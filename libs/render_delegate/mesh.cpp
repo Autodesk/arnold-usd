@@ -351,8 +351,7 @@ void HdArnoldMesh::Sync(
         HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
             nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
-            const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
-                sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+            const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();

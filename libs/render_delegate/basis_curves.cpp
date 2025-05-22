@@ -200,9 +200,7 @@ void HdArnoldBasisCurves::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-
-        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
-            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
         if (material != nullptr) {
             AiNodeSetPtr(node, str::shader, material->GetSurfaceShader());
         } else {

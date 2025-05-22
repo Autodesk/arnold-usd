@@ -593,8 +593,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             std::vector<AtNode*> filters;
             filters.reserve(filterPaths.size());
             for (const auto& filterPath : filterPaths) {
-                auto* filterMaterial = reinterpret_cast<const HdArnoldNodeGraph*>(
-                    sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, filterPath));
+                auto* filterMaterial = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), filterPath);
                 if (filterMaterial == nullptr) {
                     continue;
                 }
