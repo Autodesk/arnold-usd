@@ -671,6 +671,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         const auto* mainDriverName = AiNodeGetName(_mainDriver);
         int bufferIndex = 0;
         int filterIndex = 0;
+        std::vector<AtString> buffer_names;
+        std::vector<void*> buffer_pointers;
+
         for (const auto& binding : aovBindings) {
             auto& buffer = _renderBuffers[binding.aovName];
             // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
@@ -730,16 +733,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         format = TfToken(it->second.UncheckedGet<std::string>());
                 }
 
-                // Creating a separate driver for each aov.
-                AtString driverNameStr = _renderDelegate->GetLocalNodeName(
-                    AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%d", ++bufferIndex).c_str()});
-
-                buffer.driver = _renderDelegate->CreateArnoldNode(str::HdArnoldDriverAOV,
-                    driverNameStr);
-                
-                AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
-
-               // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+                // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
                 const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
 
                 const char* aovName = nullptr;
@@ -786,17 +780,25 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (binding.aovName == str::t_crypto_asset || 
                     binding.aovName == str::t_crypto_material ||
                     binding.aovName == str::t_crypto_object)
-                    _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
+                    _renderDelegate->RegisterCryptomatteDriver(AtString(mainDriverName));
+                
+                buffer_pointers.push_back((void*)buffer.buffer);
+                buffer_names.push_back(AtString(aovName));
                 
                 output = AtString{
                     TfStringPrintf(
-                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
+                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName)
                         .c_str()};
-
-                AiNodeSetPtr(buffer.driver, str::input, imager);
 
             }
             outputs.push_back(output);
+        }
+        if (buffer_names.empty() || buffer_names.size() != buffer_pointers.size()) {
+            AiNodeResetParameter(_mainDriver, str::buffer_names);
+            AiNodeResetParameter(_mainDriver, str::buffer_pointers);
+        } else {
+            AiNodeSetArray(_mainDriver, str::buffer_names, AiArrayConvert(buffer_names.size(), 1, AI_TYPE_STRING, &buffer_names[0]));
+            AiNodeSetArray(_mainDriver, str::buffer_pointers, AiArrayConvert(buffer_pointers.size(), 1, AI_TYPE_POINTER, &buffer_pointers[0]));
         }
         // We haven't initialized the custom products yet.
         // At the moment this won't work if delegate render products are set interactively, as this is only meant to
@@ -863,26 +865,41 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
                 _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings, _renderDelegate);
 
-                // FIXME do we still need to do a special case for deep exrs ?
-                constexpr float defaultTolerance = 0.01f;
-                constexpr bool defaultEnableFiltering = true;
-                constexpr bool defaultHalfPrecision = false;
-                const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
-                auto* toleranceArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_FLOAT);
-                auto* tolerance = static_cast<float*>(AiArrayMap(toleranceArray));
-                auto* enableFilteringArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
-                auto* enableFiltering = static_cast<bool*>(AiArrayMap(enableFilteringArray));
-                auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
-                auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
+                // Arnold supports multiple deepexr settings per AOV, by setting the parameters
+                // layer_tolerance, layer_half_precision, layer_enable_filtering.
+                // If we see those parameters set on RenderVars, we want to set those array 
+                // attributes accordingly (#2260)
                 const bool isDeepExrDriver = AiNodeIs(customProduct.driver, str::driver_deepexr);
+                const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
+                std::vector<float> tolerances;
+                std::vector<bool> enableFiltering;
+                std::vector<bool> halfPrecision;               
+
+                // Loop through render vars in case we have AOV-specific parameters
                 for (const auto& renderVar : product.renderVars) {
                     CustomRenderVar customRenderVar;
-                    *tolerance =
-                        _GetOptionalSetting<float>(renderVar.settings, _tokens->tolerance, defaultTolerance);
-                    *enableFiltering = _GetOptionalSetting<bool>(
-                        renderVar.settings, _tokens->enableFiltering, defaultEnableFiltering);
-                    *halfPrecision =
-                        _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
+                    int renderVarIndex = customProduct.renderVars.size();
+
+                    const auto toleranceIt = renderVar.settings.find(_tokens->tolerance);
+                    if (toleranceIt != renderVar.settings.end() && toleranceIt->second.IsHolding<float>()) {
+                        // The array attribute layer_tolerance should default to the value set in the driver                    
+                        if (tolerances.empty())
+                            tolerances.assign(numRenderVars, AiNodeGetFlt(customProduct.driver, str::depth_tolerance));
+                        tolerances[renderVarIndex] = toleranceIt->second.UncheckedGet<float>();
+                    }
+                    const auto enableFilteringIt = renderVar.settings.find(_tokens->enableFiltering);
+                    if (enableFilteringIt != renderVar.settings.end() && enableFilteringIt->second.IsHolding<bool>()) {
+                        if (enableFiltering.empty())
+                            enableFiltering.assign(numRenderVars, true);
+                        enableFiltering[renderVarIndex] = enableFilteringIt->second.UncheckedGet<bool>();
+                    }
+                    const auto halfPrecisionIt = renderVar.settings.find(_tokens->halfPrecision);
+                    if (halfPrecisionIt != renderVar.settings.end() && halfPrecisionIt->second.IsHolding<bool>()) {
+                        if (halfPrecision.empty())
+                            halfPrecision.assign(numRenderVars, AiNodeGetFlt(customProduct.driver, str::depth_half_precision));
+                        halfPrecision[renderVarIndex] = halfPrecisionIt->second.UncheckedGet<bool>();
+                    }
+
                     const auto isRaw = renderVar.sourceType == _tokens->raw;
                     if (isRaw && renderVar.sourceName == HdAovTokens->color) {
                         customRenderVar.output =
@@ -923,20 +940,38 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         }
                         customRenderVar.output = AtString{output.c_str()};
                     }
-                    tolerance += 1;
-                    enableFiltering += 1;
-                    halfPrecision += 1;
                     customProduct.renderVars.push_back(customRenderVar);
                 }
-                AiArrayUnmap(toleranceArray);
-                AiArrayUnmap(enableFilteringArray);
-                AiArrayUnmap(halfPrecisionArray);
 
-                // FIXME do we still need to do a special case for deep exr or should we generalize this ? #1422
                 if (isDeepExrDriver) {
-                    AiNodeSetArray(customProduct.driver, str::layer_tolerance, toleranceArray);
-                    AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
-                    AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
+                    // For deep exr AOVs, check for AOV-specific values
+                    if (!tolerances.empty()) {
+                        AiNodeSetArray(customProduct.driver, str::layer_tolerance, 
+                            AiArrayConvert(tolerances.size(), 1, AI_TYPE_FLOAT, tolerances.data()));
+                    } else {
+                        AiNodeResetParameter(customProduct.driver, str::layer_tolerance);
+                    }
+                    if (!enableFiltering.empty()) {
+                        AtArray *filteringArray = AiArrayAllocate(enableFiltering.size(), 1, AI_TYPE_BOOLEAN);
+                        bool* filteringValues = static_cast<bool*>(AiArrayMap(filteringArray));
+                        for (size_t i = 0; i < enableFiltering.size(); ++i)
+                            filteringValues[i] = enableFiltering[i];
+                        AiArrayUnmap(filteringArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, filteringArray);
+                    } else {
+                        AiNodeResetParameter(customProduct.driver, str::layer_enable_filtering);
+                    }  
+                    if (!halfPrecision.empty()) {
+                        AtArray *halfPrecisionArray = AiArrayAllocate(halfPrecision.size(), 1, AI_TYPE_BOOLEAN);
+                        bool* halfPrecisionValues = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
+                        for (size_t i = 0; i < halfPrecision.size(); ++i)
+                            halfPrecisionValues[i] = halfPrecision[i];
+                        AiArrayUnmap(halfPrecisionArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
+
+                    } else {
+                        AiNodeResetParameter(customProduct.driver, str::layer_half_precision);
+                    }
                 }
                 AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));
@@ -1034,9 +1069,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
     for (auto& buffer : _renderBuffers) {
         if (buffer.second.filter != nullptr) {
             _renderDelegate->DestroyArnoldNode(buffer.second.filter);
-        }
-        if (buffer.second.driver != nullptr) {
-            _renderDelegate->DestroyArnoldNode(buffer.second.driver);
         }
         if (buffer.second.writer != nullptr) {
             _renderDelegate->DestroyArnoldNode(buffer.second.writer);

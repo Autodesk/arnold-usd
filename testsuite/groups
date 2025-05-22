@@ -28,13 +28,14 @@
 # Having such tests makes updating image references on a single platform unsafe.
 
 # Only executed on Windows
-windows:
+windows: 
 
 # Only executed on Linux
 linux: 
 
 # Only executed on Darwin
 darwin: 
+
 
 #######################
 # SPECIAL TEST GROUPS #

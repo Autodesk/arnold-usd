@@ -39,7 +39,7 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE render_delegate hdsi ndrObjects usdImaging usdImagingArnoldObjects)
 endif()
 
 if (APPLE OR LINUX)
@@ -64,7 +64,7 @@ if (BUILD_WITH_USD_STATIC)
         # Install the ndr arnold pluginfo
         install_ndr_arnold_pluginfo(
             ../../usd_proc 
-            "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/nodeRegistryArnold/resources/plugInfo.json"
             "${PREFIX_PROCEDURAL}/usd")
 
         # install the usd imaging arnold pluginfo

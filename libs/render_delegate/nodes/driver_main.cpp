@@ -43,6 +43,24 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 AI_DRIVER_NODE_EXPORT_METHODS(HdArnoldDriverMainMtd);
 
+HdFormat _GetFormatFromArnoldType(const int arnoldType)
+{
+    if (arnoldType == AI_TYPE_RGBA) {
+        return HdFormatFloat32Vec4;
+    } else if (arnoldType == AI_TYPE_RGB || arnoldType == AI_TYPE_VECTOR) {
+        return HdFormatFloat32Vec3;
+    } else if (arnoldType == AI_TYPE_VECTOR2) {
+        return HdFormatFloat32Vec2;
+    } else if (arnoldType == AI_TYPE_FLOAT) {
+        return HdFormatFloat32;
+    } else if (arnoldType == AI_TYPE_INT) {
+        return HdFormatInt32;
+    } else {
+        return HdFormatUNorm8;
+    }
+}
+
+
 namespace {
 const char* supportedExtensions[] = {nullptr};
 
@@ -55,6 +73,11 @@ node_parameters
     AiParameterPtr(str::color_pointer, nullptr);
     AiParameterPtr(str::depth_pointer, nullptr);
     AiParameterPtr(str::id_pointer, nullptr);
+    AiParameterArray(str::buffer_names, AiArray(0, 0, AI_TYPE_STRING));
+    AiParameterArray(str::buffer_pointers, AiArray(0, 0, AI_TYPE_POINTER));
+    AiMetaDataSetBool(nentry, NULL, "parallel_driver_needs_bucket", true);
+    AiMetaDataSetBool(nentry, NULL, "parallel_driver_prepare_bucket", true);
+    AiMetaDataSetBool(nentry, NULL, "parallel_driver_write_bucket", true); 
 }
 
 node_initialize
@@ -88,13 +111,30 @@ node_update
     if (data->regionMinY == defaultValue)
         data->regionMinY = 0;
     
+    // This driver might have an array of names & pointers, that we will use 
+    // to create a buffers map. It will return us the appropriate buffer for each AOV name
+    AtArray *buffer_names = AiNodeGetArray(node, str::buffer_names);
+    AtArray *buffer_pointers = AiNodeGetArray(node, str::buffer_pointers);
+    unsigned int buffer_names_count = buffer_names ? AiArrayGetNumElements(buffer_names) : 0;
+    unsigned int buffer_pointers_count = buffer_pointers ? AiArrayGetNumElements(buffer_pointers) : 0;
+    unsigned int buffer_count = AiMin(buffer_names_count, buffer_pointers_count);
+    data->buffers.clear();
+    for (unsigned int i = 0; i < buffer_count; ++i) {
+        AtString buffer_name = AiArrayGetStr(buffer_names, i);
+        HdArnoldRenderBuffer *buffer_pointer = (HdArnoldRenderBuffer*)AiArrayGetPtr(buffer_pointers, i);
+        if (buffer_pointer != nullptr && !buffer_name.empty()) {
+            data->buffers[buffer_name] = buffer_pointer;
+        }
+    }
 }
 
 node_finish {}
 
 driver_supports_pixel_type
 {
-    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_VECTOR || pixel_type == AI_TYPE_INT;
+    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_RGB || pixel_type == AI_TYPE_VECTOR ||
+       pixel_type == AI_TYPE_VECTOR2 || pixel_type == AI_TYPE_FLOAT || pixel_type == AI_TYPE_INT;
+
 }
 
 driver_extension { return supportedExtensions; }
@@ -126,7 +166,12 @@ driver_process_bucket
         return outputName == name;
     };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
+
+        auto it = driverData->buffers.find(outputName);
+        if (it != driverData->buffers.end()) {
+            it->second->WriteBucket(
+            bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
+        } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
             positionData = bucketData;
         } else if (pixelType == AI_TYPE_INT && checkOutputName(str::hydraPrimId)) {
             if (driverData->idBuffer) {

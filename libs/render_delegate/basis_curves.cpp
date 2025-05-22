@@ -92,6 +92,11 @@ void HdArnoldBasisCurves::Sync(
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    AtNode* node = GetArnoldNode();
+
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
+        return;
 
     HdArnoldSampledPrimvarType pointsSample;
     bool dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
@@ -130,7 +135,7 @@ void HdArnoldBasisCurves::Sync(
     // primvars conversion section
     if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
         param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
+        HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
     if (dirtyTopology) {
@@ -138,25 +143,25 @@ void HdArnoldBasisCurves::Sync(
         const auto curveBasis = topology.GetCurveBasis();            
         const auto curveWrap = topology.GetCurveWrap();
         if (curveType == HdTokens->linear) {
-            AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
+            AiNodeSetStr(node, str::basis, str::linear);
             _interpolation = HdTokens->linear;
         } else {
             if (curveBasis == HdTokens->bezier) {
-                AiNodeSetStr(GetArnoldNode(), str::basis, str::bezier);
+                AiNodeSetStr(node, str::basis, str::bezier);
                 _interpolation = HdTokens->bezier;
             } else if (curveBasis == HdTokens->bSpline) {
-                AiNodeSetStr(GetArnoldNode(), str::basis, str::b_spline);
+                AiNodeSetStr(node, str::basis, str::b_spline);
                 _interpolation = HdTokens->bSpline;
             } else if (curveBasis == HdTokens->catmullRom) {
-                AiNodeSetStr(GetArnoldNode(), str::basis, str::catmull_rom);
+                AiNodeSetStr(node, str::basis, str::catmull_rom);
                 _interpolation = HdTokens->catmullRom;
             } else {
-                AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
+                AiNodeSetStr(node, str::basis, str::linear);
                 _interpolation = HdTokens->linear;
             }
 #if ARNOLD_VERSION_NUM >= 70103
             if (curveBasis == HdTokens->bSpline || curveBasis == HdTokens->catmullRom)
-                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{curveWrap.GetText()});
+                AiNodeSetStr(node, str::wrap_mode, AtString{curveWrap.GetText()});
 #endif
         }
         const auto& vertexCounts = topology.GetCurveVertexCounts();
@@ -176,7 +181,7 @@ void HdArnoldBasisCurves::Sync(
             });
             AiArrayUnmap(numPointsArray);
         }
-        AiNodeSetArray(GetArnoldNode(), str::num_points, numPointsArray);
+        AiNodeSetArray(node, str::num_points, numPointsArray);
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
@@ -184,7 +189,7 @@ void HdArnoldBasisCurves::Sync(
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId());
         transformDirtied = true;
     }
 
@@ -198,14 +203,14 @@ void HdArnoldBasisCurves::Sync(
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+            AiNodeSetPtr(node, str::shader, material->GetSurfaceShader());
         } else {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
+            AiNodeSetPtr(node, str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
     }
     if (*dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), id);
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, node, id);
     }
 
     if (dirtyPrimvars) {
@@ -218,7 +223,7 @@ void HdArnoldBasisCurves::Sync(
         ArnoldUsdCurvesData curvesData(vmin, vstep, _vertexCounts);
 
         // For pinned curves, we might have to remap primvars differently #1240
-        bool isPinned = (AiNodeGetStr(GetArnoldNode(), str::wrap_mode) == str::pinned);
+        bool isPinned = (AiNodeGetStr(node, str::wrap_mode) == str::pinned);
 
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
@@ -233,9 +238,9 @@ void HdArnoldBasisCurves::Sync(
                     _interpolation != HdTokens->linear) {
                     auto value = desc.value;
                     curvesData.RemapCurvesVertexPrimvar<float, double, GfHalf>(value);
-                    ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), value);
+                    ArnoldUsdCurvesData::SetRadiusFromValue(node, value);
                 } else {
-                    ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), desc.value);
+                    ArnoldUsdCurvesData::SetRadiusFromValue(node, desc.value);
                 }
                 continue;
             }
@@ -260,33 +265,33 @@ void HdArnoldBasisCurves::Sync(
                 // The number of motion keys has to be matched between points and orientations, so if there are multiple
                 // position keys, so we are forcing the user to use the SamplePrimvars function.
                 if (primvar.first == _tokens->orientations) {
-                    HdArnoldSetNormalsFromPrimvar(GetArnoldNode(), id, _tokens->orientations, str::orientations, sceneDelegate, param());
+                    HdArnoldSetNormalsFromPrimvar(node, id, _tokens->orientations, str::orientations, sceneDelegate, param());
                 } else if (primvar.first != _tokens->basis) {
                     // We skip reading the basis for now as it would require remapping the vertices, widths and
                     // all the primvars.
                     HdArnoldSetConstantPrimvar(
-                        GetArnoldNode(), arnoldAttributeName, desc.role, value, &_visibilityFlags, &_sidednessFlags,
+                        node, arnoldAttributeName, desc.role, value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
 
             } else if (desc.interpolation == HdInterpolationUniform) {
                 if (forceDeclare) {
-                    DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                    DeclareAndAssignParameter(node, arnoldAttributeName, 
                         str::t_uniform, value, GetRenderDelegate()->GetAPIAdapter(), 
                         desc.role == HdPrimvarRoleTokens->color);
 
                 } else {
-                    HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                    HdArnoldSetUniformPrimvar(node, arnoldAttributeName, desc.role, value, 
                         GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
-                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, value);
+                    HdArnoldSetPositionFromValue(node, str::points, value);
                 } else if (primvar.first == HdTokens->normals) {
                     if (_interpolation == HdTokens->linear)
-                        AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(GetArnoldNode()));
+                        AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(node));
                     else
-                        curvesData.SetOrientationFromValue(GetArnoldNode(), value);
+                        curvesData.SetOrientationFromValue(node, value);
                 } else {
                     if (!desc.valueIndices.empty()) {
                         // This vertex-interpolated primvar is also indexed. Since we might have to remap them 
@@ -304,11 +309,11 @@ void HdArnoldBasisCurves::Sync(
                             std::string, TfToken, SdfAssetPath>(value);
                     }
                     if (forceDeclare) {
-                        DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                        DeclareAndAssignParameter(node, arnoldAttributeName, 
                             str::t_varying, value, GetRenderDelegate()->GetAPIAdapter(), 
                             desc.role == HdPrimvarRoleTokens->color);
                     } else {
-                        HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                        HdArnoldSetVertexPrimvar(node, arnoldAttributeName, desc.role, value, 
                             GetRenderDelegate());
                     }
                 }

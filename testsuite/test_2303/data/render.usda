@@ -1,0 +1,23 @@
+#usda 1.0
+(
+    framesPerSecond = 24
+    metersPerUnit = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+    defaultPrim = "root"
+)
+
+def Xform "root"
+{
+    def Xform "source"
+    {
+        token visibility = "invisible"
+
+        def "asset" (
+            prepend references = @./assets.usda@
+        )
+        {
+        }
+    }
+}
+

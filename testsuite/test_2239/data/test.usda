@@ -1,0 +1,333 @@
+#usda 1.0
+(
+    customLayerData = {
+        timecode[] timeCodeArray = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
+    }
+    defaultPrim = "tmp"
+    endFrame = 100
+    endTimeCode = 100
+    framesPerSecond = 24
+    metersPerUnit = 0.01
+    startFrame = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def DomeLight "light"
+{    
+}
+def Xform "adsktest" (
+    kind = "group"
+)
+{
+    def Volume "testdata" (
+        kind = "component"
+    )
+    {
+        custom rel field:density = </adsktest/testdata/density>
+
+        def OpenVDBAsset "density" (
+            kind = "component"
+        )
+        {
+            int fieldIndex = 0
+            token fieldName = "voxel_fog_density"
+            asset filePath.timeSamples = {
+                0: @./cube01.vdb@,
+                1: @./plane01.vdb@,
+                2: @./torus01.vdb@,
+                3: @./cube01.vdb@,
+                4: @./plane01.vdb@,
+                5: @./torus01.vdb@,
+                6: @./cube01.vdb@,
+                7: @./plane01.vdb@,
+                8: @./torus01.vdb@,
+                9: @./cube01.vdb@,
+                10: @./plane01.vdb@,
+                11: @./torus01.vdb@,
+                12: @./cube01.vdb@,
+                13: @./plane01.vdb@,
+                14: @./torus01.vdb@,
+                15: @./cube01.vdb@,
+                16: @./plane01.vdb@,
+                17: @./torus01.vdb@,
+                18: @./cube01.vdb@,
+                19: @./plane01.vdb@,
+                20: @./torus01.vdb@,
+                21: @./cube01.vdb@,
+                22: @./plane01.vdb@,
+                23: @./torus01.vdb@,
+                24: @./cube01.vdb@,
+                25: @./plane01.vdb@,
+                26: @./torus01.vdb@,
+                27: @./cube01.vdb@,
+                28: @./plane01.vdb@,
+                29: @./torus01.vdb@,
+                30: @./cube01.vdb@,
+                31: @./plane01.vdb@,
+                32: @./torus01.vdb@,
+            }
+        }
+    }
+}
+
+
+def Scope "Render"
+{
+    def RenderSettings "settings"
+    {
+        custom int arnold:AA_samples = 3
+        int arnold:AA_seed.timeSamples = {
+            1: 14,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 8,
+            9: 9,
+            10: 10,
+            11: 11,
+            12: 12,
+            13: 13,
+            14: 14,
+            15: 15,
+            16: 16,
+            17: 17,
+            18: 18,
+            19: 19,
+            20: 20,
+            21: 21,
+            22: 22,
+            23: 23,
+            24: 24,
+            25: 25,
+            26: 26,
+            27: 27,
+            28: 28,
+            29: 29,
+            30: 30,
+            31: 31,
+            32: 32,
+            33: 33,
+            34: 34,
+            35: 35,
+            36: 36,
+            37: 37,
+            38: 38,
+            39: 39,
+            40: 40,
+            41: 41,
+            42: 42,
+            43: 43,
+            44: 44,
+            45: 45,
+            46: 46,
+            47: 47,
+            48: 48,
+            49: 49,
+            50: 50,
+            51: 51,
+            52: 52,
+            53: 53,
+            54: 54,
+            55: 55,
+            56: 56,
+            57: 57,
+            58: 58,
+            59: 59,
+            60: 60,
+            61: 61,
+            62: 62,
+            63: 63,
+            64: 64,
+            65: 65,
+            66: 66,
+            67: 67,
+            68: 68,
+            69: 69,
+            70: 70,
+            71: 71,
+            72: 72,
+            73: 73,
+            74: 74,
+            75: 75,
+            76: 76,
+            77: 77,
+            78: 78,
+            79: 79,
+            80: 80,
+            81: 81,
+            82: 82,
+            83: 83,
+            84: 84,
+            85: 85,
+            86: 86,
+            87: 87,
+            88: 88,
+            89: 89,
+            90: 90,
+            91: 91,
+            92: 92,
+            93: 93,
+            94: 94,
+            95: 95,
+            96: 96,
+            97: 97,
+            98: 98,
+            99: 99,
+            100: 100,
+        }
+        float arnold:frame.timeSamples = {
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            5: 5,
+            6: 6,
+            7: 7,
+            8: 8,
+            9: 9,
+            10: 10,
+            11: 11,
+            12: 12,
+            13: 13,
+            14: 14,
+            15: 15,
+            16: 16,
+            17: 17,
+            18: 18,
+            19: 19,
+            20: 20,
+            21: 21,
+            22: 22,
+            23: 23,
+            24: 24,
+            25: 25,
+            26: 26,
+            27: 27,
+            28: 28,
+            29: 29,
+            30: 30,
+            31: 31,
+            32: 32,
+            33: 33,
+            34: 34,
+            35: 35,
+            36: 36,
+            37: 37,
+            38: 38,
+            39: 39,
+            40: 40,
+            41: 41,
+            42: 42,
+            43: 43,
+            44: 44,
+            45: 45,
+            46: 46,
+            47: 47,
+            48: 48,
+            49: 49,
+            50: 50,
+            51: 51,
+            52: 52,
+            53: 53,
+            54: 54,
+            55: 55,
+            56: 56,
+            57: 57,
+            58: 58,
+            59: 59,
+            60: 60,
+            61: 61,
+            62: 62,
+            63: 63,
+            64: 64,
+            65: 65,
+            66: 66,
+            67: 67,
+            68: 68,
+            69: 69,
+            70: 70,
+            71: 71,
+            72: 72,
+            73: 73,
+            74: 74,
+            75: 75,
+            76: 76,
+            77: 77,
+            78: 78,
+            79: 79,
+            80: 80,
+            81: 81,
+            82: 82,
+            83: 83,
+            84: 84,
+            85: 85,
+            86: 86,
+            87: 87,
+            88: 88,
+            89: 89,
+            90: 90,
+            91: 91,
+            92: 92,
+            93: 93,
+            94: 94,
+            95: 95,
+            96: 96,
+            97: 97,
+            98: 98,
+            99: 99,
+            100: 100,
+        }
+        custom int arnold:GI_diffuse_depth = 1
+        custom int arnold:GI_specular_depth = 1
+        int arnold:GI_transmission_depth = 8
+        float arnold:meters_per_unit = 0.01
+        string arnold:name = "options"
+        bool arnold:texture_automip = 0
+        bool arnold:texture_per_file_stats = 1
+        prepend rel camera = </persp>
+        uniform float pixelAspectRatio = 1
+        string primvars:render_layer = "defaultRenderLayer" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        uniform int2 resolution = (160, 120)
+    }
+
+}
+
+def Camera "persp"
+{
+    float2 clippingRange = (0.1, 10000)
+    float focalLength = 35
+    float focusDistance = 1
+    float horizontalAperture = 35.999928
+    float[] primvars:arnold:aperture_size = [0]
+    float[] primvars:arnold:fov = [49.134346]
+    float2[] primvars:arnold:lens_shift = [(0, 0)]
+    float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+    vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+    float primvars:arnold:motion_end = 0
+    vector3f[] primvars:arnold:position = [(0, 0, 0)]
+    float2[] primvars:arnold:screen_window_max = [(1, 1)]
+    float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+    vector3f[] primvars:arnold:up = [(0, 1, 0)]
+    color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+    string primvars:dcc_name = "cameraShape1" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+    token projection = "perspective"
+    double shutter:close = 0
+    double shutter:open = 0
+    float verticalAperture = 23.999952
+    float3 xformOp:rotateXYZ = (-27.6, -10.8, 0)
+    double3 xformOp:translate = (-7.812193592738666, 9.31462348424481, 20.8970369516998)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+}
+
+

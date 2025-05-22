@@ -1118,6 +1118,32 @@ bool UsdArnoldPrimWriter::WriteAttribute(
 void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode* node, UsdArnoldWriter& writer)
 {
     _exportedAttrs.insert("matrix");
+
+    const UsdPrim &prim = xformable.GetPrim();
+    const AtUniverse* universe = writer.GetUniverse();
+
+    AtMatrix parentMatrix = AiM4Identity();
+    AtMatrix invParentMtx = AiM4Identity();
+    bool applyInvParentMtx = false;
+
+    for (UsdPrim p = prim.GetParent(); !p.IsPseudoRoot(); p = p.GetParent()) {
+        AtNode *parent = AiNodeLookUpByName(universe, AtString(p.GetPath().GetText()));
+        if (parent == nullptr)
+            continue;
+        // Special case for mesh lights pointing at our current mesh. Their transform will not be authored
+        // to USD so we must skip it here.
+        if (AiNodeIs(parent, str::mesh_light) && AiNodeGetPtr(parent, str::mesh) == (void*)node)
+            continue;
+
+        AtMatrix mtx = AiNodeGetMatrix(parent, str::matrix);
+        if (mtx == AiM4Identity())
+            continue;
+        parentMatrix =  AiM4Mult(mtx, parentMatrix);
+        applyInvParentMtx = true;
+    }
+    if (applyInvParentMtx)
+        invParentMtx = AiM4Invert(parentMatrix);
+
     AtArray* array = AiNodeGetArray(node, AtString("matrix"));
     if (array == nullptr)
         return;
@@ -1128,11 +1154,13 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     if (matrices == nullptr)
         return;
 
-    bool hasMatrix = false;
+    bool hasMatrix = applyInvParentMtx;
 
-    for (unsigned int i = 0; i < numKeys; ++i) {
-        if (!AiM4IsIdentity(matrices[i])) {
-            hasMatrix = true;
+    if (!hasMatrix) {
+        for (unsigned int i = 0; i < numKeys; ++i) {
+            if (!AiM4IsIdentity(matrices[i])) {
+                hasMatrix = true;
+            }
         }
     }
     // Identity matrix, nothing to write
@@ -1165,7 +1193,9 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
-        const AtMatrix& mtx = matrices[k];
+        AtMatrix mtx = matrices[k];
+        if (applyInvParentMtx)
+            mtx = AiM4Mult(mtx, invParentMtx);
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 m[i][j] = mtx[i][j];

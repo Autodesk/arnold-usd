@@ -163,6 +163,10 @@ struct HdArnoldConfig {
     ///
     std::string profile_file; ///< Output file for profiling data.
 
+    /// Use HDARNOLD_report_file to set the value.
+    ///
+    std::string report_file; ///< Output file for html report data.
+
     /// Use HDARNOLD_stats_file to set the value.
     ///
     std::string stats_file; ///< Output file for stats data.

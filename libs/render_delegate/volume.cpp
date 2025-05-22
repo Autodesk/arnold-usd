@@ -188,6 +188,7 @@ struct VdbFieldData {
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     (filePath)
+    (fieldName)
 );
 // clang-format on
 
@@ -230,7 +231,7 @@ void HdArnoldVolume::Sync(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         auto* volumeShader =
             material != nullptr ? material->GetVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
-        _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });
+        _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }
 
     auto transformDirtied = false;

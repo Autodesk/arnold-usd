@@ -44,16 +44,21 @@ void HdArnoldPoints::Sync(
  
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    AtNode* node = GetArnoldNode();
+    
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
+        return;
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId());
         transformDirtied = true;
     }
     if (*dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, node, GetId());
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
@@ -68,9 +73,9 @@ void HdArnoldPoints::Sync(
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+            AiNodeSetPtr(node, str::shader, material->GetSurfaceShader());
         } else {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
+            AiNodeSetPtr(node, str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
     }
 
@@ -97,7 +102,7 @@ void HdArnoldPoints::Sync(
                     extrapolatePoints = true;
                 } else {
                     HdArnoldSetConstantPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role,   desc.value, &_visibilityFlags, &_sidednessFlags,
+                        node, primvar.first, desc.role,   desc.value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
                 // Anything that's not per instance interpolation needs to be converted to uniform data.
@@ -105,7 +110,7 @@ void HdArnoldPoints::Sync(
                 // Even though we are using velocity and acceleration for optional interpolation, we are still
                 // converting the values to user data.
                 if (primvar.first != HdTokens->points && primvar.first != HdTokens->widths) {
-                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
+                    HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
                 }
             }
         }
@@ -116,12 +121,12 @@ void HdArnoldPoints::Sync(
     if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(
-            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
+            node, id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
     }
     // Ensure we set radius after the positions, as we might need to check the amount of points #2015
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
         param.Interrupt();
-        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
+        HdArnoldSetRadiusFromPrimvar(node, id, sceneDelegate);
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

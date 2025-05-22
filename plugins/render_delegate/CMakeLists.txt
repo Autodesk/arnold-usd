@@ -6,7 +6,7 @@ if (NOT BUILD_WITH_USD_STATIC)
         target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
     endif ()
 
-    set(_usd_deps arch plug trace tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUtil)
+    set(_usd_deps arch plug trace tf vt gf work sdf hf hd hdsi usdImaging usdLux pxOsd cameraUtil)
     if (${USD_VERSION} VERSION_LESS "0.20.5")
         set(_usd_deps ${_usd_deps} hdx)
     endif ()

@@ -254,10 +254,20 @@ inline const TfTokenVector& _SupportedSprimTypes()
     return r;
 }
 
-inline const TfTokenVector& _SupportedBprimTypes()
+inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-    return r;
+    // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
+    // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+#if PXR_VERSION >= 2208
+    if (!ownsUniverse) {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    } else
+#endif
+    {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+        return r;
+    }
 }
 
 struct SupportedRenderSetting {
@@ -325,6 +335,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_ignore_smoothing, {"Ignore Smoothing"}},
         {str::t_ignore_sss, {"Ignore SubSurface Scattering"}},
         {str::t_ignore_operators, {"Ignore Operators"}},
+        // HTML Report Settings
+        {str::t_report_file, {"HTML Report Path", config.report_file}},
         // Log Settings
         {str::t_log_verbosity, {"Log Verbosity (0-5)", config.log_verbosity}},
         {str::t_log_file, {"Log File Path", config.log_file}},
@@ -620,7 +632,7 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {    
@@ -681,6 +693,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
+#if ARNOLD_VERSION_NUM >= 70401
+    } else if (key == str::t_report_file) {
+        if (value.IsHolding<std::string>()) {
+            _reportFile = value.UncheckedGet<std::string>();
+            AiReportSetFileName(_reportFile.c_str());
+        }
+#endif
     } else if (key == str::t_stats_file) {
         if (value.IsHolding<std::string>()) {
             _statsFile = value.UncheckedGet<std::string>();
@@ -689,9 +708,18 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_stats_mode) {
         if (value.IsHolding<int>()) {
             _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
-            AiStatsSetMode(_statsMode);
-            AiStatsSetMode(AtStatsMode(0));
+        } else if (value.IsHolding<std::string>()) {
+            // This value can be returned as a string, with 0 & 1, 
+            // or with overwrite & append
+            std::string statsStr = VtValueGetString(value);
+            if (statsStr == std::string("0") || statsStr == std::string("overwrite"))
+                _statsMode = AI_STATS_MODE_OVERWRITE;
+            else if (statsStr == std::string("1") || statsStr == std::string("append"))
+                _statsMode = AI_STATS_MODE_APPEND;
+            else
+                AiMsgWarning("Unknown Stats mode %s", statsStr.c_str());
         }
+        AiStatsSetMode(_statsMode);
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
             _profileFile = value.UncheckedGet<std::string>();
@@ -973,6 +1001,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
     } else if (key == str::t_log_file) {
         return VtValue(_logFile);
+    } else if (key == str::t_report_file) {
+        return VtValue(_reportFile);
     } else if (key == str::t_stats_file) {
         return VtValue(_statsFile);
     } else if (key == str::t_stats_mode) {
@@ -1247,20 +1277,20 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
+    // Silently ignore render settings primitives, at the moment they're treated
+    // through a different code path
+#if PXR_VERSION >= 2208
+    if (typeId == HdPrimTypeTokens->renderSettings)
+        return nullptr;
+#endif
+
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
 }
 
 HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
 {
-    if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(SdfPath());
-    }
-    if (typeId == _tokens->openvdbAsset) {
-        return new HdArnoldOpenvdbAsset(this, SdfPath());
-    }
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
-    return nullptr;
+    return CreateBprim(typeId, SdfPath());
 }
 
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
@@ -1703,7 +1733,7 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
     _renderTagTrackQueue.push({node, tag});
 }
 
@@ -1721,11 +1751,11 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     }
     if (renderTags != _renderTags) {
         _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
-        }
         _renderParam->Interrupt();
+
+        for (auto& elem : _renderTagMap) {
+            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+        }
     }
 }
 

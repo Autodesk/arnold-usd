@@ -106,7 +106,7 @@ vars.AddVariables(
     PathVariable('PREFIX', 'Directory to install under', '.', PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the render delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the node registry plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCENE_DELEGATE', 'Directory to install the scene delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
@@ -139,6 +139,7 @@ vars.AddVariables(
     StringVariable('JUNIT_TESTSUITE_URL', 'Optional URL for the JUnit report', None),
     BoolVariable('REPORT_ONLY_FAILED_TESTS', 'Only failed test will be kept', False),
     StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
+    ListVariable('TESTSUITE_PASSES', 'Test passes to enable', None, ['usd','hydra']),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6'),
     ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 1),
@@ -194,7 +195,7 @@ BUILD_DOCS                   = env['BUILD_DOCS']
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
 # if we want the hydra procedural to be enabled with a static USD, we need
-# schemas, usd_imaging and ndr plugins to be compiled as well. For shared / monolithic USD builds
+# schemas, usd_imaging and node registry plugins to be compiled as well. For shared / monolithic USD builds
 # we might want these modules to be built separately
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE == 'static':
     env['BUILD_SCHEMAS'] = True
@@ -549,10 +550,10 @@ renderdelegateplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'render_del
 renderdelegateplugin_plug_info = os.path.join('plugins', 'render_delegate', 'plugInfo.json.in')
 renderdelegateplugin_out_plug_info = os.path.join(renderdelegateplugin_build, 'plugInfo.json')
 
-ndrplugin_script = os.path.join('plugins', 'ndr', 'SConscript')
-ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'ndr')
-ndrplugin_plug_info = os.path.join('plugins', 'ndr', 'plugInfo.json.in')
-ndrplugin_out_plug_info = os.path.join(ndrplugin_build, 'plugInfo.json')
+node_registry_plugin_script = os.path.join('plugins', 'node_registry', 'SConscript')
+node_registry_plugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'node_registry')
+node_registry_plugin_plug_info = os.path.join('plugins', 'node_registry', 'plugInfo.json.in')
+node_registry_plugin_out_plug_info = os.path.join(node_registry_plugin_build, 'plugInfo.json')
 
 usdimagingplugin_script = os.path.join('plugins', 'usd_imaging', 'SConscript')
 usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'usd_imaging')
@@ -624,7 +625,7 @@ else:
     RENDERDELEGATEPLUGIN = None
 
 if BUILD_NDR_PLUGIN:
-    NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
+    NDRPLUGIN = env.SConscript(node_registry_plugin_script, variant_dir = node_registry_plugin_build, duplicate = 0, exports = 'env')
     Depends(NDRPLUGIN, COMMON[0])
     SConscriptChdir(0)
 else:
@@ -713,8 +714,8 @@ for (source, target) in plugInfos:
                 action=configure.configure_plug_info)
 
 if BUILD_NDR_PLUGIN:
-    env.Command(target=ndrplugin_out_plug_info,
-                source=ndrplugin_plug_info,
+    env.Command(target=node_registry_plugin_out_plug_info,
+                source=node_registry_plugin_plug_info,
                 action=configure.configure_ndr_plug_info)
     
 if BUILD_USD_IMAGING_PLUGIN:
@@ -728,12 +729,12 @@ if RENDERDELEGATEPLUGIN:
 if SCENEDELEGATE:
     Depends(SCENEDELEGATE, scenedelegate_plug_info)
 
-# We now include the ndr plugin in the procedural, so we must add the plugInfo.json as well
+# We now include the node_registry plugin in the procedural, so we must add the plugInfo.json as well
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     if BUILD_NDR_PLUGIN:
-        procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
+        procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'nodeRegistryArnold', 'resources', 'plugInfo.json')
         env.Command(target=procedural_ndr_plug_info,
-                    source=ndrplugin_plug_info,
+                    source=node_registry_plugin_plug_info,
                         action=configure.configure_procedural_ndr_plug_info)
         Depends(PROCEDURAL, procedural_ndr_plug_info)
 
@@ -816,11 +817,11 @@ if NDRPLUGIN:
     if is_windows:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
     else:
-        INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
-    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [ndrplugin_out_plug_info])
+        INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'nodeRegistryArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'nodeRegistryArnold', 'resources'), [node_registry_plugin_out_plug_info])
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
-    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
-    env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'node_registry'), env.Glob(os.path.join('ndr', '*.h')))
+    env.Alias('node_registry_plugin-install', INSTALL_NDRPLUGIN)
 
 if USDIMAGINGPLUGIN:
     if is_windows:

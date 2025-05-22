@@ -1,0 +1,34 @@
+{
+    "Plugins": [
+        {
+            "Info": {
+                "SdfMetadata": {
+                    "arnold:filename": {
+                        "appliesTo": [
+                            "prims"
+                        ],
+                        "default": "<built-in>",
+                        "displayGroup": "Arnold",
+                        "documentation": "Arnold plugin location for a node.",
+                        "type": "token"
+                    }
+                },
+                "Types": {
+                    "NdrArnoldParserPlugin" : {
+                        "bases": ["NdrParserPlugin"],
+                        "displayName": "Arnold Node Parser"
+                    },
+                    "NodeRegistryArnoldDiscoveryPlugin" : {
+                        "bases": ["NdrDiscoveryPlugin"],
+                        "displayName": "Arnold Node Discovery"
+                    }
+                }
+            },
+            "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
+            "Name": "nodeRegistryArnold",
+            "ResourcePath": "resources",
+            "Root": "..",
+            "Type": "library"
+        }
+    ]
+}

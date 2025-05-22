@@ -1,0 +1,10 @@
+USD Instancer with animated instances positions and prototype points.
+
+Instance positions have 2 keys, prototypes points several keys
+
+See #2254
+
+author: cyril.pichard@autodesk.com
+
+
+PARAMS: {'scene': 'test.usda', 'kick_params':'-frame 5 '}

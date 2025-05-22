@@ -96,6 +96,35 @@ public:
         HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
         _shape.Sync(this, dirtyBits, sceneDelegate, param, force);
     }
+
+    bool SkipHiddenPrim(HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param)
+    {
+        if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id))
+            HydraType::_UpdateVisibility(sceneDelegate, dirtyBits);
+
+        // If this geometry isn't visible, we want to disable it and skip the translation
+        bool skip = !this->_sharedData.visible;
+        AtNode* node = GetArnoldNode();
+        if (node == nullptr)
+            return skip;
+
+        bool wasDisabled = AiNodeIsDisabled(node);
+        if (skip == wasDisabled)
+            return skip;
+
+        if (wasDisabled) {
+            // We're about to turn this disabled node into an active one.
+            // But we must ensure it hadn't been disabled due to its render tags.
+            // If so, we don't want to stop the render nor change its state
+            if (!_renderDelegate->IsVisibleRenderTag(sceneDelegate->GetRenderTag(id)))
+                return false;
+        }
+        param.Interrupt();
+        AiNodeSetDisabled(GetArnoldNode(), skip);
+    
+        return skip;        
+    }
+    
     /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if
     /// either has changed.
     ///
