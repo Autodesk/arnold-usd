@@ -24,7 +24,6 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 TF_REGISTRY_FUNCTION(TfType)
 {
-    if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
     HdSceneIndexPluginRegistry::Define<HdArnoldImplicitSurfaceSceneIndexPlugin>();
 }
 
@@ -80,8 +79,6 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 #endif
     }
 
-    if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
-
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
                 "Arnold",
                 _tokens->sceneIndexPluginName,
@@ -98,7 +95,6 @@ HdArnoldImplicitSurfaceSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene,
     const HdContainerDataSourceHandle &inputArgs)
 {
-    if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
     return HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs);
 }
 
