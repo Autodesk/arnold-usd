@@ -368,14 +368,9 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         }
         if (volume == nullptr) {
             auto* shape = new HdArnoldShape(str::volume, _renderDelegate, id, GetPrimId());
+            volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, AtString(openvdb.first.c_str()));
             AiNodeSetStr(volume, str::name, AtString(TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str()));
-
-            // TODO we need something like this to set the index on the volume node
-            //const std::optional<int>& openvdb_index = openvdb.second[i].fieldIndex;
-            // if(openvdb_index) {
-            //     AiNodeSetInt(volume, "grid_index", openvdb_index.value());
-            // }
 
             _volumes.push_back(shape);
         }
@@ -383,7 +378,14 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         const auto numFields = openvdb.second.size();
         auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
         for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            AiArraySetStr(fields, i, AtString(openvdb.second[i].field.GetText()));
+            const TfToken& field = openvdb.second[i].field;
+            const std::optional<int>& field_index = openvdb.second[i].fieldIndex;
+            // If the fieldIndex property is set, we can use the field[<index>] syntax
+            const AtString field_name =
+                field_index.has_value()
+                    ? AtString(TfStringPrintf("%s[%d]", field.GetText(), field_index.value()).c_str())
+                    : AtString(field.GetText());
+            AiArraySetStr(fields, i, field_name);
         }
         AiNodeSetArray(volume, str::grids, fields);
     }
@@ -412,10 +414,10 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
 
         for (const auto& data : houvdb.second) {
             const TfToken& field = data.field;
-            const std::optional<int>& houvdb_index = data.fieldIndex;
+            const std::optional<int>& field_index = data.fieldIndex;
 
             auto* primVdb =
-                houdiniFnSet.getVdbPrimitiveWithIndex(houvdb.first.c_str(), field.GetText(), houvdb_index.value_or(0));
+                houdiniFnSet.getVdbPrimitiveWithIndex(houvdb.first.c_str(), field.GetText(), field_index.value_or(0));
             if (primVdb == nullptr) {
                 continue;
             }
