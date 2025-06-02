@@ -113,6 +113,9 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
+    AiMetaDataSetStr(nentry, str::filename, str::path, str::file);
+    AiMetaDataSetStr(nentry, str::filename, str::extensions, AtString("usd usda usdc usdz"));
+    
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
 }
