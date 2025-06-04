@@ -1,5 +1,5 @@
 
-// #if PXR_VERSION >= 2402
+#if PXR_VERSION >= 2505 // Hydra 2
 
 #include "extComputationPrimvarPruningSIP.h"
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
@@ -8,12 +8,10 @@
 #include <pxr/imaging/hd/primvarsSchema.h>
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
 #include <pxr/imaging/hd/tokens.h>
-#include <pxr/pxr.h>
-// #if PXR_VERSION >= 2402
 #include <pxr/imaging/hdsi/extComputationPrimvarPruningSceneIndex.h>
+#include <pxr/pxr.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
 #include <pxr/usdImaging/usdSkelImaging/bindingSchema.h>
-// #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -174,14 +172,9 @@ HdSceneIndexBaseRefPtr HdArnoldExtComputationPrimvarPruningSceneIndexPlugin::_Ap
     const HdSceneIndexBaseRefPtr &inputScene, const HdContainerDataSourceHandle &inputArgs)
 {
     TF_UNUSED(inputArgs);
-    // #if PXR_VERSION >= 2402
     return HdSiExtComputationPrimvarPruningSceneIndex::New(_ExtComputationNormalsPruningSceneIndex::New(inputScene));
-    // return _ExtComputationNormalsPruningSceneIndex::New(HdSiExtComputationPrimvarPruningSceneIndex::New(inputScene));
-    //  #else
-    //      return inputScene;
-    //  #endif
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-// #endif // PXR_VERSION >= 2402
+#endif // PXR_VERSION >= 2505 Hydra 2

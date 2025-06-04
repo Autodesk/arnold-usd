@@ -137,6 +137,7 @@ bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) cons
 
 #endif
 
+#if PXR_VERSION >= 2505 // Hydra 2
 // Recusively check nodes starting at the terminal to find the dirty prim.
 // If the dirty prim is the source material also check the specific dirty
 // property.
@@ -397,6 +398,7 @@ HdDataSourceLocatorSet ArnoldNodeGraphAdapter::InvalidateImagingSubprim(
 
     return result;
 }
+#endif // Hydra 2
 
 void ArnoldNodeGraphAdapter::UpdateForTime(
     const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
@@ -447,11 +449,6 @@ void ArnoldNodeGraphAdapter::MarkMaterialDirty(
         UsdImagingIndexProxy* index)
 {
     MarkDirty(prim, cachePath, HdMaterial::DirtyResource, index);
-}
-
-void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index)
-{
-    index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
 }
 
 void

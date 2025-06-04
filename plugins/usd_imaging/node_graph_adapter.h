@@ -36,7 +36,7 @@ public:
     //
     // Scene index support
     //
-
+#if PXR_VERSION >= 2505
     TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
 
     TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
@@ -53,6 +53,7 @@ public:
     HdDataSourceLocatorSet InvalidateImagingSubprimFromDescendent(
         UsdPrim const& prim, UsdPrim const& descendentPrim, TfToken const& subprim, TfTokenVector const& properties,
         UsdImagingPropertyInvalidationType invalidationType) override;
+#endif
 
     /// Populate primitives in the usd imaging index proxy.
     ///
@@ -143,13 +144,6 @@ USDIMAGING_API
 
 #endif
 
-private:
-    /// Removes the primitive from the UsdImagingIndex.
-    ///
-    /// @param cachePath Path to the primitive in the UsdImaging cache.
-    /// @param index Pointer to the UsdImagingIndex.
-    USDIMAGINGARNOLD_API
-    void _RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
