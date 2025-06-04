@@ -219,7 +219,7 @@ void HdArnoldVolume::Sync(
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
         const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
         auto* volumeShader =
-            material != nullptr ? material->GetVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
+            material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }
 

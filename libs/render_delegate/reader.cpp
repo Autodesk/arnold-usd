@@ -201,8 +201,10 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
         _sceneIndex = _displayStyleSceneIndex =
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
-
-        _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
+        {
+            std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
+            _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
+        }
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
 #endif        
     } else {        
@@ -283,6 +285,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         if (_imagingDelegate)
             _imagingDelegate->SetShutter(shutter_start, shutter_end);
 
+        _shutter = {static_cast<float>(shutter_start), static_cast<float>(shutter_end)};
     } else {
         if (!renderCameraPath.IsEmpty()) {
             SetCameraForSampling(stage, renderCameraPath);
@@ -451,6 +454,8 @@ HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
     HdSceneIndexBaseRefPtr const &inputScene)
 {
+    static AtMutex s_appendOverridesSceneIndices;
+    std::lock_guard<AtMutex> lock(s_appendOverridesSceneIndices);
     HdSceneIndexBaseRefPtr sceneIndex = inputScene;
 
     static HdContainerDataSourceHandle const materialPruningInputArgs =

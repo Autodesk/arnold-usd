@@ -329,7 +329,7 @@ void HdArnoldMesh::Sync(
             node, subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
             subdivTags.GetCreaseIndices(), subdivTags.GetCreaseLengths(), subdivTags.GetCreaseWeights());
     }
-    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+    if (*dirtyBits & (HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }
@@ -357,8 +357,8 @@ void HdArnoldMesh::Sync(
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
-                dispMap[arrayId] = material->GetDisplacementShader();
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader();
+                dispMap[arrayId] = material->GetCachedDisplacementShader();
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {

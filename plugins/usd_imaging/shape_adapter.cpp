@@ -19,11 +19,19 @@
 
 #include <pxr/usd/usd/schemaRegistry.h>
 
-#include <pxr/usdImaging/usdImaging/indexProxy.h>
-#include <pxr/usdImaging/usdImaging/tokens.h>
-
 #include <common_bits.h>
 #include <constant_strings.h>
+#include <pxr/imaging/hd/dirtyBitsTranslator.h>
+#include <pxr/imaging/hd/material.h>
+#include <pxr/imaging/hd/overlayContainerDataSource.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/retainedDataSource.h>
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+#include <pxr/usdImaging/usdImaging/indexProxy.h>
+#include <pxr/usdImaging/usdImaging/primAdapter.h>
+#include <pxr/usdImaging/usdImaging/tokens.h>
+#include <pxr/usdImaging/usdImaging/dataSourceGprim.h>
 #include <shape_utils.h>
 
 std::size_t hash_value(const AtString& s) { return s.hash(); }
@@ -100,5 +108,88 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
         }
     }
 }
+
+TfTokenVector UsdImagingArnoldShapeAdapter::GetImagingSubprims(UsdPrim const& prim) {
+    // Assuming Arnold nodes are leaves
+    return { TfToken() };
+}
+
+TfToken UsdImagingArnoldShapeAdapter::GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+         return ArnoldDelegatePrimType();
+    }
+    return UsdImagingGprimAdapter::GetImagingSubprimType(prim, subprim);
+}
+
+class ArnoldShapeDataSourcePrim : public UsdImagingDataSourceGprim { // also tried HdDataSourceLegacyPrim but no sceneDelegate available at this point
+public:
+    HD_DECLARE_DATASOURCE(ArnoldShapeDataSourcePrim);
+
+    TfTokenVector GetNames() override
+    {
+        TfTokenVector result = UsdImagingDataSourceGprim::GetNames();
+        // Assuming primvars is already added by UsdImagingDataSourcePrim
+        result.push_back(TfToken());
+
+        return result;
+    }
+
+    HdDataSourceBaseHandle Get(const TfToken& name) override
+    {
+        if (name == str::t_arnold__attributes) {
+            ArnoldUsdParamValueList params;
+            params.reserve(_paramNames.size());
+            for (const auto& paramName : _paramNames) {
+                const auto attribute = _GetUsdPrim().GetAttribute(paramName.first);
+                VtValue value;
+                if (attribute && attribute.HasAuthoredValue() && attribute.Get(&value, _GetStageGlobals().GetTime())) {
+                    // We don't need to treat attributes that don't have any authored value ("Get" would still return true)
+                    params.emplace_back(paramName.second, value);
+                }
+            }
+            // To avoid copying.
+            return HdRetainedSampledDataSource::New(VtValue(params));
+        }
+        return UsdImagingDataSourceGprim::Get(name);
+    }
+
+    ~ArnoldShapeDataSourcePrim() override = default;
+
+    static HdDataSourceLocatorSet Invalidate(
+        const UsdPrim& prim, const TfToken& subprim, const TfTokenVector& properties,
+        UsdImagingPropertyInvalidationType invalidationType)
+    {
+        // TODO: test invalidation in interactive mode
+        return UsdImagingDataSourceGprim::Invalidate(prim, subprim, properties, invalidationType);
+    }
+
+private:
+    USDIMAGING_API
+    ArnoldShapeDataSourcePrim(
+        const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const ParamNamesT &paramNames, const UsdImagingDataSourceStageGlobals& stageGlobals)
+        : UsdImagingDataSourceGprim(sceneIndexPath, usdPrim, stageGlobals), _paramNames(paramNames)
+    {
+    }
+    const ParamNamesT &_paramNames; ///< reference to the lookup table with USD and Arnold param names.
+};
+
+HD_DECLARE_DATASOURCE_HANDLES(ArnoldShapeDataSourcePrim);
+
+HdContainerDataSourceHandle UsdImagingArnoldShapeAdapter::GetImagingSubprimData(
+    UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return ArnoldShapeDataSourcePrim::New(
+            prim.GetPath(),
+            prim,
+            _paramNames,
+            stageGlobals);
+    }
+    return UsdImagingGprimAdapter::GetImagingSubprimData(prim, subprim, stageGlobals);
+}
+
+
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

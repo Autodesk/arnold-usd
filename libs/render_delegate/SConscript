@@ -39,6 +39,7 @@ source_files = [
     'render_param.cpp',
     'render_pass.cpp',
     'implicitSurfaceSIP.cpp',
+    'dependenciesSIP.cpp',
     'dependencyForwardingSIP.cpp',
     'extComputationPrimvarPruningSIP.cpp',
     'shape.cpp',

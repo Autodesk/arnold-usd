@@ -796,6 +796,12 @@ private:
     bool _enableNodesDestruction = true;
 
     std::unordered_map<std::string, AtNode *> _nodeNames;
+
+    // We store a list of functions that must be run once all the prims are synced and have filled the 
+    // vectors like 
+    // They will be ran in the _Execute function
+    std::mutex _deferredFunctionCallsMutex;
+    std::vector<std::function<void()>> _deferredFunctionCalls;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

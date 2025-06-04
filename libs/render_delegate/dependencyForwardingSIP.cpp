@@ -27,4 +27,4 @@ HdSceneIndexBaseRefPtr HdArnoldDependencyForwardingSceneIndexPlugin::_AppendScen
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-//#endif // PXR_VERSION >= 2208
+// #endif // PXR_VERSION >= 2208

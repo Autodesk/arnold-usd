@@ -32,6 +32,21 @@ class ArnoldProceduralCustomAdapter : public UsdImagingGprimAdapter {
 public:
     using BaseAdapter = UsdImagingGprimAdapter;
 
+    ArnoldProceduralCustomAdapter()
+        : UsdImagingGprimAdapter()
+    {}
+
+    //
+    // Scene index support
+    //
+
+    TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
+
+    TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
+
+    HdContainerDataSourceHandle GetImagingSubprimData(
+        UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
+
     /// Populate primitives in the usd imaging index proxy.
     ///
     /// @param prim USD Primitive of the ArnoldProceduralCustom.

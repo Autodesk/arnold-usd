@@ -597,7 +597,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 if (filterMaterial == nullptr) {
                     continue;
                 }
-                auto* filter = filterMaterial->GetSurfaceShader();
+                auto* filter = filterMaterial->GetCachedSurfaceShader();
                 if (filter == nullptr) {
                     continue;
                 }
@@ -667,25 +667,25 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         HdArnoldSetTransform(_light, sceneDelegate, id);
     }
 
-    // TODO(pal): Test if there is a separate dirty bits for this, maybe DirtyCollection?
-    auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
-        auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
-        if (linkValue.IsHolding<TfToken>()) {
-            const auto& link = linkValue.UncheckedGet<TfToken>();
-            if (currentLink != link) {
-                param->Interrupt();
-                // The empty link value only exists when creating the class, so link can never match emptyLink.
-                if (currentLink != _tokens->emptyLink) {
-                    _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+    if (*dirtyBits & (DirtyParams | DirtyShadowParams | DirtyCollection)) {
+        auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
+            auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
+            if (linkValue.IsHolding<TfToken>()) {
+                const auto& link = linkValue.UncheckedGet<TfToken>();
+                if (currentLink != link) {
+                    param->Interrupt();
+                    // The empty link value only exists when creating the class, so link can never match emptyLink.
+                    if (currentLink != _tokens->emptyLink) {
+                        _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+                    }
+                    _delegate->RegisterLightLinking(link, this, isShadow);
+                    currentLink = link;
                 }
-                _delegate->RegisterLightLinking(link, this, isShadow);
-                currentLink = link;
             }
-        }
-    };
-    updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
-    updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
-
+        };
+        updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
+        updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
+    }
     *dirtyBits = HdLight::Clean;
 }
 
@@ -791,9 +791,9 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
     AtNode *color = nullptr;
     std::vector<AtNode *> lightFilters;
     if (!lightShaderPath.IsEmpty()) {
-        const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
         if (nodeGraph) {
-            color = nodeGraph->GetTerminal(str::t_color);
+            color = nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_color);
             if (color) {
                 // Only certain types of light can be linked
                 if (AiNodeIs(light, str::skydome_light) ||
@@ -805,7 +805,7 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
                 }
             } 
             
-            lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
+            lightFilters = nodeGraph->GetOrCreateTerminals(sceneDelegate, _tokens->filtersArray);
             if (!lightFilters.empty()) {
                 VtArray<std::string> filtersNodeName;
                 for (const AtNode *node:lightFilters) {

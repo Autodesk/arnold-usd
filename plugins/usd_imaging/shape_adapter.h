@@ -25,11 +25,30 @@
 
 #include <ai.h>
 
+    
 PXR_NAMESPACE_OPEN_SCOPE
+
+using ParamNamesT = std::vector<std::pair<TfToken, AtString>>;
 
 class UsdImagingArnoldShapeAdapter : public UsdImagingGprimAdapter {
 public:
     using BaseAdapter = UsdImagingGprimAdapter;
+
+    UsdImagingArnoldShapeAdapter()
+        : UsdImagingGprimAdapter()
+    {}
+
+    //
+    // Scene index support
+    //
+
+    TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
+
+    TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
+
+    HdContainerDataSourceHandle GetImagingSubprimData(
+        UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
+
     USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index,
@@ -59,7 +78,7 @@ public:
         const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time,
         VtIntArray* outIndices) const override;
 private:
-    std::vector<std::pair<TfToken, AtString> > _paramNames; ///< Lookup table with USD and Arnold param names.
+    ParamNamesT _paramNames; ///< Lookup table with USD and Arnold param names.
 protected:
     /// Caches param names for later lookup.
     /// Does nothing if USD is earlier than 20.11.

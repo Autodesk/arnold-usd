@@ -249,7 +249,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
                                  _tokens->GeometryLight, _tokens->ArnoldOptions,
-                                 HdPrimTypeTokens->extComputation
+                                 HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
 }
@@ -1205,6 +1205,10 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return (_mask & AI_NODE_SHADER) ? 
             new HdArnoldNodeGraph(this, sprimId) : nullptr;
     }
+    if (typeId == str::t_ArnoldNodeGraph) {
+        return (_mask & AI_NODE_SHADER) ? 
+            new HdArnoldNodeGraph(this, sprimId) : nullptr;
+    }
     if (typeId == _tokens->ArnoldOptions) {
         return (_mask & AI_NODE_OPTIONS) ? 
             new HdArnoldOptions(this, sprimId) : nullptr;
@@ -1450,7 +1454,7 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
     if (lightEmpty && shadowEmpty) {
         return;
     }
-    auto applyGroups = [&](const AtString& group, const AtString& useGroup, const LightLinkingMap& links) {
+    auto applyGroups = [=](const AtString& group, const AtString& useGroup, const LightLinkingMap& links) {
         std::vector<AtNode*> lights;
         for (const auto& category : categories) {
             auto it = links.find(category);
@@ -1491,16 +1495,20 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
         }
         AiNodeSetBool(shape, useGroup, true);
     };
+
     if (!lightEmpty) {
-        applyGroups(str::light_group, str::use_light_group, _lightLinks);
+        std::lock_guard<std::mutex> guard(_deferredFunctionCallsMutex);
+        _deferredFunctionCalls.push_back(std::bind(applyGroups, str::light_group, str::use_light_group, _lightLinks));
     }
     if (!shadowEmpty) {
-        applyGroups(str::shadow_group, str::use_shadow_group, _shadowLinks);
+        std::lock_guard<std::mutex> guard(_deferredFunctionCallsMutex);
+        _deferredFunctionCalls.push_back(std::bind(applyGroups, str::shadow_group, str::use_shadow_group, _shadowLinks));
     }
 }
 
 void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
     const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
+    std::cout << "Apply light linking for " << id.GetString() << std::endl;
     VtArray<TfToken> instancerCategories;
     // If this shape is instanced, we store the list of "categories"
     // (aka collections) associated with it.
@@ -1541,6 +1549,14 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
 
 bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
+    if (!_deferredFunctionCalls.empty()) {
+        // TODO: depending on the size, we could do the update in parallel.
+        for (const auto& func : _deferredFunctionCalls) {
+            func();
+        }
+        _deferredFunctionCalls.clear();
+    }
+
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
     // the light linking information.
@@ -1763,7 +1779,7 @@ AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
     if (nodeGraph)    
-        return nodeGraph->GetTerminal(str::t_background);
+        return nodeGraph->GetCachedTerminal(str::t_background);
     return nullptr;
 }
 
@@ -1771,7 +1787,7 @@ AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
     if (nodeGraph)
-        return nodeGraph->GetTerminal(str::t_atmosphere);
+        return nodeGraph->GetCachedTerminal(str::t_atmosphere);
     return nullptr;
 }
 
@@ -1779,9 +1795,9 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     std::vector<AtNode *> nodes;
     for (const auto &materialPath: _aov_shaders) {
-        const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
         if (nodeGraph) {
-            const auto &terminals = nodeGraph->GetTerminals(_tokens->aovShadersArray);
+            const auto &terminals = nodeGraph->GetCachedTerminals(_tokens->aovShadersArray);
             std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
         }
     }
@@ -1792,7 +1808,7 @@ AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
     if (nodeGraph)
-        return nodeGraph->GetTerminal(str::t_input);
+        return nodeGraph->GetCachedTerminal(str::t_input);
     return nullptr;
 }
 
@@ -1808,7 +1824,7 @@ AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
     if (nodeGraph)    
-        return nodeGraph->GetTerminal(str::t_shader_override);
+        return nodeGraph->GetCachedTerminal(str::t_shader_override);
     return nullptr;
 }
 

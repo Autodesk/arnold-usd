@@ -18,15 +18,19 @@
 
 #include "procedural_custom_adapter.h"
 
+#include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include <pxr/imaging/hd/material.h>
-
+#include <pxr/imaging/hd/overlayContainerDataSource.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
-
-#include "constant_strings.h"
-#include <iostream>
-
-#include <pxr/usdImaging/usdImaging/tokens.h>
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
+#include <pxr/usdImaging/usdImaging/tokens.h>
+
+#include <iostream>
+#include "constant_strings.h"
+
 
 #if PXR_VERSION >= 2108
 
@@ -191,5 +195,89 @@ ArnoldProceduralCustomAdapter::ProcessPrimResync(
 
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
+
+TfTokenVector ArnoldProceduralCustomAdapter::GetImagingSubprims(UsdPrim const& prim) {
+    return { TfToken() };
+}
+
+TfToken ArnoldProceduralCustomAdapter::GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+        return str::t_procedural_custom; // TODO
+    }
+    return TfToken();
+}
+
+class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
+public:
+    HD_DECLARE_DATASOURCE(ArnoldProceduralCustomDataSourcePrim);
+
+    TfTokenVector GetNames() override
+    {
+        TfTokenVector result = UsdImagingDataSourcePrim::GetNames();
+        // Assuming primvars is already added by UsdImagingDataSourcePrim
+        return result;
+    }
+
+    UsdImagingDataSourceCustomPrimvars::Mappings _GetMappings() const
+    {
+        UsdImagingDataSourceCustomPrimvars::Mappings mappings;
+        // TODO: ideally we want to return the static mappings coming from the schema instead of
+        // the ones queried on the usd prim
+        for (const UsdProperty& prop : _GetUsdPrim().GetPropertiesInNamespace("arnold")) {
+            mappings.emplace_back(prop.GetName(), prop.GetName(), TfToken("constant"));
+        }
+        return mappings;
+    }
+
+    HdDataSourceBaseHandle Get(const TfToken& name) override
+    {
+        if (name == HdPrimvarsSchema::GetSchemaToken()) {
+            return
+                HdOverlayContainerDataSource::New(
+                    HdContainerDataSource::Cast(
+                        UsdImagingDataSourcePrim::Get(name)),
+                    UsdImagingDataSourceCustomPrimvars::New(
+                        _GetSceneIndexPath(),
+                        _GetUsdPrim(),
+                        _GetMappings(),
+                        _GetStageGlobals()));
+        }
+        return UsdImagingDataSourcePrim::Get(name);
+    }
+
+    ~ArnoldProceduralCustomDataSourcePrim() override = default;
+
+    static HdDataSourceLocatorSet Invalidate(
+        const UsdPrim& prim, const TfToken& subprim, const TfTokenVector& properties,
+        UsdImagingPropertyInvalidationType invalidationType)
+    {
+        return UsdImagingDataSourcePrim::Invalidate(prim, subprim, properties, invalidationType);
+    }
+
+private:
+    USDIMAGING_API
+    ArnoldProceduralCustomDataSourcePrim(
+        const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const UsdImagingDataSourceStageGlobals& stageGlobals)
+        : UsdImagingDataSourcePrim(sceneIndexPath, usdPrim, stageGlobals)
+    {
+    }
+};
+
+HD_DECLARE_DATASOURCE_HANDLES(ArnoldProceduralCustomDataSourcePrim);
+
+HdContainerDataSourceHandle ArnoldProceduralCustomAdapter::GetImagingSubprimData(
+    UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals)
+{
+    if (subprim.IsEmpty()) {
+        return ArnoldProceduralCustomDataSourcePrim::New(
+            prim.GetPath(),
+            prim,
+            stageGlobals);
+    }
+
+    return nullptr;
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

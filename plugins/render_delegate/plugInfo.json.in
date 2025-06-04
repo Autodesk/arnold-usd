@@ -33,6 +33,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold light linking"
+                    },
+                    "HdArnoldDependencySceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold prim dependencies"
                     }
                 }
             },

@@ -22,7 +22,7 @@
 #include <common_bits.h>
 #include <constant_strings.h>
 #include <shape_utils.h>
-
+#include <pxr/imaging/hd/retainedDataSource.h>
 PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldNativeRprim::HdArnoldNativeRprim(
@@ -46,7 +46,24 @@ void HdArnoldNativeRprim::Sync(
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
     }
-    
+
+    auto GetArnoldAttributes = [&]() {
+        // Try to get the arnold attributes via the scene delegate
+        const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+        if (!val.IsEmpty())
+            return val;
+        // Otherwise try with the sceneIndex
+        HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+        if (sceneIndex) {
+            HdSampledDataSourceHandle arnoldAttribute = HdSampledDataSource::Cast(
+                sceneIndex->GetDataSource(id, HdDataSourceLocator(str::t_arnold__attributes)));
+            if (arnoldAttribute) {
+                return arnoldAttribute->GetValue(0.0);
+            }   
+        }
+        return VtValue();
+    };
+
     // If the primitive is invisible for hydra, we want to skip it here
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
@@ -55,13 +72,13 @@ void HdArnoldNativeRprim::Sync(
     // Sync any built-in parameters.
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
-        const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+        VtValue val = GetArnoldAttributes();
         if (val.IsHolding<ArnoldUsdParamValueList>()) {
             const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
             for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
                 HdArnoldSetParameter(
-                        GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), 
-                        param.second, GetRenderDelegate());
+                    GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second,
+                    GetRenderDelegate());
                 if (param.first == str::t_visibility)
                     defaultVisibility = (int)AiNodeGetByte(GetArnoldNode(), str::visibility);
             }
@@ -77,9 +94,9 @@ void HdArnoldNativeRprim::Sync(
         const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
         if (material != nullptr) {
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetVolumeShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader());
             } else {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader());
             }
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);

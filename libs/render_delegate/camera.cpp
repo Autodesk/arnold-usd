@@ -59,8 +59,7 @@ AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRend
     _delegate->TrackDependencies(GetId(), pathSet);
 
     if (shaderNodeGraph) {
-        shaderNodeGraph->Sync(sceneDelegate, renderParam, dirtyBits);
-        return shaderNodeGraph->GetTerminal(terminal);
+        return shaderNodeGraph->GetOrCreateTerminal(sceneDelegate, terminal);
     }
     return nullptr;
 };

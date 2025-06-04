@@ -34,8 +34,15 @@ void ProceduralReader::Read(const std::string &filename,
             _overrides = nullptr;
             return;
         }
-        UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
-        ReadStage(stage, path);
+        if (path.empty()) {
+            UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
+            ReadStage(stage, path);
+        } else {
+            UsdStagePopulationMask mask({SdfPath(path)});
+            UsdStageRefPtr stage = UsdStage::OpenMasked(rootLayer, mask, UsdStage::LoadAll);
+            ReadStage(stage, path);
+        }
+
     } else {
         _overrides = overrides; // Store the overrides that are currently being applied
         auto getLayerName = []() -> std::string {
@@ -69,10 +76,16 @@ void ProceduralReader::Read(const std::string &filename,
         overrideLayer->SetSubLayerPaths(layerNames);
         // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
         // USD from crashing #235
-        auto stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
-                               : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
-
-        ReadStage(stage, path);
+        if (path.empty()) {
+            auto stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
+                                   : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
+            ReadStage(stage, path);
+        } else {
+            UsdStagePopulationMask mask({SdfPath(path)});
+            auto stage = rootLayer ? UsdStage::OpenMasked(rootLayer, overrideLayer, mask, UsdStage::LoadAll)
+                                   : UsdStage::OpenMasked(overrideLayer, mask, UsdStage::LoadAll);
+            ReadStage(stage, path);
+        }
     }
 
     _filename = "";       // finished reading, let's clear the filename
