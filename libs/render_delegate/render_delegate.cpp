@@ -1508,7 +1508,6 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
 
 void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
     const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
-    std::cout << "Apply light linking for " << id.GetString() << std::endl;
     VtArray<TfToken> instancerCategories;
     // If this shape is instanced, we store the list of "categories"
     // (aka collections) associated with it.
