@@ -102,7 +102,7 @@ static void SamplePrimvarChecked(
     HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, VectorT& out)
 {
     HdArnoldSampledPrimvarType sample;
-    delegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], &sample);
+    SamplePrimvar(delegate, id, key, shutterRange, &sample);
     HdArnoldEnsureSamplesCount(shutterRange, sample);
     if (sample.count >= 1) {
         // We expect SamplePrimvar to return the same number of elements in sampled arrays.
@@ -206,11 +206,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const auto numInstances = instanceIndices.size();
 
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
-    GetDelegate()->SampleInstancerTransform(instancerId,
-    // TODO #if PXR_VERSION 
-        _samplingInterval[0], 
-        _samplingInterval[1],
-        &instancerTransforms);
+    SampleInstancerTransform(GetDelegate(), instancerId, _samplingInterval, &instancerTransforms);
     HdArnoldEnsureSamplesCount(_samplingInterval, instancerTransforms);
 
     // Similarly to the HdPrman render delegate, we take a look at the sampled values, and take the one with the

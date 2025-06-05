@@ -1,4 +1,5 @@
 
+#include <pxr/pxr.h>
 #if PXR_VERSION >= 2505 // Hydra 2
 
 #include "extComputationPrimvarPruningSIP.h"
@@ -9,7 +10,6 @@
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/imaging/hdsi/extComputationPrimvarPruningSceneIndex.h>
-#include <pxr/pxr.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
 #include <pxr/usdImaging/usdSkelImaging/bindingSchema.h>
 

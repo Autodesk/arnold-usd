@@ -26,6 +26,7 @@
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include "constant_strings.h"
 
+#include <iostream>
 #if PXR_VERSION >= 2108
 
 #include <pxr/usd/ar/resolverContextBinder.h>
@@ -37,11 +38,109 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// namespace {
+// static bool
+// _FindLocator(HdDataSourceLocator const& locator,
+//              HdDataSourceLocatorSet::const_iterator const& end,
+//              HdDataSourceLocatorSet::const_iterator *it,
+//              const bool advanceToNext = true)
+// {
+//     if (*it == end) {
+//         return false;
+//     }
+
+//     // The range between *it and end can be divided into:
+//     // 1.) items < locator and not a prefix.
+//     // 2.) items < locator and a prefix.
+//     // 3.) locator
+//     // 4.) items > locator and a suffix.
+//     // 5.) items > locator and not a suffix.
+
+//     // We want to return true if sets [2-4] are nonempty.
+//     // If (advanceToNext) is true, we leave it pointing at the first element
+//     // of 5; otherwise, we leave it pointing at the first element of [2-4].
+//     bool found = false;
+//     for (; (*it) != end; ++(*it)) {
+//         if ((*it)->Intersects(locator)) {
+//             found = true;
+//             if (!advanceToNext) {
+//                 break;
+//             }
+//         } else if (locator < (**it)) {
+//             break;
+//         }
+//     }
+//     return found;
+// }
+// void
+// _ConvertLocatorSetToDirtyBitsForNodeGraph(
+//     HdDataSourceLocatorSet const& set, HdDirtyBits *bitsOut)
+// {
+//     // if (set.Intersects(HdDataSourceLocator(_tokens->taco, _tokens->protein))) {
+//     //     (*bits) |= DirtyProtein;
+//     // }
+
+//     // if (set.Intersects(HdDataSourceLocator(_tokens->taco, _tokens->tortilla))) {
+//     //     (*bits) |= DirtyTortilla;
+//     // }
+
+//     // if (set.Intersects(HdDataSourceLocator(_tokens->taco, _tokens->salsa))) {
+//     //     (*bits) |= DirtySalsa;
+//     // }
+//     HdDataSourceLocatorSet::const_iterator it = set.begin();
+
+//     if (it == set.end()) {
+//         *bitsOut = HdChangeTracker::Clean;
+//         return;
+//     }
+//     HdDataSourceLocatorSet::const_iterator end = set.end();
+//     HdDirtyBits bits = HdChangeTracker::Clean;
+
+//     if (_FindLocator(HdMaterialSchema::GetDefaultLocator(), end, &it)) {
+//         bits |= HdMaterial::DirtyParams | HdMaterial::DirtyResource;
+//         for (const auto& locator : set) {
+//             static const HdDataSourceLocator materialLocator(
+//                 HdMaterialSchema::GetDefaultLocator());
+//             if (locator == materialLocator) {
+//                 bits |= HdMaterial::AllDirty;
+//             } else {
+//                 TfToken terminal = HdMaterialSchema::GetLocatorTerminal(
+//                     locator, TfTokenVector());
+//                 if (terminal == HdMaterialSchemaTokens->surface) {
+//                     bits |= HdMaterial::DirtySurface;
+//                 }
+//                 else if (terminal == HdMaterialSchemaTokens->displacement) {
+//                     bits |= HdMaterial::DirtyDisplacement;
+//                 }
+//                 else if (terminal == HdMaterialSchemaTokens->volume) {
+//                     bits |= HdMaterial::DirtyVolume;
+//                 } else {
+//                     std::cout << "unknown terminal dirtied" << std::endl;
+//                 }
+//             }
+//         }
+//     }
+//     *bitsOut = bits;
+// }
+
+// void
+// _ConvertDirtyBitsToLocatorSetForNodeGraph(
+//     const HdDirtyBits bits, HdDataSourceLocatorSet *set)
+// {
+//     if (bits & HdMaterial::AllDirty) {
+//         set->append(HdMaterialSchema::GetDefaultLocator());
+//     }
+// }
+// }
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     using Adapter = ArnoldNodeGraphAdapter;
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
     t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
+
+    // HdDirtyBitsTranslator::RegisterTranslatorsForCustomSprimType(
+    //     str::t_ArnoldNodeGraph, _ConvertLocatorSetToDirtyBitsForNodeGraph, _ConvertDirtyBitsToLocatorSetForNodeGraph);
 }
 
 #if PXR_VERSION >= 2108

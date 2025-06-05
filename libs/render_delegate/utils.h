@@ -572,5 +572,52 @@ bool IsVaryingTopology(const SampledTyped &xf) {
     return false;
 }
 
+template <typename SampledPrimvarType>
+inline void SamplePrimvar(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#if PXR_VERSION >= 2505
+    sceneDelegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SamplePrimvar(id, key, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleIndexedPrimvar(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#if PXR_VERSION >= 2505
+    sceneDelegate->SampleIndexedPrimvar(id, key, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleIndexedPrimvar(id, key, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleInstancerTransform(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#if PXR_VERSION >= 2505
+    sceneDelegate->SampleInstancerTransform(id, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleInstancerTransform(id, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleTransform(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#if PXR_VERSION >= 2505
+    sceneDelegate->SampleTransform(id, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleTransform(id, samples);
+#endif
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -71,7 +71,7 @@ if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
-target_link_libraries(render_delegate INTERFACE common usdSkelImaging)
+target_link_libraries(render_delegate INTERFACE common)
 if (ENABLE_SHARED_ARRAYS)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SHARED_ARRAYS=1)
 endif()

@@ -2,7 +2,7 @@
 
 #include "pxr/pxr.h"
 
-#if PXR_VERSION >= 2208
+#if PXR_VERSION >= 2505
 
 #include "pxr/imaging/hd/sceneIndexPlugin.h"
 

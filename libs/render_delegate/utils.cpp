@@ -84,8 +84,7 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
 {
     HdArnoldSampledMatrixType xf{};
 
-// TODO depending on the version
-    sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
+    SampleTransform(sceneDelegate, id, samplingInterval, &xf);
     const float timeStart = samplingInterval[0];
     const float timeEnd = samplingInterval[1];
     HdArnoldEnsureSamplesCount(samplingInterval, xf);
@@ -165,7 +164,7 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
 void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
     HdArnoldSampledMatrixType xf{};
-    sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
+    SampleTransform(sceneDelegate, id, samplingInterval, &xf);
     HdArnoldEnsureSamplesCount(samplingInterval, xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
@@ -448,9 +447,7 @@ size_t HdArnoldSetPositionFromPrimvar(
     if (pointsSample != nullptr && pointsSample->count > 0) {
         sample = *pointsSample;
     } else {
-        sceneDelegate->SamplePrimvar(id, HdTokens->points,
-            param->GetShutterRange()[0],  param->GetShutterRange()[1], 
-            &sample);    
+        SamplePrimvar(sceneDelegate, id, HdTokens->points, param->GetShutterRange(), &sample);
     }
     HdArnoldSampledType<VtVec3fArray> xf;
     HdArnoldUnboxSample(sample, xf);
@@ -534,7 +531,7 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
 {
     GfVec2f samplingInterval = param->GetShutterRange();
     HdArnoldSampledPrimvarType sample;
-    sceneDelegate->SamplePrimvar(id, primvarName, samplingInterval[0], samplingInterval[1], &sample);
+    SamplePrimvar(sceneDelegate, id, primvarName, samplingInterval, &sample);
     HdArnoldEnsureSamplesCount(samplingInterval, sample);
     HdArnoldSampledType<VtArray<GfVec3f>> xf;
     HdArnoldUnboxSample(sample, xf);
