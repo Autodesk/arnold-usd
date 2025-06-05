@@ -51,7 +51,6 @@ HdContainerDataSourceHandle _BuildLightArnoldShaderDependenciesDs(const std::str
 
     TfTokenVector names;
     std::vector<HdDataSourceBaseHandle> deps;
-    const size_t numFilters = 1;
 
     // Register a dependency on each filter targeted by the light such that
     // the invalidation of *any* locator on the filter invalidates the 'light'
