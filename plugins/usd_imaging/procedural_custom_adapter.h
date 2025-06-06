@@ -35,7 +35,7 @@ public:
     ArnoldProceduralCustomAdapter()
         : UsdImagingGprimAdapter()
     {}
-
+#if PXR_VERSION >= 2505
     //
     // Scene index support
     //
@@ -46,6 +46,7 @@ public:
 
     HdContainerDataSourceHandle GetImagingSubprimData(
         UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
+#endif
 
     /// Populate primitives in the usd imaging index proxy.
     ///

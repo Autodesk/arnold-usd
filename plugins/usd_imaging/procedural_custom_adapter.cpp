@@ -27,7 +27,9 @@
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
-
+#include <pxr/usdImaging/usdImaging/primvarUtils.h>
+#include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
+#include <pxr/base/tf/denseHashMap.h>
 #include <iostream>
 #include "constant_strings.h"
 
@@ -196,6 +198,7 @@ ArnoldProceduralCustomAdapter::ProcessPrimResync(
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
 
+#if PXR_VERSION >= 2505
 TfTokenVector ArnoldProceduralCustomAdapter::GetImagingSubprims(UsdPrim const& prim) {
     return { TfToken() };
 }
@@ -207,6 +210,129 @@ TfToken ArnoldProceduralCustomAdapter::GetImagingSubprimType(UsdPrim const& prim
     }
     return TfToken();
 }
+// ArnoldDataSourceCustomPrimvars is a copy/paste/rename of UsdImagingDataSourceCustomPrimvars.
+// We should use UsdImagingDataSourceCustomPrimvars but on windows the constructor is not exported and the build
+// fails at link time.
+
+static
+TfToken
+_GetInterpolation(const UsdAttribute &attr)
+{
+    // A reimplementation of UsdGeomPrimvar::GetInterpolation(),
+    // but with "vertex" as the default instead of "constant"...
+    TfToken interpolation;
+    if (attr.GetMetadata(UsdGeomTokens->interpolation, &interpolation)) {
+        return UsdImagingUsdToHdInterpolationToken(interpolation);
+    }
+
+    return HdPrimvarSchemaTokens->vertex;
+}
+class ArnoldDataSourceCustomPrimvars : public HdContainerDataSource {
+public:
+    HD_DECLARE_DATASOURCE(ArnoldDataSourceCustomPrimvars);
+
+    USDIMAGING_API
+    TfTokenVector GetNames() override
+    {
+        TRACE_FUNCTION();
+
+        TfTokenVector result;
+        result.reserve(_mappings.size());
+
+        for (const auto& mapping : _mappings) {
+            result.push_back(mapping.primvarName);
+        }
+
+        return result;
+    }
+
+    USDIMAGING_API
+    HdDataSourceBaseHandle Get(const TfToken& name) override
+    {
+        TRACE_FUNCTION();
+
+        for (const Mapping& mapping : _mappings) {
+            if (mapping.primvarName != name) {
+                continue;
+            }
+
+            const UsdAttribute attr = _usdPrim.GetAttribute(mapping.usdAttrName);
+            UsdAttributeQuery valueQuery(attr);
+
+            if (!valueQuery.HasAuthoredValue()) {
+                return nullptr;
+            }
+
+            return UsdImagingDataSourcePrimvar::New(
+                _sceneIndexPath, name, _stageGlobals,
+                /* value = */ std::move(valueQuery),
+                /* indices = */ UsdAttributeQuery(),
+                HdPrimvarSchema::BuildInterpolationDataSource(
+                    mapping.interpolation.IsEmpty() ? _GetInterpolation(attr) : mapping.interpolation),
+                HdPrimvarSchema::BuildRoleDataSource(UsdImagingUsdToHdRole(attr.GetRoleName())),
+                /* elementSize = */ nullptr);
+        }
+
+        return nullptr;
+    }
+
+    struct Mapping {
+        Mapping(const TfToken& primvarName, const TfToken& usdAttrName, const TfToken& interpolation = TfToken())
+            : primvarName(primvarName), usdAttrName(usdAttrName), interpolation(interpolation)
+        {
+        }
+
+        TfToken primvarName;
+        TfToken usdAttrName;
+        TfToken interpolation;
+    };
+
+    // This map is passed to the constructor to specify non-"primvars:"
+    // attributes to include as primvars (e.g., "points" and "normals").
+    // The first token is the datasource name, and the second the USD name.
+    using Mappings = std::vector<Mapping>;
+
+    USDIMAGING_API
+    static HdDataSourceLocatorSet Invalidate(const TfTokenVector& properties, const Mappings& mappings)
+    {
+        HdDataSourceLocatorSet result;
+
+        // TODO, decide how to handle this based on the size?
+        TfDenseHashMap<TfToken, TfToken, TfHash> nameMappings;
+        for (const ArnoldDataSourceCustomPrimvars::Mapping& m : mappings) {
+            nameMappings[m.usdAttrName] = m.primvarName;
+        }
+
+        for (const TfToken& propertyName : properties) {
+            const auto it = nameMappings.find(propertyName);
+            if (it != nameMappings.end()) {
+                result.insert(HdPrimvarsSchema::GetDefaultLocator().Append(it->second));
+            }
+        }
+
+        return result;
+    }
+
+private:
+    ArnoldDataSourceCustomPrimvars(
+        const SdfPath& sceneIndexPath, UsdPrim const& usdPrim, const Mappings& mappings,
+        const UsdImagingDataSourceStageGlobals& stageGlobals)
+        : _sceneIndexPath(sceneIndexPath), _usdPrim(usdPrim), _stageGlobals(stageGlobals), _mappings(mappings)
+    {
+    }
+
+    // Path of the owning prim.
+    SdfPath _sceneIndexPath;
+
+    UsdPrim _usdPrim;
+
+    // Stage globals handle.
+    const UsdImagingDataSourceStageGlobals& _stageGlobals;
+
+    const Mappings _mappings;
+};
+
+HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourceCustomPrimvars);
 
 class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
@@ -219,9 +345,9 @@ public:
         return result;
     }
 
-    UsdImagingDataSourceCustomPrimvars::Mappings _GetMappings() const
+    ArnoldDataSourceCustomPrimvars::Mappings _GetMappings() const
     {
-        UsdImagingDataSourceCustomPrimvars::Mappings mappings;
+        ArnoldDataSourceCustomPrimvars::Mappings mappings;
         // TODO: ideally we want to return the static mappings coming from the schema instead of
         // the ones queried on the usd prim
         for (const UsdProperty& prop : _GetUsdPrim().GetPropertiesInNamespace("arnold")) {
@@ -237,7 +363,7 @@ public:
                 HdOverlayContainerDataSource::New(
                     HdContainerDataSource::Cast(
                         UsdImagingDataSourcePrim::Get(name)),
-                    UsdImagingDataSourceCustomPrimvars::New(
+                    ArnoldDataSourceCustomPrimvars::New(
                         _GetSceneIndexPath(),
                         _GetUsdPrim(),
                         _GetMappings(),
@@ -277,6 +403,6 @@ HdContainerDataSourceHandle ArnoldProceduralCustomAdapter::GetImagingSubprimData
 
     return nullptr;
 }
-
+#endif
 
 PXR_NAMESPACE_CLOSE_SCOPE
