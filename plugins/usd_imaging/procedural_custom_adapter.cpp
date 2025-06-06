@@ -255,8 +255,7 @@ public:
         return UsdImagingDataSourcePrim::Invalidate(prim, subprim, properties, invalidationType);
     }
 
-private:
-    USDIMAGING_API
+private:    
     ArnoldProceduralCustomDataSourcePrim(
         const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const UsdImagingDataSourceStageGlobals& stageGlobals)
         : UsdImagingDataSourcePrim(sceneIndexPath, usdPrim, stageGlobals)

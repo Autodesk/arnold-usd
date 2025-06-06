@@ -165,7 +165,6 @@ public:
     }
 
 private:
-    USDIMAGING_API
     ArnoldShapeDataSourcePrim(
         const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const ParamNamesT &paramNames, const UsdImagingDataSourceStageGlobals& stageGlobals)
         : UsdImagingDataSourceGprim(sceneIndexPath, usdPrim, stageGlobals), _paramNames(paramNames)
