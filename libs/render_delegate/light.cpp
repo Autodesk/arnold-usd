@@ -783,10 +783,18 @@ AtNode* GetLightNode(const HdLight* light)
 
 SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
 {
+    // Get the value of the parameter on the light
+    VtValue lightParamValue = sceneDelegate->GetLightParamValue(id, attr);
+    // We might also be querying a mesh, in that case try to get the primvar (hydra2)
+    if (lightParamValue.IsEmpty()) { // Try as a regular primvar
+        const TfToken attrWoPrimvar =
+            TfStringStartsWith(attr.GetString(), "primvars:") ? TfToken(attr.GetString().substr(9)) : attr;
+        float time = 0;
+        sceneDelegate->SamplePrimvar(id, attrWoPrimvar, 1, &time, &lightParamValue);
+    }
     // get the sdf path for the light shader arnold node graph container
     SdfPath lightShaderPath;
-    ArnoldUsdCheckForSdfPathValue(sceneDelegate->GetLightParamValue(id, attr),
-                                  [&](const SdfPath& p) { lightShaderPath = p; });
+    ArnoldUsdCheckForSdfPathValue(lightParamValue, [&](const SdfPath& p) { lightShaderPath = p; });
 
     AtNode *color = nullptr;
     std::vector<AtNode *> lightFilters;

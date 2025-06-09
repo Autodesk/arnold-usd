@@ -440,8 +440,7 @@ public:
         return result;
     }
 
-private:
-    USDIMAGING_API
+private:    
     ArnoldNodeGraphDataSourcePrim(
         const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const UsdImagingDataSourceStageGlobals& stageGlobals)
         : UsdImagingDataSourcePrim(sceneIndexPath, usdPrim, stageGlobals)
