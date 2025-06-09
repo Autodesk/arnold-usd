@@ -344,7 +344,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_profile_file, {"File Output for Profiling", config.profile_file}},
         // Stats Settings
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
-        {str::t_stats_mode, {"Overwrite or append"}},
         // Search paths
         {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
@@ -705,21 +704,6 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _statsFile = value.UncheckedGet<std::string>();
             AiStatsSetFileName(_statsFile.c_str());
         }
-    } else if (key == str::t_stats_mode) {
-        if (value.IsHolding<int>()) {
-            _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
-        } else if (value.IsHolding<std::string>()) {
-            // This value can be returned as a string, with 0 & 1, 
-            // or with overwrite & append
-            std::string statsStr = VtValueGetString(value);
-            if (statsStr == std::string("0") || statsStr == std::string("overwrite"))
-                _statsMode = AI_STATS_MODE_OVERWRITE;
-            else if (statsStr == std::string("1") || statsStr == std::string("append"))
-                _statsMode = AI_STATS_MODE_APPEND;
-            else
-                AiMsgWarning("Unknown Stats mode %s", statsStr.c_str());
-        }
-        AiStatsSetMode(_statsMode);
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
             _profileFile = value.UncheckedGet<std::string>();
@@ -1005,8 +989,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_reportFile);
     } else if (key == str::t_stats_file) {
         return VtValue(_statsFile);
-    } else if (key == str::t_stats_mode) {
-        return VtValue(static_cast<int>(_statsMode));
     } else if (key == str::t_profile_file) {
         return VtValue(_profileFile);
     } else if (key == str::t_interactive_target_fps) {
