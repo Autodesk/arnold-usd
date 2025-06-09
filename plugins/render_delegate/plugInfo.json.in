@@ -39,6 +39,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold prim dependencies"
+                    },
+                    "HdArnoldFixMaterialPruningSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold fix material pruning"
                     }
                 }
             },

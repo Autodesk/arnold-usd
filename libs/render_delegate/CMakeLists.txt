@@ -8,6 +8,7 @@ set(SRC
     debug_codes.cpp
     dependenciesSIP.cpp
     dependencyForwardingSIP.cpp
+    fixMaterialPruningSIP.cpp
     extComputationPrimvarPruningSIP.cpp
     instancer.cpp
 	implicitSurfaceSIP.cpp
