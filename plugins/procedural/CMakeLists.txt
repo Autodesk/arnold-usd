@@ -39,7 +39,7 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate hdsi ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImaging usdImagingArnoldObjects)
 endif()
 
 if (APPLE OR LINUX)

@@ -227,6 +227,9 @@ if (HOUDINI_LOCATION)
         if (${USD_VERSION} VERSION_LESS "0.25.05")
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
+        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+            list(APPEND ARNOLD_USD_LIBS_ hdsi;usdSkelImaging)
+        endif()
         foreach (lib ${ARNOLD_USD_LIBS_})
             # We alias standard usd targets to the Houdini ones
             if (APPLE) # On macOS the targets are not defined, we should modify the code using libs to remove the creation of targets here.
