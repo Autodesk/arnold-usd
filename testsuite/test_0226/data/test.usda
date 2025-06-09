@@ -66,7 +66,9 @@ def Xform "pCylinder1"
         {
             uniform token[] xformOpOrder = ["xformOp:transform"]
 
-            def Mesh "mesh"
+            def Mesh "mesh" (
+                apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 uniform bool doubleSided = 1
                 float3[] extent = [(-1.0000002, -1, -1.0000005), (1, 1, 1.0000001)]

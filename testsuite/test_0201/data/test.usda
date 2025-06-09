@@ -10,6 +10,7 @@
 )
 
 def Xform "sphere1" (
+    apiSchemas = ["MaterialBindingAPI"]
     kind = "component"
 )
 {
@@ -41,6 +42,7 @@ def Xform "sphere1" (
 }
 
 def "sphere1_1" (
+    apiSchemas = ["MaterialBindingAPI"]
     append references = </sphere1>
 )
 {
@@ -50,6 +52,7 @@ def "sphere1_1" (
 }
 
 def "sphere1_2" (
+    apiSchemas = ["MaterialBindingAPI"]
     append references = </sphere1>
 )
 {
@@ -196,3 +199,4 @@ def "collections" (
         </sphere1_2>,
     ]
 }
+

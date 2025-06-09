@@ -8,6 +8,11 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -17,14 +22,8 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
-        float arnold:meters_per_unit = 0.01
-        float arnold:frame.timeSamples = {
-            1: 1,
-        }
     }
 }
-
 
 def Xform "persp"
 {
@@ -122,7 +121,9 @@ def Shader "file1"
 
 def Xform "pCube1"
 {
-    def Mesh "pCubeShape1"
+    def Mesh "pCubeShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
