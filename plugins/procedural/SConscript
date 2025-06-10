@@ -135,7 +135,7 @@ else:  # shared libs
         usd_libs += ['boost','python',]
 
     if local_env['USD_VERSION_INT'] >= 2505:
-        usd_libs += ['hdsi',]
+        usd_libs += ['hdsi','ts']
 
     usd_deps += [get_tbb_lib(env)]
 
