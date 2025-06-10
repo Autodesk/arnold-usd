@@ -64,6 +64,7 @@ def configure_ndr_plug_info(source, target, env):
     configure(source, target, env, {
         'LIB_PATH' : '../nodeRegistryArnold',
         'LIB_EXTENSION': system.LIB_EXTENSION,
+        'REGISTRY_BASE': 'Ndr' if usd_version < 2505 else 'Sdr',
     })
 
 def configure_procedural_ndr_plug_info(source, target, env):
@@ -71,6 +72,7 @@ def configure_procedural_ndr_plug_info(source, target, env):
     configure(source, target, env, {
         'LIB_PATH': '../../usd_proc',
         'LIB_EXTENSION': system.LIB_EXTENSION,
+        'REGISTRY_BASE': 'Ndr' if usd_version < 2505 else 'Sdr',
     })
 
 

@@ -106,6 +106,11 @@ endfunction()
 function(install_ndr_arnold_pluginfo LIB_PATH NDR_PLUGINFO CONFIG_ROOT)
     # LIB_PATH is used in the plugInfo.json.in, do not rename
     set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+		set(REGISTRY_BASE "Sdr")
+	else()
+		set(REGISTRY_BASE "Ndr")
+    endif ()
     configure_file(
         "${NDRARNOLD_PLUGINFO_SRC}"
         "${NDR_PLUGINFO}"
