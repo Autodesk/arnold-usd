@@ -11,7 +11,7 @@ if (NOT BUILD_WITH_USD_STATIC)
         set(_usd_deps ${_usd_deps} hdx)
     endif ()
     if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-        set(_usd_deps ${_usd_deps} hdsi usdSkelImaging)
+        set(_usd_deps ${_usd_deps} hdsi;usdSkelImaging;ts)
     endif ()
     add_common_dependencies(
         TARGET_NAME hdArnold

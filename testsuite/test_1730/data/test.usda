@@ -15,6 +15,7 @@ def ArnoldProceduralCustom "myinstancer"
     string arnold:node_entry = "instancer"
     uint[] arnold:node_idxs = [0, 0, 1, 1, 2, 2]
     string[] arnold:nodes = ["/cube", "/sphere", "/cone"]
+    string[] primvars:arnold:nodes = ["/cube", "/sphere", "/cone"]
 }
 
 def Cube "cube"

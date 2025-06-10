@@ -15,11 +15,11 @@
                 },
                 "Types": {
                     "NdrArnoldParserPlugin" : {
-                        "bases": ["SdrParserPlugin"],
+                        "bases": ["${REGISTRY_BASE}ParserPlugin"],
                         "displayName": "Arnold Node Parser"
                     },
                     "NodeRegistryArnoldDiscoveryPlugin" : {
-                        "bases": ["SdrDiscoveryPlugin"],
+                        "bases": ["${REGISTRY_BASE}DiscoveryPlugin"],
                         "displayName": "Arnold Node Discovery"
                     }
                 }

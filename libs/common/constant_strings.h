@@ -278,6 +278,7 @@ ASTR(enable_procedural_cache);
 ASTR(enable_progressive_pattern);
 ASTR(enable_progressive_render);
 ASTR(exposure);
+ASTR(extensions);
 ASTR(fallback);
 ASTR(far_clip);
 ASTR(file);

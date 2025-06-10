@@ -64,21 +64,6 @@ void HdArnoldPoints::Sync(
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param.Interrupt();
-        const auto materialId = sceneDelegate->GetMaterialId(id);
-        // Ensure the reference from this shape to its material is properly tracked
-        // by the render delegate
-        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
-
-        if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader());
-        } else {
-            AiNodeSetPtr(node, str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
-        }
-    }
-
     auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
@@ -116,6 +101,25 @@ void HdArnoldPoints::Sync(
         }
 
         UpdateVisibilityAndSidedness();
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+        param.Interrupt();
+        const auto materialId = sceneDelegate->GetMaterialId(id);
+        // Ensure the reference from this shape to its material is properly tracked
+        // by the render delegate
+        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
+
+        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+        if (material != nullptr) {
+            AiNodeSetPtr(node, str::shader, _IsVolume() ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader());
+        } else {
+            AiNodeSetPtr(
+                node, str::shader,
+                _IsVolume() ? GetRenderDelegate()->GetFallbackVolumeShader()
+                            : GetRenderDelegate()->GetFallbackSurfaceShader());
+        }
     }
 
     if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {

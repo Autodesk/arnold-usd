@@ -1748,7 +1748,7 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
     _renderTagTrackQueue.push({node, tag});
 }
 
@@ -1766,11 +1766,11 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     }
     if (renderTags != _renderTags) {
         _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
-        }
         _renderParam->Interrupt();
+
+        for (auto& elem : _renderTagMap) {
+            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+        }
     }
 }
 
