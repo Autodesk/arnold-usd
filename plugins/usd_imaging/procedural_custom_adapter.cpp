@@ -22,13 +22,10 @@
 #include <pxr/imaging/hd/material.h>
 #include <pxr/imaging/hd/overlayContainerDataSource.h>
 #include <pxr/imaging/hd/primvarsSchema.h>
-#include <pxr/imaging/hd/utils.h>
-#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
-#include <pxr/usdImaging/usdImaging/primvarUtils.h>
-#include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
+
 #include <pxr/base/tf/denseHashMap.h>
 #include <iostream>
 #include "constant_strings.h"
@@ -198,7 +195,13 @@ ArnoldProceduralCustomAdapter::ProcessPrimResync(
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
 
-#if PXR_VERSION >= 2505
+#if PXR_VERSION >= 2505 // Hydra2
+
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+#include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
+#include <pxr/usdImaging/usdImaging/primvarUtils.h>
+
 TfTokenVector ArnoldProceduralCustomAdapter::GetImagingSubprims(UsdPrim const& prim) {
     return { TfToken() };
 }

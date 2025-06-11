@@ -41,14 +41,14 @@ public:
     //
     // Scene index support
     //
-
+# if PXR_VERSION >= 2505 // Hydra2
     TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
 
     TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
 
     HdContainerDataSourceHandle GetImagingSubprimData(
         UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
-
+#endif // PXR_VERSION >= 2505 // Hydra2
     USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index,

@@ -52,6 +52,7 @@ void HdArnoldNativeRprim::Sync(
         const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
         if (!val.IsEmpty())
             return val;
+#if PXR_VERSION >= 2505 // Hydra2
         // Otherwise try with the sceneIndex
         HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
         if (sceneIndex) {
@@ -61,6 +62,7 @@ void HdArnoldNativeRprim::Sync(
                 return arnoldAttribute->GetValue(0.0);
             }   
         }
+#endif // PXR_VERSION >= 2505 // Hydra2
         return VtValue();
     };
 

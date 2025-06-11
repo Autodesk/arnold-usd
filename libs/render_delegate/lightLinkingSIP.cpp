@@ -1,5 +1,9 @@
 
+#include <pxr/pxr.h>
+#if PXR_VERSION >= 2505 // Hydra2
+
 #include "pxr/imaging/hd/version.h"
+
 
 // There was no hdsi/version.h before this HD_API_VERSION.
 #if HD_API_VERSION >= 58
@@ -69,3 +73,5 @@ protected:
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif
+
+#endif // PXR_VERSION >= 2505 // Hydra2

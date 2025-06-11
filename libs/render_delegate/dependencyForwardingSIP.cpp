@@ -1,4 +1,6 @@
 #include "dependencyForwardingSIP.h"
+
+#if PXR_VERSION >= 2505 // Hydra 2
 #include "pxr/imaging/hd/dependencyForwardingSceneIndex.h"
 #include "pxr/imaging/hd/sceneIndexPluginRegistry.h"
 
@@ -27,4 +29,4 @@ HdSceneIndexBaseRefPtr HdArnoldDependencyForwardingSceneIndexPlugin::_AppendScen
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-// #endif // PXR_VERSION >= 2208
+#endif // PXR_VERSION >= 2505 // Hydra 2

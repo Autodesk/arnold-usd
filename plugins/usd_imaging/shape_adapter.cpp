@@ -24,10 +24,6 @@
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include <pxr/imaging/hd/material.h>
 #include <pxr/imaging/hd/overlayContainerDataSource.h>
-#include <pxr/imaging/hd/primvarsSchema.h>
-#include <pxr/imaging/hd/retainedDataSource.h>
-#include <pxr/imaging/hd/utils.h>
-#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
@@ -108,6 +104,11 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
         }
     }
 }
+#if PXR_VERSION >= 2505 // Hydra2
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/retainedDataSource.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 
 TfTokenVector UsdImagingArnoldShapeAdapter::GetImagingSubprims(UsdPrim const& prim) {
     // Assuming Arnold nodes are leaves
@@ -121,6 +122,7 @@ TfToken UsdImagingArnoldShapeAdapter::GetImagingSubprimType(UsdPrim const& prim,
     }
     return UsdImagingGprimAdapter::GetImagingSubprimType(prim, subprim);
 }
+
 
 class ArnoldShapeDataSourcePrim : public UsdImagingDataSourceGprim { // also tried HdDataSourceLegacyPrim but no sceneDelegate available at this point
 public:
@@ -187,7 +189,7 @@ HdContainerDataSourceHandle UsdImagingArnoldShapeAdapter::GetImagingSubprimData(
     }
     return UsdImagingGprimAdapter::GetImagingSubprimData(prim, subprim, stageGlobals);
 }
-
+#endif // PXR_VERSION >= 2505 // Hydra2
 
 
 
