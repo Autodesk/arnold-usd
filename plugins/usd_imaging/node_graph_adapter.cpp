@@ -32,6 +32,11 @@
 
 #endif
 
+#if PXR_VERSION >= 2505 // Hydra 2
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // namespace {
@@ -233,8 +238,7 @@ bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) cons
 #endif
 
 #if PXR_VERSION >= 2505 // Hydra 2
-#include <pxr/imaging/hd/utils.h>
-#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+
 // Recusively check nodes starting at the terminal to find the dirty prim.
 // If the dirty prim is the source material also check the specific dirty
 // property.

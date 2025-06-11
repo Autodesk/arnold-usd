@@ -40,6 +40,13 @@
 
 #endif
 
+#if PXR_VERSION >= 2505 // Hydra2
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+#include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
+#include <pxr/usdImaging/usdImaging/primvarUtils.h>
+#endif // PXR_VERSION >= 2505 // Hydra2
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfType)
@@ -196,11 +203,6 @@ ArnoldProceduralCustomAdapter::ProcessPrimResync(
 }
 
 #if PXR_VERSION >= 2505 // Hydra2
-
-#include <pxr/imaging/hd/utils.h>
-#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
-#include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
-#include <pxr/usdImaging/usdImaging/primvarUtils.h>
 
 TfTokenVector ArnoldProceduralCustomAdapter::GetImagingSubprims(UsdPrim const& prim) {
     return { TfToken() };

@@ -30,6 +30,13 @@
 #include <pxr/usdImaging/usdImaging/dataSourceGprim.h>
 #include <shape_utils.h>
 
+#if PXR_VERSION >= 2505 // Hydra2
+#include <pxr/imaging/hd/utils.h>
+#include <pxr/imaging/hd/retainedDataSource.h>
+#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#endif // PXR_VERSION >= 2505 // Hydra2
+
 std::size_t hash_value(const AtString& s) { return s.hash(); }
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -105,10 +112,6 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
     }
 }
 #if PXR_VERSION >= 2505 // Hydra2
-#include <pxr/imaging/hd/utils.h>
-#include <pxr/imaging/hd/primvarsSchema.h>
-#include <pxr/imaging/hd/retainedDataSource.h>
-#include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 
 TfTokenVector UsdImagingArnoldShapeAdapter::GetImagingSubprims(UsdPrim const& prim) {
     // Assuming Arnold nodes are leaves
