@@ -6,7 +6,7 @@
 
 def ArnoldUsd "usdProc"
 {
-    string arnold:filename = "sphere.usd"
+    asset arnold:filename = "sphere.usd"
     float arnold:motion_end = 0.5
     float arnold:motion_start = -0.5
     double3 xformOp:translate = (0.5, 0, 0)
