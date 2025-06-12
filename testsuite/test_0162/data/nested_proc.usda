@@ -4,7 +4,7 @@ def "transform1"
 {
     def ArnoldUsd "correctStandinTransform"
     {
-        string arnold:filename = "sphere.usda"
+        asset arnold:filename = "sphere.usda"
         string primvars:dcc_name = "correctStandinTransform" (
             elementSize = 1
             interpolation = "constant"

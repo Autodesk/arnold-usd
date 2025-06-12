@@ -99,7 +99,7 @@ def Xform "debug_mb_v3"
 {
     def ArnoldUsd "debug_mb_v3Shape"
     {
-        string arnold:filename = "../common/usd/skin.usd"
+        asset arnold:filename = "../common/usd/skin.usd"
         float arnold:frame = 18
         float arnold:motion_end = 1
         float arnold:motion_start = -1

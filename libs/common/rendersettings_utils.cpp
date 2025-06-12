@@ -50,7 +50,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((logVerbosity, "arnold:global:log:verbosity"))
     ((reportFile, "arnold:global:report:file"))
     ((statsFile, "arnold:global:stats:file"))
-    ((statsMode, "arnold:global:stats:mode"))
     ((profileFile, "arnold:global:profile:file"))
     ((arnoldName, "arnold:name"))
     ((inputsName, "inputs:name"))
@@ -891,15 +890,6 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         if (statsFileAttr.Get(&statsFileValue, time.frame)) {
             const std::string statsFile = VtValueGetString(statsFileValue);
             AiStatsSetFileName(statsFile.c_str());
-        }
-    }
-
-    // stats mode (overwrite or append)
-    if (UsdAttribute statsModeAttr = renderSettingsPrim.GetAttribute(_tokens->statsMode)) {
-        VtValue statsModeValue;
-        if (statsModeAttr.Get(&statsModeValue, time.frame)) {
-            const AtStatsMode statsMode = static_cast<AtStatsMode>(VtValueGetInt(statsModeValue));
-            AiStatsSetMode(statsMode);
         }
     }
 

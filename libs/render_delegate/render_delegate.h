@@ -767,7 +767,6 @@ private:
     std::string _logFile;
     std::string _reportFile;
     std::string _statsFile;
-    AtStatsMode _statsMode;
     std::string _profileFile;
     AtString _pxrMtlxPath;
 
