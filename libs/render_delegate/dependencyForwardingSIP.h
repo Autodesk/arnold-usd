@@ -1,7 +1,6 @@
 #pragma once
-
-#if PXR_VERSION >= 2505 // Hydra 2
 #include "pxr/pxr.h"
+#if PXR_VERSION >= 2505 // Hydra 2
 #include "pxr/imaging/hd/sceneIndexPlugin.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
