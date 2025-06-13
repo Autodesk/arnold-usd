@@ -8,13 +8,12 @@
     upAxis = "Y"
 )
 
-
 def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        custom int arnold:global:AA_samples = 3
         int arnold:global:AA_seed = 103
-        
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -24,9 +23,9 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
     }
 }
+
 def Xform "cameras"
 {
     def Camera "camera1"
@@ -67,7 +66,9 @@ def PointInstancer "addpointinstancer1"
     {
         def Xform "Root"
         {
-            def Cube "cube1"
+            def Cube "cube1" (
+                apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </addpointinstancer1/Prototypes/Root/materials/arnold_materialbuilder1>
@@ -180,12 +181,12 @@ def Xform "lights"
 {
     def DomeLight "domelight1"
     {
+        custom float houdini:guidescale = 1
         color3f inputs:color = (1, 1, 1)
         float inputs:diffuse = 1
         bool inputs:enableColorTemperature = 0
         float inputs:exposure = 0
         rel inputs:filters = None
-        custom float houdini:guidescale = 1
         float inputs:intensity = 1
         bool inputs:normalize = 0
         rel inputs:portals = None

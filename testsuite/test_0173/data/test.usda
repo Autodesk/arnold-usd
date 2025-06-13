@@ -18,7 +18,9 @@ def Xform "testgeometry_rubbertoy1" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform"]
 
-    def ArnoldSphere "sphere_0"
+    def ArnoldSphere "sphere_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float[] arnold:radius = [1]
         rel material:binding = </materials/materiallibrary1>
@@ -146,23 +148,21 @@ def Scope "Render"
     def RenderSettings "rendersettings1"
     {
         custom int arnold:global:AA_samples = 1
-        
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
-        int2 resolution = (160, 120)
         rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 120)
     }
 
     def Scope "Products"
     {
         def RenderProduct "renderproduct1"
         {
-            rel orderedVars = [
-                </Render/Products/Vars/rendervar1>,
-            ]
+            rel orderedVars = </Render/Products/Vars/rendervar1>
             token productName = "testrender.tif"
             token productType = "raster"
         }
+
         def Scope "Vars"
         {
             def RenderVar "rendervar1" (
@@ -176,6 +176,6 @@ def Scope "Render"
                 token sourceType = "raw"
             }
         }
-
     }
 }
+

@@ -39,10 +39,12 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
     if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
         target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
     endif ()
+
 endif()
 
 if (APPLE OR LINUX)
@@ -77,6 +79,7 @@ if (BUILD_WITH_USD_STATIC)
             "${PREFIX_PROCEDURAL}/usd")
 
         # Install the render delegate plugInfo.json
+        set(LIB_PATH "../../${USD_PROCEDURAL_NAME}_proc") # for plugInfo.json.in
         set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/resources/plugInfo.json")
         configure_file(
             "${HDARNOLD_PLUGINFO_SRC}"
