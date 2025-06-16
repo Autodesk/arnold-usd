@@ -7,7 +7,7 @@
 - [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
 - [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 - [usd#2310](https://github.com/Autodesk/arnold-usd/issues/2310) - Support volume shaders on points with hydra
-- [usd#2318](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
+- [usd#2320](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
 
 ## Next Bugfix release (7.4.2.1)
 
