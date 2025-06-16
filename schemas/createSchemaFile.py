@@ -505,7 +505,7 @@ createArnoldClass('procedural_custom', 'Gprim', proceduralCustomAttrs,
 # We want a schema ArnoldUsd with the base shape attributes, as well as the usd proc parameters.
 # Note : this should be updated when new attributes are added to the procedural
 proceduralUsdAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'operator']
-proceduralUsdAppendAttrs = ['asset arnold:filename = "" (customData = {string apiName = "Filename"})', 
+proceduralUsdAppendAttrs = ['string arnold:filename = ""', 
                             'string arnold:object_path = ""', 
                             'float arnold:frame = 0',
                             'bool arnold:debug = 0',
