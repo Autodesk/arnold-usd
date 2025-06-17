@@ -21,7 +21,7 @@ def PointInstancer "addpointinstancer2"
         {
             def ArnoldUsd "sphereProcShape"
             {
-                asset arnold:filename = "sphere.usda"
+                string arnold:filename = "sphere.usda"
             }
         }
     }
