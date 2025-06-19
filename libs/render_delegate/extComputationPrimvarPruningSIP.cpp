@@ -117,7 +117,7 @@ protected:
         : HdSingleInputFilteringSceneIndexBase(inputSceneIndex)
     {
 #if PXR_VERSION >= 2308
-        SetDisplayName("Arnold prune skinned mesh normals");
+        SetDisplayName("Arnold: prune skinned mesh normals");
 #endif
     }
 

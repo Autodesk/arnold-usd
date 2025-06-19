@@ -6,37 +6,28 @@
 
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
+#include <pxr/imaging/hd/filteringSceneIndex.h>
 #include <pxr/imaging/hd/lazyContainerDataSource.h>
 #include <pxr/imaging/hd/materialBindingsSchema.h>
 #include <pxr/imaging/hd/primvarsSchema.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
-#include <pxr/imaging/hd/filteringSceneIndex.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((sceneIndexPluginName, "HdArnoldFixMaterialPruningSceneIndexPlugin"))
-);
+TF_DEFINE_PRIVATE_TOKENS(_tokens, ((sceneIndexPluginName, "HdArnoldFixMaterialPruningSceneIndexPlugin")));
 
-TF_REGISTRY_FUNCTION(TfType)
-{
-    HdSceneIndexPluginRegistry::Define<HdArnoldFixMaterialPruningSceneIndexPlugin>();
-}
+TF_REGISTRY_FUNCTION(TfType) { HdSceneIndexPluginRegistry::Define<HdArnoldFixMaterialPruningSceneIndexPlugin>(); }
 
 TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 {
     const HdSceneIndexPluginRegistry::InsertionPhase insertionPhase = 0;
 
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
-                "Arnold",
-                _tokens->sceneIndexPluginName,
-                nullptr,
-                insertionPhase,
-                HdSceneIndexPluginRegistry::InsertionOrderAtStart);
+        "Arnold", _tokens->sceneIndexPluginName, nullptr, insertionPhase,
+        HdSceneIndexPluginRegistry::InsertionOrderAtStart);
 }
 
 namespace {
@@ -63,9 +54,10 @@ public:
 
         // Check prim type info
         const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-        if (primInfo && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") && prim.primType != HdPrimTypeTokens->material) {
+        if (primInfo && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
+            prim.primType != HdPrimTypeTokens->material) {
             prim.primType = HdPrimTypeTokens->material;
-            //GetRenderIndex().InsertSprim(prim.primType, this, primPath);
+            // GetRenderIndex().InsertSprim(prim.primType, this, primPath);
         }
 
         return prim;
@@ -81,7 +73,7 @@ protected:
         : HdSingleInputFilteringSceneIndexBase(inputSceneIndex)
     {
 #if PXR_VERSION >= 2308
-        SetDisplayName("Arnold - Fix 25.05 material pruning in prototypes");
+        SetDisplayName("Arnold: fix material pruning in prototypes");
 #endif
     }
 
@@ -91,7 +83,7 @@ protected:
             return;
         }
         HdSceneIndexObserver::AddedPrimEntries _entries(entries);
-        // 
+        //
         for (auto &entry : _entries) {
             HdSceneIndexPrim prim = _GetInputSceneIndex()->GetPrim(entry.primPath);
 
@@ -126,14 +118,10 @@ protected:
 
 } // namespace
 
+HdArnoldFixMaterialPruningSceneIndexPlugin::HdArnoldFixMaterialPruningSceneIndexPlugin() = default;
 
-HdArnoldFixMaterialPruningSceneIndexPlugin::
-HdArnoldFixMaterialPruningSceneIndexPlugin() = default;
-
-HdSceneIndexBaseRefPtr
-HdArnoldFixMaterialPruningSceneIndexPlugin::_AppendSceneIndex(
-    const HdSceneIndexBaseRefPtr &inputScene,
-    const HdContainerDataSourceHandle &inputArgs)
+HdSceneIndexBaseRefPtr HdArnoldFixMaterialPruningSceneIndexPlugin::_AppendSceneIndex(
+    const HdSceneIndexBaseRefPtr &inputScene, const HdContainerDataSourceHandle &inputArgs)
 {
     return _FixMaterialPruningSceneIndex::New(inputScene);
 }

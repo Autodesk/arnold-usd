@@ -21,7 +21,7 @@
 #include "pxr/imaging/hd/sceneIndexPluginRegistry.h"
 #include "pxr/imaging/hd/tokens.h"
 
-#include <iostream>
+
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -175,9 +175,7 @@ protected:
     _DependenciesSceneIndex(const HdSceneIndexBaseRefPtr &inputSceneIndex)
         : HdSingleInputFilteringSceneIndexBase(inputSceneIndex)
     {
-#if PXR_VERSION >= 2308
-        SetDisplayName("Declare arnold dependencies");
-#endif
+        SetDisplayName("Arnold: declare Arnold dependencies");
     }
 
     void _PrimsAdded(const HdSceneIndexBase &sender, const HdSceneIndexObserver::AddedPrimEntries &entries) override
