@@ -64,6 +64,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (LightAPI)
     (normals)
     ((PrimvarsArnoldLightShaders, "primvars:arnold:light:shaders"))
+    ((PrimvarsArnoldNodeEntry, "primvars:arnold:node_entry"))
 );
 
 namespace {
@@ -220,7 +221,6 @@ static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext
     ReadPrimvars(prim, node, time, context, primvarsRemapper);
     // Read the parameters that are explicitely namespaced for arnold
     ReadArnoldParameters(prim, context, node, time, arnoldNamespace);
-
     // If this primitive is hidden, we must set the arnold visibility to 0
     if (!primVisibility) {
         AiNodeSetByte(node, str::visibility, 0);
@@ -1610,10 +1610,10 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         if (i == 0 || (hasVelocities == false && positionsAttr.ValueMightBeTimeVarying())) 
             positionsAttr.Get(&positions, hasVelocities ? frame : times[i]);
         if (i == 0 || orientationsAttr.ValueMightBeTimeVarying())
-            orientationsAttr.Get(&orientations, times[i]);
+            orientationsAttr.Get(&orientations, hasVelocities ? frame : times[i]);
         if (i == 0 || scalesAttr.ValueMightBeTimeVarying())
-            scalesAttr.Get(&scales, times[i]);
-        
+            scalesAttr.Get(&scales, hasVelocities ? frame : times[i]);
+
         if (positions.empty())
             continue;
         // We're calling this PointInstancer API for each time key,
@@ -1788,8 +1788,13 @@ AtNode* UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReader
     // This schema is meant for custom procedurals. Its attribute "node_entry" will
     // indicate what is the node entry name for this node.
     UsdAttribute attr = prim.GetAttribute(str::t_arnold_node_entry);
+
+    // We can also support primvars:arnold:node_entry
+    if (!attr || !attr.HasAuthoredValue())
+        attr = prim.GetAttribute(_tokens->PrimvarsArnoldNodeEntry);
+
     // for backward compatibility, check the attribute without namespace
-    if (!attr)
+    if (!attr || !attr.HasAuthoredValue())
         attr = prim.GetAttribute(str::t_node_entry);
     
     const TimeSettings &time = context.GetTimeSettings();
@@ -1802,7 +1807,11 @@ AtNode* UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReader
     std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
+
     _ReadGenericShape(prim, context, node, time, "arnold", nullptr, false);
+    // Attributes could also be authored as "primvars:arnold"
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold"); 
+
     return node;
 }
 

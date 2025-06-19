@@ -38,7 +38,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 extern const AtNodeMethods* HdArnoldDriverMainMtd;
-extern const AtNodeMethods* HdArnoldDriverAOVMtd;
 
 namespace {
 struct NodeDefinition {
@@ -53,7 +52,6 @@ using BuiltInNodes = std::vector<NodeDefinition>;
 const auto builtInNodes = []() -> const BuiltInNodes& {
     static const BuiltInNodes ret{
         {AI_NODE_DRIVER, AI_TYPE_UNDEFINED, str::HdArnoldDriverMain, HdArnoldDriverMainMtd},
-        {AI_NODE_DRIVER, AI_TYPE_UNDEFINED, str::HdArnoldDriverAOV, HdArnoldDriverAOVMtd},
     };
     return ret;
 };

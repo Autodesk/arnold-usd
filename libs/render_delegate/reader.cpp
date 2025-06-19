@@ -153,15 +153,57 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _purpose(UsdGeomTokens->render), 
         _universe(universe) 
 {
+    static AtMutex s_renderIndexCreationMutex;
+#ifdef ARNOLD_SCENE_INDEX
+    if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
+    {
+        // The environment variable is defined, it takes precedence on any other setting
+        std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
+        std::string::size_type i = useSceneIndex.find(" ");
+        while(i != std::string::npos) {
+            useSceneIndex.erase(i, 1);
+            i = useSceneIndex.find(" ");
+        }
+        _useSceneIndex = (useSceneIndex != "0");
+    }
+#endif
+    
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
-    _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
-    SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
-    _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
+    {
+        std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
+        _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+    }
+    _sceneDelegateId = SdfPath::AbsoluteRootPath();
+
+    if (_useSceneIndex) {
+#ifdef ARNOLD_SCENE_INDEX
+        UsdImagingCreateSceneIndicesInfo info;
+        info.displayUnloadedPrimsWithBounds = false;
+        info.overridesSceneIndexCallback =
+            std::bind(
+                &HydraArnoldReader::_AppendOverridesSceneIndices,
+                this, std::placeholders::_1);
+
+        const UsdImagingSceneIndices sceneIndices =
+            UsdImagingCreateSceneIndices(info);
+        
+        _stageSceneIndex = sceneIndices.stageSceneIndex;
+        _sceneIndex = sceneIndices.finalSceneIndex;
+
+        _sceneIndex = _displayStyleSceneIndex =
+            HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
+
+        _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
+#endif        
+    } else {        
+        _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
+    }
 
     const char *debugScene = std::getenv("HDARNOLD_DEBUG_SCENE");
     if (debugScene)
         _debugScene = std::string(debugScene);
+
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
@@ -199,11 +241,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                 renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
 
-        TimeSettings timeSettings;
-        ChooseRenderSettings(stage, _renderSettings, timeSettings);
+        ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), _time, _universe, renderCameraPath);
         }
     } 
 
@@ -213,47 +254,68 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         // range to our custom imaging delegate
         double shutter_start = AiNodeGetFlt(universeCamera, str::shutter_start);
         double shutter_end = AiNodeGetFlt(universeCamera, str::shutter_end);
-        _imagingDelegate->SetShutter(shutter_start, shutter_end);
+        
+        if (_imagingDelegate)
+            _imagingDelegate->SetShutter(shutter_start, shutter_end);
+
     } else {
         if (!renderCameraPath.IsEmpty()) {
-        _imagingDelegate->SetCameraForSampling(renderCameraPath);
+
+            if (_imagingDelegate)
+                _imagingDelegate->SetCameraForSampling(renderCameraPath);
         } else {
             // Use the first camera available
             for (const auto &it: stage->Traverse()) {
                 if (it.IsA<UsdGeomCamera>()) {
                     UsdPrim cameraPrim = it;
-                    _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+                    if (_imagingDelegate)
+                        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
                     break;
                 }
             }
         }
     }
-
+    
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
-
     UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
-    _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+
+    if (_useSceneIndex) {
+        _stageSceneIndex->SetStage(stage);
+    } else {
+        _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+    }
     if (!path.empty()) {
-        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
-        _imagingDelegate->SetRootTransform(xformCache.GetLocalToWorldTransform(rootPrim));
+        UsdGeomXformCache xformCache(_useSceneIndex ? _stageSceneIndex->GetTime() : _imagingDelegate->GetTime());
+        const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
+        if (_useSceneIndex) {            
+#ifdef ARNOLD_SCENE_INDEX
+            _rootOverridesSceneIndex->SetRootTransform(xf);
+#endif
+        } else {
+            _imagingDelegate->SetRootTransform(xf);
+        }
     }
     // This will return a "hidden" render tag if a primitive is of a disabled type
-    _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
-    _imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
-    _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
-
+    if (_imagingDelegate) {
+        _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
+        _imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
+        _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
+    }
+    
     // Not sure about the meaning of collection geometry -- should that be extended ?
     _collection = HdRprimCollection (HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
     _syncPass = HdRenderPassSharedPtr(new HdArnoldSyncPass(_renderIndex, _collection));
-
-    GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
-    UsdTimeCode time = _imagingDelegate->GetTime();
-    _shutter = GfVec2f(timeInterval.GetMin(),timeInterval.GetMax());
-    if (!time.IsDefault()) {
-        _shutter -= GfVec2f(time.GetValue());
+    
+    if (_imagingDelegate) {
+        GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
+        UsdTimeCode time = _imagingDelegate->GetTime();
+        _shutter = GfVec2f(timeInterval.GetMin(),timeInterval.GetMax());
+        if (!time.IsDefault()) {
+            _shutter -= GfVec2f(time.GetValue());
+        }
     }
     // Update the shutter so that SyncAll translates nodes with the correct shutter #1994
     static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(_shutter);
@@ -263,7 +325,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
-
     arnoldRenderDelegate->ProcessConnections();
     
     // We want to render the purpose that this reader was assigned to.
@@ -279,6 +340,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
     while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
+        arnoldRenderDelegate->ProcessConnections();
     }
 
 #ifndef ENABLE_SHARED_ARRAYS
@@ -290,8 +352,11 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         // and here we're just clearing the usd stage. So we tell the render delegate that nodes
         // destruction should be skipped
         arnoldRenderDelegate->EnableNodesDestruction(false);
-        delete _imagingDelegate;
-        _imagingDelegate = nullptr;
+
+        if (_imagingDelegate) {
+            delete _imagingDelegate;
+            _imagingDelegate = nullptr;
+        }
         delete _renderIndex;
         _renderIndex = nullptr;
         // Copy the render delegate list of nodes to the reader
@@ -307,7 +372,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
-    if (_imagingDelegate) {
+    _time.frame = frame;
+    if (_useSceneIndex) {
+        _stageSceneIndex->SetTime(UsdTimeCode(frame));
+    } else {
         _imagingDelegate->SetTime(UsdTimeCode(frame));
     }
 }
@@ -323,9 +391,19 @@ void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_r
 void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
-    _imagingDelegate->ApplyPendingUpdates();
+    if (_useSceneIndex) {
+#ifdef ARNOLD_SCENE_INDEX        
+        _stageSceneIndex->ApplyPendingUpdates();
+#endif
+    }
+    else
+        _imagingDelegate->ApplyPendingUpdates();        
+
     arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
+    // Connections may have been made as part of the sync pass, so we need to process them
+    // again to make sure that the nodes are up to date. (#2269)
+    arnoldRenderDelegate->ProcessConnections();
 }
 
 void HydraArnoldReader::WriteDebugScene() const
@@ -339,3 +417,47 @@ void HydraArnoldReader::WriteDebugScene() const
     AiSceneWrite(_universe, AtString(_debugScene.c_str()), params);
     AiParamValueMapDestroy(params);
 }
+
+
+#ifdef ARNOLD_SCENE_INDEX
+
+HdSceneIndexBaseRefPtr
+HydraArnoldReader::_AppendOverridesSceneIndices(
+    HdSceneIndexBaseRefPtr const &inputScene)
+{
+    HdSceneIndexBaseRefPtr sceneIndex = inputScene;
+
+    static HdContainerDataSourceHandle const materialPruningInputArgs =
+        HdRetainedContainerDataSource::New(
+            HdsiPrimTypePruningSceneIndexTokens->primTypes,
+            HdRetainedTypedSampledDataSource<TfTokenVector>::New(
+                { HdPrimTypeTokens->material }),
+            HdsiPrimTypePruningSceneIndexTokens->bindingToken,
+            HdRetainedTypedSampledDataSource<TfToken>::New(
+                HdMaterialBindingsSchema::GetSchemaToken()));
+
+    // Prune scene materials prior to flattening inherited
+    // materials bindings and resolving material bindings
+    sceneIndex = _materialPruningSceneIndex =
+        HdsiPrimTypePruningSceneIndex::New(
+            sceneIndex, materialPruningInputArgs);
+
+    static HdContainerDataSourceHandle const lightPruningInputArgs =
+        HdRetainedContainerDataSource::New(
+            HdsiPrimTypePruningSceneIndexTokens->primTypes,
+            HdRetainedTypedSampledDataSource<TfTokenVector>::New(
+                HdLightPrimTypeTokens()),
+            HdsiPrimTypePruningSceneIndexTokens->doNotPruneNonPrimPaths,
+            HdRetainedTypedSampledDataSource<bool>::New(
+                false));
+
+    sceneIndex = _lightPruningSceneIndex =
+        HdsiPrimTypePruningSceneIndex::New(
+            sceneIndex, lightPruningInputArgs);
+
+    sceneIndex = _rootOverridesSceneIndex =
+        UsdImagingRootOverridesSceneIndex::New(sceneIndex);
+
+    return sceneIndex;
+}
+#endif

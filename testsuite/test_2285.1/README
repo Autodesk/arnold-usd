@@ -1,0 +1,7 @@
+Velocity blur with animated translation, orientation and scale.
+
+This is an excerpt of test 0024 focusing on one of the peeble.
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.146, 'kick_params': '-frame 32'}

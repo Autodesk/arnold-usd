@@ -204,6 +204,11 @@ void HdArnoldMesh::Sync(
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    AtNode* node = GetArnoldNode();
+
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
+        return;
     HdArnoldSampledPrimvarType _pointsSample;
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
@@ -215,7 +220,7 @@ void HdArnoldMesh::Sync(
     } else {
         SetDeformKeys(-1);
     }
-    AtNode* node = GetArnoldNode();
+    
     bool positionsChanged = false;
 
     if (dirtyPrimvars) {
@@ -548,7 +553,6 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
-bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {

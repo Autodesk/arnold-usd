@@ -9,7 +9,27 @@
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderDelegate.h"
 #include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
+#include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
+
+#if PXR_VERSION >= 2505
+#define ARNOLD_SCENE_INDEX
+
+#include "pxr/usdImaging/usdImaging/sceneIndices.h"
+#include "pxr/imaging/hdsi/legacyDisplayStyleOverrideSceneIndex.h"
+#include "pxr/usdImaging/usdImaging/rootOverridesSceneIndex.h"
+#include "pxr/imaging/hd/retainedDataSource.h"
+#include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
+#include "pxr/imaging/hd/materialBindingsSchema.h"
+
+#endif
+
+TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
+TF_DECLARE_REF_PTRS(UsdImagingRootOverridesSceneIndex);
+TF_DECLARE_REF_PTRS(HdsiLegacyDisplayStyleOverrideSceneIndex);
+TF_DECLARE_REF_PTRS(HdsiPrimTypePruningSceneIndex);
+
+
 
 class UsdArnoldProcImagingDelegate;
 
@@ -47,6 +67,15 @@ private:
     UsdArnoldProcImagingDelegate* _imagingDelegate = nullptr;
     HdEngine _engine;
     HdRenderDelegate *_renderDelegate;
+    SdfPath _sceneDelegateId;
+    UsdImagingStageSceneIndexRefPtr _stageSceneIndex;
+    //UsdImagingSelectionSceneIndexRefPtr _selectionSceneIndex;
+    UsdImagingRootOverridesSceneIndexRefPtr _rootOverridesSceneIndex;
+    HdSceneIndexBaseRefPtr _sceneIndex;
+    HdsiLegacyDisplayStyleOverrideSceneIndexRefPtr _displayStyleSceneIndex;
+    HdsiPrimTypePruningSceneIndexRefPtr _materialPruningSceneIndex;
+    HdsiPrimTypePruningSceneIndexRefPtr _lightPruningSceneIndex;
+
     AtUniverse *_universe = nullptr;
     HdRenderPassSharedPtr _syncPass;
     HdRprimCollection _collection;
@@ -55,4 +84,13 @@ private:
     HdTaskContext _taskContext;
     std::vector<AtNode*> _nodes;
     std::string _debugScene;
+    bool _useSceneIndex = false; 
+    TimeSettings _time;
+
+#ifdef ARNOLD_SCENE_INDEX
+    HdSceneIndexBaseRefPtr
+    _AppendOverridesSceneIndices(
+        const HdSceneIndexBaseRefPtr &inputScene);
+#endif
+
 };

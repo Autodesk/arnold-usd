@@ -1,0 +1,7 @@
+Instancer motion blur
+
+see #2268
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 3'}

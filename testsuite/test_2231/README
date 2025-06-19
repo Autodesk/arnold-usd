@@ -1,0 +1,7 @@
+Motion blur with different number of instances per frame
+
+see #2231
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.05, 'kick_params': '-frame 1002'}
