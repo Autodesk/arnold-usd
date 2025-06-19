@@ -303,13 +303,17 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
-    SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
     UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
 
     if (_useSceneIndex) {
+        if (!path.empty()) {
+            UsdStagePopulationMask mask({SdfPath(path)});
+            stage->SetPopulationMask(mask);
+        }
         _stageSceneIndex->SetStage(stage);
     } else {
+        SdfPathVector _excludedPrimPaths; // excluding nothing
         _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
     }
     if (!path.empty()) {
