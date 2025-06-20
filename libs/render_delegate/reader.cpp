@@ -316,16 +316,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         SdfPathVector _excludedPrimPaths; // excluding nothing
         _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
     }
-    if (!path.empty()) {
-        UsdGeomXformCache xformCache(_useSceneIndex ? _stageSceneIndex->GetTime() : _imagingDelegate->GetTime());
+    if (!path.empty() && !_useSceneIndex) {
+        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
         const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
-        if (_useSceneIndex) {            
-#ifdef ARNOLD_SCENE_INDEX
-            _rootOverridesSceneIndex->SetRootTransform(xf);
-#endif
-        } else {
-            _imagingDelegate->SetRootTransform(xf);
-        }
+        _imagingDelegate->SetRootTransform(xf);
     }
     // This will return a "hidden" render tag if a primitive is of a disabled type
     if (_imagingDelegate) {
