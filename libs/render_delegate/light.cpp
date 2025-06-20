@@ -486,9 +486,9 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+
     if (!_delegate->CanUpdateScene())
         return;
- 
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
@@ -593,12 +593,11 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             std::vector<AtNode*> filters;
             filters.reserve(filterPaths.size());
             for (const auto& filterPath : filterPaths) {
-                auto* filterMaterial = reinterpret_cast<const HdArnoldNodeGraph*>(
-                    sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, filterPath));
+                auto* filterMaterial = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), filterPath);
                 if (filterMaterial == nullptr) {
                     continue;
                 }
-                auto* filter = filterMaterial->GetSurfaceShader();
+                auto* filter = filterMaterial->GetCachedSurfaceShader();
                 if (filter == nullptr) {
                     continue;
                 }
@@ -668,25 +667,25 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         HdArnoldSetTransform(_light, sceneDelegate, id);
     }
 
-    // TODO(pal): Test if there is a separate dirty bits for this, maybe DirtyCollection?
-    auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
-        auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
-        if (linkValue.IsHolding<TfToken>()) {
-            const auto& link = linkValue.UncheckedGet<TfToken>();
-            if (currentLink != link) {
-                param->Interrupt();
-                // The empty link value only exists when creating the class, so link can never match emptyLink.
-                if (currentLink != _tokens->emptyLink) {
-                    _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+    if (*dirtyBits & (DirtyParams | DirtyShadowParams | DirtyCollection)) {
+        auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
+            auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
+            if (linkValue.IsHolding<TfToken>()) {
+                const auto& link = linkValue.UncheckedGet<TfToken>();
+                if (currentLink != link) {
+                    param->Interrupt();
+                    // The empty link value only exists when creating the class, so link can never match emptyLink.
+                    if (currentLink != _tokens->emptyLink) {
+                        _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+                    }
+                    _delegate->RegisterLightLinking(link, this, isShadow);
+                    currentLink = link;
                 }
-                _delegate->RegisterLightLinking(link, this, isShadow);
-                currentLink = link;
             }
-        }
-    };
-    updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
-    updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
-
+        };
+        updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
+        updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
+    }
     *dirtyBits = HdLight::Clean;
 }
 
@@ -784,17 +783,25 @@ AtNode* GetLightNode(const HdLight* light)
 
 SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
 {
+    // Get the value of the parameter on the light
+    VtValue lightParamValue = sceneDelegate->GetLightParamValue(id, attr);
+    // We might also be querying a mesh, in that case try to get the primvar (hydra2)
+    if (lightParamValue.IsEmpty()) { // Try as a regular primvar
+        const TfToken attrWoPrimvar =
+            TfStringStartsWith(attr.GetString(), "primvars:") ? TfToken(attr.GetString().substr(9)) : attr;
+        float time = 0;
+        sceneDelegate->SamplePrimvar(id, attrWoPrimvar, 1, &time, &lightParamValue);
+    }
     // get the sdf path for the light shader arnold node graph container
     SdfPath lightShaderPath;
-    ArnoldUsdCheckForSdfPathValue(sceneDelegate->GetLightParamValue(id, attr),
-                                  [&](const SdfPath& p) { lightShaderPath = p; });
+    ArnoldUsdCheckForSdfPathValue(lightParamValue, [&](const SdfPath& p) { lightShaderPath = p; });
 
     AtNode *color = nullptr;
     std::vector<AtNode *> lightFilters;
     if (!lightShaderPath.IsEmpty()) {
-        const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
         if (nodeGraph) {
-            color = nodeGraph->GetTerminal(str::t_color);
+            color = nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_color);
             if (color) {
                 // Only certain types of light can be linked
                 if (AiNodeIs(light, str::skydome_light) ||
@@ -806,7 +813,7 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
                 }
             } 
             
-            lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
+            lightFilters = nodeGraph->GetOrCreateTerminals(sceneDelegate, _tokens->filtersArray);
             if (!lightFilters.empty()) {
                 VtArray<std::string> filtersNodeName;
                 for (const AtNode *node:lightFilters) {

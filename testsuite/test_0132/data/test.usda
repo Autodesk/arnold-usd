@@ -4,8 +4,8 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        custom int arnold:global:AA_samples = 3
         int arnold:global:AA_seed = 103
-        
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </persp/perspShape>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -15,7 +15,6 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
     }
 }
 
@@ -54,7 +53,9 @@ def "persp"
 
 def "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -110,6 +111,7 @@ def Shader "texture"
     float2 inputs:st.connect = </textureCoords.outputs:result>
     color3f outputs:out
 }
+
 def Shader "textureCoords"
 {
     uniform token info:id = "UsdPrimvarReader_float2"

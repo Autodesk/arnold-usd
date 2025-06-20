@@ -1,10 +1,10 @@
 #usda 1.0
 
-
 def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        custom int arnold:global:AA_samples = 3
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </persp/perspShape>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -14,9 +14,9 @@ def Scope "Render"
         float pixelAspectRatio = 1.333
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
     }
 }
+
 def Xform "persp"
 {
     def Camera "perspShape"
@@ -52,9 +52,11 @@ def Xform "persp"
 
 def Xform "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
-         uniform bool doubleSided = 1
+        uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
         int[] faceVertexIndices = [0, 1, 3, 2]
         rel material:binding = </materials/aiFlat1>
@@ -86,7 +88,9 @@ def Xform "pPlane1"
 
 def Xform "pPlane2"
 {
-    def Mesh "pPlaneShape2"
+    def Mesh "pPlaneShape2" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -124,9 +128,11 @@ def Xform "pPlane2"
 
 def Xform "pPlane3"
 {
-    def Mesh "pPlaneShape3"
+    def Mesh "pPlaneShape3" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
-         uniform bool doubleSided = 1
+        uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
         int[] faceVertexIndices = [0, 1, 3, 2]
         rel material:binding = </materials/aiFlat3>
@@ -162,9 +168,11 @@ def Xform "pPlane3"
 
 def Xform "pPlane4"
 {
-    def Mesh "pPlaneShape4"
+    def Mesh "pPlaneShape4" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
-         uniform bool doubleSided = 1
+        uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
         int[] faceVertexIndices = [0, 1, 3, 2]
         rel material:binding = </materials/aiFlat4>
@@ -200,7 +208,9 @@ def Xform "pPlane4"
 
 def Xform "pPlane5"
 {
-    def Mesh "pPlaneShape5"
+    def Mesh "pPlaneShape5" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -238,7 +248,9 @@ def Xform "pPlane5"
 
 def Xform "pPlane6"
 {
-    def Mesh "pPlaneShape6"
+    def Mesh "pPlaneShape6" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -276,7 +288,9 @@ def Xform "pPlane6"
 
 def Xform "pPlane7"
 {
-    def Mesh "pPlaneShape7"
+    def Mesh "pPlaneShape7" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -314,7 +328,9 @@ def Xform "pPlane7"
 
 def Xform "pPlane8"
 {
-    def Mesh "pPlaneShape8"
+    def Mesh "pPlaneShape8" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -350,38 +366,43 @@ def Xform "pPlane8"
     }
 }
 
-
-
 def "materials"
 {
     def Material "aiFlat1"
     {
         token outputs:arnold:surface.connect = </aiFlat1.outputs:surface>
     }
+
     def Material "aiFlat2"
     {
         token outputs:arnold:surface.connect = </aiFlat2.outputs:surface>
     }
+
     def Material "aiFlat3"
     {
         token outputs:arnold:surface.connect = </aiFlat3.outputs:surface>
     }
+
     def Material "aiFlat4"
     {
         token outputs:arnold:surface.connect = </aiFlat4.outputs:surface>
     }
+
     def Material "aiFlat5"
     {
         token outputs:arnold:surface.connect = </aiFlat5.outputs:surface>
     }
+
     def Material "aiFlat6"
     {
         token outputs:arnold:surface.connect = </aiFlat6.outputs:surface>
     }
+
     def Material "aiFlat7"
     {
         token outputs:arnold:surface.connect = </aiFlat7.outputs:surface>
     }
+
     def Material "aiFlat8"
     {
         token outputs:arnold:surface.connect = </aiFlat8.outputs:surface>
@@ -400,10 +421,9 @@ def Shader "aiFlat1"
 def Shader "texture1"
 {
     uniform token info:id = "UsdUVTexture"
+    float4 inputs:bias = (0.3, 0, 0, 0)
     asset inputs:file = @texture.tx@
     float4 inputs:scale = (1, 0.2, 1, 1)
-    float4 inputs:bias = (0.3, 0, 0, 0)
-    
     float2 inputs:st.connect = </textureCoords.outputs:result>
     color3f outputs:out
 }
@@ -419,10 +439,9 @@ def Shader "aiFlat2"
 def Shader "texture2"
 {
     uniform token info:id = "UsdUVTexture"
-    float4 inputs:scale = (1, 0.2, 1, 1)
     float4 inputs:bias = (0.3, 0, 0, 0)
     float4 inputs:fallback = (1, 0, 0, 1)
-    
+    float4 inputs:scale = (1, 0.2, 1, 1)
     float2 inputs:st.connect = </textureCoords.outputs:result>
     color3f outputs:out
 }
@@ -434,12 +453,13 @@ def Shader "aiFlat3"
     prepend color3f inputs:color.connect = </texture3.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture3"
 {
     uniform token info:id = "UsdUVTexture"
+    float4 inputs:bias = (0.3, 0, 0, 0)
     asset inputs:file = @texture.tx@
     float4 inputs:scale = (1, 0.2, 1, 1)
-    float4 inputs:bias = (0.3, 0, 0, 0)
     float2 inputs:st.connect = </textureTransform.outputs:result>
     token inputs:wrapS = "black"
     token inputs:wrapT = "mirror"
@@ -453,15 +473,16 @@ def Shader "aiFlat4"
     prepend color3f inputs:color.connect = </texture4.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture4"
 {
     uniform token info:id = "UsdUVTexture"
+    float4 inputs:bias = (0.3, 0, 0, 0)
     asset inputs:file = @texture.tx@
     float4 inputs:scale = (1, 0.2, 1, 1)
-    float4 inputs:bias = (0.3, 0, 0, 0)
     float2 inputs:st.connect = </textureTransform.outputs:result>
-    token inputs:wrapT = "black"
     token inputs:wrapS = "mirror"
+    token inputs:wrapT = "black"
     color3f outputs:result
 }
 
@@ -472,15 +493,16 @@ def Shader "aiFlat5"
     prepend color3f inputs:color.connect = </texture5.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture5"
 {
     uniform token info:id = "UsdUVTexture"
-    asset inputs:file = @texture.tx@
-    float2 inputs:st.connect = </textureTransform.outputs:result>
-    token inputs:wrapT = "useMetadata"
-    token inputs:wrapS = "useMetadata"
-    float4 inputs:scale = (1, 0.2, 1, 1)
     float4 inputs:bias = (0.3, 0, 0, 0)
+    asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "useMetadata"
+    token inputs:wrapT = "useMetadata"
     color3f outputs:result
 }
 
@@ -491,15 +513,16 @@ def Shader "aiFlat6"
     prepend color3f inputs:color.connect = </texture6.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture6"
 {
     uniform token info:id = "UsdUVTexture"
-    asset inputs:file = @texture.tx@
-    float2 inputs:st.connect = </textureTransform.outputs:result>
-    token inputs:wrapT = "repeat"
-    token inputs:wrapS = "clamp"
-    float4 inputs:scale = (1, 0.2, 1, 1)
     float4 inputs:bias = (0.3, 0, 0, 0)
+    asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "clamp"
+    token inputs:wrapT = "repeat"
     color3f outputs:result
 }
 
@@ -510,15 +533,16 @@ def Shader "aiFlat7"
     prepend color3f inputs:color.connect = </texture7.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture7"
 {
     uniform token info:id = "UsdUVTexture"
+    float4 inputs:bias = (0.3, 0, 0, 0)
     asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
     float2 inputs:st.connect = </textureTransform.outputs:result>
     token inputs:wrapS = "repeat"
     token inputs:wrapT = "clamp"
-    float4 inputs:scale = (1, 0.2, 1, 1)
-    float4 inputs:bias = (0.3, 0, 0, 0)
     color3f outputs:result
 }
 
@@ -529,26 +553,26 @@ def Shader "aiFlat8"
     prepend color3f inputs:color.connect = </texture8.outputs:result>
     token outputs:surface
 }
+
 def Shader "texture8"
 {
     uniform token info:id = "UsdUVTexture"
+    float4 inputs:bias = (0, 0.4, 0, 0)
     asset inputs:file = @texture.tx@
+    float4 inputs:scale = (0.2, 1, 1, 1)
     float2 inputs:st.connect = </textureTransform.outputs:result>
     token inputs:wrapS = "repeat"
     token inputs:wrapT = "repeat"
-    float4 inputs:scale = (0.2, 1, 1, 1)
-    float4 inputs:bias = (0, 0.4, 0, 0)
     color3f outputs:result
 }
 
 def Shader "textureTransform"
 {
     uniform token info:id = "UsdTransform2d"
-
     float2 inputs:in.connect = </textureCoords.outputs:result>
+    float inputs:rotation = -10
     float2 inputs:scale = (2, 1)
     float2 inputs:translation = (0, 0.3)
-    float inputs:rotation = -10
     color3f outputs:result
 }
 

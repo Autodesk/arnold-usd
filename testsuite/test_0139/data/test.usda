@@ -13,8 +13,8 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        custom int arnold:global:AA_samples = 3
         int arnold:global:AA_seed = 103
-        
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -24,11 +24,11 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
     }
 }
 
 def Xform "geo" (
+    apiSchemas = ["MaterialBindingAPI"]
     kind = "component"
 )
 {

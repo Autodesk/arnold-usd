@@ -44,6 +44,18 @@ def Xform "geo"
         {
             matrix4d xformOp:transform:transform2 = ( (0.7071067811865476, 0, -0.7071067811865476, 0), (0, 1, 0, 0), (0.7071067811865476, 0, 0.7071067811865476, 0), (0, 0, 0, 1) )
             uniform token[] xformOpOrder = ["xformOp:transform:transform2"]
+
+            over "geo"
+            {
+                over "cube"
+                {
+                    over "mesh_0" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
+                    {
+                    }
+                }
+            }
             variantSet "model" = {
                 "cube" {
                     def Xform "geo" (
@@ -161,7 +173,9 @@ def Xform "geo"
                             matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
                             uniform token[] xformOpOrder = ["xformOp:transform:xform"]
 
-                            def Mesh "mesh_0"
+                            def Mesh "mesh_0" (
+                                apiSchemas = ["MaterialBindingAPI"]
+                            )
                             {
                                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                                 int[] faceVertexCounts = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
@@ -270,6 +284,18 @@ def Xform "geo"
         {
             matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 2, 1) )
             uniform token[] xformOpOrder = ["xformOp:transform:transform1"]
+
+            over "geo"
+            {
+                over "sphere"
+                {
+                    over "mesh_0" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
+                    {
+                    }
+                }
+            }
             variantSet "model" = {
                 "teapot" {
                     def Xform "geo" (
@@ -390,7 +416,9 @@ def Xform "geo"
                             matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
                             uniform token[] xformOpOrder = ["xformOp:transform:xform"]
 
-                            def Mesh "mesh_0"
+                            def Mesh "mesh_0" (
+                                apiSchemas = ["MaterialBindingAPI"]
+                            )
                             {
                                 float3[] extent = [(-0.75, -0.25, -0.75), (0.75, 0.25, 0.75)]
                                 int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
@@ -584,15 +612,15 @@ def Xform "lights"
 {
     def DomeLight "domelight1"
     {
+        custom float houdini:guidescale
+        float houdini:guidescale.timeSamples = {
+            1: 1,
+        }
         color3f inputs:color = (1, 1, 1)
         float inputs:diffuse = 1
         bool inputs:enableColorTemperature = 0
         float inputs:exposure = 0
         rel inputs:filters = None
-        custom float houdini:guidescale
-        float houdini:guidescale.timeSamples = {
-            1: 1,
-        }
         float inputs:intensity = 1
         bool inputs:normalize = 0
         rel inputs:portals = None

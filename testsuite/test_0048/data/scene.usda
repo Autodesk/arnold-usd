@@ -2,7 +2,9 @@
 
 def "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]
@@ -36,7 +38,9 @@ def "pPlane1"
 
 def "materials"
 {
-    def Material "surfaceShader2"
+    def Material "surfaceShader2" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         token outputs:arnold:surface.connect = </surfaceShader2.outputs:surface>
     }
