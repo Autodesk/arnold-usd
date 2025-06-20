@@ -136,6 +136,9 @@ void HdArnoldBasisCurves::Sync(
     if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
+
+        // We need to set the widths/radius along with the positions. If they are not set, it will create a default value
+        HdArnoldSetRadiusFromPrimvar(node, id, sceneDelegate);
     }
 
     if (dirtyTopology) {

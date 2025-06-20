@@ -513,8 +513,8 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
         if (pointsCount > 0) {
             // USD accepts empty width attributes, or a constant width for all points,
             // but arnold fails in that case. So we need to generate a dedicated array
-            std::vector<float> radiusVec(pointsCount, 0.f);
-            AiNodeSetArray(node, str::radius, AiArrayConvert(pointsCount, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+            std::vector<float> radiusVec(1, 0.5);
+            AiNodeSetArray(node, str::radius, AiArrayConvert(1, 1, AI_TYPE_FLOAT, &radiusVec[0]));
         }
         return;
     }
