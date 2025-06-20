@@ -73,7 +73,7 @@ testsuite_target_path = test_env.Dir('.').abspath
 if 'TESTSUITE_PASSES' in test_env:
    testsuite_passes = test_env['TESTSUITE_PASSES']
 else:
-   testsuite_passes = ['usd', 'hydra'] 
+   testsuite_passes = ['usd','hydra'] 
 
 args_load = dict(
    path   = testsuite_source_path,

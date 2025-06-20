@@ -9,6 +9,7 @@ set(SRC
     dependenciesSIP.cpp
     dependencyForwardingSIP.cpp
     fixMaterialPruningSIP.cpp
+    fixPropagatedPrototypesVisibilitySIP.cpp
     extComputationPrimvarPruningSIP.cpp
     instancer.cpp
 	implicitSurfaceSIP.cpp
