@@ -45,6 +45,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold fix material pruning"
+                    },
+                    "HdArnoldNurbsApproximatingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold nurbs approximation"
                     }
                 }
             },

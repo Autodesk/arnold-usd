@@ -17,6 +17,7 @@ set(SRC
     mesh.cpp
     native_rprim.cpp
     node_graph.cpp
+    nurbsApproximatingSIP.cpp
     openvdb_asset.cpp
     options.cpp
     points.cpp
