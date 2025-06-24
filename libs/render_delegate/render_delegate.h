@@ -604,7 +604,14 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        AiNodeDestroy(node);
+        // if we have a procedural parent, we should avoid deleting nodes
+        // as this can happen in batch sessions during procedural_update, 
+        // which is not allowed
+        if (_procParent) {
+            AiNodeSetDisabled(node, true);
+        }
+        else
+            AiNodeDestroy(node);
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
