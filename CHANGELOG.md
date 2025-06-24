@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Next Bugfix release (7.4.2.2)
+
+### Bug Fixes
+
+- [usd#2340](https://github.com/Autodesk/arnold-usd/issues/2340) - Fix warnings when nodes are deleted during batch sessions
+
 ## Next Bugfix release (7.4.2.1)
 
 ### Bug Fixes
