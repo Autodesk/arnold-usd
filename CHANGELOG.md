@@ -5,7 +5,8 @@
 
 ### Bug Fixes
 
-- [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2334) - Fix random crashes with husk and cryptomatte
+- [usd#2340](https://github.com/Autodesk/arnold-usd/issues/2340) - Fix warnings when nodes are deleted during batch sessions
+- [usd#2334](https://github.com/Autodesk/arnold-usd/issues/2334) - Fix random crashes with husk and cryptomatte
 
 ## [7.4.2.1] - 2025-06-09
 
