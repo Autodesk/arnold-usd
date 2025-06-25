@@ -485,9 +485,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 #else
     _isArnoldActive = AiUniverseIsActive();
 #endif
-    if (_isBatch) {
+    if (_isBatch && _renderDelegateOwnsUniverse) {
 #if ARNOLD_VERSION_NUM >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
+        // We only want to do this when we own the universe (e.g. with husk), 
+        // otherwise this would prevent CER from showing up when we're rendering it
+        // through a procedural, or scene format plugin
         AiADPDisableDialogWindow();
         AiErrorReportingSetEnabled(false);
 #endif
