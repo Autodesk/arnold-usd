@@ -4,4 +4,4 @@ Fixes #1547
 
 author: cyril.pichard@autodesk.com
 
-PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.063}
+PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.075}

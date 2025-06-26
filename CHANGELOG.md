@@ -1,16 +1,22 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-
 ## Next feature release (7.4.3.0)
 
 - [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
 - [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 - [usd#2310](https://github.com/Autodesk/arnold-usd/issues/2310) - Support volume shaders on points with hydra
-- [usd#2318](https://github.com/Autodesk/arnold-usd/issues/2318) - Add metadatas for path and extensions in the usd procedural
-- [usd#2318](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
+- [usd#2320](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
+- [usd#2337](https://github.com/Autodesk/arnold-usd/issues/2337) - Don't disable CER error reports through the hydra procedural
 
-## Next Bugfix release (7.4.2.1)
+## Next Bugfix release (7.4.2.2)
+
+### Bug Fixes
+
+- [usd#2340](https://github.com/Autodesk/arnold-usd/issues/2340) - Fix warnings when nodes are deleted during batch sessions
+- [usd#2334](https://github.com/Autodesk/arnold-usd/issues/2334) - Fix random crashes with husk and cryptomatte
+
+## [7.4.2.1] - 2025-06-09
 
 ### Bug Fixes
 
