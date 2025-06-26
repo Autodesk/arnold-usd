@@ -342,7 +342,8 @@ HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourceCustomPrimvars);
 class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldProceduralCustomDataSourcePrim);
-
+    
+    USDIMAGING_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourcePrim::GetNames();
@@ -361,6 +362,7 @@ public:
         return mappings;
     }
 
+    USDIMAGING_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdPrimvarsSchema::GetSchemaToken()) {
