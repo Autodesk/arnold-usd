@@ -42,6 +42,7 @@ source_files = [
     'dependenciesSIP.cpp',
     'dependencyForwardingSIP.cpp',
     'extComputationPrimvarPruningSIP.cpp',
+	'fixInvalidationSIP.cpp',
 	'fixMaterialPruningSIP.cpp',
     'fixPropagatedPrototypesVisibilitySIP.cpp',
     'nurbsApproximatingSIP.cpp',

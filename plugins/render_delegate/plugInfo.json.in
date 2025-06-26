@@ -57,6 +57,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold fix propagated prototype visibility"
+                    },
+                    "HdArnoldFixInvalidationSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: fix invalidation for custom types"
                     }
                     
                 }

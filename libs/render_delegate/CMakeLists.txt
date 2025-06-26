@@ -8,6 +8,7 @@ set(SRC
     debug_codes.cpp
     dependenciesSIP.cpp
     dependencyForwardingSIP.cpp
+    fixInvalidationSIP.cpp
     fixMaterialPruningSIP.cpp
     fixPropagatedPrototypesVisibilitySIP.cpp
     extComputationPrimvarPruningSIP.cpp
