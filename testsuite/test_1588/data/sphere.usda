@@ -7,7 +7,9 @@
 
 def Xform "pSphere1"
 {
-    def Mesh "pSphereShape1"
+    def Mesh "pSphereShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.0000002, -1, -1.0000005), (1, 1, 1.0000001)]

@@ -28,7 +28,10 @@ def Xform "geo" (
                 prepend apiSchemas = ["MaterialBindingAPI"]
             )
             {
+                uniform bool doubleSided = 1
                 rel material:binding = </materials/arnold_box>
+                double3 xformOp:translate = (0, 0.16306444535917874, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
             }
         }
 
@@ -41,10 +44,13 @@ def Xform "geo" (
                 prepend apiSchemas = ["MaterialBindingAPI"]
             )
             {
+                uniform bool doubleSided = 1
                 float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
                 rel material:binding = </materials/usd_box>
                 custom bool primvars:arnold:smoothing = 0
                 double size = 1
+                double3 xformOp:translate = (0, 0.1378257057022182, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
             }
         }
     }

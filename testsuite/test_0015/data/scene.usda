@@ -2,13 +2,15 @@
 
 def "World"
 {
-    def Cylinder "cylinder"
+    def Cylinder "cylinder" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         token axis = "Y"
         double height = 3
         rel material:binding = </World/material>
-        double radius = 1.1
         custom bool primvars:arnold:smoothing = 0
+        double radius = 1.1
         float3 xformOp:translate = (0, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -25,13 +27,15 @@ def "World"
         }
     }
 
-    def Cone "cone"
+    def Cone "cone" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         token axis = "Y"
         double height = 3
         rel material:binding = </World/material2>
-        double radius = 1.1
         custom bool primvars:arnold:smoothing = 0
+        double radius = 1.1
         float3 xformOp:translate = (5, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -48,12 +52,13 @@ def "World"
         }
     }
 
-    def Cube "cube"
+    def Cube "cube" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         rel material:binding = </World/material3>
         custom bool primvars:arnold:smoothing = 0
         float3 xformOp:translate = (-5, 0, 0)
-
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
@@ -71,10 +76,10 @@ def "World"
 
     def DomeLight "light"
     {
-        float primvars:arnold:camera = 0.5
-        float inputs:specular = 0
         color3f inputs:color = (1, 0.4, 1)
         float inputs:intensity = 1
+        float inputs:specular = 0
+        float primvars:arnold:camera = 0.5
     }
 }
 

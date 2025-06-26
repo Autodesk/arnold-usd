@@ -58,6 +58,8 @@ public:
 
     void WriteDebugScene() const;
 
+    void SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath);
+
 private:
     std::string _renderSettings;
     unsigned int _id;

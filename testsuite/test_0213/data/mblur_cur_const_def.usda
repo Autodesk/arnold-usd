@@ -17,7 +17,9 @@ def Xform "cur_const_def" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position18"]
 
-    def BasisCurves "curve_0"
+    def BasisCurves "curve_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = ""
         int[] curveVertexCounts.timeSamples = {
