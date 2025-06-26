@@ -72,7 +72,12 @@ void HdArnoldNativeRprim::Sync(
 
     int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
-    if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
+    bool syncBuiltinParameters = *dirtyBits & ArnoldUsdRprimBitsParams;
+ #if PXR_VERSION >= 2505 // Hydra2 - we have to pass the arnold::attributes via the DirtyPrimvar bit unfortunately,
+                         // the mapping is done in fixInvalidationSIP.cpp
+    syncBuiltinParameters = syncBuiltinParameters || (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+ #endif   
+    if (syncBuiltinParameters && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
         VtValue val = GetArnoldAttributes();
         if (val.IsHolding<ArnoldUsdParamValueList>()) {
