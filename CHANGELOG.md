@@ -8,6 +8,7 @@
 - [usd#2310](https://github.com/Autodesk/arnold-usd/issues/2310) - Support volume shaders on points with hydra
 - [usd#2320](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
 - [usd#2337](https://github.com/Autodesk/arnold-usd/issues/2337) - Don't disable CER error reports through the hydra procedural
+- [usd#2346](https://github.com/Autodesk/arnold-usd/issues/2346) - Registry should explicitely consider the usd.hide metadata instead of DCC-specific ones
 
 ## Next Bugfix release (7.4.2.2)
 
