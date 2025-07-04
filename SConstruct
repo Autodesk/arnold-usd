@@ -259,6 +259,7 @@ env['USD_INCLUDE'] = USD_INCLUDE
 env['USD_LIB'] = USD_LIB
 env['USD_BIN'] = USD_BIN
 env['PREFIX_RENDER_DELEGATE'] = PREFIX_RENDER_DELEGATE
+env['PREFIX_SCHEMAS'] = PREFIX_SCHEMAS
 
 # these could be supplied by linux / osx
 BOOST_INCLUDE = get_optional_env_path('BOOST_INCLUDE')
