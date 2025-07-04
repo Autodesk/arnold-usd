@@ -3,11 +3,17 @@
 
 ## Next feature release (7.4.3.0)
 
+### Features
+
 - [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
 - [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 - [usd#2310](https://github.com/Autodesk/arnold-usd/issues/2310) - Support volume shaders on points with hydra
 - [usd#2320](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
 - [usd#2337](https://github.com/Autodesk/arnold-usd/issues/2337) - Don't disable CER error reports through the hydra procedural
+
+### Bug Fixes
+
+- [usd#2333](https://github.com/Autodesk/arnold-usd/issues/2333) - Fix crash in USD writer when the outputs string contains asterisk
 
 ## Next Bugfix release (7.4.2.2)
 
