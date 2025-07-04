@@ -128,7 +128,7 @@ else:  # shared libs
         'sdr'
     ]
 
-    if local_env['USD_VERSION_INT'] < 2505:
+    if local_env['USD_VERSION_INT'] <= 2505:
         usd_libs += ['ndr',]
 
     if local_env['USD_VERSION_INT'] >= 2411:
@@ -173,7 +173,8 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
 
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'node_registry'))]
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]
-    
+    else:
+        procedural_libs += ['render_delegate']
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
 
 local_env.Append(LIBPATH = procedural_lib_paths)
