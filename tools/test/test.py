@@ -436,8 +436,8 @@ class Test:
          # Specialize the environment per pass, cloning the global environment
          environment = dict(environment_global)
          environment['ARNOLD_TESTSUITE_PASS'] = pass_name
-         environment['PROCEDURAL_USE_HYDRA'] = 1 if pass_name == 'hydra' else 0
-         
+         environment['PROCEDURAL_USE_HYDRA'] = 1 if pass_name in ['hydra', 'hydra2'] else 0
+         environment['USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX'] = 1 if pass_name == 'hydra2' else 0
          # Construct the path to the reference image of the current pass. If
          # there's no specific reference image for this pass (which should end
          # with ".<pass>.<ext>"), use the global reference. And if there's no
@@ -551,12 +551,13 @@ class Test:
             'warnpercent': self.diff_warnpercent
       }
       diff_thresholds['hydra'] = dict(diff_thresholds['usd'])
-
+      diff_thresholds['hydra2'] = dict(diff_thresholds['usd'])
       # Configure the diffs that we want to perform
       # NOTE : in arnold-usd we don't want to compare between the 2 passes, cause the reference is always the same
       diff_checks = [
          [('out', 'usd'), ('ref', 'usd')],
-         [('out', 'hydra'), ('ref', 'hydra')]
+         [('out', 'hydra'), ('ref', 'hydra')],
+         [('out', 'hydra2'), ('ref', 'hydra2')]
       ]
       for keys in diff_checks:
          # Skip the check if a pass generating an output image failed. That

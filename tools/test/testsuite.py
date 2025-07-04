@@ -460,6 +460,14 @@ class Testsuite(object):
                {'class_name': 'dif', 'title': 'Dif (4x)', 'key': 'dif_img_hydra_out-hydra_ref'},
             ]
          },
+         'hydra2': {
+            'name': 'Hydra2',
+            'images': [
+               {'class_name': 'new', 'title': 'New', 'key': 'new_img_hydra2'},
+               {'class_name': 'ref', 'title': 'Ref', 'key': 'ref_img_hydra2'},
+               {'class_name': 'dif', 'title': 'Dif (4x)', 'key': 'dif_img_hydra2_out-hydra2_ref'},
+            ]
+         },
       }
 
       for pass_name in self.passes:
