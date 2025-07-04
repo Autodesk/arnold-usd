@@ -157,7 +157,7 @@ procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR']
 if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
     # for static USD builds we need to include ndr/sdr & usdImaging in the procedural lib
-    if local_env['USD_BUILD_MODE'] == 'static':
+    if local_env['USD_BUILD_MODE'] == 'static' or local_env['USD_BUILD_MODE'] == 'monolithic':
         if system.is_windows:
             procedural_libs += ['-WHOLEARCHIVE:nodeRegistryArnold']
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
