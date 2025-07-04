@@ -388,12 +388,18 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
             while (aovNames.find(varName) != aovNames.end()) {
                 varName = renderVarsPrefix + aovName + std::to_string(++aovIndex);
             }
+            aovNames.insert(varName);
+
+            if (varName.back() == '*') {
+                varName.pop_back();
+                varName += std::string("all");
+            }
+
             // Now we'll author a new prim for Render Vars,
             // let's clear _exportedAttrs so that it doesn't
             // conflict between different nodes
             _exportedAttrs.clear();
-
-            aovNames.insert(varName);
+            
             SdfPath aovPath(varName);
             UsdRenderVar renderVar = UsdRenderVar::Define(stage, aovPath);
             UsdPrim renderVarPrim = renderVar.GetPrim();

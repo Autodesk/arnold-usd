@@ -1,0 +1,52 @@
+Executing C:\Users\blaines\AppData\Local\Programs\Python\Python311\python.exe test.py
+00:00:00    81MB         | log started Fri Jul  4 17:23:50 2025
+00:00:00    81MB         | Arnold 7.4.2.1 [37ff9861] windows x86_64 clang-15.0.7 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.8.2.57 clmhub-3.1.1.43 rlm-17.0.1 optix-8.0.0 2025/06/05 02:50:39
+00:00:00    81MB         | running on ADSKEM00ZH29, pid=26372
+00:00:00    81MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
+00:00:00    81MB         |  NVIDIA driver version 572.83
+00:00:00    81MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (4760MB available) (NVLink:0)
+00:00:00    81MB         |  Windows 10 (version 10.0, build 26100)
+00:00:00    81MB         |  soft limit for open files changed from 512 to 2048
+00:00:00    81MB         |  
+00:00:00    81MB         | Installing system handler with mask 255
+00:00:00   128MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.24.11_arnold-7.4.2.1\plugins\procedural ...
+00:00:00   137MB         |  usd_proc.dll: usd uses Arnold 7.4.2.1
+00:00:00   137MB         | loaded 1 plugins from 1 lib(s) in 0:00.02
+00:00:00   137MB         | loading plugins from D:\arnold\sdk\7.4.2.1\bin\..\plugins ...
+00:00:00   138MB         |  alembic_proc.dll: alembic uses Arnold 7.4.2.1
+00:00:00   138MB         |  skipping already loaded plugin: D:\arnold\sdk\7.4.2.1\bin\..\plugins\usd_proc.dll ...
+00:00:00   138MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   139MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   141MB         | [metadata] loading metadata file: scene.ass
+00:00:00   142MB         | [ass] loading scene.ass ...
+00:00:00   142MB         | [ass] read 27312 bytes, 9 nodes in 0:00.00
+AAAAAAAAAAA
+num outputs = 4
+->RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA
+var name = /Render/Vars/RGBA
+->RGBA_* RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA
+var name = /Render/Vars/RGBA_*
+->diffuse RGB defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA
+var name = /Render/Vars/diffuse
+->specular RGB defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA
+var name = /Render/Vars/specular
+DONE
+00:00:00   172MB         | [usd] Saved scene as test_resaved.usda
+
+        RLM DEBUG for all products
+
+        In license file: C:\arnold\license\arnold_04d9c8c1a45e_20260306.lic: 
+        Product: arnold, ISV: solidangle, Uncounted
+
+        1 product instances found
+
+00:00:01   313MB         |  
+00:00:01   313MB         | releasing resources
+00:00:01   213MB         |   
+00:00:01   213MB         |  releasing resources
+00:00:01   201MB         |   unloading 2 plugins
+00:00:01   201MB         |    closing usd_proc.dll ...
+00:00:01   201MB         |    closing alembic_proc.dll ...
+00:00:01   201MB         |   unloading plugins done
+00:00:01   201MB         |  Arnold shutdown
+00:00:01   188MB         |  Installing system handler with mask 0
