@@ -36,6 +36,7 @@ void ProceduralReader::Read(const std::string &filename,
         }
         UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
         ReadStage(stage, path);
+
     } else {
         _overrides = overrides; // Store the overrides that are currently being applied
         auto getLayerName = []() -> std::string {
@@ -70,8 +71,7 @@ void ProceduralReader::Read(const std::string &filename,
         // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
         // USD from crashing #235
         auto stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
-                               : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
-
+                                : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
         ReadStage(stage, path);
     }
 

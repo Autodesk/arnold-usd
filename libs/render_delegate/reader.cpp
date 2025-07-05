@@ -2,23 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <iostream>
-#include <vector>
 #include <ai.h>
 #include <constant_strings.h>
-#include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/arch/env.h>
-#include "pxr/imaging/hd/camera.h"
-#include "pxr/imaging/hd/driver.h"
-#include "pxr/imaging/hd/engine.h"
-#include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
-#include "pxr/imaging/hd/renderBuffer.h"
-#include "pxr/imaging/hd/renderPass.h"
-#include "pxr/imaging/hd/rendererPlugin.h"
-#include "pxr/imaging/hd/rendererPluginRegistry.h"
-#include "pxr/usd/sdf/path.h"
-#include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdGeom/camera.h"
+#include <pxr/base/tf/pathUtils.h>
+#include <iostream>
+#include <vector>
+#include <iostream>
+#include <pxr/imaging/hd/camera.h>
+#include <pxr/imaging/hd/driver.h>
+#include <pxr/imaging/hd/engine.h>
+#include <pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h>
+#include <pxr/imaging/hd/renderBuffer.h>
+#include <pxr/imaging/hd/renderPass.h>
+#include <pxr/imaging/hd/rendererPlugin.h>
+#include <pxr/imaging/hd/rendererPluginRegistry.h>
+#include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
+#include <pxr/usd/sdf/path.h>
+#include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/camera.h>
 
 #include "render_delegate.h"
 #include "render_pass.h"
@@ -141,8 +143,14 @@ HydraArnoldReader::~HydraArnoldReader()
     if (_imagingDelegate)
         delete _imagingDelegate;
 
-    if (_renderIndex)
+        
+
+
+    if (_renderIndex) {
+        _renderIndex->RemoveSceneIndex(_sceneIndex);
         delete _renderIndex;
+    }
+
     
     if (_renderDelegate)    
         delete _renderDelegate;
@@ -193,7 +201,10 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
         _sceneIndex = _displayStyleSceneIndex =
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
-
+        {
+            std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
+            _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
+        }
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
 #endif        
     } else {        
@@ -208,7 +219,23 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
     return _renderDelegate ? static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes : _nodes; }
-    
+
+void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath)
+{
+    if (_imagingDelegate)
+        _imagingDelegate->SetCameraForSampling(cameraPath);
+    if (_renderIndex && _stageSceneIndex && stage) {
+        UsdGeomCamera cameraPrim(stage->GetPrimAtPath(cameraPath));
+        double shutterOpen, shutterClose;
+        UsdTimeCode timeCode = _stageSceneIndex->GetTime();
+        if (cameraPrim) {
+            cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);
+            cameraPrim.GetShutterCloseAttr().Get<double>(&shutterClose, timeCode);
+            _shutter = GfVec2f(shutterOpen, shutterClose);
+        }
+    }
+}
+
 void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                                 const std::string &path)
 {
@@ -258,18 +285,16 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         if (_imagingDelegate)
             _imagingDelegate->SetShutter(shutter_start, shutter_end);
 
+        _shutter = {static_cast<float>(shutter_start), static_cast<float>(shutter_end)};
     } else {
         if (!renderCameraPath.IsEmpty()) {
-
-            if (_imagingDelegate)
-                _imagingDelegate->SetCameraForSampling(renderCameraPath);
+            SetCameraForSampling(stage, renderCameraPath);
         } else {
             // Use the first camera available
             for (const auto &it: stage->Traverse()) {
                 if (it.IsA<UsdGeomCamera>()) {
                     UsdPrim cameraPrim = it;
-                    if (_imagingDelegate)
-                        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+                    SetCameraForSampling(stage, cameraPrim.GetPath());
                     break;
                 }
             }
@@ -278,25 +303,23 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
-    SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
     UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
 
     if (_useSceneIndex) {
+        if (!path.empty()) {
+            UsdStagePopulationMask mask({SdfPath(path)});
+            stage->SetPopulationMask(mask);
+        }
         _stageSceneIndex->SetStage(stage);
     } else {
+        SdfPathVector _excludedPrimPaths; // excluding nothing
         _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
     }
-    if (!path.empty()) {
-        UsdGeomXformCache xformCache(_useSceneIndex ? _stageSceneIndex->GetTime() : _imagingDelegate->GetTime());
+    if (!path.empty() && !_useSceneIndex) {
+        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
         const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
-        if (_useSceneIndex) {            
-#ifdef ARNOLD_SCENE_INDEX
-            _rootOverridesSceneIndex->SetRootTransform(xf);
-#endif
-        } else {
-            _imagingDelegate->SetRootTransform(xf);
-        }
+        _imagingDelegate->SetRootTransform(xf);
     }
     // This will return a "hidden" render tag if a primitive is of a disabled type
     if (_imagingDelegate) {
@@ -357,8 +380,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             delete _imagingDelegate;
             _imagingDelegate = nullptr;
         }
-        delete _renderIndex;
-        _renderIndex = nullptr;
+        if (_renderIndex) {
+            _renderIndex->RemoveSceneIndex(_sceneIndex);
+            delete _renderIndex;
+            _renderIndex = nullptr;
+        }
+
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
         std::swap(_nodes, arnoldRenderDelegate->_nodes);
@@ -425,6 +452,8 @@ HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
     HdSceneIndexBaseRefPtr const &inputScene)
 {
+    static AtMutex s_appendOverridesSceneIndices;
+    std::lock_guard<AtMutex> lock(s_appendOverridesSceneIndices);
     HdSceneIndexBaseRefPtr sceneIndex = inputScene;
 
     static HdContainerDataSourceHandle const materialPruningInputArgs =
@@ -457,7 +486,6 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
 
     sceneIndex = _rootOverridesSceneIndex =
         UsdImagingRootOverridesSceneIndex::New(sceneIndex);
-
     return sceneIndex;
 }
 #endif

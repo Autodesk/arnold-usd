@@ -97,7 +97,9 @@ def Xform "pTorus1"
         }
     }
 
-    def Mesh "pTorusShape1"
+    def Mesh "pTorusShape1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.5000005, -0.50000024, -1.5000008), (1.5000001, 0.50000006, 1.5000004)]
@@ -157,7 +159,9 @@ def Xform "pTorus2"
         }
     }
 
-    def Mesh "pTorusShape2"
+    def Mesh "pTorusShape2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.5000005, -0.50000024, -1.5000008), (1.5000001, 0.50000006, 1.5000004)]
@@ -217,7 +221,9 @@ def Xform "pTorus3"
         }
     }
 
-    def Mesh "pTorusShape3"
+    def Mesh "pTorusShape3" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.5000005, -0.50000024, -1.5000008), (1.5000001, 0.50000006, 1.5000004)]
@@ -294,7 +300,9 @@ def Xform "pTorus4"
         }
     }
 
-    def Mesh "pTorusShape4"
+    def Mesh "pTorusShape4" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.5000005, -0.50000024, -1.5000008), (1.5000001, 0.50000006, 1.5000004)]

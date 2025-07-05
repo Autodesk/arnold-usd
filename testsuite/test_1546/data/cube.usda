@@ -10,7 +10,9 @@
     timeCodesPerSecond = 30
 )
 
-def Mesh "Cube"
+def Mesh "Cube" (
+    apiSchemas = ["MaterialBindingAPI"]
+)
 {
     uniform bool doubleSided = 1
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
