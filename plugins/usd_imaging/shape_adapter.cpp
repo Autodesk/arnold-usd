@@ -119,7 +119,7 @@ class ArnoldShapeDataSourcePrim : public UsdImagingDataSourceGprim { // also tri
 public:
     HD_DECLARE_DATASOURCE(ArnoldShapeDataSourcePrim);
     
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourceGprim::GetNames();
@@ -129,7 +129,7 @@ public:
         return result;
     }
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == str::t_arnold__attributes) {

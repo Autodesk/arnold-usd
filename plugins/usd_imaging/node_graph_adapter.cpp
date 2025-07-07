@@ -405,7 +405,7 @@ class ArnoldNodeGraphDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldNodeGraphDataSourcePrim);
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourcePrim::GetNames();
@@ -413,7 +413,7 @@ public:
         return result;
     }
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdMaterialSchema::GetSchemaToken()) {
