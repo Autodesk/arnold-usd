@@ -108,15 +108,15 @@ public:
     void MarkDirty(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index) override;
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     void MarkMaterialDirty(UsdPrim const& prim,
                            SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     void ProcessPrimResync(SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
-USDIMAGING_API
+    USDIMAGINGARNOLD_API
     HdDirtyBits ProcessPrimChange(UsdPrim const& prim,
                                 SdfPath const& cachePath,
                                 TfTokenVector const& changedFields) override;
