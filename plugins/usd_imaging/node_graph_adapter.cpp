@@ -352,6 +352,7 @@ class ArnoldNodeGraphDataSource : public HdContainerDataSource {
 public:
     HD_DECLARE_DATASOURCE(ArnoldNodeGraphDataSource);
 
+    USDIMAGING_API
     TfTokenVector GetNames() override
     {
         TfTokenVector renderContexts;
@@ -360,6 +361,7 @@ public:
         return renderContexts;
     }
 
+    USDIMAGING_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         // Same as GetResources from arnold
@@ -389,6 +391,7 @@ private:
         const UsdPrim& usdPrim, const UsdImagingDataSourceStageGlobals& stageGlobals)
         : _usdPrim(usdPrim), _stageGlobals(stageGlobals)
     {
+        // TODO flags as time varying 
     }
 
 private:
@@ -402,12 +405,15 @@ class ArnoldNodeGraphDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldNodeGraphDataSourcePrim);
 
+    USDIMAGING_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourcePrim::GetNames();
         result.push_back(HdMaterialSchema::GetSchemaToken());
         return result;
     }
+
+    USDIMAGING_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdMaterialSchema::GetSchemaToken()) {
