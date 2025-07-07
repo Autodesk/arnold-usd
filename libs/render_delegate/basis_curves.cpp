@@ -323,6 +323,14 @@ void HdArnoldBasisCurves::Sync(
         }
         UpdateVisibilityAndSidedness();
     }
+    // Set motion_start / motion_end if we have a non null shutter range
+    {    
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+        if (renderParam->GetShutterRange()[0] != renderParam->GetShutterRange()[1]) {
+            AiNodeSetFlt(node, str::motion_start, renderParam->GetShutterRange()[0]);
+            AiNodeSetFlt(node, str::motion_end, renderParam->GetShutterRange()[1]);
+        }
+    }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
 
