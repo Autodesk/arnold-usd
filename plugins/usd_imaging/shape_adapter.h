@@ -48,6 +48,10 @@ public:
 
     HdContainerDataSourceHandle GetImagingSubprimData(
         UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
+
+    HdDataSourceLocatorSet InvalidateImagingSubprim(
+        UsdPrim const& prim, TfToken const& subprim, TfTokenVector const& properties,
+        UsdImagingPropertyInvalidationType invalidationType) override;
 #endif // PXR_VERSION >= 2505 // Hydra2
     USDIMAGINGARNOLD_API
     SdfPath Populate(

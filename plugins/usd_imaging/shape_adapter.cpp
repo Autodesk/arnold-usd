@@ -113,31 +113,18 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
 }
 #if PXR_VERSION >= 2505 // Hydra2
 
-TfTokenVector UsdImagingArnoldShapeAdapter::GetImagingSubprims(UsdPrim const& prim) {
-    // Assuming Arnold nodes are leaves
-    return { TfToken() };
-}
-
-TfToken UsdImagingArnoldShapeAdapter::GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim)
-{
-    if (subprim.IsEmpty()) {
-         return ArnoldDelegatePrimType();
-    }
-    return UsdImagingGprimAdapter::GetImagingSubprimType(prim, subprim);
-}
-
+// TODO custom Rbits for arnold
 
 class ArnoldShapeDataSourcePrim : public UsdImagingDataSourceGprim { // also tried HdDataSourceLegacyPrim but no sceneDelegate available at this point
 public:
     HD_DECLARE_DATASOURCE(ArnoldShapeDataSourcePrim);
-
     
     USDIMAGING_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourceGprim::GetNames();
         // Assuming primvars is already added by UsdImagingDataSourcePrim
-        result.push_back(TfToken());
+        result.push_back(str::t_arnold__attributes);
 
         return result;
     }
@@ -156,7 +143,8 @@ public:
                     params.emplace_back(paramName.second, value);
                 }
             }
-            // To avoid copying.
+            // Ideally we should return an UsdImagingDataSourceAttribute per attribue, it takes care of setting invalidation flags: time varying, asset dependent, ...
+            //return UsdImagingDataSourceAttribute<ArnoldUsdParamValueList>::New(params);
             return HdRetainedSampledDataSource::New(VtValue(params));
         }
         return UsdImagingDataSourceGprim::Get(name);
@@ -168,8 +156,14 @@ public:
         const UsdPrim& prim, const TfToken& subprim, const TfTokenVector& properties,
         UsdImagingPropertyInvalidationType invalidationType)
     {
-        // TODO: test invalidation in interactive mode
-        return UsdImagingDataSourceGprim::Invalidate(prim, subprim, properties, invalidationType);
+        HdDataSourceLocatorSet result =
+            UsdImagingDataSourceGprim::Invalidate(prim, subprim, properties, invalidationType);
+        if (std::any_of(properties.cbegin(), properties.cend(), [](const TfToken& propName) {
+                return TfStringStartsWith(propName.GetString(), str::arnold_prefix);
+            })) {
+            result.insert(HdDataSourceLocator(str::t_arnold__attributes));
+        }
+        return result;
     }
 
 private:
@@ -177,9 +171,39 @@ private:
         const SdfPath& sceneIndexPath, const UsdPrim& usdPrim, const ParamNamesT &paramNames, const UsdImagingDataSourceStageGlobals& stageGlobals)
         : UsdImagingDataSourceGprim(sceneIndexPath, usdPrim, stageGlobals), _paramNames(paramNames)
     {
+        stageGlobals.FlagAsTimeVarying(sceneIndexPath, HdDataSourceLocator(str::t_arnold__attributes));
     }
     const ParamNamesT &_paramNames; ///< reference to the lookup table with USD and Arnold param names.
 };
+
+TfTokenVector UsdImagingArnoldShapeAdapter::GetImagingSubprims(UsdPrim const& prim) {
+    // Assuming Arnold nodes are leaves
+    return { TfToken() };
+}
+
+TfToken UsdImagingArnoldShapeAdapter::GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim)
+{
+    if (subprim.IsEmpty()) {
+         return ArnoldDelegatePrimType();
+    }
+    return UsdImagingGprimAdapter::GetImagingSubprimType(prim, subprim);
+}
+
+HdDataSourceLocatorSet UsdImagingArnoldShapeAdapter::InvalidateImagingSubprim(
+    UsdPrim const& prim, TfToken const& subprim, TfTokenVector const& properties,
+    UsdImagingPropertyInvalidationType invalidationType)
+{
+    HdDataSourceLocatorSet result;
+
+    // Dirty our whole node graph
+    if (result.IsEmpty() && subprim.IsEmpty()) {
+        result.insert(ArnoldShapeDataSourcePrim::Invalidate(
+            prim, subprim, properties, invalidationType));
+    }
+
+    return result;
+}
+
 
 HD_DECLARE_DATASOURCE_HANDLES(ArnoldShapeDataSourcePrim);
 
