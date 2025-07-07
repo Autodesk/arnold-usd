@@ -45,7 +45,6 @@
 
 #include "pxr/imaging/hd/extComputationUtils.h"
 
-#include "debug_codes.h"
 #include "render_delegate.h"
 
 #include <type_traits>

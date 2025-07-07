@@ -36,7 +36,6 @@
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include <constant_strings.h>
-#include "debug_codes.h"
 #include "hdarnold.h"
 #include "utils.h"
 

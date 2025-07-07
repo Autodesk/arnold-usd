@@ -1,11 +1,9 @@
 set(SRC
     nodes/driver_main.cpp
     nodes/nodes.cpp
-
     basis_curves.cpp
     camera.cpp
     config.cpp
-    debug_codes.cpp
     dependenciesSIP.cpp
     dependencyForwardingSIP.cpp
     fixInvalidationSIP.cpp

@@ -22,7 +22,6 @@ source_files = [
     'basis_curves.cpp',
     'camera.cpp',
     'config.cpp',
-    'debug_codes.cpp',
     'instancer.cpp',
     'light.cpp',
     'lightLinkingSIP.cpp',
