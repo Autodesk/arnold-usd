@@ -13,7 +13,6 @@
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
-#include <iostream>
 #include "constant_strings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -72,7 +71,6 @@ protected:
         if (!_IsObserved()) {
             return;
         }
-        std::cout << "prims added from " << sender.GetDisplayName() << std::endl;
         // Check if prims added are light and have dependencies, keep the dependencies
         _SendPrimsAdded(entries);
     }
@@ -90,11 +88,6 @@ protected:
         if (!_IsObserved()) {
             return;
         }
-
-        for (const auto &ent:entries) {
-            std::cout << "Dirtied " << ent.primPath.GetString() << " " << ent.dirtyLocators << std::endl;
-        }
-
         //  Here we would ideally want to MarkRprimDirty the custom arnold prims when an arnold attribute has been modified
         // Unfortunately there is no way to retrieve the ChangeTracker/RenderIndex, etc here 
         // So as a workaround we remap arnold::attributes to primvars/arnold::attributes which we know will trigger a resync.
@@ -116,8 +109,6 @@ protected:
                         locators.insert(locator);
                     }
                 }
-                std::cout << entry.primPath.GetString() << std::endl;
-                std::cout << locators << std::endl;
                 _entries.emplace_back(entry.primPath, locators);
             }
             _SendPrimsDirtied(_entries);
