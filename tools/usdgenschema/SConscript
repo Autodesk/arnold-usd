@@ -93,6 +93,8 @@ else:
         'js',
         'usd',
     ]
+    if local_env['USD_VERSION_INT'] >= 2505:
+        usd_libs += ['boost', 'python']
     usd_libs, _ = link_usd_libraries(local_env, usd_libs)
     usd_deps = [get_tbb_lib(local_env)]
     if system.is_linux:
