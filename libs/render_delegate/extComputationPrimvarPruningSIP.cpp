@@ -25,7 +25,7 @@ public:
 
     _NormalsPruningDataSource(HdContainerDataSourceHandle const &input) : _input(input) {}
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     TfTokenVector GetNames() override
     {
         if (!_input) {
@@ -37,7 +37,7 @@ public:
         return names;
     }
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken &name) override
     {
         if (!_input) {
