@@ -1,7 +1,7 @@
 
 #include <pxr/pxr.h>
 #if PXR_VERSION >= 2505 // Hydra 2
-
+#include "api.h"
 #include "extComputationPrimvarPruningSIP.h"
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
 #include <pxr/imaging/hd/lazyContainerDataSource.h>
