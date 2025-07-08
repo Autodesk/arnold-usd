@@ -108,6 +108,7 @@ ASTR2(render_context, "RENDER_CONTEXT");
 ASTR2(sidedness_prefix, "sidedness:");
 ASTR2(transformKeys, "arnold:transform_keys");
 ASTR2(ui_groups, "ui.groups");
+ASTR2(usd_hide, "usd.hide");
 ASTR2(visibility_prefix, "visibility:");
 
 ASTR(AA_sample_clamp);

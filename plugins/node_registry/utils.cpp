@@ -368,7 +368,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
         } else if (metadata->name == str::ui_groups) {
             usdPrimMetadata = _tokens->uigroups;
         } else if (metadata->type == AI_TYPE_BOOLEAN && 
-          (metadata->name == str::hide || _StrEndsWith(metadataName, ".hide"))) {
+          (metadata->name == str::hide || metadata->name == str::usd_hide)) {
             hide |= (bool)metadata->value.BOOL();
             continue;          
         } else if (metadata->type == AI_TYPE_STRING && metadata->name == str::dcc) {
