@@ -74,7 +74,7 @@ if 'TESTSUITE_PASSES' in test_env:
    testsuite_passes = test_env['TESTSUITE_PASSES']
 else:
    testsuite_passes = ['usd', 'hydra']
-   if 'ENABLE_SCENE_INDEX' in test_env and test_env['ENABLE_SCENE_INDEX']:
+   if 'BUILD_SCENE_INDEX_PLUGIN' in test_env and test_env['BUILD_SCENE_INDEX_PLUGIN']:
       testsuite_passes += ['hydra2']
 
 args_load = dict(

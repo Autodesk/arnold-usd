@@ -26,7 +26,7 @@ public:
 
     _NormalsPruningDataSource(HdContainerDataSourceHandle const &input) : _input(input) {}
 
-    HDARNOLD_API
+    HDSCENEINDEX_API
     TfTokenVector GetNames() override
     {
         if (!_input) {
@@ -38,7 +38,7 @@ public:
         return names;
     }
 
-    HDARNOLD_API
+    HDSCENEINDEX_API
     HdDataSourceBaseHandle Get(const TfToken &name) override
     {
         if (!_input) {

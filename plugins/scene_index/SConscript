@@ -17,26 +17,24 @@ from utils import system, dependencies, configure
 Import('env')
 local_env = env.Clone()
 
-shape_adapters = os.path.join(local_env['ROOT_DIR'], local_env['BUILD_BASE_DIR'], 'usd_imaging', 'shape_adapters.cpp')
-local_env.Command(target=shape_adapters,
-                  source=['shape_adapters.cpp.in'], action=configure.configure_shape_adapters)
-
 source_files = [
-    'material_param_utils.cpp',
-    'node_graph_adapter.cpp',
-    'shape_adapter.cpp',
-    'usd_lux_light_filter_adapter.cpp',
-    'procedural_custom_adapter.cpp',
-    'arnold_options_adapter.cpp',
-    shape_adapters,
+    'lightLinkingSIP.cpp',
+    'implicitSurfaceSIP.cpp',
+    'dependenciesSIP.cpp',
+    'dependencyForwardingSIP.cpp',
+    'extComputationPrimvarPruningSIP.cpp',
+	'fixInvalidationSIP.cpp',
+	'fixMaterialPruningSIP.cpp',
+    'fixPropagatedPrototypesVisibilitySIP.cpp',
+    'nurbsApproximatingSIP.cpp',
 ]
 
 if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
     local_env.Append(CXXFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
 
-local_env.Append(CPPDEFINES=['USDIMAGINGARNOLD_EXPORTS'])
-local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging')])
+local_env.Append(CPPDEFINES=['SIARNOLD_EXPORTS'])
+local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'plugins', 'scene_index')])
 common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
 local_env.Append(LIBPATH = [common_lib_path])
 local_env.Append(LIBS = ['ai', 'common'])
@@ -45,11 +43,11 @@ if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 # Otherwise we are getting a build error.
-source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
+source_files, usd_deps = dependencies.scene_index_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
 if env['USD_BUILD_MODE'] == 'static':
-    USDIMAGINGPLUGIN = local_env.StaticLibrary('usdImagingArnold', source_files)
+    SCENEINDEXPLUGIN = local_env.StaticLibrary('sceneIndexArnold', source_files)
 else:
-	USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
-Return('USDIMAGINGPLUGIN')
+	SCENEINDEXPLUGIN = local_env.SharedLibrary('sceneIndexArnold', source_files)
+Return('SCENEINDEXPLUGIN')

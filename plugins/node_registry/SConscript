@@ -35,7 +35,7 @@ local_env.Append(LIBS = ['ai', 'common'])
 source_files, usd_deps = dependencies.ndr_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-if local_env['ENABLE_SCENE_INDEX']:
+if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 if env['USD_BUILD_MODE'] == 'static':

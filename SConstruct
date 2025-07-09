@@ -108,6 +108,7 @@ vars.AddVariables(
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the render delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the node registry plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_SCENE_INDEX_PLUGIN', 'Directory to install the scene index plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCENE_DELEGATE', 'Directory to install the scene delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCHEMAS', 'Directory to install the schemas under.', os.path.join('$PREFIX', 'schema'), PathVariable.PathIsDirCreate),
@@ -118,6 +119,7 @@ vars.AddVariables(
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
+    BoolVariable('BUILD_SCENE_INDEX_PLUGIN', 'Whether or not to build the scene index plugin.', False),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
@@ -126,7 +128,6 @@ vars.AddVariables(
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', True),
     BoolVariable('ENABLE_SHARED_ARRAYS', 'Enable the use of shared arrays in hydra', False),
-    BoolVariable('ENABLE_SCENE_INDEX', 'Enable the use of scene index aka hydra2', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
@@ -206,6 +207,7 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
+BUILD_SCENE_INDEX_PLUGIN     = env['BUILD_SCENE_INDEX_PLUGIN']
 
 # Set default amount of threads set to the cpu counts in this machine.
 # This can be overridden through command line by setting e.g. "abuild -j 1"
@@ -243,6 +245,7 @@ PREFIX_PROCEDURAL         = env.subst(env['PREFIX_PROCEDURAL'])
 PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
 PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
+PREFIX_SCENE_INDEX_PLUGIN = env.subst(env['PREFIX_SCENE_INDEX_PLUGIN'])
 PREFIX_SCENE_DELEGATE     = env.subst(env['PREFIX_SCENE_DELEGATE'])
 PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
 PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
@@ -293,7 +296,7 @@ if env['PROC_SCENE_FORMAT']:
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
     
-if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS:
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS or BUILD_SCENE_INDEX_PLUGIN:
     # Get USD Version
     header_info = get_usd_header_info(USD_INCLUDE) 
     env['USD_VERSION'] = header_info['USD_VERSION']
@@ -562,6 +565,11 @@ usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'usd_imaging')
 usdimagingplugin_plug_info = os.path.join('plugins', 'usd_imaging', 'plugInfo.json.in')
 usdimagingplugin_out_plug_info = os.path.join(usdimagingplugin_build, 'plugInfo.json')
 
+sceneindexplugin_script = os.path.join('plugins', 'scene_index', 'SConscript')
+sceneindexplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'scene_index')
+sceneindexplugin_plug_info = os.path.join('plugins', 'scene_index', 'plugInfo.json.in')
+sceneindexplugin_out_plug_info = os.path.join(sceneindexplugin_build, 'plugInfo.json')
+
 scenedelegate_script = os.path.join('plugins', 'scene_delegate', 'SConscript')
 scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'scene_delegate')
 scenedelegate_plug_info = os.path.join('plugins', 'scene_delegate', 'plugInfo.json.in')
@@ -640,6 +648,13 @@ if BUILD_USD_IMAGING_PLUGIN:
 else:
     USDIMAGINGPLUGIN = None
 
+if BUILD_SCENE_INDEX_PLUGIN:
+    SCENEINDEXPLUGIN = env.SConscript(sceneindexplugin_script, variant_dir = sceneindexplugin_build, duplicate = 0, exports = 'env')
+    Depends(SCENEINDEXPLUGIN, COMMON[0])
+    SConscriptChdir(0)
+else:
+    SCENEINDEXPLUGIN = None
+
 if BUILD_SCENE_DELEGATE:
     SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
     Depends(SCENEDELEGATE, COMMON[0])
@@ -662,6 +677,8 @@ if BUILD_PROCEDURAL:
             Depends(PROCEDURAL, NDRPLUGIN[0])
         if BUILD_USD_IMAGING_PLUGIN:            
             Depends(PROCEDURAL, USDIMAGINGPLUGIN[0])
+        if BUILD_SCENE_INDEX_PLUGIN:            
+            Depends(PROCEDURAL, SCENEINDEXPLUGIN[0])
         if BUILD_SCHEMAS:
             Depends(PROCEDURAL, SCHEMAS[0])
 
@@ -725,6 +742,11 @@ if BUILD_USD_IMAGING_PLUGIN:
                 source=usdimagingplugin_plug_info,
                 action=configure.configure_usd_imaging_plug_info)
 
+if BUILD_SCENE_INDEX_PLUGIN:
+    env.Command(target=sceneindexplugin_out_plug_info,
+                source=sceneindexplugin_plug_info,
+                action=configure.configure_scene_index_plug_info)
+
 if RENDERDELEGATEPLUGIN:
     Depends(RENDERDELEGATEPLUGIN, renderdelegateplugin_plug_info)
 
@@ -747,6 +769,13 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
                     action=configure.configure_usd_imaging_proc_plug_info)
         Depends(PROCEDURAL, usdimagingplugin_plug_info)
 
+    if BUILD_SCENE_INDEX_PLUGIN:
+        procedural_scene_index_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'sceneIndexArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_scene_index_plug_info,
+                    source=sceneindexplugin_plug_info,
+                    action=configure.configure_scene_index_proc_plug_info)
+        Depends(PROCEDURAL, sceneindexplugin_plug_info)
+
     if BUILD_SCHEMAS:
         schemas_plug_info = os.path.join(schemas_build, 'source', 'plugInfo.json')
         schemas_file = os.path.join(schemas_build, 'source', 'generatedSchema.usda')
@@ -756,13 +785,7 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         env.Command(schemas_out_file, schemas_file, Copy("$TARGET", "$SOURCE"))
         Depends(PROCEDURAL, SCHEMAS[0])
         Depends(PROCEDURAL, SCHEMAS[1])
-    
-    if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']: # TODO and ENABLE_SCENEINDEX
-        procedural_si_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'hdArnold', 'resources', 'plugInfo.json')
-        env.Command(target=procedural_si_plug_info,
-                    source=renderdelegateplugin_plug_info,
-                    action=configure.configure_procedural_si_plug_info)
-        Depends(PROCEDURAL, procedural_si_plug_info) 
+
 
 if BUILD_TESTSUITE:
     if BUILD_PROCEDURAL:
@@ -793,7 +816,7 @@ if BUILD_TESTSUITE:
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
+for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, SCENEINDEXPLUGIN]:
     if target:
         if isinstance(target, dict):
             for t in target:
@@ -841,6 +864,16 @@ if USDIMAGINGPLUGIN:
     INSTALL_USDIMAGINGPLUGIN += env.Install(PREFIX_USD_IMAGING_PLUGIN, ['plugInfo.json'])
     INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'usd_imaging'), env.Glob(os.path.join('usd_imaging', '*.h')))
     env.Alias('usdimagingplugin-install', INSTALL_USDIMAGINGPLUGIN)
+
+if SCENEINDEXPLUGIN:
+    if is_windows:
+        INSTALL_SCENEINDEXPLUGIN = env.Install(PREFIX_SCENE_INDEX_PLUGIN, SCENEINDEXPLUGIN)
+    else:
+        INSTALL_SCENEINDEXPLUGIN = env.InstallAs(os.path.join(PREFIX_SCENE_INDEX_PLUGIN, 'sceneIndexArnold%s' % system.LIB_EXTENSION), SCENEINDEXPLUGIN)
+    INSTALL_SCENEINDEXPLUGIN += env.Install(os.path.join(PREFIX_SCENE_INDEX_PLUGIN, 'sceneIndexArnold', 'resources'), [sceneindexplugin_out_plug_info])
+    INSTALL_SCENEINDEXPLUGIN += env.Install(PREFIX_SCENE_INDEX_PLUGIN, ['plugInfo.json'])
+    INSTALL_SCENEINDEXPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_index'), env.Glob(os.path.join('scene_index', '*.h')))
+    env.Alias('sceneindexplugin-install', INSTALL_SCENEINDEXPLUGIN)
 
 if SCENEDELEGATE:
     if is_windows:

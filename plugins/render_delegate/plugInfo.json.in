@@ -9,62 +9,7 @@
                         ],
                         "displayName": "Arnold",
                         "priority": 99
-                    },
-                    "HdArnoldImplicitSurfaceSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold implicit surfaces generation"
-                    },
-                    "HdArnoldDependencyForwardingSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold dependency forwarding"
-                    },
-                    "HdArnoldExtComputationPrimvarPruningSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold computed primvars replacement"
-                    },
-                    "HdArnoldLightLinkingSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold light linking"
-                    },
-                    "HdArnoldDependencySceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold prim dependencies"
-                    },
-                    "HdArnoldFixMaterialPruningSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold fix material pruning"
-                    },
-                    "HdArnoldNurbsApproximatingSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold nurbs approximation"
-                    },
-                    "HdArnoldPropagatedPrototypesVisibilitySceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold fix propagated prototype visibility"
-                    },
-                    "HdArnoldFixInvalidationSceneIndexPlugin" : {
-                        "bases": ["HdSceneIndexPlugin"],
-                        "loadWithRenderer": "Arnold",
-                        "priority": 0,
-                        "displayName": "Arnold: fix invalidation for custom types"
                     }
-                    
                 }
             },
             "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",

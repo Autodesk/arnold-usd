@@ -24,7 +24,6 @@ source_files = [
     'config.cpp',
     'instancer.cpp',
     'light.cpp',
-    'lightLinkingSIP.cpp',
     'mesh.cpp',
     'native_rprim.cpp',
     'node_graph.cpp',
@@ -37,14 +36,6 @@ source_files = [
     'render_delegate.cpp',
     'render_param.cpp',
     'render_pass.cpp',
-    'implicitSurfaceSIP.cpp',
-    'dependenciesSIP.cpp',
-    'dependencyForwardingSIP.cpp',
-    'extComputationPrimvarPruningSIP.cpp',
-	'fixInvalidationSIP.cpp',
-	'fixMaterialPruningSIP.cpp',
-    'fixPropagatedPrototypesVisibilitySIP.cpp',
-    'nurbsApproximatingSIP.cpp',
     'shape.cpp',
     'utils.cpp',
     'volume.cpp',
@@ -64,7 +55,7 @@ if local_env['USD_HAS_FULLSCREEN_SHADER']:
 if local_env['ENABLE_SHARED_ARRAYS']:
     local_env.Append(CPPDEFINES = ['ENABLE_SHARED_ARRAYS'])
 
-if local_env['ENABLE_SCENE_INDEX']:
+if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])

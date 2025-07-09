@@ -59,6 +59,18 @@ def configure_usd_imaging_proc_plug_info(source, target, env):
         'REGISTER_ARNOLD_TYPES': register_arnold_types
     })
 
+def configure_scene_index_plug_info(source, target, env):
+    configure(source, target, env, {
+        'LIB_PATH' : '../sceneIndexArnold',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+    })
+
+def configure_scene_index_proc_plug_info(source, target, env):
+    # TODO: plugInfo itself and is it the same as normal plugInfo ?
+    configure(source, target, env, {
+        'LIB_PATH': '../../usd_proc',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+    })
 
 def configure_ndr_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
@@ -74,15 +86,6 @@ def configure_procedural_ndr_plug_info(source, target, env):
         'LIB_PATH': '../../usd_proc',
         'LIB_EXTENSION': system.LIB_EXTENSION,
         'REGISTRY_BASE': 'Ndr' if usd_version < 2505 else 'Sdr',
-    })
-
-# 'si' stands for 'scene index'
-def configure_procedural_si_plug_info(source, target, env):
-    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
-    configure(source, target, env, {
-        'LIB_PATH': '../../usd_proc',
-        'LIB_EXTENSION': system.LIB_EXTENSION,
-        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
     })
 
 def configure_shape_adapters(source, target, env):

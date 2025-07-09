@@ -3,7 +3,7 @@ set(SRC
 
 if (NOT BUILD_WITH_USD_STATIC)
     add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
-    if (ENABLE_SCENE_INDEX)
+    if (BUILD_SCENE_INDEX_PLUGIN)
         target_compile_definitions(hdArnold PUBLIC ENABLE_SCENE_INDEX=1)
     endif()
     if (BUILD_HEADERS_AS_SOURCES)
