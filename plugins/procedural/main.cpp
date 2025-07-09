@@ -108,7 +108,6 @@ node_parameters
     // is modified (see #176)
     AiMetaDataSetBool(nentry, AtString("filename"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("object_path"), AtString("_triggers_reload"), true);
-    AiMetaDataSetBool(nentry, AtString("frame"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("overrides"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
