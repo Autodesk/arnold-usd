@@ -49,8 +49,6 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
         "Arnold", _tokens->sceneIndexPluginName,
-        // XXX Update inputArgs to provide the list of geometry types
-        //     supported by hdPrman.
         nullptr, insertionPhase, HdSceneIndexPluginRegistry::InsertionOrderAtStart);
 }
 

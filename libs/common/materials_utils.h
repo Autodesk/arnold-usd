@@ -14,7 +14,7 @@
 
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usd/attribute.h>
-#include <iostream>
+
 PXR_NAMESPACE_USING_DIRECTIVE
 
 /// MaterialReader class is used by both usd and hydra translators, with
