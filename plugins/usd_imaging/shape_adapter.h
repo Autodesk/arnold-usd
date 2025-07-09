@@ -41,7 +41,7 @@ public:
     //
     // Scene index support
     //
-# if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
     TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
 
     TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
@@ -52,7 +52,7 @@ public:
     HdDataSourceLocatorSet InvalidateImagingSubprim(
         UsdPrim const& prim, TfToken const& subprim, TfTokenVector const& properties,
         UsdImagingPropertyInvalidationType invalidationType) override;
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX // Hydra2
     USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index,

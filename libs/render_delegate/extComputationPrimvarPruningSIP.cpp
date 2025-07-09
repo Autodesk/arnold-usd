@@ -1,7 +1,8 @@
 
 #include <pxr/pxr.h>
-#if PXR_VERSION >= 2505 // Hydra 2
 #include "api.h"
+#ifdef ENABLE_SCENE_INDEX // Hydra 2
+
 #include "extComputationPrimvarPruningSIP.h"
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
 #include <pxr/imaging/hd/lazyContainerDataSource.h>
@@ -179,4 +180,4 @@ HdSceneIndexBaseRefPtr HdArnoldExtComputationPrimvarPruningSceneIndexPlugin::_Ap
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2505 Hydra 2
+#endif // ENABLE_SCENE_INDEX Hydra 2

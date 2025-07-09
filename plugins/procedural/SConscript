@@ -177,6 +177,9 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         procedural_libs += ['render_delegate']
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
 
+if local_env['ENABLE_SCENE_INDEX']:
+    local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
+
 local_env.Append(LIBPATH = procedural_lib_paths)
 local_env.Append(LIBS = procedural_libs)
 

@@ -52,7 +52,7 @@ void HdArnoldNativeRprim::Sync(
         const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
         if (!val.IsEmpty())
             return val;
-#if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
         // Otherwise try with the sceneIndex
         HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
         if (sceneIndex) {
@@ -62,7 +62,7 @@ void HdArnoldNativeRprim::Sync(
                 return arnoldAttribute->GetValue(0.0);
             }   
         }
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX // Hydra2
         return VtValue();
     };
 
@@ -73,7 +73,7 @@ void HdArnoldNativeRprim::Sync(
     int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
     bool syncBuiltinParameters = *dirtyBits & ArnoldUsdRprimBitsParams;
- #if PXR_VERSION >= 2505 // Hydra2 - we have to pass the arnold::attributes via the DirtyPrimvar bit unfortunately,
+ #ifdef ENABLE_SCENE_INDEX // Hydra2 - we have to pass the arnold::attributes via the DirtyPrimvar bit unfortunately,
                          // the mapping is done in fixInvalidationSIP.cpp
     syncBuiltinParameters = syncBuiltinParameters || (*dirtyBits & HdChangeTracker::DirtyPrimvar);
  #endif   
@@ -156,6 +156,8 @@ void HdArnoldNativeRprim::Sync(
 
     *dirtyBits = HdChangeTracker::Clean;
 }
+
+// TODO conversion between HdDirtyBits and ArnoldUsdRprimBitsParams
 
 HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const
 {

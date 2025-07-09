@@ -35,7 +35,7 @@ public:
     ArnoldProceduralCustomAdapter()
         : UsdImagingGprimAdapter()
     {}
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     //
     // Scene index support
     //

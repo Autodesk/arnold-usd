@@ -2,7 +2,7 @@
 
 #include "fixMaterialPruningSIP.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
@@ -38,11 +38,10 @@ TF_DECLARE_REF_PTRS(_FixMaterialPruningSceneIndex);
 
 /// \class _SceneIndex
 ///
-/// The scene index that adds dependencies for volume and light prims.
+///
 ///
 class _FixMaterialPruningSceneIndex : public HdSingleInputFilteringSceneIndexBase {
 public:
-    std::unordered_map<SdfPath, SdfPath, SdfPath::Hash> _lightDep;
     static _FixMaterialPruningSceneIndexRefPtr New(const HdSceneIndexBaseRefPtr &inputSceneIndex)
     {
         return TfCreateRefPtr(new _FixMaterialPruningSceneIndex(inputSceneIndex));
@@ -57,7 +56,6 @@ public:
         if (primInfo && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
             prim.primType != HdPrimTypeTokens->material) {
             prim.primType = HdPrimTypeTokens->material;
-            // GetRenderIndex().InsertSprim(prim.primType, this, primPath);
         }
 
         return prim;
@@ -128,4 +126,4 @@ HdSceneIndexBaseRefPtr HdArnoldFixMaterialPruningSceneIndexPlugin::_AppendSceneI
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2208
+#endif // PENABLE_SCENE_INDEX

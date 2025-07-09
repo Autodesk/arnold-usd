@@ -36,7 +36,7 @@ public:
     //
     // Scene index support
     //
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
 
     TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;

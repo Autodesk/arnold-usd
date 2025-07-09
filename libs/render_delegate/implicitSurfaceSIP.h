@@ -2,7 +2,7 @@
 
 #include "pxr/pxr.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include "pxr/imaging/hd/sceneIndexPlugin.h"
 
@@ -24,4 +24,4 @@ protected:
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif
+#endif // ENABLE_SCENE_INDEX

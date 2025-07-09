@@ -32,7 +32,7 @@
 
 #endif
 
-#if PXR_VERSION >= 2505 // Hydra 2
+#ifdef ENABLE_SCENE_INDEX // Hydra 2
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #endif
@@ -237,7 +237,7 @@ bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) cons
 
 #endif
 
-#if PXR_VERSION >= 2505 // Hydra 2
+#ifdef ENABLE_SCENE_INDEX // Hydra 2
 
 // Recusively check nodes starting at the terminal to find the dirty prim.
 // If the dirty prim is the source material also check the specific dirty
@@ -352,7 +352,7 @@ class ArnoldNodeGraphDataSource : public HdContainerDataSource {
 public:
     HD_DECLARE_DATASOURCE(ArnoldNodeGraphDataSource);
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     TfTokenVector GetNames() override
     {
         TfTokenVector renderContexts;
@@ -361,7 +361,7 @@ public:
         return renderContexts;
     }
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         // Same as GetResources from arnold

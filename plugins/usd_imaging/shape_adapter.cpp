@@ -30,12 +30,12 @@
 #include <pxr/usdImaging/usdImaging/dataSourceGprim.h>
 #include <shape_utils.h>
 
-#if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #include <pxr/imaging/hd/primvarsSchema.h>
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX// Hydra2
 
 std::size_t hash_value(const AtString& s) { return s.hash(); }
 
@@ -111,7 +111,8 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
         }
     }
 }
-#if PXR_VERSION >= 2505 // Hydra2
+
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 
 // TODO custom Rbits for arnold
 
@@ -219,7 +220,7 @@ HdContainerDataSourceHandle UsdImagingArnoldShapeAdapter::GetImagingSubprimData(
     }
     return UsdImagingGprimAdapter::GetImagingSubprimData(prim, subprim, stageGlobals);
 }
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX // Hydra2
 
 
 

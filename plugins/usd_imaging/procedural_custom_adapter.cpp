@@ -40,12 +40,12 @@
 
 #endif
 
-#if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/usdImaging/usdImaging/dataSourceMaterial.h>
 #include <pxr/usdImaging/usdImaging/dataSourcePrimvars.h>
 #include <pxr/usdImaging/usdImaging/primvarUtils.h>
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX // Hydra2
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -202,7 +202,7 @@ ArnoldProceduralCustomAdapter::ProcessPrimResync(
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
 
-#if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 
 TfTokenVector ArnoldProceduralCustomAdapter::GetImagingSubprims(UsdPrim const& prim) {
     return { TfToken() };

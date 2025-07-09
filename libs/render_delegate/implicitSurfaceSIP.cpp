@@ -2,7 +2,7 @@
 
 #include "implicitSurfaceSIP.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
@@ -180,7 +180,7 @@ HdArnoldImplicitSurfaceSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene,
     const HdContainerDataSourceHandle &inputArgs)
 {
-#if PXR_VERSION == 2505
+#if PXR_VERSION <= 2505
     return _FixImplicitSurfaceSidedNessSceneIndex::New(HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs));
 #else // Assuming the sidedness bug is fixed in 25.08
     return HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs);
@@ -189,4 +189,4 @@ HdArnoldImplicitSurfaceSceneIndexPlugin::_AppendSceneIndex(
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2208
+#endif // ENABLE_SCENE_INDEX

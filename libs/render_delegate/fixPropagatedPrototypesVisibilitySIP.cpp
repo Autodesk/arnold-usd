@@ -1,6 +1,6 @@
 #include "fixPropagatedPrototypesVisibilitySIP.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
@@ -130,4 +130,4 @@ HdSceneIndexBaseRefPtr HdArnoldPropagatedPrototypesVisibilitySceneIndexPlugin::_
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2505
+#endif // ENABLE_SCENE_INDEX

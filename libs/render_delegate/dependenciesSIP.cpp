@@ -1,6 +1,6 @@
 
 #include "dependenciesSIP.h"
-#if PXR_VERSION >= 2505 // Hydra 2
+#ifdef ENABLE_SCENE_INDEX // Hydra 2
 #include <unordered_map>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
 #include <pxr/imaging/hd/dataSource.h>
@@ -217,4 +217,4 @@ HdSceneIndexBaseRefPtr HdArnoldDependencySceneIndexPlugin::_AppendSceneIndex(
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
-#endif // PXR_VERSION >= 2505 // Hydra 2
+#endif // ENABLE_SCENE_INDEX // Hydra 2

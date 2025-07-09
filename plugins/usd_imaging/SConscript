@@ -41,6 +41,9 @@ common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'lib
 local_env.Append(LIBPATH = [common_lib_path])
 local_env.Append(LIBS = ['ai', 'common'])
 
+if local_env['ENABLE_SCENE_INDEX']:
+    local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
+
 # Otherwise we are getting a build error.
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)

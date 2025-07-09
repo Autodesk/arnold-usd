@@ -577,7 +577,7 @@ inline void SamplePrimvar(
     HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
     SampledPrimvarType* samples)
 {
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     sceneDelegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], samples);
 #else
     sceneDelegate->SamplePrimvar(id, key, samples);
@@ -589,7 +589,7 @@ inline void SampleIndexedPrimvar(
     HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
     SampledPrimvarType* samples)
 {
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     sceneDelegate->SampleIndexedPrimvar(id, key, shutterRange[0], shutterRange[1], samples);
 #else
     sceneDelegate->SampleIndexedPrimvar(id, key, samples);
@@ -601,7 +601,7 @@ inline void SampleInstancerTransform(
     HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
     SampledPrimvarType* samples)
 {
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     sceneDelegate->SampleInstancerTransform(id, shutterRange[0], shutterRange[1], samples);
 #else
     sceneDelegate->SampleInstancerTransform(id, samples);
@@ -613,7 +613,7 @@ inline void SampleTransform(
     HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
     SampledPrimvarType* samples)
 {
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
     sceneDelegate->SampleTransform(id, shutterRange[0], shutterRange[1], samples);
 #else
     sceneDelegate->SampleTransform(id, samples);

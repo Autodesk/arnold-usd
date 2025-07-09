@@ -12,7 +12,7 @@
 #include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 #define ARNOLD_SCENE_INDEX
 
 #include "pxr/usdImaging/usdImaging/sceneIndices.h"

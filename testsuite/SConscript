@@ -73,7 +73,9 @@ testsuite_target_path = test_env.Dir('.').abspath
 if 'TESTSUITE_PASSES' in test_env:
    testsuite_passes = test_env['TESTSUITE_PASSES']
 else:
-   testsuite_passes = ['usd', 'hydra', 'hydra2'] 
+   testsuite_passes = ['usd', 'hydra']
+   if 'ENABLE_SCENE_INDEX' in test_env and test_env['ENABLE_SCENE_INDEX']:
+      testsuite_passes += ['hydra2']
 
 args_load = dict(
    path   = testsuite_source_path,

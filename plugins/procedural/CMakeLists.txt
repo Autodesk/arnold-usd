@@ -36,6 +36,10 @@ if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
     target_compile_definitions(${PROC_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
 endif()
 
+if (ENABLE_SCENE_INDEX)
+    target_compile_definitions(${PROC_NAME} PUBLIC ENABLE_SCENE_INDEX=1)
+endif()
+
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)

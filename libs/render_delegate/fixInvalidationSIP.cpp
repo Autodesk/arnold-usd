@@ -2,7 +2,7 @@
 
 #include "fixInvalidationSIP.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX // Hydra 2
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
 #include <pxr/imaging/hd/filteringSceneIndex.h>
@@ -130,4 +130,4 @@ HdSceneIndexBaseRefPtr HdArnoldFixInvalidationSceneIndexPlugin::_AppendSceneInde
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2505
+#endif // ENABLE_SCENE_INDEX

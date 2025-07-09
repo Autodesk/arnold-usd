@@ -1,7 +1,11 @@
 set(SRC
     renderer_plugin.cpp)
+
 if (NOT BUILD_WITH_USD_STATIC)
     add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
+    if (ENABLE_SCENE_INDEX)
+        target_compile_definitions(hdArnold PUBLIC ENABLE_SCENE_INDEX=1)
+    endif()
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
     endif ()

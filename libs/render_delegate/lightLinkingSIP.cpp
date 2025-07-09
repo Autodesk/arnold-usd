@@ -1,6 +1,6 @@
 
 #include <pxr/pxr.h>
-#if PXR_VERSION >= 2505 // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 
 #include "pxr/imaging/hd/version.h"
 
@@ -74,4 +74,4 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif
 
-#endif // PXR_VERSION >= 2505 // Hydra2
+#endif // ENABLE_SCENE_INDEX // Hydra2

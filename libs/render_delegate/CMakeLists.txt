@@ -78,5 +78,7 @@ if (ENABLE_SHARED_ARRAYS)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SHARED_ARRAYS=1)
 endif()
 target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
-
+if (ENABLE_SCENE_INDEX)
+    target_compile_definitions(render_delegate PUBLIC ENABLE_SCENE_INDEX=1)
+endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <pxr/pxr.h>
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include <pxr/imaging/hd/sceneIndexPlugin.h>
 
@@ -19,4 +19,4 @@ protected: // HdSceneIndexPlugin overrides
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PXR_VERSION >= 2505
+#endif // ENABLE_SCENE_INDEX

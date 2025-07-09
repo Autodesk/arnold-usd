@@ -1,6 +1,6 @@
 #include "nurbsApproximatingSIP.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
 #include <pxr/imaging/hdsi/nurbsApproximatingSceneIndex.h>
@@ -32,4 +32,4 @@ HdSceneIndexBaseRefPtr HdArnoldNurbsApproximatingSceneIndexPlugin::_AppendSceneI
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
-#endif // PXR_VERSION >= 2505
+#endif // ENABLE_SCENE_INDEX
