@@ -697,9 +697,6 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
     AtParamValueMap *params = AiParamValueMap();
 
     const AtString &pxrMtlxPath = context.GetPxrMtlxPath();
-    if (!pxrMtlxPath.empty()) {
-        AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
-    }
 
 #if ARNOLD_VERSION_NUM > 70203
     std::string shaderKey = shaderId.GetString();
