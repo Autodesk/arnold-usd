@@ -89,13 +89,15 @@ namespace {
 static AtMutex s_globalReaderMutex;
 static std::unordered_map<long int, int> s_cacheRefCount;
 UsdArnoldReader::UsdArnoldReader(AtUniverse *universe, AtNode *procParent)
-        : _procParent(procParent),
+        : ProceduralReader(),
+          _procParent(procParent),
           _universe(universe),
           _convert(true),
           _debug(false),
           _threadCount(1),
           _mask(AI_NODE_ALL),
           _defaultShader(nullptr),
+          _defaultVolumeShader(nullptr),
           _hasRootPrim(false),
           _readStep(READ_NOT_STARTED),
           _purpose(UsdGeomTokens->render),
@@ -818,6 +820,7 @@ void UsdArnoldReader::ClearNodes()
     _nodes.clear();
     _nodeNames.clear();
     _defaultShader = nullptr; // reset defaultShader
+    _defaultVolumeShader = nullptr; 
 }
 
 void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) {
@@ -825,28 +828,36 @@ void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtPa
     _readerRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
 }
 
-AtNode *UsdArnoldReader::GetDefaultShader()
+AtNode *UsdArnoldReader::GetDefaultShader(bool isVolume)
 {
+    AtNode *node = nullptr;
     // Eventually lock the mutex
     LockReader();
-
-    if (_defaultShader == nullptr) {
-        // The default shader doesn't exist yet, let's create a standard_surface,
-        // which base_color is linked to a user_data_rgb that looks up the user data
-        // called "displayColor". This way, by default geometries that don't have any
-        // shader assigned will appear as in hydra.
-        _defaultShader = AiNode(_universe, AtString("standard_surface"), AtString("_default_arnold_shader"), _procParent);
-        AtNode *userData = AiNode(_universe, AtString("user_data_rgb"), AtString("_default_arnold_shader_color"), _procParent);
-        _nodes.push_back(_defaultShader);
-        _nodes.push_back(userData);
-        AiNodeSetStr(userData, str::attribute, AtString("displayColor"));
-        AiNodeSetRGB(userData, str::_default, 1.f, 1.f, 1.f); // neutral white shader if no user data is found
-        AiNodeLink(userData, str::base_color, _defaultShader);
+    if (isVolume) {
+        if (_defaultVolumeShader == nullptr) {
+            // The default volume shader doesn't exist yet, let's create a standard_volume,
+            _defaultVolumeShader = AiNode(_universe, AtString("standard_volume"), AtString("_fallbackVolume"), _procParent);
+            _nodes.push_back(_defaultVolumeShader);
+        }
+        node = _defaultVolumeShader;
+    } else {
+        if (_defaultShader == nullptr) {
+            // The default shader doesn't exist yet, let's create a standard_surface,
+            // which base_color is linked to a user_data_rgb that looks up the user data
+            // called "displayColor". This way, by default geometries that don't have any
+            // shader assigned will appear as in hydra.
+            _defaultShader = AiNode(_universe, AtString("standard_surface"), AtString("_default_arnold_shader"), _procParent);
+            AtNode *userData = AiNode(_universe, AtString("user_data_rgb"), AtString("_default_arnold_shader_color"), _procParent);
+            _nodes.push_back(_defaultShader);
+            _nodes.push_back(userData);
+            AiNodeSetStr(userData, str::attribute, AtString("displayColor"));
+            AiNodeSetRGB(userData, str::_default, 1.f, 1.f, 1.f); // neutral white shader if no user data is found
+            AiNodeLink(userData, str::base_color, _defaultShader);
+        }
+        node = _defaultShader;
     }
-
     UnlockReader();
-
-    return _defaultShader;
+    return node;
 }
 
 // Process eventual light links info, and apply them to the 

@@ -66,7 +66,7 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `PREFIX`: Directory to install under.
 - `PREFIX_PROCEDURAL`: Directory to install the procedural under. Defaults to `prefix/procedural`.
 - `PREFIX_RENDER_DELEGATE`: Directory to install the render delegate under. Defaults to `prefix/plugin`.
-- `PREFIX_NDR_PLUGIN`: Directory to install the ndr plugin under. Defaults to `prefix/plugin`.
+- `PREFIX_NDR_PLUGIN`: Directory to install the node registry plugin under. Defaults to `prefix/plugin`.
 - `PREFIX_HEADERS`: Directory to install the headers under. Defaults to `prefix/include`.
 - `PREFIX_LIB`: Directory to install the libraries under. Defaults to `prefix/lib`.
 - `PREFIX_BIN`: Directory to install the binaries under. Defaults to `prefix/bin`.
@@ -254,7 +254,7 @@ The build script will now try to find the `pxrConfig.cmake` for configuring the 
 ### Installation Configuration:
 - `CMAKE_INSTALL_PREFIX`: Directory to install under.
 - `PREFIX_PROCEDURAL`: Directory to install the procedural under.
-- `PREFIX_PLUGINS`: Directory to install the plugins (Hydra and Ndr) under.
+- `PREFIX_PLUGINS`: Directory to install the plugins (hydra and node registry) under.
 - `PREFIX_HEADERS`: Directory to install the headers under.
 - `PREFIX_LIB`: Directory to install the libraries under.
 - `PREFIX_BIN`: Directory to install the binaries under.

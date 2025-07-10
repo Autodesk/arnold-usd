@@ -101,7 +101,8 @@ public:
     bool HasRootPrim() const {return _hasRootPrim;}
     const UsdPrim &GetRootPrim() const {return _rootPrim;}
 
-    AtNode *GetDefaultShader();
+    AtNode *GetDefaultShader(bool isVolume = false);
+
     AtNode *LookupNode(const char *name, bool checkParent = true)
     {
         auto it = _nodeNames.find(std::string(name));
@@ -222,6 +223,8 @@ private:
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
     
     AtNode *_defaultShader;
+    AtNode *_defaultVolumeShader;
+
     
     bool _hasRootPrim;     // are we reading this stage based on a root primitive
     UsdPrim _rootPrim;     // eventual root primitive used to traverse the stage

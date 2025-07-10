@@ -48,8 +48,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
+    ((reportFile, "arnold:global:report:file"))
     ((statsFile, "arnold:global:stats:file"))
-    ((statsMode, "arnold:global:stats:mode"))
     ((profileFile, "arnold:global:profile:file"))
     ((arnoldName, "arnold:name"))
     ((inputsName, "inputs:name"))
@@ -461,6 +461,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     AiNodeSetInt(options, str::AA_samples, 3);
     AiNodeSetInt(options, str::GI_diffuse_depth, 1);
     AiNodeSetInt(options, str::GI_specular_depth, 1);
+    AiNodeSetInt(options, str::GI_transmission_depth, 8);
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
@@ -873,21 +874,22 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         }
     }
 
+    // html report file
+#if ARNOLD_VERSION_NUM >= 70401
+    if (UsdAttribute reportFileAttr = renderSettingsPrim.GetAttribute(_tokens->reportFile)) {
+        VtValue reportFileValue;
+        if (reportFileAttr.Get(&reportFileValue, time.frame)) {
+            const std::string reportFile = VtValueGetString(reportFileValue);
+            AiReportSetFileName(reportFile.c_str());
+        }
+    }
+#endif
     // stats file
     if (UsdAttribute statsFileAttr = renderSettingsPrim.GetAttribute(_tokens->statsFile)) {
         VtValue statsFileValue;
         if (statsFileAttr.Get(&statsFileValue, time.frame)) {
             const std::string statsFile = VtValueGetString(statsFileValue);
             AiStatsSetFileName(statsFile.c_str());
-        }
-    }
-
-    // stats mode (overwrite or append)
-    if (UsdAttribute statsModeAttr = renderSettingsPrim.GetAttribute(_tokens->statsMode)) {
-        VtValue statsModeValue;
-        if (statsModeAttr.Get(&statsModeValue, time.frame)) {
-            const AtStatsMode statsMode = static_cast<AtStatsMode>(VtValueGetInt(statsModeValue));
-            AiStatsSetMode(statsMode);
         }
     }
 

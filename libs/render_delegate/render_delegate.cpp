@@ -254,10 +254,20 @@ inline const TfTokenVector& _SupportedSprimTypes()
     return r;
 }
 
-inline const TfTokenVector& _SupportedBprimTypes()
+inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-    return r;
+    // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
+    // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+#if PXR_VERSION >= 2208
+    if (!ownsUniverse) {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    } else
+#endif
+    {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+        return r;
+    }
 }
 
 struct SupportedRenderSetting {
@@ -325,6 +335,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_ignore_smoothing, {"Ignore Smoothing"}},
         {str::t_ignore_sss, {"Ignore SubSurface Scattering"}},
         {str::t_ignore_operators, {"Ignore Operators"}},
+        // HTML Report Settings
+        {str::t_report_file, {"HTML Report Path", config.report_file}},
         // Log Settings
         {str::t_log_verbosity, {"Log Verbosity (0-5)", config.log_verbosity}},
         {str::t_log_file, {"Log File Path", config.log_file}},
@@ -332,7 +344,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_profile_file, {"File Output for Profiling", config.profile_file}},
         // Stats Settings
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
-        {str::t_stats_mode, {"Overwrite or append"}},
         // Search paths
         {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
@@ -474,9 +485,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 #else
     _isArnoldActive = AiUniverseIsActive();
 #endif
-    if (_isBatch) {
+    if (_isBatch && _renderDelegateOwnsUniverse) {
 #if ARNOLD_VERSION_NUM >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
+        // We only want to do this when we own the universe (e.g. with husk), 
+        // otherwise this would prevent CER from showing up when we're rendering it
+        // through a procedural, or scene format plugin
         AiADPDisableDialogWindow();
         AiErrorReportingSetEnabled(false);
 #endif
@@ -620,7 +634,7 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {    
@@ -681,16 +695,17 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
+#if ARNOLD_VERSION_NUM >= 70401
+    } else if (key == str::t_report_file) {
+        if (value.IsHolding<std::string>()) {
+            _reportFile = value.UncheckedGet<std::string>();
+            AiReportSetFileName(_reportFile.c_str());
+        }
+#endif
     } else if (key == str::t_stats_file) {
         if (value.IsHolding<std::string>()) {
             _statsFile = value.UncheckedGet<std::string>();
             AiStatsSetFileName(_statsFile.c_str());
-        }
-    } else if (key == str::t_stats_mode) {
-        if (value.IsHolding<int>()) {
-            _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
-            AiStatsSetMode(_statsMode);
-            AiStatsSetMode(AtStatsMode(0));
         }
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
@@ -973,10 +988,10 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
     } else if (key == str::t_log_file) {
         return VtValue(_logFile);
+    } else if (key == str::t_report_file) {
+        return VtValue(_reportFile);
     } else if (key == str::t_stats_file) {
         return VtValue(_statsFile);
-    } else if (key == str::t_stats_mode) {
-        return VtValue(static_cast<int>(_statsMode));
     } else if (key == str::t_profile_file) {
         return VtValue(_profileFile);
     } else if (key == str::t_interactive_target_fps) {
@@ -1060,39 +1075,43 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
     stats[_tokens->renderProgressAnnotation] = VtValue(resolutionBuffer);
 
-    // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
-    // In theory, we could just look for the first driver, but for safety we're doing it for all of them
-    for (const auto& cryptoDriver : _cryptomatteDrivers) {
-        const AtNode *driver = LookupNode(cryptoDriver.c_str());
-        if (!driver)
-            continue;
-        if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
-            continue;
-        const AtArray *customAttrsArray = AiNodeGetArray(driver, str::custom_attributes);
-        if (customAttrsArray == nullptr)
-            continue;
-        unsigned int customAttrsCount = AiArrayGetNumElements(customAttrsArray);
-        for (unsigned int i = 0; i < customAttrsCount; ++i) {
-            AtString customAttr = AiArrayGetStr(customAttrsArray, i);
-            std::string customAttrStr(customAttr.c_str());
-            // the custom_attributes attribute will be an array of strings, where each  
-            // element is set like:
-            // "STRING cryptomatte/f834d0a/conversion uint32_to_float32"
-            // where the second element is the metadata name and the last one
-            // is the metadata value
-            size_t pos = customAttrStr.find_first_of(' ');
-            if (pos == std::string::npos)
+    if (total_progress >= 100) {
+        // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
+        // In theory, we could just look for the first driver, but for safety we're doing it for all of them.
+        // This doesn't need to be done while the render is in progress as it's only required
+        // when the exr file is authored on disk #2334
+        for (const auto& cryptoDriver : _cryptomatteDrivers) {
+            const AtNode *driver = LookupNode(cryptoDriver.c_str());
+            if (!driver)
                 continue;
-            std::string customAttrType = customAttrStr.substr(0, pos);
-            customAttrStr = customAttrStr.substr(pos + 1);
+            if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
+                continue;
+            const AtArray *customAttrsArray = AiNodeGetArray(driver, str::custom_attributes);
+            if (customAttrsArray == nullptr)
+                continue;
+            unsigned int customAttrsCount = AiArrayGetNumElements(customAttrsArray);
+            for (unsigned int i = 0; i < customAttrsCount; ++i) {
+                AtString customAttr = AiArrayGetStr(customAttrsArray, i);
+                std::string customAttrStr(customAttr.c_str());
+                // the custom_attributes attribute will be an array of strings, where each  
+                // element is set like:
+                // "STRING cryptomatte/f834d0a/conversion uint32_to_float32"
+                // where the second element is the metadata name and the last one
+                // is the metadata value
+                size_t pos = customAttrStr.find_first_of(' ');
+                if (pos == std::string::npos)
+                    continue;
+                std::string customAttrType = customAttrStr.substr(0, pos);
+                customAttrStr = customAttrStr.substr(pos + 1);
 
-            pos = customAttrStr.find_first_of(' ');
-            if (pos == std::string::npos)
-                continue;
-            std::string metadataName = customAttrStr.substr(0, pos);
-            std::string metadataVal = customAttrStr.substr(pos + 1);
-            // TODO do we want to check if the metadata is not a string ?
-            stats[TfToken(metadataName)] = TfToken(metadataVal);
+                pos = customAttrStr.find_first_of(' ');
+                if (pos == std::string::npos)
+                    continue;
+                std::string metadataName = customAttrStr.substr(0, pos);
+                std::string metadataVal = customAttrStr.substr(pos + 1);
+                // TODO do we want to check if the metadata is not a string ?
+                stats[TfToken(metadataName)] = TfToken(metadataVal);
+            }
         }
     }
 
@@ -1247,20 +1266,20 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
+    // Silently ignore render settings primitives, at the moment they're treated
+    // through a different code path
+#if PXR_VERSION >= 2208
+    if (typeId == HdPrimTypeTokens->renderSettings)
+        return nullptr;
+#endif
+
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
 }
 
 HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
 {
-    if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(SdfPath());
-    }
-    if (typeId == _tokens->openvdbAsset) {
-        return new HdArnoldOpenvdbAsset(this, SdfPath());
-    }
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
-    return nullptr;
+    return CreateBprim(typeId, SdfPath());
 }
 
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
@@ -1703,7 +1722,7 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
     _renderTagTrackQueue.push({node, tag});
 }
 
@@ -1721,11 +1740,11 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     }
     if (renderTags != _renderTags) {
         _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
-        }
         _renderParam->Interrupt();
+
+        for (auto& elem : _renderTagMap) {
+            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+        }
     }
 }
 

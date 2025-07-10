@@ -15,6 +15,7 @@ def ArnoldProceduralCustom "myinstancer"
     string arnold:node_entry = "instancer"
     uint[] arnold:node_idxs = [0, 0, 1, 1, 2, 2]
     string[] arnold:nodes = ["/cube", "/sphere", "/cone"]
+    string[] primvars:arnold:nodes = ["/cube", "/sphere", "/cone"]
 }
 
 def Cube "cube"
@@ -26,14 +27,14 @@ def Cube "cube"
 def Sphere "sphere"
 {
     double radius = 40
-    token visibility = "invisible"
+    int primvars:arnold:visibility = 0
 }
 
 def Cone "cone"
 {
     double height = 100
     double radius = 30
-    token visibility = "invisible"
+    int primvars:arnold:visibility = 0
 }
 
 def Cube "cube1"

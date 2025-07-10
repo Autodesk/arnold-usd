@@ -52,7 +52,25 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
     ((PrimvarsArnoldTransformKeys, "primvars:arnold:transform_keys"))
+    ((PrimvarsArnoldStepSize, "primvars:arnold:step_size"))
 );
+
+static inline bool IsVolume(const AtNode* node, const UsdPrim& prim)
+{
+    if (AiNodeIs(node, str::volume))
+        return true;
+
+    if (AiNodeIs(node, str::polymesh)) {
+        // For mesh nodes, check if an attribute primvars:arnold:step_size exists in the usd primitive
+        UsdAttribute stepSizeAttr = prim.GetAttribute(_tokens->PrimvarsArnoldStepSize); 
+        if (stepSizeAttr && stepSizeAttr.HasAuthoredValue()) {
+            VtValue value;
+            if (stepSizeAttr.Get(&value))
+                return VtValueGetFloat(value) > AI_EPSILON;
+        }
+    }
+    return false;
+}
 
 bool HasConstantPrimvar(UsdArnoldReaderContext &context, const TfToken& name)
 {
@@ -294,7 +312,7 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
         context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(), 
             ArnoldAPIAdapter::CONNECTION_PTR);
     } else if (assignDefault) {
-        AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader());
+        AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader(IsVolume(node, prim)));
     }
 
     if (isPolymesh && dispPrim) {
@@ -333,7 +351,7 @@ void ReadSubsetsMaterialBinding(
         if (shaderPrim)
             shaderStr = shaderPrim.GetPath().GetString();
         else if (assignDefault) {
-            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
+            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader(IsVolume(node, prim)));
         }
         if (shaderStr.empty())
             shaderStr = "NULL";
@@ -387,7 +405,7 @@ void ReadSubsetsMaterialBinding(
         if (shaderPrim) {
             shaderStr = shaderPrim.GetPath().GetString();
         } else if (assignDefault) {
-            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
+            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader(IsVolume(node, prim)));
         } else {
             shaderStr = "NULL";
         }

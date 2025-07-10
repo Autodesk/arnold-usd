@@ -112,10 +112,11 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
   Arnold will return an error. This function will handle the remapping, 
   by eventually interpolating the input values.
 **/
-template <typename T>
-void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
+
+void _RemapNormalKeys(size_t requiredCount, HdArnoldSampledPrimvarType &sample)
 {
     auto origValues = sample.values;
+    size_t inputCount = sample.count;
     sample.values.clear();
     sample.times.clear();
 
@@ -127,7 +128,7 @@ void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
         remappedInput *= inputCount;
         int floorIndex = (int) remappedInput;
         float remappedDelta = remappedInput - floorIndex;
-        if (remappedDelta < AI_EPSILON || size_t(floorIndex + 1) >= origValues.size()) {
+        if (remappedDelta < AI_EPSILON || size_t(floorIndex + 1) >= inputCount) {
             // If there's no need to interpolate, we copy the input VtValue for this key
             sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
         } else {
@@ -185,6 +186,11 @@ void HdArnoldMesh::Sync(
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    AtNode* node = GetArnoldNode();
+
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
+        return;
     HdArnoldSampledPrimvarType _pointsSample;
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
@@ -196,7 +202,7 @@ void HdArnoldMesh::Sync(
     } else {
         SetDeformKeys(-1);
     }
-    AtNode* node = GetArnoldNode();
+    
     bool positionsChanged = false;
 
     if (dirtyPrimvars) {
@@ -429,7 +435,7 @@ void HdArnoldMesh::Sync(
                         arrayIndices = desc.valueIndices;
                     }
                     if (sample.count != _numberOfPositionKeys) {
-                        _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
+                        _RemapNormalKeys(_numberOfPositionKeys, sample);
                     }
                     AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(sample));
                     AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));
@@ -457,11 +463,9 @@ void HdArnoldMesh::Sync(
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
-                        sample.count = _numberOfPositionKeys;
                         sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
-
                         if (sample.count != _numberOfPositionKeys) {
-                           _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
+                           _RemapNormalKeys(_numberOfPositionKeys, sample);
                         }
                         AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfVec3f>>(sample));
                         if (!desc.valueIndices.empty()) {
@@ -522,7 +526,6 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
-bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {

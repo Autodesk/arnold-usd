@@ -40,6 +40,9 @@ endif()
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
     target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImaging usdImagingArnoldObjects)
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+        target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
+    endif ()
 endif()
 
 if (APPLE OR LINUX)
@@ -55,16 +58,16 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
 
+# We need to install the plugInfos for the included usd plugins.
+install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
+		DESTINATION "${PREFIX_PROCEDURAL}")
 if (BUILD_WITH_USD_STATIC)
-    # When linking statically we need to install the plugInfos for the included usd plugins.
-    install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
-            DESTINATION "${PREFIX_PROCEDURAL}")
 
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
         # Install the ndr arnold pluginfo
         install_ndr_arnold_pluginfo(
             ../../usd_proc 
-            "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/nodeRegistryArnold/resources/plugInfo.json"
             "${PREFIX_PROCEDURAL}/usd")
 
         # install the usd imaging arnold pluginfo

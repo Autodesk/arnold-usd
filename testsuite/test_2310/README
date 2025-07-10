@@ -1,0 +1,8 @@
+Volume shaders on points
+
+See #2310
+
+author: Tom Minor
+
+PARAMS: {'scene':'test.usda'}
+

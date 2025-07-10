@@ -75,7 +75,7 @@ struct ArrayCopier : public ArrayOperations<ArrayCopier> {
     }
 };
 
-#if ARNOLD_VERSION_NUM >= 70307
+#if ARNOLD_VERSION_NUM > 70307
 // Shared array buffer holder
 struct ArrayHolder : public ArrayOperations<ArrayHolder> {
     // We need to keep a count here because we also hold the timesamples which could all point to the same buffer
@@ -203,7 +203,7 @@ using ArrayHandler = ArrayHolder;
 using ArrayHandler = ArrayCopier;
 #endif
 
-#else // ARNOLD_VERSION < 70307
+#else // ARNOLD_VERSION <= 70307
 using ArrayHandler = ArrayCopier;
 #endif
 

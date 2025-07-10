@@ -448,6 +448,11 @@ public:
     HDARNOLD_API
     void TrackRenderTag(AtNode* node, const TfToken& tag);
 
+    bool IsVisibleRenderTag(const TfToken& tag) const
+    {
+        return std::find(_renderTags.begin(), _renderTags.end(), tag) != _renderTags.end();
+    }
+
     /// Deregisters a shape from the render tag map.
     ///
     /// @param node Pointer to the Arnold node.
@@ -599,11 +604,12 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-
-        // If we have a procedural parent, the node was already added to our 
-        // _nodes list. For now we just disable it
-        if (_procParent)
+        // if we have a procedural parent, we should avoid deleting nodes
+        // as this can happen in batch sessions during procedural_update, 
+        // which is not allowed
+        if (_procParent) {
             AiNodeSetDisabled(node, true);
+        }
         else
             AiNodeDestroy(node);
     }
@@ -766,8 +772,8 @@ private:
     AtNode* _procParent = nullptr;
     AtSessionMode _renderSessionType = AI_SESSION_INTERACTIVE;
     std::string _logFile;
+    std::string _reportFile;
     std::string _statsFile;
-    AtStatsMode _statsMode;
     std::string _profileFile;
     AtString _pxrMtlxPath;
 

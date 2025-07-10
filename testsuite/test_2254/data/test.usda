@@ -1,0 +1,151 @@
+#usda 1.0
+(
+    endTimeCode = 10
+)
+
+def "Geo"
+{
+    def PointInstancer "instancer"
+    {
+        point3f[] positions = [(0, -1.5, 0), (1, 1, 0), (2, 3.5, 0), (3, -1.5, 0), (4, 1, 0), (5, 3.5, 0)]
+        point3f[] positions.timeSamples = {
+            0: [(0.5, -1.5, 0), (0.5, 1, 0), (2, 3.5, 0), (3, -1.5, 0), (3.5, 1, 0), (5, 3.5, 0)],
+            10: [(0, -1.5, 0), (1, 1, 0), (2, 3.5, 0), (1, -1.5, 0), (2.5, 1, 0), (3.8, 3.5, 0)],
+        }
+        int[] protoIndices = [0, 0, 0, 1, 1, 1]
+        prepend rel prototypes = [
+            </Geo/instancer/Prototypes/Plane0000>,
+            </Geo/instancer/Prototypes/Plane0001>,
+        ]
+
+        def Scope "Prototypes"
+        {
+            def Mesh "Plane0000"
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -0.1), (1, 1, 0.1)]
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 3, 2]
+                normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                point3f[] points = [(-2, -0.6, 0), (0, -1, 0), (-2, 0.6, 0), (0, 1, 0)]
+                point3f[] points.timeSamples = {
+                    0: [(-2, -0.6, 0), (0, -1, 0), (-2, 0.6, 0), (0, 1, 0)],
+                    4: [(-1.6, -0.6, 0), (0.79999995, -1.4000001, 0), (-1.2, 0.36, 0), (0.79999995, 0.6, 0)],
+                    4.5: [(-1.5500001, -0.6, 0), (0.9, -1.45, 0), (-1.1, 0.33, 0), (0.9, 0.55, 0)],
+                    5: [(-1.5, -0.6, 0), (1, -1.5, 0), (-1, 0.3, 0), (1, 0.5, 0)],
+                    5.5: [(-1.45, -0.6, 0), (1.1, -1.5500001, 0), (-0.9, 0.27, 0), (1.1, 0.45, 0)],
+                    6: [(-1.4000001, -0.6, 0), (1.2, -1.6, 0), (-0.79999995, 0.24000001, 0), (1.2, 0.39999998, 0)],
+                    10: [(-1, -0.6, 0), (2, -2, 0), (0, 0, 0), (2, 0, 0)],
+                }
+                color3f[] primvars:displayColor = [(0, 0.3291142, 1)]
+                texCoord2f[] primvars:UVMap = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+
+            def Mesh "Plane0001"
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -0.1), (1, 1, 0.1)]
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 3, 2]
+                normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                point3f[] points = [(-1.8, -1, 0), (0, -1, 0), (-2, 1, 0), (0, 1, 0)]
+                point3f[] points.timeSamples = {
+                    0: [(-1.8, -1, 0), (0, -1, 0), (-2, 1, 0), (0, 1, 0)],
+                    4: [(-0.4799999, -0.8, 0), (1.6, -1.4000001, 0), (-0.8000001, 0.8, 0), (1.2, 0.6, 0)],
+                    4.5: [(-0.3149999, -0.77500004, 0), (1.8000001, -1.45, 0), (-0.6500001, 0.77500004, 0), (1.35, 0.55, 0)],
+                    5: [(-0.1499999, -0.75000006, 0), (2, -1.5, 0), (-0.5000001, 0.75000006, 0), (1.5, 0.5, 0)],
+                    5.5: [(0.01500009, -0.7250001, 0), (2.2, -1.5500001, 0), (-0.3500001, 0.7250001, 0), (1.6500001, 0.45, 0)],
+                    6: [(0.18000008, -0.7000001, 0), (2.4, -1.6, 0), (-0.2000001, 0.7000001, 0), (1.8000001, 0.39999998, 0)],
+                    10: [(1.5, -0.5, 0), (4, -2, 0), (1, 0.5, 0), (3, 0, 0)],
+                }
+                color3f[] primvars:displayColor = [(1, 0, 0)]
+                texCoord2f[] primvars:UVMap = [(0, 0), (1, 0), (1, 1), (0, 1)] (
+                    interpolation = "faceVarying"
+                )
+                uniform token subdivisionScheme = "none"
+            }
+        }
+    }
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float4[] clippingPlanes.timeSamples = {
+            5: [],
+        }
+        float2 clippingRange = (1, 20000)
+        float2 clippingRange.timeSamples = {
+            5: (1, 20000),
+        }
+        float focalLength = 18.147562
+        float focalLength.timeSamples = {
+            5: 18.147562,
+        }
+        float focusDistance = 12.439155
+        float focusDistance.timeSamples = {
+            5: 12.439155,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            5: 0,
+        }
+        float horizontalAperture = 20.955
+        float horizontalAperture.timeSamples = {
+            5: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            5: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            5: "perspective",
+        }
+        double shutter:close = 2
+        double shutter:open = -2
+        float verticalAperture = 11.787188
+        float verticalAperture.timeSamples = {
+            5: 11.787188,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            5: 0,
+        }
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3, 2, 12.689154636114836, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            5: ( (0.9998476951563913, 7.6017553736123e-17, -0.01745240643727876, 0), (0.0012174183314138235, 0.997564050259824, 0.06974584949530445, 0), (0.01740989325235243, -0.06975647374412874, 0.9974121164231594, 0), (3.216564354169812, 1.1322884370063275, 12.656963552151174, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "Lights"
+{
+    def DistantLight "Distant1"
+    {
+        float3 xformOp:rotateXYZ = (-28.33051, -0, -0)
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+}
+
+def RenderSettings "RenderSettings"
+{
+    custom int arnold:global:AA_samples = 1
+    custom int arnold:global:AA_seed
+    int arnold:global:AA_seed.timeSamples = {
+        224: 224,
+    }
+    rel camera = </Cameras/camera>
+    int2 resolution = (160, 120)
+}
+

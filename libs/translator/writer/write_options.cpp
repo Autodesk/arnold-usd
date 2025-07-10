@@ -51,6 +51,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aaSamples, "arnold:AA_samples"))
     ((giDiffuseDepth, "arnold:GI_diffuse_depth"))
     ((giSpecularDepth, "arnold:GI_specular_depth"))
+    ((giTransmissionDepth, "arnold:GI_transmission_depth"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
@@ -269,6 +270,11 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
         prim.CreateAttribute(_tokens->giSpecularDepth, SdfValueTypeNames->Int), 
         AiNodeGetInt(node, str::GI_specular_depth));
     _exportedAttrs.insert("GI_specular_depth");
+
+    writer.SetAttribute(
+        prim.CreateAttribute(_tokens->giTransmissionDepth, SdfValueTypeNames->Int), 
+        AiNodeGetInt(node, str::GI_transmission_depth));
+    _exportedAttrs.insert("GI_transmission_depth");
 
     AtNode* colorManager = (AtNode*) AiNodeGetPtr(node, str::color_manager);
     // If the options node has a color manager set, we want to author it in the render settings #1965
