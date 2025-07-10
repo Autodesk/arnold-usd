@@ -1,0 +1,7 @@
+Crash when writing output strings containing asterisks to USD
+
+See #2333
+
+author: sebastien ortega
+
+PARAMS: {'resaved':'usda'}
