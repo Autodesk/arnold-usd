@@ -161,7 +161,8 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         if system.is_windows:
             procedural_libs += ['-WHOLEARCHIVE:nodeRegistryArnold']
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
-            procedural_libs += ['-WHOLEARCHIVE:sceneIndexArnold']
+            if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+                procedural_libs += ['-WHOLEARCHIVE:sceneIndexArnold']
             procedural_libs += ['-WHOLEARCHIVE:render_delegate'] if local_env['BUILD_SCENE_INDEX_PLUGIN'] else []
         elif system.is_linux:
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'node_registry', 'libnodeRegistryArnold.a')))])
