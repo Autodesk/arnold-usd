@@ -76,6 +76,8 @@ def render_delegate(env, sources):
         usd_libs.append('hdx')
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
+    if env['USD_VERSION_INT'] >= 2505:
+        usd_libs += ['hdsi','ts','usdSkelImaging']
     return add_plugin_deps(env, sources, usd_libs, True)
 
 
@@ -124,6 +126,40 @@ def usd_imaging_plugin(env, sources):
     ]
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
+    if env['USD_VERSION_INT'] >= 2505:
+        usd_libs += ['ts',]
+    return add_plugin_deps(env, sources, usd_libs, True)
+
+def scene_index_plugin(env, sources):
+    usd_libs = [
+        'ar',
+        'arch',
+        'plug',
+        'tf',
+        'trace',
+        'vt',
+        'gf',
+        'work',
+        'ndr',
+        'sdf',
+        'sdr',
+        'hf',
+        'hd',
+        'hdsi',
+        'usdSkel',
+        'usdSkelImaging',
+        'usd',
+        'usdGeom',
+        'usdImaging',
+        'usdLux',
+        'usdShade',
+        'usdRender', # common/rendersettings_utils.h
+        'pcp', # common
+    ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
+    if env['USD_VERSION_INT'] >= 2505:
+        usd_libs += ['ts',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_delegate(env, sources):

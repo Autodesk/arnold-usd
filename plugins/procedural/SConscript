@@ -128,7 +128,7 @@ else:  # shared libs
         'sdr'
     ]
 
-    if local_env['USD_VERSION_INT'] < 2505:
+    if local_env['USD_VERSION_INT'] <= 2505:
         usd_libs += ['ndr',]
 
     if local_env['USD_VERSION_INT'] >= 2411:
@@ -155,24 +155,38 @@ procedural_libs = ['common']
 procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))]
 
 if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
-    procedural_libs += ['render_delegate']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
     # for static USD builds we need to include ndr/sdr & usdImaging in the procedural lib
-    if local_env['USD_BUILD_MODE'] == 'static':
+    if local_env['USD_BUILD_MODE'] == 'static' or local_env['USD_BUILD_MODE'] == 'monolithic':
         if system.is_windows:
             procedural_libs += ['-WHOLEARCHIVE:nodeRegistryArnold']
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
+            if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+                procedural_libs += ['-WHOLEARCHIVE:sceneIndexArnold']
+            procedural_libs += ['-WHOLEARCHIVE:render_delegate']
         elif system.is_linux:
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'node_registry', 'libnodeRegistryArnold.a')))])
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
+            if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+                local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'scene_index', 'libsceneIndexArnold.a')))])
+            local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
         else:
             local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'node_registry', 'libnodeRegistryArnold.a')))])
             local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
+            if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+                local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'scene_index', 'libsceneIndexArnold.a')))])            
+            local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
 
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'node_registry'))]
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]
-    
+        if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+            procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'scene_index'))]
+    else:
+        procedural_libs += ['render_delegate']
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
+
+if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+    local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 local_env.Append(LIBPATH = procedural_lib_paths)
 local_env.Append(LIBS = procedural_libs)

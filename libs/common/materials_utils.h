@@ -44,3 +44,8 @@ public:
 AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId, 
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter& context, 
     const TimeSettings& time, MaterialReader& materialReader);
+
+inline std::string GetArnoldShaderName(const SdfPath& nodePath, const SdfPath& materialPath)
+{
+    return nodePath.HasPrefix(materialPath) ? nodePath.GetString() : materialPath.GetString() + nodePath.GetString();
+}

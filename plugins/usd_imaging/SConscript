@@ -33,12 +33,16 @@ source_files = [
 
 if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
+    local_env.Append(CXXFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
 
 local_env.Append(CPPDEFINES=['USDIMAGINGARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging')])
 common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
 local_env.Append(LIBPATH = [common_lib_path])
 local_env.Append(LIBS = ['ai', 'common'])
+
+if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+    local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 # Otherwise we are getting a build error.
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)

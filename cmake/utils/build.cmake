@@ -134,3 +134,14 @@ function(install_usdimaging_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
     install(FILES "${PLUGINFO}"
         DESTINATION "${CONFIG_ROOT}/usdImagingArnold/resources")
 endfunction()
+
+function(install_sceneindex_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
+    # LIB_PATH is used in the plugInfo.json.in, do not rename
+    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    configure_file(
+        "${SCENEINDEXARNOLD_PLUGINFO_SRC}"
+        "${PLUGINFO}"
+    )
+    install(FILES "${PLUGINFO}"
+        DESTINATION "${CONFIG_ROOT}/sceneIndexArnold/resources")
+endfunction()

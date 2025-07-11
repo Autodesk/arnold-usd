@@ -15,6 +15,12 @@ render_delegate_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DI
 common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
 local_env.Append(LIBPATH = [render_delegate_lib_path, common_lib_path])
 local_env.Append(LIBS = ['ai', 'render_delegate', 'common'])
+if system.is_windows:
+    local_env.Append(LINKFLAGS = ['-WHOLEARCHIVE:render_delegate'])
+elif system.is_linux:
+    local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
+else:
+    local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
 
 source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)

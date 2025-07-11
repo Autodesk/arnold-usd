@@ -36,7 +36,6 @@
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include <constant_strings.h>
-#include "debug_codes.h"
 #include "hdarnold.h"
 #include "utils.h"
 
@@ -47,6 +46,23 @@
 
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+inline void EnsurePathHasMaterialPrefix(SdfPath &path, const SdfPath& materialPath) {
+    if (!path.HasPrefix(materialPath)) {
+        path = materialPath.AppendPath(path.MakeRelativePath(SdfPath::AbsoluteRootPath()));
+    }
+}
+
+inline void EnsureMaterialNetworPathsPrefix(HdMaterialNetwork& network, const SdfPath &materialPath)
+{
+    for (auto& rel : network.relationships) {
+        EnsurePathHasMaterialPrefix(rel.inputId, materialPath);
+        EnsurePathHasMaterialPrefix(rel.outputId, materialPath);
+    }
+    for (auto& nd : network.nodes) {
+        EnsurePathHasMaterialPrefix(nd.path, materialPath);
+    }
+}
 
 // MaterialReader classes are shared between the procedural and delegate code
 // to hold information needed to translate a shading tree.
@@ -68,27 +84,14 @@ public:
         return _nodeGraph.CreateArnoldNode(nodeType, nodeName);
     }
 
-    void ConnectShader(AtNode* node, const std::string& attrName, 
-            const SdfPath& target, ArnoldAPIAdapter::ConnectionType type) override 
+    void ConnectShader(
+        AtNode* node, const std::string& attrName, const SdfPath& target,
+        ArnoldAPIAdapter::ConnectionType type) override
     {
-        if (target.HasPrefix(_nodeGraph.GetId())) {
-            _context.AddConnection(
-                node, attrName.c_str(), target.GetPrimPath().GetText(),
-                type, target.GetElementString());
-            
-        }
-        else {
-            // If the connected shader is not already prefixed with our material path,
-            // we add this prefix to that shader name #1940        
-            std::string targetPath = 
-                _nodeGraph.GetId().GetString() + target.GetPrimPath().GetString();
-            _context.AddConnection(
-                node, attrName.c_str(), targetPath.c_str(),
-                type, target.GetElementString());    
-        }
-        
+        const std::string targetNodeName = GetArnoldShaderName(target.GetPrimPath(), _nodeGraph.GetId());
+        _context.AddConnection(node, attrName.c_str(), targetNodeName.c_str(), type, target.GetElementString());
     }
-    
+
     // GetShaderInput is called to return a parameter value for a given shader
     // in the current network. It also returns the shaderId of the shader
     bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param,
@@ -156,7 +159,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             param.Interrupt();
-            const HdMaterialNetworkMap& map = value.UncheckedGet<HdMaterialNetworkMap>();
+            const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
             // Before translation starts, we store the previous list of AtNodes
             // for this NodeGraph. After we translated everything, all unused nodes
             // in this list will be destroyed
@@ -167,25 +170,32 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             // As we'll use this to identify the networks root shaders, 
             // we copy the vector and we'll remove elements as we find them.
             // Note that this vector should only have a single or a few elements.
-            std::vector<SdfPath> terminals = map.terminals;
-            for (const auto& terminal : map.map) {
+            std::vector<SdfPath> terminals = materialNetworkmap.terminals;
+            for (auto &ter :terminals) {
+                EnsurePathHasMaterialPrefix(ter, GetId());
+            }
+            for (const auto& tokenAndMaterialNetwork : materialNetworkmap.map) {
                 // terminalType tells us which type of network this is meant to be
                 // (surface, displacement, etc...). We're using it to identify a 
                 // special case for displacement with UsdPreviewSurface
-                const TfToken& terminalType = terminal.first;
+                const TfToken& terminalType = tokenAndMaterialNetwork.first;
 
                 // network will contain the list of shaders nodes to translate, 
                 // as well as the list of relationships (shader connections)
-                const HdMaterialNetwork& network = terminal.second;
+                HdMaterialNetwork network = tokenAndMaterialNetwork.second;
                 // If this network doesn't contain any node, then there's nothing to do
                 if (network.nodes.empty())
                     continue;
+                 // Make sure all paths in the material network are prefixed with the material path
+                 // This is due to hydra2 removing the prefix of the materials of the shader nodes
+                EnsureMaterialNetworPathsPrefix(network, GetId());
+
                 // Read the material network and retrieve the "root" shader that will referenced
                 // from other nodes through one of our terminals. 
                 AtNode* node = ReadMaterialNetwork(network, terminalType, terminals);
                 // UpdateTerminal assigns a given shader to a terminal name
-                if (node && _nodeGraph.UpdateTerminal(
-                        terminal.first, node)) {
+                if (node && _nodeGraphCache.UpdateTerminal(
+                        terminalType, node)) {
                     nodeGraphChanged = true;
                 }
                 
@@ -225,28 +235,89 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
 HdDirtyBits HdArnoldNodeGraph::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-AtNode* HdArnoldNodeGraph::GetSurfaceShader() const
+AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader() const
 {
-    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->surface);
+    auto* terminal = _nodeGraphCache.GetTerminal(HdMaterialTerminalTokens->surface);
     return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
 }
 
-AtNode* HdArnoldNodeGraph::GetDisplacementShader() const { return _nodeGraph.GetTerminal(str::t_displacement); }
+AtNode* HdArnoldNodeGraph::GetCachedDisplacementShader() const { return _nodeGraphCache.GetTerminal(str::t_displacement); }
 
-AtNode* HdArnoldNodeGraph::GetVolumeShader() const
+AtNode* HdArnoldNodeGraph::GetCachedVolumeShader() const
 {
-    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->volume);
+    auto* terminal = _nodeGraphCache.GetTerminal(HdMaterialTerminalTokens->volume);
     return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
 }
 
-AtNode* HdArnoldNodeGraph::GetTerminal(const TfToken& terminalName) const
+AtNode* HdArnoldNodeGraph::GetOrCreateTerminal(HdSceneDelegate* sceneDelegate, const TfToken& terminalName)
 {
-    return _nodeGraph.GetTerminal(terminalName);
+    // Check if the terminal is cached
+    if (_nodeGraphCache.HasTerminal(terminalName)) {
+        return _nodeGraphCache.GetTerminal(terminalName);
+    } else {
+        // Check if the hydra prim has the terminal, create an arnold node and cacheit
+        const VtValue value = sceneDelegate->GetMaterialResource(GetId());
+        if (value.IsHolding<HdMaterialNetworkMap>()) {
+            const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
+
+            auto terminalIt = materialNetworkmap.map.find(terminalName);
+            if (terminalIt != materialNetworkmap.map.end()) {
+                HdMaterialNetwork network = terminalIt->second;
+                if (network.nodes.empty())
+                    return nullptr;
+                // Make sure the network paths have the material prefix
+                EnsureMaterialNetworPathsPrefix(network, GetId());
+
+                auto terminals = materialNetworkmap.terminals;
+                for (auto& ter : terminals) {
+                    EnsurePathHasMaterialPrefix(ter, GetId());
+                }
+
+                AtNode* node = ReadMaterialNetwork(network, terminalName, terminals);
+                // UpdateTerminal assigns a given shader to a terminal name
+                if (node) {
+                    if (_nodeGraphCache.UpdateTerminal(terminalName, node)) {
+                        return node;
+                    } // else {should already be covered by _nodeGraphCache.GetTerminal(terminalName) }
+                }
+            }
+        }
+    }
+    return nullptr;
 }
 
-std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName) const
+AtNode* HdArnoldNodeGraph::GetCachedTerminal(const TfToken& terminalName) const
 {
-    return _nodeGraph.GetTerminals(terminalName);
+    return _nodeGraphCache.GetTerminal(terminalName);
+}
+
+std::vector<AtNode*> HdArnoldNodeGraph::GetCachedTerminals(const TfToken& terminalName)
+{
+    return _nodeGraphCache.GetTerminals(terminalName);
+}
+
+std::vector<AtNode*> HdArnoldNodeGraph::GetOrCreateTerminals(
+    HdSceneDelegate* sceneDelegate, const TfToken& terminalPrefix)
+{
+    std::vector<AtNode*> result;
+
+    // Check if there are any terminals starting with terminalPrefix
+    const VtValue value = sceneDelegate->GetMaterialResource(GetId());
+    if (value.IsHolding<HdMaterialNetworkMap>()) {
+        std::vector<TfToken> foundTerminals;
+        const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
+        for (const auto& matMap : materialNetworkmap.map) {
+            if (matMap.first.GetString().rfind(terminalPrefix.GetString(), 0) == 0)
+                foundTerminals.push_back(matMap.first);
+        }
+
+        for (const TfToken& terminalName : foundTerminals) {
+            AtNode* terminalNode = GetOrCreateTerminal(sceneDelegate, terminalName);
+            if (terminalNode)
+                result.push_back(terminalNode);
+        }
+    }
+    return result;
 }
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, std::vector<SdfPath>& terminals)
@@ -391,9 +462,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         const SdfPath &nodePath = node.path;
         // If the shader is not already prefixed with its material path, 
         // we add the prefix to the shader name #1940
-        std::string arnoldNodeName = nodePath.HasPrefix(id) ?
-            nodePath.GetString() : id.GetString() + nodePath.GetString();
-
+        std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
         AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath)
@@ -403,12 +472,23 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     return terminalNode;
 }
 
-const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id)
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id)
 {
     if (id.IsEmpty()) {
         return nullptr;
     }
-    return reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    // Since and HdArnoldNodeGraph is used for Material and ArnoldNodeGraph, we need to query both.
+    HdArnoldNodeGraph *material = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
+    HdArnoldNodeGraph *arnoldNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(str::t_ArnoldNodeGraph, id));
+    return arnoldNodeGraph ? arnoldNodeGraph : material;
+}
+
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id)
+{
+    if (renderIndex) {
+        return GetNodeGraph(*renderIndex, id);
+    }
+    return nullptr;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

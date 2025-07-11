@@ -21,12 +21,39 @@
 #include "api.h"
 
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
+#include <pxr/usdImaging/usdImaging/materialAdapter.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class ArnoldNodeGraphAdapter : public UsdImagingPrimAdapter {
+class ArnoldNodeGraphAdapter : public UsdImagingMaterialAdapter {
 public:
     using BaseAdapter = UsdImagingPrimAdapter;
+
+    ArnoldNodeGraphAdapter()
+        : UsdImagingMaterialAdapter()
+    {}
+
+    //
+    // Scene index support
+    //
+#ifdef ENABLE_SCENE_INDEX
+    TfTokenVector GetImagingSubprims(UsdPrim const& prim) override;
+
+    TfToken GetImagingSubprimType(UsdPrim const& prim, TfToken const& subprim) override;
+
+    HdContainerDataSourceHandle GetImagingSubprimData(
+        UsdPrim const& prim, TfToken const& subprim, const UsdImagingDataSourceStageGlobals& stageGlobals) override;
+
+    HdDataSourceLocatorSet InvalidateImagingSubprim(
+        UsdPrim const& prim, TfToken const& subprim, TfTokenVector const& properties,
+        UsdImagingPropertyInvalidationType invalidationType) override;
+
+    UsdImagingPrimAdapter::PopulationMode GetPopulationMode() override { return RepresentsSelfAndDescendents; }
+
+    HdDataSourceLocatorSet InvalidateImagingSubprimFromDescendent(
+        UsdPrim const& prim, UsdPrim const& descendentPrim, TfToken const& subprim, TfTokenVector const& properties,
+        UsdImagingPropertyInvalidationType invalidationType) override;
+#endif
 
     /// Populate primitives in the usd imaging index proxy.
     ///
@@ -81,14 +108,21 @@ public:
     void MarkDirty(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index) override;
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     void MarkMaterialDirty(UsdPrim const& prim,
                            SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
 
-    USDIMAGING_API
+    USDIMAGINGARNOLD_API
     void ProcessPrimResync(SdfPath const& cachePath,
                            UsdImagingIndexProxy* index) override;
+    USDIMAGINGARNOLD_API
+    HdDirtyBits ProcessPrimChange(UsdPrim const& prim,
+                                SdfPath const& cachePath,
+                                TfTokenVector const& changedFields) override;
+    
+    void ProcessPrimRemoval(SdfPath const& cachePath,
+    UsdImagingIndexProxy* index) override;
 
     /// Tells if the primitive is supported by an UsdImagingIndex.
     ///
@@ -110,13 +144,6 @@ public:
 
 #endif
 
-private:
-    /// Removes the primitive from the UsdImagingIndex.
-    ///
-    /// @param cachePath Path to the primitive in the UsdImaging cache.
-    /// @param index Pointer to the UsdImagingIndex.
-    USDIMAGINGARNOLD_API
-    void _RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -35,7 +35,7 @@
  *  - Generate output types based on shader output type.
  * */
 #include "parser.h"
-
+#include <pxr/pxr.h>
 #include <pxr/base/tf/staticTokens.h>
 
 #include <pxr/usd/sdr/shaderNode.h>
@@ -109,7 +109,6 @@ public:
 #if PXR_VERSION >= 2111
     const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
 #endif
-
 private:
     SdfValueTypeName _typeName;
 };
