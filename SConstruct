@@ -409,6 +409,9 @@ if env['_COMPILER'] in ['gcc', 'clang']:
     if env['MODE'] == 'opt' or env['MODE'] == 'profile':
         env.Append(CCFLAGS = Split('-O3'))
 
+    if env['MODE'] == 'opt':
+        env.Append(CPPDEFINES=Split('NDEBUG'))
+
     # Debug and profile flags
     if env['MODE'] == 'debug' or env['MODE'] == 'profile':
         env.ParseFlags('-DDEBUG')
