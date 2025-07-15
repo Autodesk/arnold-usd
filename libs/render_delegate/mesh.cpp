@@ -188,6 +188,7 @@ HdArnoldMesh::~HdArnoldMesh() {
         AiNodeResetParameter(node, str::nlist);
         AiNodeResetParameter(node, str::nidxs); // nidxs might be shared with vidx so we need to reset it as well
         AiNodeResetParameter(node, str::uvlist);
+        AiNodeResetParameter(node, str::uvidxs);// uvidxs might be shared with vidx so we need to reset it as well
     }
 
     // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
