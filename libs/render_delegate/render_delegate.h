@@ -350,9 +350,21 @@ public:
     /// @return Const Reference to the list of Delegate Render Products.
     const DelegateRenderProducts& GetDelegateRenderProducts() const { return _delegateRenderProducts; }
 
+    /// Check if we need to update the render delegate products.
+    /// The "dirty" flag is cleaned during this function
+    bool NeedsDelegateProductsUpdate() {
+        const bool needsDelegateProductsUpdate = 
+            !_delegateRenderProducts.empty() && _delegateRenderProductsDirty;
+        _delegateRenderProductsDirty = false;
+        return needsDelegateProductsUpdate;
+    }
+
     /// Clear the existing list of delegate render products. This is needed when the render pass
     /// didn't manage to create any render product based on the delegate list
-    void ClearDelegateRenderProducts() {_delegateRenderProducts.clear();}
+    void ClearDelegateRenderProducts() {
+        _delegateRenderProducts.clear(); 
+        _delegateRenderProductsDirty = true;
+    }
     /// Advertise whether this delegate supports pausing and resuming of
     /// background render threads. Default implementation returns false.
     ///
@@ -573,8 +585,12 @@ public:
     /// Method used to create any node in the context of the render delegate. 
     /// This method should always be called, instead of explicit AiNode() creations
     inline 
-    AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
-        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
+    AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName, bool checkExisting = false) {
+        AtNode *node = checkExisting ? LookupNode(nodeName.c_str()) : nullptr;
+        if (node != nullptr && AiNodeIs(node, nodeType))
+            return node;
+
+        node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
         if (_procParent) {
 
             // All shape nodes should have an id parameter if we're coming from a parent procedural
@@ -749,6 +765,7 @@ private:
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
+    bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
     NativeRprimTypeMap _nativeRprimTypes;           ///< Remapping between the native rprim type names and arnold types.
     NativeRprimParams _nativeRprimParams;           ///< List of parameters for native rprims.
