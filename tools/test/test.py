@@ -34,7 +34,7 @@ def obfuscate_log(log_file):
    def sig_repl(match):
       obfuscated_sig = '*' * len(match.groupdict().get('sig', ''))
       return str.encode(f'sig="{obfuscated_sig}"')
-   if os.path.exists(log_file):
+   if log_file and os.path.exists(log_file):
       # We have some test dealing with corrupted binary
       # data which is intentionally printed in the stdout. So the logs
       # contain part of that binary data. So let's open them in binary mode,
@@ -407,8 +407,12 @@ class Test:
       # Clone the environment variables defined for the testsuite
       environment_global = dict(self.testsuite.environment)
       # Force RLM to log debug and diagnostics (see #7833).
-      environment_global['RLM_DIAGNOSTICS'] = os.path.join(self.target, 'rlm.diag')
-      environment_global['RLM_DEBUG'] = ''
+      if environment_global.get('DISABLE_RLM_DEBUG') is None:
+         if 'RLM_DIAGNOSTICS' not in environment_global: environment_global['RLM_DIAGNOSTICS'] = os.path.join(self.target, 'rlm.diag')
+         if 'RLM_DEBUG'       not in environment_global: environment_global['RLM_DEBUG'] = ''
+      else:
+         environment_global.pop('RLM_DIAGNOSTICS', None)
+         environment_global.pop('RLM_DEBUG'      , None)
       # Force CLM Hub to write the log files in the test working directory and
       # raise the log level to "trace" in order to get the full verbosity
       # (see #5658).
@@ -473,7 +477,7 @@ class Test:
                command = '{} {}'.format(command, self.testsuite.kick_params)
             # Execute the command
             completed_process = system.execute(command, cwd=self.target, env=environment, shell=use_shell, timeout=timeout, verbose=show_output, version=2)
-            obfuscate_log(environment['RLM_DIAGNOSTICS'])
+            obfuscate_log(environment.get('RLM_DIAGNOSTICS'))
             # Output into common log
             log_outputs += [f'Executing {command}']
             log_outputs += completed_process.stdout

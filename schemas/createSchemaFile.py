@@ -318,9 +318,9 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
         if paramStr != None and len(paramStr) > 0:
             file.write('    {}\n'.format(paramStr))
 
-        if appendAttrs:
-            for appendAttr in appendAttrs:
-                file.write('    {}\n'.format(appendAttr))
+    if appendAttrs:
+        for appendAttr in appendAttrs:
+            file.write('    {}\n'.format(appendAttr))
    
     file.write('}\n')
 
