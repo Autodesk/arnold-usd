@@ -16,6 +16,7 @@
 ### Bug Fixes
 
 - [usd#2333](https://github.com/Autodesk/arnold-usd/issues/2333) - Fix crash in USD writer when the outputs string contains asterisk
+- [usd#2364](https://github.com/Autodesk/arnold-usd/issues/2364) - Fix crash render delegate when using indexed uvs and shared arrays.
 
 ## Next Bugfix release (7.4.2.2)
 
