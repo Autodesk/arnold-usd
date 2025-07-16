@@ -214,7 +214,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     const auto filterNameStr =
         renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("HdArnoldRenderPass_filter_%d", filterIndex).c_str()});
 
-    AtNode* filter = renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), filterNameStr, true);
+    AtNode* filter = renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), filterNameStr);
     if (filter == nullptr) {
         return nullptr;
     }
@@ -255,13 +255,13 @@ const std::string _CreateAOV(
 
         // We need to add a aov write shader to the list of aov_shaders on the options node. Each
         // of this shader will be executed on every surface.
-        writer = renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, writerName, true);
+        writer = renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite, writerName);
         if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-            reader = renderDelegate->CreateArnoldNode(str::utility, readerName, true);
+            reader = renderDelegate->FindOrCreateArnoldNode(str::utility, readerName);
             AiNodeSetStr(reader, str::color_mode, str::uv);
             AiNodeSetStr(reader, str::shade_mode, str::flat);
         } else {
-            reader = renderDelegate->CreateArnoldNode(arnoldTypes.userData, readerName, true);
+            reader = renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData, readerName);
             AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
         }
         
@@ -754,16 +754,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
                     // We need to add a aov write shader to the list of aov_shaders on the options node. Each
                     // of this shader will be executed on every surface.
-                    buffer.writer = _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite,
-                        writerName, true);
+                    buffer.writer = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite,
+                        writerName);
                     if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-                        buffer.reader = _renderDelegate->CreateArnoldNode(str::utility,
-                            readerName, true);
+                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(str::utility,
+                            readerName);
                         AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
                         AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                     } else {
-                        buffer.reader = _renderDelegate->CreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
-                            AtString(sourceName.c_str()), true);
+                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
+                            AtString(sourceName.c_str()));
                     }
                     
                     AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
@@ -838,8 +838,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
                 const AtString customDriverName =
                     AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
-                customProduct.driver = _renderDelegate->CreateArnoldNode(AtString(product.productType.GetText()),
-                    customDriverName, true);
+                customProduct.driver = _renderDelegate->FindOrCreateArnoldNode(AtString(product.productType.GetText()),
+                    customDriverName);
                 if (Ai_unlikely(customProduct.driver == nullptr)) {
                     continue;
                 }

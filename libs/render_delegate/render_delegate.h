@@ -585,12 +585,8 @@ public:
     /// Method used to create any node in the context of the render delegate. 
     /// This method should always be called, instead of explicit AiNode() creations
     inline 
-    AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName, bool checkExisting = false) {
-        AtNode *node = checkExisting ? LookupNode(nodeName.c_str()) : nullptr;
-        if (node != nullptr && AiNodeIs(node, nodeType))
-            return node;
-
-        node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
+    AtNode* CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
+        AtNode* node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
         if (_procParent) {
 
             // All shape nodes should have an id parameter if we're coming from a parent procedural
@@ -603,6 +599,17 @@ public:
         }
         return node;
     };
+
+    // Lookup for a node of a given name and type and return it, otherwise create a new one
+    inline 
+    AtNode* FindOrCreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
+        AtNode* node = LookupNode(nodeName.c_str());
+        if (node != nullptr && AiNodeIs(node, nodeType))
+            return node;
+
+        return CreateArnoldNode(nodeType, nodeName);
+    }
+
 
     /// Method used to destroy nodes in the context of the render delegate.
     /// This method should always be called, instead of explicit AiNodeDestroy() 
