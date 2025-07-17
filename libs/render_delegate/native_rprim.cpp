@@ -22,7 +22,7 @@
 #include <common_bits.h>
 #include <constant_strings.h>
 #include <shape_utils.h>
-
+#include <pxr/imaging/hd/retainedDataSource.h>
 PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldNativeRprim::HdArnoldNativeRprim(
@@ -46,22 +46,46 @@ void HdArnoldNativeRprim::Sync(
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
     }
-    
+
+    auto GetArnoldAttributes = [&]() {
+        // Try to get the arnold attributes via the scene delegate
+        const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+        if (!val.IsEmpty())
+            return val;
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+        // Otherwise try with the sceneIndex
+        HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+        if (sceneIndex) {
+            HdSampledDataSourceHandle arnoldAttribute = HdSampledDataSource::Cast(
+                sceneIndex->GetDataSource(id, HdDataSourceLocator(str::t_arnold__attributes)));
+            if (arnoldAttribute) {
+                return arnoldAttribute->GetValue(0.0);
+            }   
+        }
+#endif // ENABLE_SCENE_INDEX // Hydra2
+        return VtValue();
+    };
+
     // If the primitive is invisible for hydra, we want to skip it here
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
 
     int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
-    if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
+    bool syncBuiltinParameters = *dirtyBits & ArnoldUsdRprimBitsParams;
+ #ifdef ENABLE_SCENE_INDEX // Hydra2 - we have to pass the arnold::attributes via the DirtyPrimvar bit unfortunately,
+                         // the mapping is done in fixInvalidationSIP.cpp
+    syncBuiltinParameters = syncBuiltinParameters || (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+ #endif   
+    if (syncBuiltinParameters && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
-        const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+        VtValue val = GetArnoldAttributes();
         if (val.IsHolding<ArnoldUsdParamValueList>()) {
             const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
             for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
                 HdArnoldSetParameter(
-                        GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), 
-                        param.second, GetRenderDelegate());
+                    GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second,
+                    GetRenderDelegate());
                 if (param.first == str::t_visibility)
                     defaultVisibility = (int)AiNodeGetByte(GetArnoldNode(), str::visibility);
             }
@@ -74,14 +98,12 @@ void HdArnoldNativeRprim::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        
-        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
-            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
         if (material != nullptr) {
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetVolumeShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader());
             } else {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader());
             }
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);
@@ -125,7 +147,8 @@ void HdArnoldNativeRprim::Sync(
     bool transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, GetId())) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldRenderParam* arnoldRenderParam = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), arnoldRenderParam->GetShutterRange());
         transformDirtied = true;
     }
 
@@ -133,6 +156,8 @@ void HdArnoldNativeRprim::Sync(
 
     *dirtyBits = HdChangeTracker::Clean;
 }
+
+// TODO conversion between HdDirtyBits and ArnoldUsdRprimBitsParams
 
 HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const
 {

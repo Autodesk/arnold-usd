@@ -31,6 +31,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURR
 add_library(usdImagingArnoldObjects OBJECT ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 target_compile_definitions(usdImagingArnoldObjects PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME usdImagingArnoldObjects DEPENDENCIES common)
+if (BUILD_SCENE_INDEX_PLUGIN)
+    target_compile_definitions(usdImagingArnoldObjects PUBLIC ENABLE_SCENE_INDEX=1)
+endif()
 
 # If we want a usdImagingArnold shared plugin
 if (NOT BUILD_WITH_USD_STATIC)

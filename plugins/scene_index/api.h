@@ -1,0 +1,24 @@
+
+/// API definitions for exports and imports.
+#pragma once
+
+#include <pxr/base/arch/export.h>
+#include <pxr/pxr.h>
+
+#if defined(PXR_STATIC)
+#define HDSCENEINDEX_API
+#define HDSCENEINDEX_API_TEMPLATE_CLASS(...)
+#define HDSCENEINDEX_API_TEMPLATE_STRUCT(...)
+#define HDSCENEINDEX_LOCAL
+#else
+#if defined(HDSCENEINDEX_EXPORTS)
+#define HDSCENEINDEX_API ARCH_EXPORT
+#define HDSCENEINDEX_API_TEMPLATE_CLASS(...) ARCH_EXPORT_TEMPLATE(class, __VA_ARGS__)
+#define HDSCENEINDEX_API_TEMPLATE_STRUCT(...) ARCH_EXPORT_TEMPLATE(struct, __VA_ARGS__)
+#else
+#define HDSCENEINDEX_API ARCH_IMPORT
+#define HDSCENEINDEX_API_TEMPLATE_CLASS(...) ARCH_IMPORT_TEMPLATE(class, __VA_ARGS__)
+#define HDSCENEINDEX_API_TEMPLATE_STRUCT(...) ARCH_IMPORT_TEMPLATE(struct, __VA_ARGS__)
+#endif
+#define HDSCENEINDEX_LOCAL ARCH_HIDDEN
+#endif

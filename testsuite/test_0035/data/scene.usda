@@ -1,8 +1,7 @@
 #usda 1.0
-
 (
     subLayers = [
-        @./geom.usda@,
+        @./geom.usda@
     ]
 )
 
@@ -13,9 +12,8 @@ def Material "redMaterial"
     def Shader "previewSurface"
     {
         uniform token info:id = "UsdPreviewSurface"
-
-        token outputs:surface
         color3f inputs:diffuseColor = (1, 0, 0)
+        token outputs:surface
     }
 }
 
@@ -26,27 +24,30 @@ def Material "greenMaterial"
     def Shader "previewSurface"
     {
         uniform token info:id = "UsdPreviewSurface"
-
-        token outputs:surface
         color3f inputs:diffuseColor = (0, 1, 0)
+        token outputs:surface
     }
 }
 
 over "suzanne"
 {
-    # over "mesh"
-    # {
-    #     rel material:binding = </greenMaterial>
-    # }
-    over "mesh"
+    over "mesh" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
-        over "evenFaces"
+        over "evenFaces" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             rel material:binding = </redMaterial>
         }
-        over "oddFaces"
+
+        over "oddFaces" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             rel material:binding = </greenMaterial>
         }
     }
 }
+

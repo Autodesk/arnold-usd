@@ -53,15 +53,13 @@ AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRend
         return nullptr;
 
     SdfPath shaderPath(shaderStr.c_str());
-    auto* shaderNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(
-        sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, shaderPath));
+    auto* shaderNodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), shaderPath);
     HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
     pathSet.insert({shaderPath, HdChangeTracker::DirtyMaterialId});
     _delegate->TrackDependencies(GetId(), pathSet);
 
     if (shaderNodeGraph) {
-        shaderNodeGraph->Sync(sceneDelegate, renderParam, dirtyBits);
-        return shaderNodeGraph->GetTerminal(terminal);
+        return shaderNodeGraph->GetOrCreateTerminal(sceneDelegate, terminal);
     }
     return nullptr;
 };
@@ -279,7 +277,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     if (*dirtyBits & HdCamera::DirtyViewMatrix) {
 #endif
         param->Interrupt();
-        HdArnoldSetTransform(_camera, sceneDelegate, GetId());
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
+        HdArnoldSetTransform(_camera, sceneDelegate, GetId(), renderParam->GetShutterRange());
     }
 
     if (*dirtyBits & HdCamera::DirtyParams) {

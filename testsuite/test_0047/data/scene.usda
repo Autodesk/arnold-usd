@@ -8,12 +8,12 @@ def "pointLight1"
         float inputs:diffuse = 1
         float inputs:exposure = 4
         float inputs:intensity = 2
+        float inputs:specular = 1
         vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "pointLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float inputs:specular = 1
         bool treatAsPoint = 1
         matrix4d xformOp:transform.timeSamples = {
             0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-9.067680358886719, 1.4753198623657227, 0, 1) ),
@@ -26,17 +26,17 @@ def "pointLight2"
 {
     def SphereLight "pointLightShape2"
     {
+        float inputs:colorTemperature = 2000
         float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 1
         float inputs:exposure = 3
         float inputs:intensity = 2
-        bool inputs:enableColorTemperature = true
-        float inputs:colorTemperature = 2000
+        float inputs:specular = 1
         vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "pointLightShape2" (
             elementSize = 1
             interpolation = "constant"
         )
-        float inputs:specular = 1
         bool treatAsPoint = 1
         matrix4d xformOp:transform.timeSamples = {
             0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.0358829498291016, 1.4753198623657227, 0, 1) ),
@@ -50,17 +50,16 @@ def "pointLight3"
     def SphereLight "pointLightShape3"
     {
         color3f inputs:color = (2, 2, 2)
-        bool inputs:enableColorTemperature = true
         float inputs:colorTemperature = 12000
-        
         float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 1
         float inputs:exposure = 3
+        float inputs:specular = 1
         vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "pointLightShape3" (
             elementSize = 1
             interpolation = "constant"
         )
-        float inputs:specular = 1
         bool treatAsPoint = 1
         matrix4d xformOp:transform.timeSamples = {
             0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2.853314161300659, 1.4753198623657227, 0, 1) ),
@@ -74,17 +73,16 @@ def "pointLight4"
     def SphereLight "pointLightShape4"
     {
         color3f inputs:color = (1, 0.5, 0.5)
-        float inputs:diffuse = 1
-        float inputs:intensity = 30
-        bool inputs:enableColorTemperature = false
         float inputs:colorTemperature = 12000
-        
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:intensity = 30
+        float inputs:specular = 1
         vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "pointLightShape4" (
             elementSize = 1
             interpolation = "constant"
         )
-        float inputs:specular = 1
         bool treatAsPoint = 1
         matrix4d xformOp:transform.timeSamples = {
             0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (7.873787879943848, 1.4753198623657227, 0, 1) ),
@@ -92,15 +90,16 @@ def "pointLight4"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
+
 def DomeLight "dome"
 {
     color3f inputs:color = (1, 1, 1)
-    string primvars:arnold:shaders = "/dome/light_shader"
-    
-    float inputs:intensity = 0.5
-    float inputs:exposure = -1
-    bool inputs:enableColorTemperature = true
     float inputs:colorTemperature = 2000
+    bool inputs:enableColorTemperature = 1
+    float inputs:exposure = -1
+    float inputs:intensity = 0.5
+    string primvars:arnold:shaders = "/dome/light_shader"
+
     def ArnoldNodeGraph "light_shader"
     {
         prepend token outputs:color.connect = </domeShader.outputs:out>
@@ -114,10 +113,11 @@ def Shader "domeShader"
     color3f outputs:out
 }
 
-
 def "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]

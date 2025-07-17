@@ -13,7 +13,9 @@ def Xform "Primitives" (
     kind = "component"
 )
 {
-    def Sphere "ball"
+    def Sphere "ball" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent = [(-1, -1, -1), (1, 1, 1)]
         rel material:binding = </materials/blue_standard>
@@ -27,7 +29,9 @@ def Xform "Primitives" (
         matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, -1, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform:xform"]
 
-        def Mesh "mesh_0"
+        def Mesh "mesh_0" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             float3[] extent = [(-5, 0, -5), (5, 0, 5)]
             int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
@@ -203,12 +207,12 @@ def Xform "lights"
 {
     def DomeLight "overcast"
     {
+        custom float houdini:guidescale = 1
         color3f inputs:color = (1, 1, 1)
         float inputs:diffuse = 1
         bool inputs:enableColorTemperature = 0
         float inputs:exposure = 0
         rel inputs:filters = None
-        custom float houdini:guidescale = 1
         float inputs:intensity = 1
         bool inputs:normalize = 0
         rel inputs:portals = None
@@ -281,7 +285,7 @@ def Scope "Render"
             int2 resolution.timeSamples = {
                 1: (460, 220),
                 2: (160, 120),
-            }   
+            }
         }
     }
 
@@ -298,7 +302,7 @@ def Scope "Render"
         int2 resolution.timeSamples = {
             1: (460, 220),
             2: (160, 120),
-        }   
+        }
     }
 }
 

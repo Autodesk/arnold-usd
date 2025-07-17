@@ -8,21 +8,20 @@
     upAxis = "Y"
 )
 
-def Sphere "sphere1"
+def Sphere "sphere1" (
+    apiSchemas = ["MaterialBindingAPI"]
+)
 {
     rel material:binding = </materials/arnold_materialbuilder1>
+    double[] primvars:emptyDoubleArray = []
+    float[] primvars:emptyFloatArray = []
+    int[] primvars:emptyIntArray = []
+    matrix[] primvars:emptyMatrixArray = []
+    string[] primvars:emptyStringArray = []
     double radius = 1
     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
-    
-    int[] primvars:emptyIntArray = []
-    float[] primvars:emptyFloatArray = []
-    double[] primvars:emptyDoubleArray = []
-    string[] primvars:emptyStringArray = []
-    matrix[] primvars:emptyMatrixArray = []
-
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
-
 
 def Scope "materials"
 {

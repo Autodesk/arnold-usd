@@ -76,33 +76,48 @@ public:
     ///
     /// @return Pointer to the top Surface Shader.
     HDARNOLD_API
-    AtNode* GetSurfaceShader() const;
+    AtNode* GetCachedSurfaceShader() const;
 
     /// Returns the entry point to the Displacement Shader Network.
     ///
     /// @return Pointer to the top Displacement Shader.
     HDARNOLD_API
-    AtNode* GetDisplacementShader() const;
+    AtNode* GetCachedDisplacementShader() const;
 
     /// Returns the entry point to the Volume Shader Network.
     ///
     /// @return Pointer to the top Volume Shader.
     HDARNOLD_API
-    AtNode* GetVolumeShader() const;
+    AtNode* GetCachedVolumeShader() const;
 
     /// Returns a custom terminal.
     ///
     /// @param terminalName Name of the terminal to lookup.
     /// @return Pointer to the terminal, nullptr if not found.
     HDARNOLD_API
-    AtNode* GetTerminal(const TfToken& terminalName) const;
+    AtNode* GetCachedTerminal(const TfToken& terminalName) const;
 
     /// Returns a custom terminal.
     ///
     /// @param terminalBase Name of the terminal to lookup.
     /// @return Vector of pointers to the terminal, nullptr if not found.
     HDARNOLD_API
-    std::vector<AtNode*> GetTerminals(const TfToken& terminalBase) const;
+    std::vector<AtNode*> GetCachedTerminals(const TfToken& terminalBase);
+
+    /// Returns a custom terminal.
+    ///
+    /// @param terminalName Name of the terminal to lookup.
+    /// @return Pointer to the terminal, nullptr if not found.
+    HDARNOLD_API
+    AtNode* GetOrCreateTerminal(HdSceneDelegate* sceneDelegate, const TfToken& terminalName);
+
+    /// Returns a custom terminal.
+    ///
+    /// @param terminalBase Name of the terminal to lookup.
+    /// @return Vector of pointers to the terminal, nullptr if not found.
+    HDARNOLD_API
+    std::vector<AtNode*> GetOrCreateTerminals(HdSceneDelegate* sceneDelegate, const TfToken& terminalBase);
+
 
     /// Helper static function that returns the node graph for a given path
     ///
@@ -110,7 +125,10 @@ public:
     /// @param id  Path of the node graph primitive
     /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
-    static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+
+    HDARNOLD_API
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id);
 
     /// Create an Arnold shader node for this node graph. 
     /// We need to store the list of shaders created for this node graph,
@@ -198,6 +216,17 @@ protected:
             return it == terminals.end() ? nullptr : it->second;
         }
 
+        /// Returns true if a terminal node with terminalName is found in the cache 
+        ///
+        /// @param terminalName Name of the terminal.
+        /// @return false if terminal does not exists.
+        bool HasTerminal(const TfToken& terminalName) const
+        {
+            return std::find_if(terminals.begin(), terminals.end(), [&terminalName](const Terminal& t) -> bool {
+                       return t.first == terminalName;
+                   }) != terminals.end();
+        }
+
         /// Returns a terminal of the nodegraph.
         ///
         /// @param terminalName Name of the terminal.
@@ -239,7 +268,7 @@ protected:
     AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, 
         std::vector<SdfPath>& terminals);
 
-    ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
+    ArnoldNodeGraph _nodeGraphCache;         ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
     std::unordered_map<std::string, AtNode*> _nodes;  /// List of nodes used in this translator

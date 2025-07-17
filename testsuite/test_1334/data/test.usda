@@ -12,6 +12,11 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </persp/perspShape>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -21,11 +26,6 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
-        float arnold:meters_per_unit = 0.01
-        float arnold:frame.timeSamples = {
-            1: 1,
-        }
     }
 }
 
@@ -81,7 +81,9 @@ def Xform "directionalLight1"
 
 def Xform "pSphere1"
 {
-    def Mesh "pSphereShape1"
+    def Mesh "pSphereShape1" (
+        apiSchemas = ["MaterialBindingAPI", ""]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-1.0000002, -1, -1.0000005), (1, 1, 1.0000001)]
@@ -136,10 +138,11 @@ def Material "aiStandardSurface2"
     }
 }
 
-
 def Xform "aiCurveCollector1"
 {
-    def BasisCurves "aiCurveCollectorShape1"
+    def BasisCurves "aiCurveCollectorShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = "catmullRom"
         int[] curveVertexCounts = [28, 28, 33]
@@ -154,9 +157,7 @@ def Xform "aiCurveCollector1"
         token primvars:arnold:mode = "oriented"
         float primvars:arnold:motion_end = 0.25
         float primvars:arnold:motion_start = -0.25
-        
         uniform token type = "cubic"
-        
     }
 
     def Material "aiCurveCollectorShape1_hairShader"
@@ -173,3 +174,4 @@ def Xform "aiCurveCollector1"
         }
     }
 }
+

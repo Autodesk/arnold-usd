@@ -7,7 +7,6 @@
 def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    rel camera = </persp/perspShape>
     float arnold:frame.timeSamples = {
         1: 1,
     }
@@ -21,6 +20,7 @@ def RenderSettings "options"
     int arnold:threads = 64
     int arnold:xres = 960
     int arnold:yres = 540
+    rel camera = </persp/perspShape>
     string primvars:render_layer = "defaultRenderLayer" (
         elementSize = 1
         interpolation = "constant"
@@ -66,7 +66,9 @@ def Xform "pCylinder1"
         {
             uniform token[] xformOpOrder = ["xformOp:transform"]
 
-            def Mesh "mesh"
+            def Mesh "mesh" (
+                apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 uniform bool doubleSided = 1
                 float3[] extent = [(-1.0000002, -1, -1.0000005), (1, 1, 1.0000001)]
@@ -75,8 +77,19 @@ def Xform "pCylinder1"
                 rel material:binding = </materials/pCylinder1/light_pCylinder1/light_pCylinder1Shape/shader>
                 uniform token orientation = "rightHanded"
                 point3f[] points = [(0.95105714, -1, -0.30901718), (0.80901754, -1, -0.5877856), (0.5877856, -1, -0.8090175), (0.30901715, -1, -0.951057), (0, -1, -1.0000005), (-0.30901715, -1, -0.95105696), (-0.5877855, -1, -0.8090173), (-0.80901724, -1, -0.5877854), (-0.9510568, -1, -0.30901706), (-1.0000002, -1, 0), (-0.9510568, -1, 0.30901706), (-0.8090172, -1, 0.58778536), (-0.58778536, -1, 0.8090171), (-0.30901706, -1, 0.95105666), (-2.9802322e-8, -1, 1.0000001), (0.30901697, -1, 0.9510566), (0.58778524, -1, 0.80901706), (0.809017, -1, 0.5877853), (0.95105654, -1, 0.309017), (1, -1, 0), (0.95105714, 1, -0.30901718), (0.80901754, 1, -0.5877856), (0.5877856, 1, -0.8090175), (0.30901715, 1, -0.951057), (0, 1, -1.0000005), (-0.30901715, 1, -0.95105696), (-0.5877855, 1, -0.8090173), (-0.80901724, 1, -0.5877854), (-0.9510568, 1, -0.30901706), (-1.0000002, 1, 0), (-0.9510568, 1, 0.30901706), (-0.8090172, 1, 0.58778536), (-0.58778536, 1, 0.8090171), (-0.30901706, 1, 0.95105666), (-2.9802322e-8, 1, 1.0000001), (0.30901697, 1, 0.9510566), (0.58778524, 1, 0.80901706), (0.809017, 1, 0.5877853), (0.95105654, 1, 0.309017), (1, 1, 0), (0, -1, 0), (0, 1, 0)]
+                bool primvars:arnold:light = 1 (
+                    interpolation = "constant"
+                )
+                color3f primvars:arnold:light:color = (1, 0, 1) (
+                    interpolation = "constant"
+                )
+                float primvars:arnold:light:exposure = 5 (
+                    interpolation = "constant"
+                )
+                float primvars:arnold:light:intensity = 10 (
+                    interpolation = "constant"
+                )
                 uchar primvars:arnold:subdiv_iterations = 1
-                
                 float2[] primvars:st = [(0.64860266, 0.107966065), (0.626409, 0.064408496), (0.5918415, 0.02984102), (0.54828393, 0.0076473355), (0.5, -7.4505806e-8), (0.45171607, 0.0076473504), (0.4081585, 0.02984105), (0.37359107, 0.064408526), (0.3513974, 0.107966095), (0.34374997, 0.15625), (0.3513974, 0.2045339), (0.37359107, 0.24809146), (0.40815854, 0.28265893), (0.4517161, 0.3048526), (0.5, 0.3125), (0.5482839, 0.3048526), (0.59184146, 0.28265893), (0.62640893, 0.24809146), (0.6486026, 0.2045339), (0.65625, 0.15625), (0.375, 0.3125), (0.3875, 0.3125), (0.39999998, 0.3125), (0.41249996, 0.3125), (0.42499995, 0.3125), (0.43749994, 0.3125), (0.44999993, 0.3125), (0.46249992, 0.3125), (0.4749999, 0.3125), (0.4874999, 0.3125), (0.49999988, 0.3125), (0.51249987, 0.3125), (0.52499986, 0.3125), (0.53749985, 0.3125), (0.54999983, 0.3125), (0.5624998, 0.3125), (0.5749998, 0.3125), (0.5874998, 0.3125), (0.5999998, 0.3125), (0.6124998, 0.3125), (0.62499976, 0.3125), (0.375, 0.6875), (0.3875, 0.6875), (0.39999998, 0.6875), (0.41249996, 0.6875), (0.42499995, 0.6875), (0.43749994, 0.6875), (0.44999993, 0.6875), (0.46249992, 0.6875), (0.4749999, 0.6875), (0.4874999, 0.6875), (0.49999988, 0.6875), (0.51249987, 0.6875), (0.52499986, 0.6875), (0.53749985, 0.6875), (0.54999983, 0.6875), (0.5624998, 0.6875), (0.5749998, 0.6875), (0.5874998, 0.6875), (0.5999998, 0.6875), (0.6124998, 0.6875), (0.62499976, 0.6875), (0.64860266, 0.79546607), (0.626409, 0.7519085), (0.5918415, 0.717341), (0.54828393, 0.69514734), (0.5, 0.68749994), (0.45171607, 0.69514734), (0.4081585, 0.71734107), (0.37359107, 0.75190854), (0.3513974, 0.79546607), (0.34374997, 0.84375), (0.3513974, 0.89203393), (0.37359107, 0.93559146), (0.40815854, 0.97015893), (0.4517161, 0.9923526), (0.5, 1), (0.5482839, 0.9923526), (0.59184146, 0.97015893), (0.62640893, 0.93559146), (0.6486026, 0.89203393), (0.65625, 0.84375), (0.5, 0.15625), (0.5, 0.84375)] (
                     elementSize = 84
                     interpolation = "faceVarying"
@@ -85,25 +98,12 @@ def Xform "pCylinder1"
                 uniform token subdivisionScheme = "none"
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.24575498700141907, -3.9600954055786133, 0), (0, 0.9980799555778503, 0.06193869188427925, 0), (0, 0, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
-
-                color3f primvars:arnold:light:color = (1, 0, 1) (
-                    interpolation = "constant"
-                )
-                bool primvars:arnold:light = 1 (
-                    interpolation = "constant"
-                )
-                float primvars:arnold:light:intensity = 10 (
-                    interpolation = "constant"
-                )
-                float primvars:arnold:light:exposure = 5 (
-                    interpolation = "constant"
-                )
             }
-
 
             def Material "shader"
             {
                 token outputs:surface.connect = </pCylinder1/light_pCylinder1/light_pCylinder1Shape/shader/shader.outputs:surface>
+
                 def Shader "shader"
                 {
                     uniform token info:id = "arnold:ray_switch_shader"
@@ -157,7 +157,9 @@ def "materials"
 
 def Xform "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-0.5, 0, -0.5), (0.5, 0, 0.5)]
