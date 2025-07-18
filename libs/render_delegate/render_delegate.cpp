@@ -829,12 +829,8 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
 {
     // Details about the data layout can be found here:
     // https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHuskDRP
-    // Delegate Render Products are used by husk, so we only have to parse them once.
-    // We don't support cases where delegate render products are passed AFTER the first execution
-    // of the render pass.
-    if (!_delegateRenderProducts.empty()) {
-        return;
-    }
+    ClearDelegateRenderProducts();
+    
     using DataType = VtArray<HdAovSettingsMap>;
     if (!value.IsHolding<DataType>()) {
         return;
