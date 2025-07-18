@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Next feature release (7.4.4.0)
+
+- [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
+
 ## Next feature release (7.4.3.0)
 
 ### Features
