@@ -167,7 +167,11 @@ driver_process_bucket
     };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
 
-        auto it = driverData->buffers.find(outputName);
+        AtString bufferName = AiOutputIteratorGetLayerName(iterator);
+        if (bufferName.empty())
+            bufferName = outputName;
+        
+        auto it = driverData->buffers.find(bufferName);
         if (it != driverData->buffers.end()) {
             it->second->WriteBucket(
             bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
