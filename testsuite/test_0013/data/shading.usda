@@ -2,15 +2,20 @@
 
 def "World"
 {
-    def Cube "dummy"
+    def Cube "dummy" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
+        rel material:binding = </World/material1>
         int primvars:arnold:visibility = 0
-        rel material:binding = </World/material1>   
     }
-    def Cube "another_dummy"
+
+    def Cube "another_dummy" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
+        rel material:binding = </World/material2>
         int primvars:arnold:visibility = 0
-        rel material:binding = </World/material2>   
     }
 
     def Material "material1"
@@ -23,11 +28,13 @@ def "World"
             color3f inputs:diffuseColor.connect = </World/material1/pngTex.outputs:out>
             token outputs:out
         }
+
         def Shader "PrimvarSt1"
         {
             uniform token info:id = "UsdPrimvarReader_float2"
             color3f outputs:out
         }
+
         def Shader "pngTex"
         {
             uniform token info:id = "UsdUVTexture"
@@ -37,6 +44,7 @@ def "World"
             color3f outputs:out
         }
     }
+
     def Material "material2"
     {
         token outputs:surface.connect = </World/material2/SecondPreviewShader.outputs:out>
@@ -44,17 +52,16 @@ def "World"
         def Shader "SecondPreviewShader"
         {
             uniform token info:id = "UsdPreviewSurface"
-            color3f inputs:diffuseColor = (1,0,0)
+            color3f inputs:diffuseColor = (1, 0, 0)
             token outputs:out
         }
-        
 
         def Shader "jpgTex"
         {
             uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @mat_jpg.jpg@
             token inputs:wrapS = "repeat"
             token inputs:wrapT = "repeat"
-            asset inputs:file = @mat_jpg.jpg@
         }
 
         def Shader "PrimvarSt"

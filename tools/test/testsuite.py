@@ -155,7 +155,7 @@ class Testsuite(object):
       if 'TESTSUITE_PXR_PLUGINPATH_NAME' in self.environment:
          self.environment['PXR_PLUGINPATH_NAME'] = self.environment['TESTSUITE_PXR_PLUGINPATH_NAME']
       else:
-         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_RENDER_DELEGATE']
+         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_TEST_RENDERDELEGATE']
 
       # Disable ADP in testsuite. On linux there's a 5s delay at exit, which
       # multiplied by a few thousand tests is not OK. The opt-in dialog window
@@ -458,6 +458,14 @@ class Testsuite(object):
                {'class_name': 'new', 'title': 'New', 'key': 'new_img_hydra'},
                {'class_name': 'ref', 'title': 'Ref', 'key': 'ref_img_hydra'},
                {'class_name': 'dif', 'title': 'Dif (4x)', 'key': 'dif_img_hydra_out-hydra_ref'},
+            ]
+         },
+         'hydra2': {
+            'name': 'Hydra2',
+            'images': [
+               {'class_name': 'new', 'title': 'New', 'key': 'new_img_hydra2'},
+               {'class_name': 'ref', 'title': 'Ref', 'key': 'ref_img_hydra2'},
+               {'class_name': 'dif', 'title': 'Dif (4x)', 'key': 'dif_img_hydra2_out-hydra2_ref'},
             ]
          },
       }

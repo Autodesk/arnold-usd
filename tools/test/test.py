@@ -34,7 +34,7 @@ def obfuscate_log(log_file):
    def sig_repl(match):
       obfuscated_sig = '*' * len(match.groupdict().get('sig', ''))
       return str.encode(f'sig="{obfuscated_sig}"')
-   if os.path.exists(log_file):
+   if log_file and os.path.exists(log_file):
       # We have some test dealing with corrupted binary
       # data which is intentionally printed in the stdout. So the logs
       # contain part of that binary data. So let's open them in binary mode,
@@ -407,8 +407,12 @@ class Test:
       # Clone the environment variables defined for the testsuite
       environment_global = dict(self.testsuite.environment)
       # Force RLM to log debug and diagnostics (see #7833).
-      environment_global['RLM_DIAGNOSTICS'] = os.path.join(self.target, 'rlm.diag')
-      environment_global['RLM_DEBUG'] = ''
+      if environment_global.get('DISABLE_RLM_DEBUG') is None:
+         if 'RLM_DIAGNOSTICS' not in environment_global: environment_global['RLM_DIAGNOSTICS'] = os.path.join(self.target, 'rlm.diag')
+         if 'RLM_DEBUG'       not in environment_global: environment_global['RLM_DEBUG'] = ''
+      else:
+         environment_global.pop('RLM_DIAGNOSTICS', None)
+         environment_global.pop('RLM_DEBUG'      , None)
       # Force CLM Hub to write the log files in the test working directory and
       # raise the log level to "trace" in order to get the full verbosity
       # (see #5658).
@@ -436,8 +440,8 @@ class Test:
          # Specialize the environment per pass, cloning the global environment
          environment = dict(environment_global)
          environment['ARNOLD_TESTSUITE_PASS'] = pass_name
-         environment['PROCEDURAL_USE_HYDRA'] = 1 if pass_name == 'hydra' else 0
-         
+         environment['PROCEDURAL_USE_HYDRA'] = 1 if pass_name in ['hydra', 'hydra2'] else 0
+         environment['USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX'] = 1 if pass_name == 'hydra2' else 0
          # Construct the path to the reference image of the current pass. If
          # there's no specific reference image for this pass (which should end
          # with ".<pass>.<ext>"), use the global reference. And if there's no
@@ -473,7 +477,7 @@ class Test:
                command = '{} {}'.format(command, self.testsuite.kick_params)
             # Execute the command
             completed_process = system.execute(command, cwd=self.target, env=environment, shell=use_shell, timeout=timeout, verbose=show_output, version=2)
-            obfuscate_log(environment['RLM_DIAGNOSTICS'])
+            obfuscate_log(environment.get('RLM_DIAGNOSTICS'))
             # Output into common log
             log_outputs += [f'Executing {command}']
             log_outputs += completed_process.stdout
@@ -551,12 +555,13 @@ class Test:
             'warnpercent': self.diff_warnpercent
       }
       diff_thresholds['hydra'] = dict(diff_thresholds['usd'])
-
+      diff_thresholds['hydra2'] = dict(diff_thresholds['usd'])
       # Configure the diffs that we want to perform
       # NOTE : in arnold-usd we don't want to compare between the 2 passes, cause the reference is always the same
       diff_checks = [
          [('out', 'usd'), ('ref', 'usd')],
-         [('out', 'hydra'), ('ref', 'hydra')]
+         [('out', 'hydra'), ('ref', 'hydra')],
+         [('out', 'hydra2'), ('ref', 'hydra2')]
       ]
       for keys in diff_checks:
          # Skip the check if a pass generating an output image failed. That

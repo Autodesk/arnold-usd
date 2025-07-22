@@ -18,7 +18,6 @@ def Xform "testgeometry_sphere_object1" (
 
     def Sphere "mesh_0"
     {
-        
     }
 }
 
@@ -29,7 +28,9 @@ def Xform "floor" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1.5, 0), (0, -1.3372678756713867, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform"]
 
-    def Mesh "mesh_0"
+    def Mesh "mesh_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent = [(-5, 0, -5), (5, 0, 5)]
         int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
@@ -145,7 +146,6 @@ def Xform "cameras"
     }
 }
 
-
 def Scope "Render"
 {
     def RenderSettings "rendersettings2"
@@ -164,7 +164,6 @@ def Scope "Render"
         int2 resolution = (160, 120)
     }
 }
-
 
 def Scope "lights" (
     kind = "group"
@@ -200,6 +199,10 @@ def Scope "lights" (
                     float inputs:exposure = 11
                     float inputs:intensity = 1
                     bool inputs:normalize = 1
+                    float inputs:shaping:cone:angle = 45
+                    custom float inputs:shaping:cone:factor = 2
+                    float inputs:shaping:cone:softness = 0
+                    float inputs:specular = 1
                     string primvars:arnold:aov = "ml_natural_default_all_01" (
                         interpolation = "constant"
                     )
@@ -208,10 +211,6 @@ def Scope "lights" (
                         interpolation = "constant"
                     )
                     custom string sda:light:type = "point"
-                    float inputs:shaping:cone:angle = 45
-                    custom float inputs:shaping:cone:factor = 2
-                    float inputs:shaping:cone:softness = 0
-                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (0.9992012732544656, -3.1711838571996296e-7, 0.03996017425580005, 0), (0.01561444432176325, 0.9204998749858835, -0.39043074837862785, 0), (-0.036783211594109404, 0.39074285681362403, 0.9197646520680987, 0), (-1.6489159183912698, 8.219490162876305, 21.941723896770682, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -220,6 +219,7 @@ def Scope "lights" (
                     {
                     }
                 }
+
                 def SphereLight "ml_natural_b_all_01" (
                     prepend apiSchemas = ["CollectionAPI:shadowLink"]
                 )
@@ -234,6 +234,7 @@ def Scope "lights" (
                     float inputs:exposure = 8
                     float inputs:intensity = 1
                     bool inputs:normalize = 1
+                    float inputs:specular = 1
                     string primvars:arnold:aov = "ml_natural_b_all_01" (
                         interpolation = "constant"
                     )
@@ -242,7 +243,6 @@ def Scope "lights" (
                         interpolation = "constant"
                     )
                     custom string sda:light:type = "point"
-                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (0.6681201809961502, -0.05322788632016558, 0.7421470311626659, 0), (-0.7214044147514002, 0.19788547601084672, 0.6636392158101796, 0), (-0.18218423126840894, -0.9787788976586327, 0.09381244786962316, 0), (0.21174369717406805, -3.094021846657615, 2.091676215611347, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]

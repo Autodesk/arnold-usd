@@ -3,14 +3,22 @@
 
 ## Next feature release (7.4.3.0)
 
+### Features
+
 - [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
 - [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 - [usd#2310](https://github.com/Autodesk/arnold-usd/issues/2310) - Support volume shaders on points with hydra
 - [usd#2320](https://github.com/Autodesk/arnold-usd/issues/2320) - Use overwrite mode for stats and deprecate the render setting stats:mode
 - [usd#2337](https://github.com/Autodesk/arnold-usd/issues/2337) - Don't disable CER error reports through the hydra procedural
 - [usd#2346](https://github.com/Autodesk/arnold-usd/issues/2346) - Registry should explicitely consider the usd.hide metadata instead of DCC-specific ones
+- [usd#2352](https://github.com/Autodesk/arnold-usd/issues/2352) - Changing the frame should not re-initialize the procedural
 
-## Next Bugfix release (7.4.2.2)
+### Bug Fixes
+
+- [usd#2333](https://github.com/Autodesk/arnold-usd/issues/2333) - Fix crash in USD writer when the outputs string contains asterisk
+- [usd#2364](https://github.com/Autodesk/arnold-usd/issues/2364) - Fix crash render delegate when using indexed uvs and shared arrays.
+
+## [7.4.2.2] - 2025-07-03
 
 ### Bug Fixes
 

@@ -268,7 +268,25 @@ void HdArnoldUnboxResample(const HdArnoldSampledType<VtValue>& in, GfVec2f shutt
 }
 
 
-
+/// @brief Hydra2 helper to ensure the samples count is at least 2 or zero when there is a shutter interval.
+///  This function can be useful only when samples.count is used later on as the number of samples to pass to Arnold. 
+///  
+/// @param shutter 
+/// @param samples
+template <typename T>
+void HdArnoldEnsureSamplesCount(const GfVec2f& shutter, HdArnoldSampledType<T>& samples)
+{
+    if (shutter[0] != shutter[1]) {
+        if (samples.count == 1) {
+            const T value = samples.values[0];
+            samples.Resize(2);
+            samples.times[0] = shutter[0];
+            samples.times[1] = shutter[1];
+            samples.values[0] = value;
+            samples.values[1] = value;
+        }
+    }
+}
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
@@ -278,14 +296,14 @@ using HdArnoldSubsets = std::vector<SdfPath>;
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets the transform on multiple Arnold nodes from a single Hydra Primitive.
 ///
 /// @param node Vector holding all the Arnold Nodes.
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets a Parameter on an Arnold Node from a VtValue.
 ///
 /// @param node Pointer to the Arnold Node.
@@ -570,5 +588,52 @@ bool IsVaryingTopology(const SampledTyped &xf) {
     return false;
 }
 
+template <typename SampledPrimvarType>
+inline void SamplePrimvar(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#ifdef ENABLE_SCENE_INDEX
+    sceneDelegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SamplePrimvar(id, key, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleIndexedPrimvar(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#ifdef ENABLE_SCENE_INDEX
+    sceneDelegate->SampleIndexedPrimvar(id, key, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleIndexedPrimvar(id, key, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleInstancerTransform(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#ifdef ENABLE_SCENE_INDEX
+    sceneDelegate->SampleInstancerTransform(id, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleInstancerTransform(id, samples);
+#endif
+}
+
+template <typename SampledPrimvarType>
+inline void SampleTransform(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const GfVec2f& shutterRange,
+    SampledPrimvarType* samples)
+{
+#ifdef ENABLE_SCENE_INDEX
+    sceneDelegate->SampleTransform(id, shutterRange[0], shutterRange[1], samples);
+#else
+    sceneDelegate->SampleTransform(id, samples);
+#endif
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

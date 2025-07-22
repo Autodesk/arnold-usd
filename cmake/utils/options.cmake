@@ -21,6 +21,7 @@ option(BUILD_BOOST_ALL_NO_LIB "Disable linking of boost libraries from boost hea
 option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
 option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to help when generating IDE projects." OFF)
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the  procedural (experimental)" ON)
+option(BUILD_SCENE_INDEX_PLUGIN "Build and enable scene index aka hydra 2" OFF)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 

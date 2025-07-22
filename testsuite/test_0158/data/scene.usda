@@ -8,7 +8,9 @@
     upAxis = "Y"
 )
 
-def Sphere "sphere1"
+def Sphere "sphere1" (
+    apiSchemas = ["MaterialBindingAPI"]
+)
 {
     rel material:binding = </materials/arnold_materialbuilder1>
     double radius = 1
@@ -28,6 +30,7 @@ def Scope "materials"
             color3f inputs:color.connect = </materials/arnold_materialbuilder1/subnet1.outputs:rgba>
             vector3f outputs:rgb
         }
+
         def NodeGraph "subnet1"
         {
             vector3f inputs:rgb.connect = </materials/arnold_materialbuilder1/flat1.outputs:rgb>

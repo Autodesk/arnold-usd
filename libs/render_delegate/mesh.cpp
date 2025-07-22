@@ -63,7 +63,8 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
         
         // If pointsSamples has counts it means that the points are computed (skinned)
         if (pointsSample->count == 0) {
-            sceneDelegate->SamplePrimvar(id, HdTokens->points, pointsSample);
+            SamplePrimvar(
+                sceneDelegate, id, HdTokens->points, param->GetShutterRange(), pointsSample);
         }
 
         // Check if we can/should extrapolate positions based on velocities/accelerations.
@@ -188,6 +189,7 @@ HdArnoldMesh::~HdArnoldMesh() {
         AiNodeResetParameter(node, str::nlist);
         AiNodeResetParameter(node, str::nidxs); // nidxs might be shared with vidx so we need to reset it as well
         AiNodeResetParameter(node, str::uvlist);
+        AiNodeResetParameter(node, str::uvidxs);// uvidxs might be shared with vidx so we need to reset it as well
     }
 
     // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
@@ -239,7 +241,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
-
+    TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
@@ -288,7 +290,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
 
-        const auto scheme = topology.GetScheme();
+        scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(node, str::subdiv_type, str::catclark);
         } else {
@@ -309,10 +311,11 @@ void HdArnoldMesh::Sync(
             node, str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
     }
 
+    HdArnoldRenderParam * arnoldRenderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), arnoldRenderParam->GetShutterRange());
         transformDirtied = true;
     }
 
@@ -323,7 +326,7 @@ void HdArnoldMesh::Sync(
             node, subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
             subdivTags.GetCreaseIndices(), subdivTags.GetCreaseLengths(), subdivTags.GetCreaseWeights());
     }
-    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+    if (*dirtyBits & (HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }
@@ -345,15 +348,14 @@ void HdArnoldMesh::Sync(
         HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
             nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
-            const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
-                sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+            const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
-                dispMap[arrayId] = material->GetDisplacementShader();
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader();
+                dispMap[arrayId] = material->GetCachedDisplacementShader();
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
@@ -430,16 +432,18 @@ void HdArnoldMesh::Sync(
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
                     AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));    
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
                     VtIntArray arrayIndices;
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
-                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, &sample);
+                        SamplePrimvar(
+                            sceneDelegate, id, HdTokens->normals, arnoldRenderParam->GetShutterRange(), &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);
                     } else {
-                        // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
+                        // HdArnoldSampledPrimvarType will be initialized with 3 samples.
                         // Here we need to clear them before we push the new description value
                         sample.values.clear();
                         sample.times.clear();
@@ -472,12 +476,14 @@ void HdArnoldMesh::Sync(
                         int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
                         AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                     }
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
-                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+                        SampleIndexedPrimvar(
+                            sceneDelegate, id, primvar.first, arnoldRenderParam->GetShutterRange(), &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);  
                         if (sample.count != _numberOfPositionKeys) {
                            _RemapNormalKeys(_numberOfPositionKeys, sample);
                         }

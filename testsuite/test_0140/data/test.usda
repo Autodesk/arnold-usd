@@ -9,7 +9,6 @@
     upAxis = "Y"
 )
 
-
 def Scope "Render"
 {
     def RenderSettings "rendersettings1"
@@ -28,6 +27,7 @@ def Scope "Render"
 }
 
 def Xform "geo" (
+    apiSchemas = ["MaterialBindingAPI"]
     kind = "component"
 )
 {

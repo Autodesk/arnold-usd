@@ -36,13 +36,22 @@ if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
     target_compile_definitions(${PROC_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
 endif()
 
+if (BUILD_SCENE_INDEX_PLUGIN)
+    target_compile_definitions(${PROC_NAME} PUBLIC ENABLE_SCENE_INDEX=1)
+endif()
+
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImaging usdImagingArnoldObjects)
+    if (BUILD_SCENE_INDEX_PLUGIN)
+        target_link_libraries(${PROC_NAME} PRIVATE sceneIndexArnoldObjects)
+    endif()
+    target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
     if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
         target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
     endif ()
+
 endif()
 
 if (APPLE OR LINUX)
@@ -76,7 +85,16 @@ if (BUILD_WITH_USD_STATIC)
             "${CMAKE_CURRENT_BINARY_DIR}/usd/usdImagingArnold/resources/plugInfo.json"
             "${PREFIX_PROCEDURAL}/usd")
 
+         # install the scene index arnold pluginfo
+        if (BUILD_SCENE_INDEX_PLUGIN)
+            install_sceneindex_arnold_pluginfo(
+                ../../usd_proc
+                "${CMAKE_CURRENT_BINARY_DIR}/usd/sceneIndexArnold/resources/plugInfo.json"
+                "${PREFIX_PROCEDURAL}/usd")
+        endif()
+
         # Install the render delegate plugInfo.json
+        set(LIB_PATH "../../${USD_PROCEDURAL_NAME}_proc") # for plugInfo.json.in
         set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/resources/plugInfo.json")
         configure_file(
             "${HDARNOLD_PLUGINFO_SRC}"

@@ -53,7 +53,8 @@ void HdArnoldPoints::Sync(
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), renderParam->GetShutterRange());
         transformDirtied = true;
     }
     if (*dirtyBits & HdChangeTracker::DirtyCategories) {
@@ -112,7 +113,7 @@ void HdArnoldPoints::Sync(
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, _IsVolume() ? material->GetVolumeShader() : material->GetSurfaceShader());
+            AiNodeSetPtr(node, str::shader, _IsVolume() ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader());
         } else {
             AiNodeSetPtr(
                 node, str::shader,

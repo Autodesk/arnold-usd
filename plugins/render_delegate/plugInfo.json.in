@@ -12,7 +12,7 @@
                     }
                 }
             },
-            "LibraryPath": "../hdArnold${LIB_EXTENSION}",
+            "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
             "Name": "hdArnold",
             "ResourcePath": "resources",
             "Root": "..",

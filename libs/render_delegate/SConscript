@@ -22,7 +22,6 @@ source_files = [
     'basis_curves.cpp',
     'camera.cpp',
     'config.cpp',
-    'debug_codes.cpp',
     'instancer.cpp',
     'light.cpp',
     'mesh.cpp',
@@ -56,9 +55,15 @@ if local_env['USD_HAS_FULLSCREEN_SHADER']:
 if local_env['ENABLE_SHARED_ARRAYS']:
     local_env.Append(CPPDEFINES = ['ENABLE_SHARED_ARRAYS'])
 
+if local_env['BUILD_SCENE_INDEX_PLUGIN']:
+    local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
+
 local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'libs', 'render_delegate')])
 local_env.Append(LIBS = ['ai'])
+
+if not system.is_windows:
+    local_env.Append(CCFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
 
 RENDERDELEGATE = local_env.StaticLibrary('render_delegate', source_files)
 

@@ -12,7 +12,7 @@
 #include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
 
-#if PXR_VERSION >= 2505
+#ifdef ENABLE_SCENE_INDEX
 #define ARNOLD_SCENE_INDEX
 
 #include "pxr/usdImaging/usdImaging/sceneIndices.h"
@@ -57,6 +57,8 @@ public:
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
 
     void WriteDebugScene() const;
+
+    void SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath);
 
 private:
     std::string _renderSettings;
