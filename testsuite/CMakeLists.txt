@@ -24,16 +24,16 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite"
     COMMAND
         ${CMAKE_COMMAND} -E copy_directory "${CMAKE_INSTALL_PREFIX}/schema/usdArnold" "${CMAKE_INSTALL_PREFIX}/procedural/usd"
     # Run the scons testsuite pointing to our install. 
-    # TODO: make it multiplatform to launch on windows as well
-    #       add a way to run a set of tests instead of the whole testsuite
+    # TODO: add a way to run a set of tests instead of the whole testsuite
+    #       change the environment variable depending on the usd lib we build with (shared would need <install>/plugin in PATH)
     COMMAND
         ${CMAKE_COMMAND} -E env
             "TESTSUITE_ARNOLD_PLUGIN_PATH=$<SHELL_PATH:${CMAKE_INSTALL_PREFIX}/procedural>"
             "TESTSUITE_PXR_PLUGINPATH_NAME=$<SHELL_PATH:${CMAKE_INSTALL_PREFIX}/schema;${CMAKE_INSTALL_PREFIX}/plugin>"
-            "DYLD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;$ENV{DYLD_LIBRARY_PATH}>"
+            "DYLD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/plugin;$ENV{DYLD_LIBRARY_PATH}>"
             "PYTHONPATH=$<SHELL_PATH:${ARNOLD_PYTHON_DIR};${USD_LOCATION}/lib/python>"
-            "LD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;$ENV{LD_LIBRARY_PATH}>"
-            "PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;$ENV{PATH}>"
+            "LD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/plugin;$ENV{LD_LIBRARY_PATH}>"
+            "PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/plugin;$ENV{PATH}>"
             $<IF:$<PLATFORM_ID:Windows>,abuild.bat,./abuild> USD_PATH="$<SHELL_PATH:${USD_LOCATION}>" BOOST_INCLUDE="$<SHELL_PATH:${USD_LOCATION}/include>" ARNOLD_PATH="$<SHELL_PATH:${ARNOLD_LOCATION}>" BUILD_SCHEMAS=0 BUILD_DOCS=0 BUILD_TESTSUITE=1 testsuite
 
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
