@@ -22,6 +22,7 @@
 #include <pxr/imaging/hd/material.h>
 #include <pxr/imaging/hd/overlayContainerDataSource.h>
 #include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
@@ -215,10 +216,63 @@ TfToken ArnoldProceduralCustomAdapter::GetImagingSubprimType(UsdPrim const& prim
     }
     return TfToken();
 }
+
+// UsdImagingDataSourcePrimvar is not exported on Windows, so we need to implement a similar data source here.
+// This is a minimal replacement for UsdImagingDataSourcePrimvar.
+class ArnoldPrimvarDataSource : public HdContainerDataSource {
+public:
+    HD_DECLARE_DATASOURCE(ArnoldPrimvarDataSource);
+
+    ArnoldPrimvarDataSource(
+        const SdfPath& sceneIndexPath,
+        const TfToken& name,
+        const UsdImagingDataSourceStageGlobals& stageGlobals,
+        UsdAttributeQuery&& valueQuery,
+        HdDataSourceBaseHandle interpolation,
+        HdDataSourceBaseHandle role)
+        : _sceneIndexPath(sceneIndexPath)
+        , _name(name)
+        , _stageGlobals(stageGlobals)
+        , _valueQuery(std::move(valueQuery))
+        , _interpolation(interpolation)
+        , _role(role)
+    {}
+
+    TfTokenVector GetNames() override {
+        return { HdPrimvarSchemaTokens->primvarValue,
+                 HdPrimvarSchemaTokens->interpolation,
+                 HdPrimvarSchemaTokens->role };
+    }
+
+    HdDataSourceBaseHandle Get(const TfToken& name) override {
+        if (name == HdPrimvarSchemaTokens->primvarValue) {
+            VtValue value;
+            if (_valueQuery.Get(&value)) {
+                return HdRetainedTypedSampledDataSource<VtValue>::New(value);
+            }
+            return nullptr;
+        }
+        if (name == HdPrimvarSchemaTokens->interpolation) {
+            return _interpolation;
+        }
+        if (name == HdPrimvarSchemaTokens->role) {
+            return _role;
+        }
+        return nullptr;
+    }
+
+private:
+    SdfPath _sceneIndexPath;
+    TfToken _name;
+    const UsdImagingDataSourceStageGlobals& _stageGlobals;
+    UsdAttributeQuery _valueQuery;
+    HdDataSourceBaseHandle _interpolation;
+    HdDataSourceBaseHandle _role;
+};
+
 // ArnoldDataSourceCustomPrimvars is a copy/paste/rename of UsdImagingDataSourceCustomPrimvars.
 // We should use UsdImagingDataSourceCustomPrimvars but on windows the constructor is not exported and the build
 // fails at link time.
-
 static
 TfToken
 _GetInterpolation(const UsdAttribute &attr)
@@ -251,7 +305,6 @@ public:
         return result;
     }
 
-    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         TRACE_FUNCTION();
@@ -268,14 +321,14 @@ public:
                 return nullptr;
             }
 
-            return UsdImagingDataSourcePrimvar::New(
+
+            return ArnoldPrimvarDataSource::New(
                 _sceneIndexPath, name, _stageGlobals,
                 /* value = */ std::move(valueQuery),
-                /* indices = */ UsdAttributeQuery(),
                 HdPrimvarSchema::BuildInterpolationDataSource(
                     mapping.interpolation.IsEmpty() ? _GetInterpolation(attr) : mapping.interpolation),
-                HdPrimvarSchema::BuildRoleDataSource(UsdImagingUsdToHdRole(attr.GetRoleName())),
-                /* elementSize = */ nullptr);
+                HdPrimvarSchema::BuildRoleDataSource(UsdImagingUsdToHdRole(attr.GetRoleName()))
+            );
         }
 
         return nullptr;
@@ -297,7 +350,6 @@ public:
     // The first token is the datasource name, and the second the USD name.
     using Mappings = std::vector<Mapping>;
 
-    USDIMAGINGARNOLD_API
     static HdDataSourceLocatorSet Invalidate(const TfTokenVector& properties, const Mappings& mappings)
     {
         HdDataSourceLocatorSet result;
@@ -343,7 +395,6 @@ class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldProceduralCustomDataSourcePrim);
     
-    USDIMAGINGARNOLD_API
     TfTokenVector GetNames() override
     {
         TfTokenVector result = UsdImagingDataSourcePrim::GetNames();
@@ -362,7 +413,6 @@ public:
         return mappings;
     }
 
-    USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdPrimvarsSchema::GetSchemaToken()) {

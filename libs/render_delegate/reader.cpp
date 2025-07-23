@@ -127,6 +127,15 @@ public:
         // Fallback to the original function if this isn't the fake camera
         return UsdImagingDelegate::GetCameraParamValue(id, paramName);
     }
+
+#if USD_IMAGING_API_VERSION < 21
+    virtual SdfPath GetDataSharingId(SdfPath const& primId) 
+    {
+        return SdfPath{};
+    }
+#endif
+
+
 private:
     double _shutterStart = 0.;
     double _shutterEnd = 0.;
