@@ -53,6 +53,10 @@ if (NOT BUILD_WITH_USD_STATIC)
 
     target_link_libraries(usdImagingArnold PRIVATE common)
     target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+    if (BUILD_SCENE_INDEX_PLUGIN)
+        target_compile_definitions(usdImagingArnold PUBLIC ENABLE_SCENE_INDEX=1)
+    endif()
+
     # For the generated shape adapters to find headers here.
     target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     

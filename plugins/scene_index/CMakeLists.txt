@@ -38,7 +38,7 @@ if (NOT BUILD_WITH_USD_STATIC)
         target_sources(sceneIndexArnold PRIVATE ${HDR})
     endif ()
     #TODO check only the useful ones
-    set(SCENEINDEX_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi;usdLux;usdShade)
+    set(SCENEINDEX_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi;usdLux;usdShade;usdSkelImaging)
     if (${USD_VERSION} VERSION_LESS "0.25.05")
         list(APPEND SCENEINDEX_LIBS ndr)
     endif()
@@ -47,7 +47,11 @@ if (NOT BUILD_WITH_USD_STATIC)
         USD_DEPENDENCIES ${SCENEINDEX_LIBS})
 
     target_link_libraries(sceneIndexArnold PRIVATE common)
-    target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEXARNOLD_EXPORTS=1")
+    target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEX_EXPORTS=1")
+    if (BUILD_SCENE_INDEX_PLUGIN)
+        target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
+    endif()
+
     # For the generated shape adapters to find headers here.
     target_include_directories(sceneIndexArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     
