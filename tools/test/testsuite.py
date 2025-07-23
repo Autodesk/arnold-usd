@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import math
 import re
 import shutil
 import time
@@ -268,7 +269,7 @@ class Testsuite(object):
             testsuite.report_html(only_failed_tests=report_only_fail)
             system.print_safe(testsuite.report_text(), flush=True)
             system.print_safe('View testsuite results at: file://{}'.format(target[0].abspath), flush=True)
-            return 1 if testsuite.failed(float(env['TESTSUITE_INSTABILITY_THRESHOLD'])) else 0
+            return 1 if testsuite.failed(float(env['TESTSUITE_INSTABILITY_THRESHOLD']), verbose=True) else 0
          env.Append(BUILDERS = {
             'run_test'  : env.Builder(action = env.Action(action_run_test  )),
             'gen_report': env.Builder(action = env.Action(action_gen_report)),
@@ -364,14 +365,21 @@ class Testsuite(object):
       pool.wait_completion()
       self.total_running_time = time.time() - epoch
 
-   def failed(self, instability_threshold=0.0):
+   def failed(self, instability_threshold=0.0, verbose=False):
       result = self.report()
       total_tests = sum(result[key] for key in ['passed', 'failed', 'crashed', 'timedout', 'unstable'])
       total_failed = total_tests - result['passed']
       total_failed_stable = total_failed - result['unstable']
-      max_failed_unstable = (float(instability_threshold) * float(total_tests)) / 100.0
+      max_failed_unstable = math.ceil((float(instability_threshold) * float(total_tests)) / 100.0)
+      failure_stable   = total_failed_stable > 0
+      failure_unstable = result['unstable']  > max_failed_unstable
+      if verbose:
+         if failure_stable:
+            print(f"ERROR: {total_failed_stable} tests failed")
+         if failure_unstable:
+            print(f"ERROR: {result['unstable']} tests are unstable, but only {max_failed_unstable} are allowed")
 
-      return (total_failed_stable > 0) or (float(result['unstable']) > max_failed_unstable)
+      return failure_stable or failure_unstable
 
    def report(self):
       result = {key: 0 for key in ('total', 'passed', 'failed', 'crashed', 'timedout', 'unstable', 'skipped')}
