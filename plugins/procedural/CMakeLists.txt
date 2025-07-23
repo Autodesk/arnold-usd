@@ -49,12 +49,11 @@ if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
             target_link_libraries(${PROC_NAME} PRIVATE sceneIndexArnoldObjects)
         endif()
         target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
-        #target_link_libraries(${PROC_NAME} PRIVATE hdArnold)
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
             target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
         endif ()
     else ()
-        target_link_libraries(${PROC_NAME} PRIVATE hdArnold) # we need to have hdArnold in that case
+        target_link_libraries(${PROC_NAME} PRIVATE hdArnold) # TODO we need to make sure hdArnold is built
     endif ()
 endif ()
 
