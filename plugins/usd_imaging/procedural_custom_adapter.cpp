@@ -215,122 +215,6 @@ TfToken ArnoldProceduralCustomAdapter::GetImagingSubprimType(UsdPrim const& prim
     }
     return TfToken();
 }
-
-namespace {
-inline bool _IsIndexed(const UsdAttributeQuery& indicesQuery)
-{
-    return indicesQuery.IsValid() && indicesQuery.HasValue();
-}
-};
-
-
-// ArnoldDataSourcePrimvar is a copy/paste/rename of UsdImagingDataSourcePrimvar.
-// We should use UsdImagingDataSourcePrimvar but on windows the constructor is not exported and the build
-// fails at link time.
-class ArnoldDataSourcePrimvar : public HdContainerDataSource {
-public:
-    HD_DECLARE_DATASOURCE(ArnoldDataSourcePrimvar);
-
-    TfTokenVector GetNames() override
-    {
-        const bool indexed = _IsIndexed(_indicesQuery);
-        TfTokenVector result = {
-            HdPrimvarSchemaTokens->interpolation,
-            HdPrimvarSchemaTokens->role,
-        };
-
-        if (indexed) {
-            result.push_back(HdPrimvarSchemaTokens->indexedPrimvarValue);
-            result.push_back(HdPrimvarSchemaTokens->indices);
-        } else {
-            result.push_back(HdPrimvarSchemaTokens->primvarValue);
-        }
-
-        if (_elementSize) {
-            result.push_back(HdPrimvarSchemaTokens->elementSize);
-        }
-
-        return result;
-    }
-        HdDataSourceBaseHandle Get(const TfToken& name) override
-        {
-            const bool indexed = _IsIndexed(_indicesQuery);
-
-            if (indexed) {
-                if (name == HdPrimvarSchemaTokens->indexedPrimvarValue) {
-                    return UsdImagingDataSourceAttributeNew(_valueQuery, _stageGlobals);
-                } else if (name == HdPrimvarSchemaTokens->indices) {
-                    return UsdImagingDataSourceAttributeNew(_indicesQuery, _stageGlobals);
-                }
-            } else {
-                if (name == HdPrimvarSchemaTokens->primvarValue) {
-                    return UsdImagingDataSourceAttributeNew(_valueQuery, _stageGlobals);
-                }
-            }
-
-            if (name == HdPrimvarSchemaTokens->interpolation) {
-                return _interpolation;
-            }
-            if (name == HdPrimvarSchemaTokens->role) {
-                return _role;
-            }
-            if (name == HdPrimvarSchemaTokens->elementSize) {
-                return _elementSize;
-            }
-            return nullptr;
-        }
-
-    private:
-        ArnoldDataSourcePrimvar(
-            const SdfPath& sceneIndexPath, const TfToken& name, const UsdImagingDataSourceStageGlobals& stageGlobals,
-            UsdAttributeQuery valueQuery, UsdAttributeQuery indicesQuery, HdTokenDataSourceHandle interpolation,
-            HdTokenDataSourceHandle role, HdIntDataSourceHandle elementSize = nullptr)
-            : _stageGlobals(stageGlobals),
-              _valueQuery(valueQuery),
-              _indicesQuery(indicesQuery),
-              _interpolation(std::move(interpolation)),
-              _role(std::move(role)),
-              _elementSize(std::move(elementSize))
-        {
-            const bool indexed = _IsIndexed(_indicesQuery);
-            if (indexed) {
-                if (_valueQuery.ValueMightBeTimeVarying()) {
-                    _stageGlobals.FlagAsTimeVarying(
-                        sceneIndexPath,
-                        HdDataSourceLocator(
-                            HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->indexedPrimvarValue));
-                }
-                if (_indicesQuery.ValueMightBeTimeVarying()) {
-                    _stageGlobals.FlagAsTimeVarying(
-                        sceneIndexPath,
-                        HdDataSourceLocator(HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->indices));
-                }
-            } else {
-                if (_valueQuery.ValueMightBeTimeVarying()) {
-                    _stageGlobals.FlagAsTimeVarying(
-                        sceneIndexPath,
-                        HdDataSourceLocator(
-                            HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->primvarValue));
-                }
-            }
-        }
-
-private:
-    const UsdImagingDataSourceStageGlobals& _stageGlobals;
-    UsdAttributeQuery _valueQuery;
-    UsdAttributeQuery _indicesQuery;
-    HdTokenDataSourceHandle _interpolation;
-    HdTokenDataSourceHandle _role;
-    HdIntDataSourceHandle _elementSize;
-};
-
-HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourcePrimvar);
-
-
-
-
-
-
 // ArnoldDataSourceCustomPrimvars is a copy/paste/rename of UsdImagingDataSourceCustomPrimvars.
 // We should use UsdImagingDataSourceCustomPrimvars but on windows the constructor is not exported and the build
 // fails at link time.
@@ -383,7 +267,8 @@ public:
             if (!valueQuery.HasAuthoredValue()) {
                 return nullptr;
             }
-            return ArnoldDataSourcePrimvar::New(
+
+            return UsdImagingDataSourcePrimvar::New(
                 _sceneIndexPath, name, _stageGlobals,
                 /* value = */ std::move(valueQuery),
                 /* indices = */ UsdAttributeQuery(),
@@ -454,13 +339,6 @@ private:
 
 HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourceCustomPrimvars);
 
-// Ideally we want to use UsdImagingDataSourceCustomPrimvars to avoid copying the code, but the symbols are not
-// exported on windows.
-
-//using DataSourceCustomPrimvarsT = UsdImagingDataSourceCustomPrimvars;
-using DataSourceCustomPrimvarsT = ArnoldDataSourceCustomPrimvars;
-
-
 class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldProceduralCustomDataSourcePrim);
@@ -473,9 +351,9 @@ public:
         return result;
     }
 
-    DataSourceCustomPrimvarsT::Mappings _GetMappings() const
+    ArnoldDataSourceCustomPrimvars::Mappings _GetMappings() const
     {
-        DataSourceCustomPrimvarsT::Mappings mappings;
+        ArnoldDataSourceCustomPrimvars::Mappings mappings;
         // TODO: ideally we want to return the static mappings coming from the schema instead of
         // the ones queried on the usd prim
         for (const UsdProperty& prop : _GetUsdPrim().GetPropertiesInNamespace("arnold")) {
@@ -484,15 +362,19 @@ public:
         return mappings;
     }
 
-
     USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdPrimvarsSchema::GetSchemaToken()) {
-            return HdOverlayContainerDataSource::New(
-                HdContainerDataSource::Cast(UsdImagingDataSourcePrim::Get(name)),
-                DataSourceCustomPrimvarsT::New(
-                    _GetSceneIndexPath(), _GetUsdPrim(), _GetMappings(), _GetStageGlobals()));
+            return
+                HdOverlayContainerDataSource::New(
+                    HdContainerDataSource::Cast(
+                        UsdImagingDataSourcePrim::Get(name)),
+                    ArnoldDataSourceCustomPrimvars::New(
+                        _GetSceneIndexPath(),
+                        _GetUsdPrim(),
+                        _GetMappings(),
+                        _GetStageGlobals()));
         }
         return UsdImagingDataSourcePrim::Get(name);
     }
