@@ -43,21 +43,16 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    if (BUILD_WITH_USD_STATIC)
-        target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImaging usdImagingArnoldObjects)
-        if (BUILD_SCENE_INDEX_PLUGIN)
-            target_link_libraries(${PROC_NAME} PRIVATE sceneIndexArnoldObjects)
-        endif()
-        target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
-        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
-        endif ()
-    else ()
-        target_link_libraries(${PROC_NAME} PRIVATE hdArnold) # TODO we need to make sure hdArnold is built
+    target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImaging usdImagingArnoldObjects)
+    if (BUILD_SCENE_INDEX_PLUGIN)
+        target_link_libraries(${PROC_NAME} PRIVATE sceneIndexArnoldObjects)
+    endif()
+    target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+        target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
     endif ()
-endif ()
 
-
+endif()
 
 if (APPLE OR LINUX)
     target_link_libraries(${PROC_NAME} PRIVATE dl)
@@ -76,6 +71,7 @@ install(TARGETS ${PROC_NAME}
 install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
 		DESTINATION "${PREFIX_PROCEDURAL}")
 if (BUILD_WITH_USD_STATIC)
+
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
         # Install the ndr arnold pluginfo
         install_ndr_arnold_pluginfo(

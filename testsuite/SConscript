@@ -40,7 +40,7 @@ else:
 
 os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
 os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']
-os.environ['PREFIX_TEST_RENDERDELEGATE'] = test_env['PREFIX_RENDER_DELEGATE'] + os.pathsep + test_env['PREFIX_SCHEMAS']
+os.environ['PREFIX_TEST_RENDERDELEGATE'] = test_env['PREFIX_RENDER_DELEGATE'] + ":" + test_env['PREFIX_SCHEMAS']
 
 if test_env.get('ARNOLD_CER_AUTOSEND_EMAIL'):
    os.environ['ARNOLD_CER_AUTOSEND_EMAIL'] = test_env['ARNOLD_CER_AUTOSEND_EMAIL']
