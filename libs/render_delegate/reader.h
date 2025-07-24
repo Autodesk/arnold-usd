@@ -11,7 +11,7 @@
 #include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
 #include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
-
+#include "api.h"
 #ifdef ENABLE_SCENE_INDEX
 #define ARNOLD_SCENE_INDEX
 
@@ -37,27 +37,39 @@ class UsdArnoldProcImagingDelegate;
 
 class HydraArnoldReader : public ProceduralReader {
 public:
+    HDARNOLD_API
     HydraArnoldReader(AtUniverse *universe, AtNode *procParent);
+    HDARNOLD_API
     ~HydraArnoldReader();
     const std::vector<AtNode *> &GetNodes() const override;
-
+    HDARNOLD_API
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path) override; // read a specific UsdStage
-    
+    HDARNOLD_API
     void SetFrame(float frame) override;
+    HDARNOLD_API
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
+    HDARNOLD_API
     void SetDebug(bool b) override;
+    HDARNOLD_API
     void SetThreadCount(unsigned int t) override;
+    HDARNOLD_API
     void SetConvertPrimitives(bool b) override;
+    HDARNOLD_API
     void SetMask(int m) override;
+    HDARNOLD_API
     void SetPurpose(const std::string &p) override;
+    HDARNOLD_API
     void SetId(unsigned int id) override;
+    HDARNOLD_API
     void SetRenderSettings(const std::string &renderSettings) override;
+    HDARNOLD_API
     void Update() override;
+    HDARNOLD_API
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
-
+    HDARNOLD_API
     void WriteDebugScene() const;
-
+    HDARNOLD_API
     void SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath);
 
 private:
