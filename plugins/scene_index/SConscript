@@ -33,7 +33,7 @@ if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
     local_env.Append(CXXFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
 
-local_env.Append(CPPDEFINES=['SIARNOLD_EXPORTS'])
+local_env.Append(CPPDEFINES=['HDSCENEINDEX_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'plugins', 'scene_index')])
 common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
 local_env.Append(LIBPATH = [common_lib_path])
@@ -49,5 +49,5 @@ local_env.Append(LIBS = usd_deps)
 if env['USD_BUILD_MODE'] == 'static':
     SCENEINDEXPLUGIN = local_env.StaticLibrary('sceneIndexArnold', source_files)
 else:
-	SCENEINDEXPLUGIN = local_env.SharedLibrary('sceneIndexArnold', source_files)
+	SCENEINDEXPLUGIN = local_env.SharedLibrary('sceneIndexArnold', source_files, no_import_lib=True)
 Return('SCENEINDEXPLUGIN')

@@ -215,6 +215,122 @@ TfToken ArnoldProceduralCustomAdapter::GetImagingSubprimType(UsdPrim const& prim
     }
     return TfToken();
 }
+
+namespace {
+inline bool _IsIndexed(const UsdAttributeQuery& indicesQuery)
+{
+    return indicesQuery.IsValid() && indicesQuery.HasValue();
+}
+};
+
+
+// ArnoldDataSourcePrimvar is a copy/paste/rename of UsdImagingDataSourcePrimvar.
+// We should use UsdImagingDataSourcePrimvar but on windows the constructor is not exported and the build
+// fails at link time.
+class ArnoldDataSourcePrimvar : public HdContainerDataSource {
+public:
+    HD_DECLARE_DATASOURCE(ArnoldDataSourcePrimvar);
+
+    TfTokenVector GetNames() override
+    {
+        const bool indexed = _IsIndexed(_indicesQuery);
+        TfTokenVector result = {
+            HdPrimvarSchemaTokens->interpolation,
+            HdPrimvarSchemaTokens->role,
+        };
+
+        if (indexed) {
+            result.push_back(HdPrimvarSchemaTokens->indexedPrimvarValue);
+            result.push_back(HdPrimvarSchemaTokens->indices);
+        } else {
+            result.push_back(HdPrimvarSchemaTokens->primvarValue);
+        }
+
+        if (_elementSize) {
+            result.push_back(HdPrimvarSchemaTokens->elementSize);
+        }
+
+        return result;
+    }
+        HdDataSourceBaseHandle Get(const TfToken& name) override
+        {
+            const bool indexed = _IsIndexed(_indicesQuery);
+
+            if (indexed) {
+                if (name == HdPrimvarSchemaTokens->indexedPrimvarValue) {
+                    return UsdImagingDataSourceAttributeNew(_valueQuery, _stageGlobals);
+                } else if (name == HdPrimvarSchemaTokens->indices) {
+                    return UsdImagingDataSourceAttributeNew(_indicesQuery, _stageGlobals);
+                }
+            } else {
+                if (name == HdPrimvarSchemaTokens->primvarValue) {
+                    return UsdImagingDataSourceAttributeNew(_valueQuery, _stageGlobals);
+                }
+            }
+
+            if (name == HdPrimvarSchemaTokens->interpolation) {
+                return _interpolation;
+            }
+            if (name == HdPrimvarSchemaTokens->role) {
+                return _role;
+            }
+            if (name == HdPrimvarSchemaTokens->elementSize) {
+                return _elementSize;
+            }
+            return nullptr;
+        }
+
+    private:
+        ArnoldDataSourcePrimvar(
+            const SdfPath& sceneIndexPath, const TfToken& name, const UsdImagingDataSourceStageGlobals& stageGlobals,
+            UsdAttributeQuery valueQuery, UsdAttributeQuery indicesQuery, HdTokenDataSourceHandle interpolation,
+            HdTokenDataSourceHandle role, HdIntDataSourceHandle elementSize = nullptr)
+            : _stageGlobals(stageGlobals),
+              _valueQuery(valueQuery),
+              _indicesQuery(indicesQuery),
+              _interpolation(std::move(interpolation)),
+              _role(std::move(role)),
+              _elementSize(std::move(elementSize))
+        {
+            const bool indexed = _IsIndexed(_indicesQuery);
+            if (indexed) {
+                if (_valueQuery.ValueMightBeTimeVarying()) {
+                    _stageGlobals.FlagAsTimeVarying(
+                        sceneIndexPath,
+                        HdDataSourceLocator(
+                            HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->indexedPrimvarValue));
+                }
+                if (_indicesQuery.ValueMightBeTimeVarying()) {
+                    _stageGlobals.FlagAsTimeVarying(
+                        sceneIndexPath,
+                        HdDataSourceLocator(HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->indices));
+                }
+            } else {
+                if (_valueQuery.ValueMightBeTimeVarying()) {
+                    _stageGlobals.FlagAsTimeVarying(
+                        sceneIndexPath,
+                        HdDataSourceLocator(
+                            HdPrimvarsSchemaTokens->primvars, name, HdPrimvarSchemaTokens->primvarValue));
+                }
+            }
+        }
+
+private:
+    const UsdImagingDataSourceStageGlobals& _stageGlobals;
+    UsdAttributeQuery _valueQuery;
+    UsdAttributeQuery _indicesQuery;
+    HdTokenDataSourceHandle _interpolation;
+    HdTokenDataSourceHandle _role;
+    HdIntDataSourceHandle _elementSize;
+};
+
+HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourcePrimvar);
+
+
+
+
+
+
 // ArnoldDataSourceCustomPrimvars is a copy/paste/rename of UsdImagingDataSourceCustomPrimvars.
 // We should use UsdImagingDataSourceCustomPrimvars but on windows the constructor is not exported and the build
 // fails at link time.
