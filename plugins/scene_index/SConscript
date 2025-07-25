@@ -49,5 +49,5 @@ local_env.Append(LIBS = usd_deps)
 if env['USD_BUILD_MODE'] == 'static':
     SCENEINDEXPLUGIN = local_env.StaticLibrary('sceneIndexArnold', source_files)
 else:
-	SCENEINDEXPLUGIN = local_env.SharedLibrary('sceneIndexArnold', source_files)
+	SCENEINDEXPLUGIN = local_env.SharedLibrary('sceneIndexArnold', source_files, no_import_lib=True)
 Return('SCENEINDEXPLUGIN')
