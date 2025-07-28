@@ -5,6 +5,7 @@ set(SRC
     fixInvalidationSIP.cpp
     fixMaterialPruningSIP.cpp
     fixPropagatedPrototypesVisibilitySIP.cpp
+    propagateDirtyPrimsSIP.cpp
     implicitSurfaceSIP.cpp
     lightLinkingSIP.cpp
     nurbsApproximatingSIP.cpp
@@ -17,6 +18,7 @@ set(HDR
     fixInvalidationSIP.h
     fixMaterialPruningSIP.h
     fixPropagatedPrototypesVisibilitySIP.h
+    propagateDirtyPrimsSIP.h
     implicitSurfaceSIP.h
     nurbsApproximatingSIP.h
 )
@@ -38,7 +40,7 @@ if (NOT BUILD_WITH_USD_STATIC)
         target_sources(sceneIndexArnold PRIVATE ${HDR})
     endif ()
     #TODO check only the useful ones
-    set(SCENEINDEX_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi;usdLux;usdShade;usdSkelImaging)
+    set(SCENEINDEX_LIBS ar;arch;plug;tf;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi;usdSkelImaging)
     if (${USD_VERSION} VERSION_LESS "0.25.05")
         list(APPEND SCENEINDEX_LIBS ndr)
     endif()
