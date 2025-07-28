@@ -1,7 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next feature release (7.4.3.0)
+## Next feature release (7.4.4.0)
+
+## [7.4.3.0] - 2025-07-25
 
 ### Features
 
