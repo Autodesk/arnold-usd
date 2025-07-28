@@ -182,8 +182,7 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         if local_env['BUILD_SCENE_INDEX_PLUGIN']:
             procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'scene_index'))]
     else:
-        procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'render_delegate'))]
-        procedural_libs += ['hdArnold']
+        procedural_libs += ['render_delegate']
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
 
 if local_env['BUILD_SCENE_INDEX_PLUGIN']:

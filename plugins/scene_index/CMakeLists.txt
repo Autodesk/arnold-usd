@@ -49,11 +49,7 @@ if (NOT BUILD_WITH_USD_STATIC)
         USD_DEPENDENCIES ${SCENEINDEX_LIBS})
 
     target_link_libraries(sceneIndexArnold PRIVATE common)
-    target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEX_EXPORTS=1")
-    if (BUILD_SCENE_INDEX_PLUGIN)
-        target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
-    endif()
-
+    target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEXARNOLD_EXPORTS=1")
     # For the generated shape adapters to find headers here.
     target_include_directories(sceneIndexArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     

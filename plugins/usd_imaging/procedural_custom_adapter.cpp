@@ -383,7 +383,8 @@ public:
             if (!valueQuery.HasAuthoredValue()) {
                 return nullptr;
             }
-            return ArnoldDataSourcePrimvar::New(
+
+            return UsdImagingDataSourcePrimvar::New(
                 _sceneIndexPath, name, _stageGlobals,
                 /* value = */ std::move(valueQuery),
                 /* indices = */ UsdAttributeQuery(),
@@ -454,13 +455,6 @@ private:
 
 HD_DECLARE_DATASOURCE_HANDLES(ArnoldDataSourceCustomPrimvars);
 
-// Ideally we want to use UsdImagingDataSourceCustomPrimvars to avoid copying the code, but the symbols are not
-// exported on windows.
-
-//using DataSourceCustomPrimvarsT = UsdImagingDataSourceCustomPrimvars;
-using DataSourceCustomPrimvarsT = ArnoldDataSourceCustomPrimvars;
-
-
 class ArnoldProceduralCustomDataSourcePrim : public UsdImagingDataSourcePrim {
 public:
     HD_DECLARE_DATASOURCE(ArnoldProceduralCustomDataSourcePrim);
@@ -473,9 +467,9 @@ public:
         return result;
     }
 
-    DataSourceCustomPrimvarsT::Mappings _GetMappings() const
+    ArnoldDataSourceCustomPrimvars::Mappings _GetMappings() const
     {
-        DataSourceCustomPrimvarsT::Mappings mappings;
+        ArnoldDataSourceCustomPrimvars::Mappings mappings;
         // TODO: ideally we want to return the static mappings coming from the schema instead of
         // the ones queried on the usd prim
         for (const UsdProperty& prop : _GetUsdPrim().GetPropertiesInNamespace("arnold")) {
@@ -484,15 +478,19 @@ public:
         return mappings;
     }
 
-
     USDIMAGINGARNOLD_API
     HdDataSourceBaseHandle Get(const TfToken& name) override
     {
         if (name == HdPrimvarsSchema::GetSchemaToken()) {
-            return HdOverlayContainerDataSource::New(
-                HdContainerDataSource::Cast(UsdImagingDataSourcePrim::Get(name)),
-                DataSourceCustomPrimvarsT::New(
-                    _GetSceneIndexPath(), _GetUsdPrim(), _GetMappings(), _GetStageGlobals()));
+            return
+                HdOverlayContainerDataSource::New(
+                    HdContainerDataSource::Cast(
+                        UsdImagingDataSourcePrim::Get(name)),
+                    ArnoldDataSourceCustomPrimvars::New(
+                        _GetSceneIndexPath(),
+                        _GetUsdPrim(),
+                        _GetMappings(),
+                        _GetStageGlobals()));
         }
         return UsdImagingDataSourcePrim::Get(name);
     }
