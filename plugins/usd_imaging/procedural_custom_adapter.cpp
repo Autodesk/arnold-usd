@@ -384,7 +384,7 @@ public:
                 return nullptr;
             }
 
-            return UsdImagingDataSourcePrimvar::New(
+            return ArnoldDataSourcePrimvar::New(
                 _sceneIndexPath, name, _stageGlobals,
                 /* value = */ std::move(valueQuery),
                 /* indices = */ UsdAttributeQuery(),
