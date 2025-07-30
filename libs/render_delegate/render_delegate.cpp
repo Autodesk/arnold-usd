@@ -40,9 +40,10 @@
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
+#ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
-
+#endif
 #include <common_utils.h>
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -1574,7 +1575,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     
     bool changes = false;
     if (bits != HdChangeTracker::Clean) {
-        renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
+#ifdef ENABLE_SCENE_INDEX
         // Unfortunately the MarkAllRprimsDirty doesn't work as we would expect in USD 25.05 with hydra 2, it marks dirty the prims of the legacy scene index which doesn't contain rprims, so all
         // the dirty notifications get discarded. We have to use a workaround to get the same behaviour as before by propagating the dirtyness to a dedicated scene index filter.
         if (HdRenderIndex::IsSceneIndexEmulationEnabled()) {
@@ -1603,6 +1604,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         } else {
             renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
         }
+#else
+        renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
+#endif // ENABLE_SCENE_INDEX
         changes = true;
     }
     SdfPath id;
