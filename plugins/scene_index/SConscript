@@ -26,6 +26,7 @@ source_files = [
 	'fixInvalidationSIP.cpp',
 	'fixMaterialPruningSIP.cpp',
     'fixPropagatedPrototypesVisibilitySIP.cpp',
+	'propagateDirtyPrimsSIP.cpp',
     'nurbsApproximatingSIP.cpp',
 ]
 

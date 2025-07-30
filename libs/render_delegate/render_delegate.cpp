@@ -40,7 +40,10 @@
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
-
+#ifdef ENABLE_SCENE_INDEX
+#include <pxr/imaging/hd/dirtyBitsTranslator.h>
+#include <pxr/imaging/hd/retainedDataSource.h>
+#endif
 #include <common_utils.h>
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -1572,7 +1575,38 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     
     bool changes = false;
     if (bits != HdChangeTracker::Clean) {
+#ifdef ENABLE_SCENE_INDEX
+        // Unfortunately the MarkAllRprimsDirty doesn't work as we would expect in USD 25.05 with hydra 2, it marks dirty the prims of the legacy scene index which doesn't contain rprims, so all
+        // the dirty notifications get discarded. We have to use a workaround to get the same behaviour as before by propagating the dirtyness to a dedicated scene index filter.
+        if (HdRenderIndex::IsSceneIndexEmulationEnabled()) {
+            if (HdSceneIndexBaseRefPtr sceneIndex = renderIndex->GetTerminalSceneIndex()) {
+                // Regarding the used of TfHashMap to carry the dirtyness, we unfortunately can't pass
+                // directly HdSceneIndexObserver::DirtiedPrimEntries due to template functions implementation
+                // missing for this type. Vectors of SdfPath and HdDataSourceLocatorSet don't work as well. So
+                // we revert to an hashmap which it not ideal, but it allows us to decouple the libraries using
+                // only available functions and supported types known by each libs.
+                TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash> dirtyEntries;
+                for (const SdfPath& id : renderIndex->GetRprimIds()) {
+                    HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+                    HdDataSourceLocatorSet locators;
+                    // TODO: We might have to also translate bespoke arnold nodes parameters if they are not supported.
+                    HdDirtyBitsTranslator::RprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+                    if (!locators.IsEmpty()) {
+                        dirtyEntries.insert({id, locators});
+                    }
+                }
+                if (!dirtyEntries.empty()) {
+                    auto toto = HdRetainedTypedSampledDataSource<
+                        TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
+                    sceneIndex->SystemMessage(TfToken("ArnoldMarkAllRprimsDirty"), toto);
+                }
+            }
+        } else {
+            renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
+        }
+#else
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
+#endif // ENABLE_SCENE_INDEX
         changes = true;
     }
     SdfPath id;
