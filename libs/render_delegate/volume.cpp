@@ -38,8 +38,6 @@
 
 #include <pxr/usd/sdf/assetPath.h>
 
-#include <pxr/usd/usdVol/tokens.h>
-
 #include <constant_strings.h>
 #include "node_graph.h"
 #include "openvdb_asset.h"
@@ -73,17 +71,17 @@ namespace {
 /// volumes.
 /// HoudiniGetVolumePrimitives -> Returns a Houdini primitive to work with
 /// native Houdini volumes.
-using HoudiniGetVdbPrimitive = void* (*)(const char*, const char*, int);
+using HoudiniGetVdbPrimitive = void* (*)(const char*, const char*);
 using HoudiniGetVolumePrimitive = void* (*)(const char*, const char*, int);
 struct HoudiniFnSet {
-    HoudiniGetVdbPrimitive getVdbPrimitiveWithIndex = nullptr;
+    HoudiniGetVdbPrimitive getVdbPrimitive = nullptr;
     HoudiniGetVolumePrimitive getVolumePrimitive = nullptr;
 
     /// We need to load USD_SopVol.(so|dylib|dll) to access the volume function
     /// pointers.
     HoudiniFnSet()
     {
-        constexpr auto getVdbNameWithIndex = "SOPgetVDBVolumePrimitiveWithIndex";
+        constexpr auto getVdbName = "SOPgetVDBVolumePrimitive";
         constexpr auto getVolumeName = "SOPgetHoudiniVolumePrimitive";
         const auto HFS = ArchGetEnv("HFS");
         const auto dsoPath = HFS + ARCH_PATH_SEP + "houdini" + ARCH_PATH_SEP + "dso" + ARCH_PATH_SEP + "USD_SopVol" +
@@ -94,7 +92,7 @@ struct HoudiniFnSet {
         if (sopVol == nullptr) {
             return;
         }
-        getVdbPrimitiveWithIndex = reinterpret_cast<HoudiniGetVdbPrimitive>(GETSYM(sopVol, getVdbNameWithIndex));
+        getVdbPrimitive = reinterpret_cast<HoudiniGetVdbPrimitive>(GETSYM(sopVol, getVdbName));
         getVolumePrimitive = reinterpret_cast<HoudiniGetVolumePrimitive>(GETSYM(sopVol, getVolumeName));
     }
 };
@@ -174,13 +172,6 @@ const HtoAFnSet _GetHtoAFunctionSet()
     static HtoAFnSet ret;
     return ret;
 }
-
-// Pack the field name and index together
-struct VdbFieldData {
-    TfToken field;
-    std::optional<int> fieldIndex;
-};
-
 
 } // namespace
 
@@ -287,9 +278,8 @@ void HdArnoldVolume::Sync(
 
 void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
-    std::unordered_map<std::string, std::vector<VdbFieldData>> openvdb_fields;
-    std::unordered_map<std::string, std::vector<VdbFieldData>> houvdb_fields;
-
+    std::unordered_map<std::string, std::vector<TfToken>> openvdbs;
+    std::unordered_map<std::string, std::vector<TfToken>> houVdbs;
     const auto fieldDescriptors = sceneDelegate->GetVolumeFieldDescriptors(id);
     for (const auto& field : fieldDescriptors) {
         auto* openvdbAsset = dynamic_cast<HdArnoldOpenvdbAsset*>(
@@ -308,36 +298,20 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             TfToken fieldName = field.fieldName;
             const auto fieldNameValue = sceneDelegate->Get(field.fieldId, _tokens->fieldName);
             if (fieldNameValue.IsHolding<TfToken>()) {
-                const TfToken& fieldNameToken = fieldNameValue.UncheckedGet<TfToken>();
+                const TfToken &fieldNameToken = fieldNameValue.UncheckedGet<TfToken>();
                 if (!fieldNameToken.IsEmpty())
                     fieldName = fieldNameToken;
             }
-
-            std::optional<int> fieldIndex;
-            // TODO this is failing with a linker error
-            //auto fieldIndexValue = sceneDelegate->Get(field.fieldId, UsdVolTokens->fieldIndex);
-            auto fieldIndexValue = sceneDelegate->Get(field.fieldId, TfToken("fieldIndex"));
-            if (fieldIndexValue.IsHolding<int>()) {
-                fieldIndex = fieldIndexValue.UncheckedGet<int>();
-            }
-
-            // op: paths denote a live reference to a VDB in the Houdini session
             if (TfStringStartsWith(path, "op:")) {
-                auto& fields = houvdb_fields[path];
-
-                if (std::find_if(fields.begin(), fields.end(), [&](const VdbFieldData& data) {
-                        return data.field == fieldName;
-                    }) == fields.end()) {
-                    fields.push_back({fieldName, fieldIndex});
+                auto& fields = houVdbs[path];
+                if (std::find(fields.begin(), fields.end(), fieldName) == fields.end()) {
+                    fields.push_back(fieldName);
                 }
                 continue;
             }
-
-            auto& fields = openvdb_fields[path];
-            if (std::find_if(fields.begin(), fields.end(), [&](const VdbFieldData& data) {
-                    return data.field == fieldName;
-                }) == fields.end()) {
-                fields.push_back({fieldName, fieldIndex});
+            auto& fields = openvdbs[path];
+            if (std::find(fields.begin(), fields.end(), fieldName) == fields.end()) {
+                fields.push_back(fieldName);
             }
         }
     }
@@ -345,9 +319,9 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
     _volumes.erase(
         std::remove_if(
             _volumes.begin(), _volumes.end(),
-            [&openvdb_fields](HdArnoldShape* shape) -> bool {
-                if (openvdb_fields.find(std::string(AiNodeGetStr(shape->GetShape(), str::filename).c_str())) ==
-                    openvdb_fields.end()) {
+            [&openvdbs](HdArnoldShape* shape) -> bool {
+                if (openvdbs.find(std::string(AiNodeGetStr(shape->GetShape(), str::filename).c_str())) ==
+                    openvdbs.end()) {
                     delete shape;
                     return true;
                 }
@@ -355,8 +329,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             }),
         _volumes.end());
 
-    for (const auto& openvdb : openvdb_fields) {
-
+    for (const auto& openvdb : openvdbs) {
         AtNode* volume = nullptr;
         for (auto* shape : _volumes) {
             auto* v = shape->GetShape();
@@ -370,20 +343,12 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, AtString(openvdb.first.c_str()));
             AiNodeSetStr(volume, str::name, AtString(TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str()));
-
-            // TODO we need something like this to set the index on the volume node
-            //const std::optional<int>& openvdb_index = openvdb.second[i].fieldIndex;
-            // if(openvdb_index) {
-            //     AiNodeSetInt(volume, "grid_index", openvdb_index.value());
-            // }
-
             _volumes.push_back(shape);
         }
-
         const auto numFields = openvdb.second.size();
         auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
         for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            AiArraySetStr(fields, i, AtString(openvdb.second[i].field.GetText()));
+            AiArraySetStr(fields, i, AtString(openvdb.second[i].GetText()));
         }
         AiNodeSetArray(volume, str::grids, fields);
     }
@@ -393,12 +358,12 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
     }
     _inMemoryVolumes.clear();
 
-    if (houvdb_fields.empty()) {
+    if (houVdbs.empty()) {
         return;
     }
 
     const auto& houdiniFnSet = _GetHoudiniFunctionSet();
-    if (houdiniFnSet.getVdbPrimitiveWithIndex == nullptr || houdiniFnSet.getVolumePrimitive == nullptr) {
+    if (houdiniFnSet.getVdbPrimitive == nullptr || houdiniFnSet.getVolumePrimitive == nullptr) {
         return;
     }
 
@@ -407,15 +372,10 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         return;
     }
 
-    for (const auto& houvdb : houvdb_fields) {
+    for (const auto& houVdb : houVdbs) {
         std::vector<void*> gridVec;
-
-        for (const auto& data : houvdb.second) {
-            const TfToken& field = data.field;
-            const std::optional<int>& houvdb_index = data.fieldIndex;
-
-            auto* primVdb =
-                houdiniFnSet.getVdbPrimitiveWithIndex(houvdb.first.c_str(), field.GetText(), houvdb_index.value_or(0));
+        for (const auto& field : houVdb.second) {
+            auto* primVdb = houdiniFnSet.getVdbPrimitive(houVdb.first.c_str(), field.GetText());
             if (primVdb == nullptr) {
                 continue;
             }
