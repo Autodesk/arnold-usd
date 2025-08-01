@@ -367,6 +367,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         }
         if (volume == nullptr) {
             auto* shape = new HdArnoldShape(str::volume, _renderDelegate, id, GetPrimId());
+            volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, AtString(openvdb.first.c_str()));
             AiNodeSetStr(volume, str::name, AtString(TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str()));
 
