@@ -3,6 +3,12 @@
 
 ## Next feature release (7.4.4.0)
 
+## Unreleased bugfix version (7.4.3.1)
+
+### Bug Fixes
+
+- [usd#2349](https://github.com/Autodesk/arnold-usd/issues/2349) - Husk renders with the Arnold product type overwrites the same output path when rendering mutliple frames in same process
+
 ## [7.4.3.0] - 2025-07-25
 
 ### Features
