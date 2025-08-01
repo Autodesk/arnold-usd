@@ -178,7 +178,7 @@ const HtoAFnSet _GetHtoAFunctionSet()
 // Pack the field name and index together
 struct VdbFieldData {
     TfToken field;
-    std::optional<int> fieldIndex;
+    int fieldIndex = 0;
 };
 
 
@@ -189,6 +189,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     (filePath)
     (fieldName)
+    (fieldIndex)
 );
 // clang-format on
 
@@ -313,10 +314,8 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
                     fieldName = fieldNameToken;
             }
 
-            std::optional<int> fieldIndex;
-            // TODO this is failing with a linker error
-            //auto fieldIndexValue = sceneDelegate->Get(field.fieldId, UsdVolTokens->fieldIndex);
-            auto fieldIndexValue = sceneDelegate->Get(field.fieldId, TfToken("fieldIndex"));
+            int fieldIndex = 0;
+            auto fieldIndexValue = sceneDelegate->Get(field.fieldId, _tokens->fieldIndex);
             if (fieldIndexValue.IsHolding<int>()) {
                 fieldIndex = fieldIndexValue.UncheckedGet<int>();
             }
@@ -371,19 +370,20 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             AiNodeSetStr(volume, str::filename, AtString(openvdb.first.c_str()));
             AiNodeSetStr(volume, str::name, AtString(TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str()));
 
-            // TODO we need something like this to set the index on the volume node
-            //const std::optional<int>& openvdb_index = openvdb.second[i].fieldIndex;
-            // if(openvdb_index) {
-            //     AiNodeSetInt(volume, "grid_index", openvdb_index.value());
-            // }
-
             _volumes.push_back(shape);
         }
 
         const auto numFields = openvdb.second.size();
         auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
         for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            AiArraySetStr(fields, i, AtString(openvdb.second[i].field.GetText()));
+            const int openvdb_index = openvdb.second[i].fieldIndex;
+            if (openvdb_index > 0) {
+                std::string fieldIndexName = openvdb.second[i].field.GetString();
+                fieldIndexName += std::string("[") + std::to_string(openvdb_index) + std::string("]");
+                AiArraySetStr(fields, i, AtString(fieldIndexName.c_str()));
+            } else {
+                AiArraySetStr(fields, i, AtString(openvdb.second[i].field.GetText()));
+            }
         }
         AiNodeSetArray(volume, str::grids, fields);
     }
@@ -412,10 +412,9 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
 
         for (const auto& data : houvdb.second) {
             const TfToken& field = data.field;
-            const std::optional<int>& houvdb_index = data.fieldIndex;
-
+            
             auto* primVdb =
-                houdiniFnSet.getVdbPrimitiveWithIndex(houvdb.first.c_str(), field.GetText(), houvdb_index.value_or(0));
+                houdiniFnSet.getVdbPrimitiveWithIndex(houvdb.first.c_str(), field.GetText(), data.fieldIndex);
             if (primVdb == nullptr) {
                 continue;
             }
