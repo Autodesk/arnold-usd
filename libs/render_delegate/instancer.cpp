@@ -226,11 +226,12 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     param->Interrupt();
 
     // Declare scatter_matrix as a user param
-    AiNodeDeclare(prototypeNode, str::scatter_matrix, "constant ARRAY MATRIX");
+    if (!AiNodeLookUpUserParameter(prototypeNode, str::scatter_matrix)) {
+        AiNodeDeclare(prototypeNode, str::scatter_matrix, "constant ARRAY MATRIX");
+    }
     AiNodeSetArray(prototypeNode, str::scatter_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
-    AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count-1]);
-
+    AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
 }
 
 void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
