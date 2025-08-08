@@ -6,6 +6,7 @@
 ### Bug Fixes
 
 - [usd#2349](https://github.com/Autodesk/arnold-usd/issues/2349) - Husk renders with the Arnold product type overwrites the same output path when rendering mutliple frames in same process
+- [usd#2392](https://github.com/Autodesk/arnold-usd/issues/2392) - Fix a warning due to additional metadata parameters, typeName and colorSpace introduced in USD 25.05.
 
 ## Next feature release (7.4.3.0)
 

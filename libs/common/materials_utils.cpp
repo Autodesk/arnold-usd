@@ -443,7 +443,15 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     // list won't be set and will therefore be left to their Arnold default.
     for (const auto& attrIt : inputAttrs) {
         const TfToken &attrName = attrIt.first;
+        const std::string attrNameStr = attrName.GetString(); // to avoid calling GetString multiple times
         const InputAttribute& attr = attrIt.second;
+#if PXR_VERSION >= 2505
+        // In USD 25.05 additional parameters are passed to describe the type name and color space of the actual parameter.
+        // They are prefixed with typeName and colorSpace. Since we don't need them we just skip them
+        if (TfStringStartsWith(attrNameStr, "typeName:") || TfStringStartsWith(attrNameStr, "colorSpace:")) {
+            continue;
+        }
+#endif
         if (attrName == str::t_name) {
             // If attribute "name" is set in the usd prim, we need to set the node name
             // accordingly. We also store this node original name in a map, that we
@@ -462,7 +470,7 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             continue; // code was already translated
 
         // Get the AtParamEntry for this attribute name
-        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(attrName.GetText()));
+        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(attrNameStr.c_str()));
         if (paramEntry == nullptr) {
             // The parameter entry wasn't found for this attribute. Either we asked for an unkown parameter,
             // of we're trying to translate an array index. 
@@ -470,10 +478,10 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             // For links on array elements, we define a custom attribute type,
             // e.g. for array attribute "ramp_colors", we can link element 2
             // as "ramp_colors:i2"
-            size_t elemPos = attrName.GetString().find(":i");
+            size_t elemPos = attrNameStr.find(":i");
             if (elemPos != std::string::npos) {
                 // Read link to an array element
-                std::string baseAttrName = attrName.GetString();
+                std::string baseAttrName = attrNameStr;
                 baseAttrName.replace(elemPos, 2, std::string("["));
                 baseAttrName += "]";
 
@@ -506,9 +514,9 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         if (!attr.connection.IsEmpty()) {
             // The attribute is linked, let's ask the MaterialReader to process the connection.
             // We don't need to read the VtValue here, as arnold will ignore it
-            materialReader.ConnectShader(node, attrName.GetString(), attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
+            materialReader.ConnectShader(node, attrNameStr, attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
         } else {
-            ReadAttribute(attr, node, attrName.GetString(), time, 
+            ReadAttribute(attr, node, attrNameStr, time, 
                 context, paramType, arrayType);
         }
     }
