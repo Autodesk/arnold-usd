@@ -116,7 +116,6 @@ def usd_imaging_plugin(env, sources):
         'sdr',
         'hf',
         'hd',
-        'hdsi',
         'usd',
         'usdGeom',
         'usdImaging',
@@ -128,7 +127,7 @@ def usd_imaging_plugin(env, sources):
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
-        usd_libs += ['ts',]
+        usd_libs += ['hdsi', 'ts',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_index_plugin(env, sources):
@@ -146,7 +145,6 @@ def scene_index_plugin(env, sources):
         'sdr',
         'hf',
         'hd',
-        'hdsi',
         'usdSkel',
         'usdSkelImaging',
         'usd',
@@ -160,7 +158,7 @@ def scene_index_plugin(env, sources):
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
-        usd_libs += ['ts',]
+        usd_libs += ['hdsi', 'ts',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_delegate(env, sources):
