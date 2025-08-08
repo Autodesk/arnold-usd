@@ -43,7 +43,7 @@ if (NOT BUILD_WITH_USD_STATIC)
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(usdImagingArnold PRIVATE ${HDR})
     endif ()
-    set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;usdLux;usdShade)
+    set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
     if (${USD_VERSION} VERSION_LESS "0.25.05")
         list(APPEND USDIMAGING_LIBS ndr)
     endif()
@@ -56,7 +56,6 @@ if (NOT BUILD_WITH_USD_STATIC)
     if (BUILD_SCENE_INDEX_PLUGIN)
         target_compile_definitions(usdImagingArnold PUBLIC ENABLE_SCENE_INDEX=1)
     endif()
-
     # For the generated shape adapters to find headers here.
     target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     

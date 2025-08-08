@@ -116,6 +116,7 @@ def usd_imaging_plugin(env, sources):
         'sdr',
         'hf',
         'hd',
+        'hdsi',
         'usd',
         'usdGeom',
         'usdImaging',
