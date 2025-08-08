@@ -248,6 +248,9 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+#ifdef ENABLE_SCENE_INDEX                               
+                                 HdPrimTypeTokens->meshLight,
+#endif
                                  _tokens->GeometryLight, _tokens->ArnoldOptions,
                                  HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
                                  /*HdPrimTypeTokens->simpleLight*/};
@@ -1227,9 +1230,12 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return (_mask & AI_NODE_LIGHT) ? 
             HdArnoldLight::CreateDomeLight(this, sprimId) : nullptr;
     }
-    if (typeId == _tokens->GeometryLight) {
-        return (_mask & AI_NODE_LIGHT) ? 
-            HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
+    if (typeId == _tokens->GeometryLight
+#ifdef ENABLE_SCENE_INDEX
+        || typeId == HdPrimTypeTokens->meshLight
+#endif
+    ) {
+        return (_mask & AI_NODE_LIGHT) ? HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;

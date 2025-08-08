@@ -27,6 +27,7 @@ source_files = [
 	'fixMaterialPruningSIP.cpp',
     'fixPropagatedPrototypesVisibilitySIP.cpp',
     'nurbsApproximatingSIP.cpp',
+    'meshLightResolvingSIP.cpp',
 ]
 
 if not system.is_windows:

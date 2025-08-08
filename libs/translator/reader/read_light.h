@@ -38,3 +38,4 @@ REGISTER_PRIM_READER(UsdArnoldReadRectLight, AI_NODE_LIGHT);
 REGISTER_PRIM_READER(UsdArnoldReadGeometryLight, AI_NODE_LIGHT);
 REGISTER_PRIM_READER(UsdArnoldReadCylinderLight, AI_NODE_LIGHT);
 
+void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time);

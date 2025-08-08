@@ -56,8 +56,13 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: fix invalidation for custom types"
+                    },
+                    "HdArnoldMeshLightResolvingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: mesh lights"
                     }
-                    
                 }
             },
             "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",

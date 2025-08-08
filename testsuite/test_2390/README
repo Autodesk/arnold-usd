@@ -1,0 +1,8 @@
+MeshLightAPI applied to a Mesh
+
+
+See #2390
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda'}

@@ -183,7 +183,27 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _useSceneIndex = (useSceneIndex != "0");
     }
 #endif
-    
+
+    // We can't have the scene indices here because we can't set the display name of the render delegate.
+    // We can't set the display name of the render delegate because it has been designed to be set only by plugin system,
+    // _displayName is private to the HdRenderDelegate base class and can only be set by the HdRendererPlugin
+    // And without displayName correctly set the scene indices won't load because they won't be associated to Arnold.
+    // As a workaround, adding scene indices after the creation of the renderIndex is tricky and means adding a dependency between the render delegate library 
+    // and the scene index plugin which is not pratical.
+    // The simple solution should be to load the render delegate using the plugin mechanism
+    // and create the render delegate with the following code:
+    //
+    // HdRenderSettingsMap settingsMap;
+    // settingsMap[TfToken("arnold:is_batch")] = VtValue(true);
+    // settingsMap[TfToken("arnold:context")] = VtValue(TfToken("kick"));
+    // settingsMap[TfToken("arnold:universe")] = VtValue(_universe);
+    // settingsMap[TfToken("arnold:session_type")] = VtValue(AI_SESSION_INTERACTIVE);
+    // settingsMap[TfToken("arnold:procedural_parent")] = VtValue(procParent);
+    // _renderDelegate = HdRendererPluginRegistry::GetInstance().CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"), settingsMap);
+    //
+    // But it also means compiling and adding the renderer plugin to the procedural. A bundled library would help in that case.
+    // We would also have to read the settings map when creating the render delegate
+
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
     {
