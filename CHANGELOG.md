@@ -3,6 +3,10 @@
 
 ## Next feature release (7.4.4.0)
 
+### Bug Fixes
+
+- [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
+
 ## Unreleased bugfix version (7.4.3.1)
 
 ### Bug Fixes
