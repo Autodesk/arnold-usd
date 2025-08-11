@@ -447,7 +447,7 @@ elif env['_COMPILER'] == 'msvc':
     elif env['MODE'] == 'profile':
         env.Append(CCFLAGS=Split('/Ob2 /MD /Zi'))
     else:  # debug mode
-        env.Append(CCFLAGS=Split('/Od /Zi /MD'))
+        env.Append(CCFLAGS=Split('/Od /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
 
     if env['WARN_LEVEL'] == 'strict':
