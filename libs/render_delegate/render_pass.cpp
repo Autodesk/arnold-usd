@@ -213,10 +213,10 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     }
     const auto filterNameStr =
         renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("HdArnoldRenderPass_filter_%d", filterIndex).c_str()});
-    AtNode* filter = renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), filterNameStr);
-    
+
+    AtNode* filter = renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), filterNameStr);
     if (filter == nullptr) {
-        return filter;
+        return nullptr;
     }
     
     // We are first checking for the filter parameters prefixed with "arnold:", then doing a second
@@ -255,13 +255,13 @@ const std::string _CreateAOV(
 
         // We need to add a aov write shader to the list of aov_shaders on the options node. Each
         // of this shader will be executed on every surface.
-        writer = renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, writerName);
+        writer = renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite, writerName);
         if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-            reader = renderDelegate->CreateArnoldNode(str::utility, readerName);
+            reader = renderDelegate->FindOrCreateArnoldNode(str::utility, readerName);
             AiNodeSetStr(reader, str::color_mode, str::uv);
             AiNodeSetStr(reader, str::shade_mode, str::flat);
         } else {
-            reader = renderDelegate->CreateArnoldNode(arnoldTypes.userData, readerName);
+            reader = renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData, readerName);
             AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
         }
         
@@ -644,8 +644,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     // AOV bindings exists, so first we are checking if anything has changed.
     // If something has changed, then we rebuild the local storage class, and the outputs definition.
     // We expect Hydra to resize the render buffers.
-    const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
-    if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _customProducts.empty()) ||
+    const bool needsDelegateProductsUpdate = _renderDelegate->NeedsDelegateProductsUpdate();
+    
+    if (_RenderBuffersChanged(aovBindings) || needsDelegateProductsUpdate ||
         _usingFallbackBuffers || updateAovs || updateImagers) {
         _usingFallbackBuffers = false;
         renderParam->Interrupt();
@@ -753,15 +754,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
                     // We need to add a aov write shader to the list of aov_shaders on the options node. Each
                     // of this shader will be executed on every surface.
-                    buffer.writer = _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite,
+                    buffer.writer = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite,
                         writerName);
                     if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-                        buffer.reader = _renderDelegate->CreateArnoldNode(str::utility,
+                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(str::utility,
                             readerName);
                         AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
                         AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                     } else {
-                        buffer.reader = _renderDelegate->CreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
+                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
                             AtString(sourceName.c_str()));
                     }
                     
@@ -804,7 +805,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // At the moment this won't work if delegate render products are set interactively, as this is only meant to
         // override the output driver for batch renders. In Solaris, 
         // delegate render products are only set when rendering in husk.
-        if (!delegateRenderProducts.empty() && _customProducts.empty()) {
+        if (needsDelegateProductsUpdate) {
+            const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
+            _customProducts.clear();
             _customProducts.reserve(delegateRenderProducts.size());
             // Get an eventual output override string. We only want to use it if no outputs 
             // were added above with hydra drives, since they will render to the same filename
@@ -835,8 +838,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
                 const AtString customDriverName =
                     AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
-                
-                customProduct.driver = _renderDelegate->CreateArnoldNode(AtString(product.productType.GetText()),
+                customProduct.driver = _renderDelegate->FindOrCreateArnoldNode(AtString(product.productType.GetText()),
                     customDriverName);
                 if (Ai_unlikely(customProduct.driver == nullptr)) {
                     continue;
@@ -979,9 +981,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
             if (_customProducts.empty()) {
                 // if we didn't manage to create any custom product, we want
-                // the render delegate to clear its list. Otherwise the tests above 
-                // (!delegateRenderProducts.empty() && _customProducts.empty())
-                // will keep triggering changes and the render will start over and over
+                // the render delegate to clear its list. Otherwise the function
+                // NeedsDelegateProductsUpdate will keep returning true,
+                // triggering changes and the render will start over and over
                 _renderDelegate->ClearDelegateRenderProducts();
             }
         }
