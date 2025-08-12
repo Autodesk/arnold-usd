@@ -1880,7 +1880,7 @@ bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdComma
 
 bool HdArnoldRenderDelegate::IsUsingGPU()
 {
-    return AiDeviceGetSelectedType(_renderSession) == AI_DEVICE_TYPE_GPU;
+    return AiDeviceGetSelectedType(GetRenderSession()) == AI_DEVICE_TYPE_GPU;
 }
 
 
