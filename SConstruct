@@ -188,7 +188,7 @@ def get_optional_env_path(env_name):
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_USDGENSCHEMA_ARNOLD    = env['BUILD_USDGENSCHEMA_ARNOLD']
-BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
+BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' or env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] else False
 BUILD_SCENE_DELEGATE         = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
@@ -203,6 +203,7 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE
     env['BUILD_SCHEMAS'] = True
     env['BUILD_USD_IMAGING_PLUGIN'] = True
     env['BUILD_NDR_PLUGIN'] = True
+    env['BUILD_RENDER_DELEGATE'] = True
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
@@ -340,7 +341,8 @@ env.Append(CPPDEFINES = Split('TBB_SUPPRESS_DEPRECATED_MESSAGES'))
 
 # This definition allows to re-enable deprecated function when using c++17 headers, this fixes the compilation issue
 #   error: no template named 'unary_function' in namespace 'std'
-if env['_COMPILER'] == 'clang':
+
+if env['_COMPILER'] in ['clang', 'gcc']: # on mac even if the compiler is clang, scons sees gcc
     env.Append(CPPDEFINES = Split('_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION'))
     env.Append(CCFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
 
@@ -684,7 +686,8 @@ if BUILD_PROCEDURAL:
             Depends(PROCEDURAL, SCENEINDEXPLUGIN[0])
         if BUILD_SCHEMAS:
             Depends(PROCEDURAL, SCHEMAS[0])
-
+        if BUILD_RENDER_DELEGATE:
+            Depends(PROCEDURAL, RENDERDELEGATEPLUGIN)
     if env['USD_BUILD_MODE'] == 'static':
         # For static builds of the procedural, we need to copy the usd 
         # resources to the same path as the procedural
@@ -733,7 +736,7 @@ plugInfos = [
 
 for (source, target) in plugInfos:
     env.Command(target=target, source=source,
-                action=configure.configure_plug_info)
+                action=configure.configure_hdarnold_plug_info)
 
 if BUILD_NDR_PLUGIN:
     env.Command(target=node_registry_plugin_out_plug_info,
@@ -769,14 +772,21 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         procedural_imaging_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
         env.Command(target=procedural_imaging_plug_info,
                     source=usdimagingplugin_plug_info,
-                    action=configure.configure_usd_imaging_proc_plug_info)
+                    action=configure.configure_procedural_usd_imaging_plug_info)
         Depends(PROCEDURAL, usdimagingplugin_plug_info)
 
     if BUILD_SCENE_INDEX_PLUGIN:
         procedural_scene_index_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'sceneIndexArnold', 'resources', 'plugInfo.json')
         env.Command(target=procedural_scene_index_plug_info,
                     source=sceneindexplugin_plug_info,
-                    action=configure.configure_scene_index_proc_plug_info)
+                    action=configure.configure_procedural_scene_index_plug_info)
+        Depends(PROCEDURAL, sceneindexplugin_plug_info)
+
+    if BUILD_RENDER_DELEGATE:
+        procedural_render_delegate_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'hdArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_render_delegate_plug_info,
+                    source=renderdelegateplugin_plug_info,
+                    action=configure.configure_procedural_hdarnold_plug_info)
         Depends(PROCEDURAL, sceneindexplugin_plug_info)
 
     if BUILD_SCHEMAS:

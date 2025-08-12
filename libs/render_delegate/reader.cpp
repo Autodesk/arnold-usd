@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <iostream>
+#include <cassert>
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/driver.h>
 #include <pxr/imaging/hd/engine.h>
@@ -147,21 +148,17 @@ HydraArnoldReader::~HydraArnoldReader()
     // and here we're just clearing the usd stage. So we tell the render delegate that nodes
     // destruction should be skipped
     if (_renderDelegate)
-        static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->EnableNodesDestruction(false);
+        GetArnoldRenderDelegate()->EnableNodesDestruction(false);
     if (_imagingDelegate)
         delete _imagingDelegate;
-
-        
-
 
     if (_renderIndex) {
         _renderIndex->RemoveSceneIndex(_sceneIndex);
         delete _renderIndex;
     }
-
     
-    if (_renderDelegate)    
-        delete _renderDelegate;
+    // Delete the render delegate
+    _renderDelegate = nullptr;
 }
 
 HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) : 
@@ -170,6 +167,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _universe(universe) 
 {
     static AtMutex s_renderIndexCreationMutex;
+    static AtMutex s_renderDelegateCreationMutex;
 #ifdef ARNOLD_SCENE_INDEX
     if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
     {
@@ -184,31 +182,26 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     }
 #endif
 
-    // We can't have the scene indices here because we can't set the display name of the render delegate.
-    // We can't set the display name of the render delegate because it has been designed to be set only by plugin system,
-    // _displayName is private to the HdRenderDelegate base class and can only be set by the HdRendererPlugin
-    // And without displayName correctly set the scene indices won't load because they won't be associated to Arnold.
-    // As a workaround, adding scene indices after the creation of the renderIndex is tricky and means adding a dependency between the render delegate library 
-    // and the scene index plugin which is not pratical.
-    // The simple solution should be to load the render delegate using the plugin mechanism
-    // and create the render delegate with the following code:
     //
-    // HdRenderSettingsMap settingsMap;
-    // settingsMap[TfToken("arnold:is_batch")] = VtValue(true);
-    // settingsMap[TfToken("arnold:context")] = VtValue(TfToken("kick"));
-    // settingsMap[TfToken("arnold:universe")] = VtValue(_universe);
-    // settingsMap[TfToken("arnold:session_type")] = VtValue(AI_SESSION_INTERACTIVE);
-    // settingsMap[TfToken("arnold:procedural_parent")] = VtValue(procParent);
-    // _renderDelegate = HdRendererPluginRegistry::GetInstance().CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"), settingsMap);
+    // Create the render delegate using the plugin system. This allows the correct initialisation of the scene indices in hydra1
     //
-    // But it also means compiling and adding the renderer plugin to the procedural. A bundled library would help in that case.
-    // We would also have to read the settings map when creating the render delegate
-
-    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
+    HdRenderSettingsMap settingsMap;
+    settingsMap[TfToken("arnold:is_batch")] = VtValue(true);
+    settingsMap[TfToken("arnold:context")] = VtValue(TfToken("kick"));
+    settingsMap[TfToken("arnold:universe")] = VtValue(static_cast<void*>(_universe));
+    settingsMap[TfToken("arnold:session_type")] = VtValue(AI_SESSION_INTERACTIVE);
+    settingsMap[TfToken("arnold:procedural_parent")] = VtValue(static_cast<void*>(procParent));
+    {
+        // We must lock the render delegate creation as if multiple procedurals create HdArnoldRendererPlugin, we end up with a messed up plugin registry.
+        std::lock_guard<AtMutex> lock(s_renderDelegateCreationMutex);
+        _renderDelegate = HdRendererPluginRegistry::GetInstance().CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"), settingsMap);
+    }
+    assert(_renderDelegate);
+    //_renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
     {
         std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
-        _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+        _renderIndex = HdRenderIndex::New(GetArnoldRenderDelegate(), HdDriverVector());
     }
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
@@ -246,7 +239,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
-    return _renderDelegate ? static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes : _nodes; }
+    return _renderDelegate.Get() ? GetArnoldRenderDelegate()->_nodes : _nodes; }
 
 void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath)
 {
@@ -267,7 +260,7 @@ void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath
 void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                                 const std::string &path)
 {
-    HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
+    HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
     if (arnoldRenderDelegate == 0)
         return;
     AiProfileBlock("hydra_proc:read_stage"); 
@@ -418,7 +411,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         // so that it can be passed through procedural_get_nodes
         std::swap(_nodes, arnoldRenderDelegate->_nodes);
         
-        delete _renderDelegate;
         _renderDelegate = nullptr;
     }
 #endif
@@ -438,14 +430,14 @@ void HydraArnoldReader::SetMotionBlur(bool motionBlur, float motionStart , float
 void HydraArnoldReader::SetDebug(bool b) {}
 void HydraArnoldReader::SetThreadCount(unsigned int t) {}
 void HydraArnoldReader::SetConvertPrimitives(bool b) {}
-void HydraArnoldReader::SetMask(int m) {static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->SetMask(m); }
+void HydraArnoldReader::SetMask(int m) {GetArnoldRenderDelegate()->SetMask(m); }
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 
 void HydraArnoldReader::Update()
 {
-    HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
+    HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
     if (_useSceneIndex) {
 #ifdef ARNOLD_SCENE_INDEX        
         _stageSceneIndex->ApplyPendingUpdates();
