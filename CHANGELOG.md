@@ -3,11 +3,16 @@
 
 ## Next feature release (7.4.4.0)
 
+### Bug Fixes
+
+- [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
+
 ## Unreleased bugfix version (7.4.3.1)
 
 ### Bug Fixes
 
 - [usd#2349](https://github.com/Autodesk/arnold-usd/issues/2349) - Husk renders with the Arnold product type overwrites the same output path when rendering mutliple frames in same process
+- [usd#2392](https://github.com/Autodesk/arnold-usd/issues/2392) - Fix a warning due to additional metadata parameters, typeName and colorSpace introduced in USD 25.05.
 
 ## [7.4.3.0] - 2025-07-25
 
