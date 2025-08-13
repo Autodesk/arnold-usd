@@ -152,7 +152,7 @@ def generate(env, version=None):
    # Special linker detection in linux
    if sa.system.is_linux:
       # Name of the linker (eg. ld, gold, bfd, lld, etc.). It defaults to "gold"
-      linker_name = env.get('LINKER_NAME', 'gold').replace('ld.', '', 1)
+      linker_name = env.get('LINKER_NAME', 'ld').replace('ld.', '', 1)
       # Regular expresions for detecting the linker version
       regex_version = r'(?:[0-9]+)(?:\.(?:[0-9])+)*'
       linker_regex = {
