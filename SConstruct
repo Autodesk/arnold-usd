@@ -204,6 +204,7 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE
     env['BUILD_USD_IMAGING_PLUGIN'] = True
     env['BUILD_NDR_PLUGIN'] = True
     env['BUILD_RENDER_DELEGATE'] = True
+    env['BUILD_SCENE_INDEX_PLUGIN'] = True
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
@@ -322,6 +323,10 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 #print(" - Environment:")
 #for k, v in os.environ.items():
 #    print("     {} = {}".format(k,v))
+
+if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
+    env['BUILD_SCENE_INDEX_PLUGIN'] = False
+
 
 
 # Platform definitions
