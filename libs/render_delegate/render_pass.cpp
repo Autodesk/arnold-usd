@@ -563,6 +563,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
     float currentPixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    GfVec2i delegateResolution = _renderDelegate->GetResolution();
+    // If the render delegate resolution is explicitely set as being different from 
+    // our data window, we want to apply a pixel aspect ratio so that the final image matches.
+    // This can be skipped if the render has a window NDC as a similar logic was already applied
+    if (!hasWindowNDC && delegateResolution[0] > 0 && delegateResolution[1] > 0 &&
+            (delegateResolution[0] != _width || delegateResolution[1] != _height)) {
+        pixelAspectRatio *= (float) (_height * delegateResolution[0]) / (float) (_width * delegateResolution[1]);
+    }
+
     if (!GfIsClose(currentPixelAspectRatio, pixelAspectRatio, AI_EPSILON)) {
         renderParam->Interrupt(true, false);
         AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
