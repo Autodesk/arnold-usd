@@ -1,6 +1,7 @@
 #include <ai.h>
 
 #include <vector>
+#include <string>
 
 //#define LOG_FLAGS AI_LOG_ALL
 #define LOG_FLAGS AI_LOG_WARNINGS | AI_LOG_ERRORS
