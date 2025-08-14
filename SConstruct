@@ -324,9 +324,10 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 #for k, v in os.environ.items():
 #    print("     {} = {}".format(k,v))
 
+# Deactivate the scene index plugin for usd version < 25.05
 if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
     env['BUILD_SCENE_INDEX_PLUGIN'] = False
-
+    BUILD_SCENE_INDEX_PLUGIN = False
 
 
 # Platform definitions
