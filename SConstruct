@@ -632,7 +632,7 @@ if BUILD_SCHEMAS:
 else:
     SCHEMAS = None
 
-if BUILD_RENDER_DELEGATE:
+if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE:
     RENDERDELEGATEPLUGIN = env.SConscript(renderdelegateplugin_script, variant_dir = renderdelegateplugin_build, duplicate = 0, exports = 'env')
     Depends(RENDERDELEGATEPLUGIN, COMMON[0])
     SConscriptChdir(0)
