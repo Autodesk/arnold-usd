@@ -209,6 +209,7 @@ BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_INDEX_PLUGIN     = env['BUILD_SCENE_INDEX_PLUGIN']
+BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE']
 
 # Set default amount of threads set to the cpu counts in this machine.
 # This can be overridden through command line by setting e.g. "abuild -j 1"
@@ -787,7 +788,7 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         env.Command(target=procedural_render_delegate_plug_info,
                     source=renderdelegateplugin_plug_info,
                     action=configure.configure_procedural_hdarnold_plug_info)
-        Depends(PROCEDURAL, sceneindexplugin_plug_info)
+        Depends(PROCEDURAL, renderdelegateplugin_plug_info)
 
     if BUILD_SCHEMAS:
         schemas_plug_info = os.path.join(schemas_build, 'source', 'plugInfo.json')
