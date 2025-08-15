@@ -3,6 +3,9 @@
 
 ## Next feature release (7.4.4.0)
 
+### Features
+- [usd#1633](https://github.com/Autodesk/arnold-usd/issues/1633) - Ignore verbosity settings from USD files when rendering with "kick -v"
+
 ## Unreleased bugfix version (7.4.3.1)
 
 ### Bug Fixes

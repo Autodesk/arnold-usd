@@ -452,8 +452,14 @@ scene_load
         std::string envThreadsVal = ArchGetEnv(envThreads);
         threadCount = std::max(0, std::stoi(envThreadsVal));
     }
-    
+
     if (params) {
+        AtString commandLine;
+        if (AiParamValueMapGetStr(params, str::command_line, &commandLine)) {
+            const std::string commandLineStr(commandLine.c_str());
+            reader->SetCommandLine(commandLineStr);
+        }
+
         // eventually check the input param map in case we have an entry for "frame"
         AiParamValueMapGetFlt(params, str::frame, &frame);
         // eventually get an amount of threads to read the usd file

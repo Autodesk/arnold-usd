@@ -184,7 +184,9 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     }
 #endif
     
-    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
+    HdArnoldRenderDelegate *arnoldRenderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
+    _renderDelegate = arnoldRenderDelegate;
+    arnoldRenderDelegate->SetReader(this);
     TF_VERIFY(_renderDelegate);
     {
         std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
@@ -279,7 +281,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), _time, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, renderCameraPath);
         }
     } 
 

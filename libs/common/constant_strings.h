@@ -123,6 +123,7 @@ ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
 ASTR(colorSpace);
+ASTR(command_line);
 ASTR(CPU);
 ASTR(camera_projection);
 ASTR(crypto_asset);

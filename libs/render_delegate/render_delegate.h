@@ -52,6 +52,7 @@
 
 #include <ai.h>
 
+class HydraArnoldReader;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -693,7 +694,9 @@ public:
     }
 
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
-    
+    HydraArnoldReader *GetReader() {return _reader;} 
+    void SetReader(HydraArnoldReader *r) {_reader = r;} 
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -837,6 +840,7 @@ private:
     // They will be ran in the _Execute function
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
+    HydraArnoldReader *_reader = nullptr;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
