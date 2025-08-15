@@ -211,7 +211,7 @@ void HdArnoldMeshLightResolvingSceneIndex::_PrimsDirtied(
     // Parameter change on the meshLight
     for (const auto &entry : entries) {
         if (_meshLights.count(entry.primPath)) {
-            // Propogate dirtiness to the meshLight light if applicable.
+            // Propagate dirtiness to the meshLight light if applicable.
             // HdDataSourceLocator::EmptyLocator() == AllDirty in Hydra 1.0
             if (entry.dirtyLocators.Intersects(HdDataSourceLocator::EmptyLocator()) ||
                 entry.dirtyLocators.Intersects(HdCategoriesSchema::GetDefaultLocator()) ||
