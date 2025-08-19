@@ -92,12 +92,31 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
         }
     }
 
+    // kick hydra specific settings
+    if (const VtValue *value = TfMapLookupPtr(settingsMap, TfToken("arnold:is_batch"))) {
+        isBatch = value->UncheckedGet<bool>();
+    }
+    if (const VtValue *value = TfMapLookupPtr(settingsMap, TfToken("arnold:context"))) {
+        context = value->UncheckedGet<TfToken>();
+    }
+    AtUniverse *universe = nullptr;
+    if (const VtValue *value = TfMapLookupPtr(settingsMap, TfToken("arnold:universe"))) {
+        universe = static_cast<AtUniverse*>(value->UncheckedGet<void *>());
+    }
+    if (const VtValue *value = TfMapLookupPtr(settingsMap, TfToken("arnold:session_type"))) {
+        sessionType = value->UncheckedGet<AtSessionMode>();
+    }
+    AtNode* procParent = nullptr;
+    if (const VtValue *value = TfMapLookupPtr(settingsMap, TfToken("arnold:procedural_parent"))) {
+        procParent = static_cast<AtNode*>(value->UncheckedGet<void *>());
+    }
+
     if (isBatch && TfGetenv("ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL", "0") != "0" && !AiLicenseIsAvailable()) {
         AiMsgError("Arborting: ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL is set and Arnold license not found");
         return nullptr;
     }
 
-    auto* delegate = new HdArnoldRenderDelegate(isBatch, context, nullptr, sessionType);
+    HdRenderDelegate* delegate = new HdArnoldRenderDelegate(isBatch, context, universe, sessionType, procParent);
 
     for (const auto& setting : settingsMap) {
         delegate->SetRenderSetting(setting.first, setting.second);

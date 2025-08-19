@@ -5,7 +5,7 @@
                 "Types": {
                     "HdArnoldRendererPlugin": {
                         "bases": [
-                            "${RENDERER_PLUGIN_BASE}"
+                            "HdRendererPlugin"
                         ],
                         "displayName": "Arnold",
                         "priority": 99

@@ -22,7 +22,7 @@ if (BUILD_SCENE_DELEGATE)
     add_subdirectory(scene_delegate)
 endif ()
 
-if (BUILD_RENDER_DELEGATE)
+if (BUILD_RENDER_DELEGATE OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
     add_subdirectory(render_delegate)
 endif ()
 

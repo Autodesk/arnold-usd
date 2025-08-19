@@ -11,6 +11,7 @@
 #include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
 #include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
+#include "render_delegate.h"
 
 #ifdef ENABLE_SCENE_INDEX
 #define ARNOLD_SCENE_INDEX
@@ -63,12 +64,12 @@ public:
 private:
     std::string _renderSettings;
     unsigned int _id;
-
+    HdArnoldRenderDelegate* GetArnoldRenderDelegate()const {return static_cast<HdArnoldRenderDelegate*>(_renderDelegate.Get());}
     TfToken _purpose;
     HdRenderIndex* _renderIndex;
     UsdArnoldProcImagingDelegate* _imagingDelegate = nullptr;
     HdEngine _engine;
-    HdRenderDelegate *_renderDelegate;
+    HdPluginRenderDelegateUniqueHandle _renderDelegate;
     SdfPath _sceneDelegateId;
     UsdImagingStageSceneIndexRefPtr _stageSceneIndex;
     //UsdImagingSelectionSceneIndexRefPtr _selectionSceneIndex;

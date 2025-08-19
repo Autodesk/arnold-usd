@@ -62,6 +62,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: propagate dirty prims"
+                    },
+                    "HdArnoldMeshLightResolvingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: mesh lights"
                     }
                 }
             },
