@@ -51,7 +51,7 @@
 #include <constant_strings.h>
 #include <shape_utils.h>
 #include <parameters_utils.h>
-
+#include "read_light.h"
 #include "utils.h"
 
 //-*************************************************************************
@@ -184,6 +184,18 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
         // Read the arnold parameters for this light
         ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
         ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+    } else {
+#if PXR_VERSION >= 2302 
+        if (prim.HasAPI(TfToken("MeshLightAPI"))) {
+            std::string lightName = AiNodeGetName(node);
+            lightName += "/light";
+            AtNode *meshLightNode = context.CreateArnoldNode("mesh_light", lightName.c_str());
+            AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
+            ReadLightCommon(prim, meshLightNode, time);
+            ReadLightNormalize(prim, meshLightNode, time);
+            ReadMatrix(prim, meshLightNode, time, context);
+        }
+#endif
     }
 }
 

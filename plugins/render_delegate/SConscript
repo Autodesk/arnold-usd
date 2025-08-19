@@ -9,23 +9,27 @@ source_files = ['renderer_plugin.cpp']
 if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
-local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
+
 local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'libs', 'render_delegate')])
 render_delegate_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))
 common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
 local_env.Append(LIBPATH = [render_delegate_lib_path, common_lib_path])
 local_env.Append(LIBS = ['ai', 'render_delegate', 'common'])
-if system.is_windows:
-    local_env.Append(LINKFLAGS = ['-WHOLEARCHIVE:render_delegate'])
-elif system.is_linux:
-    local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
-else:
-    local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
+if local_env['USD_BUILD_MODE'] != 'static':
+    local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
+    if system.is_windows:
+        local_env.Append(LINKFLAGS = ['-WHOLEARCHIVE:render_delegate'])
+    elif system.is_linux:
+        local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
+    else:
+        local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_ROOT_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
 
 source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-# Build shared library for the usd procedural
-USD = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
-Return('USD')
 
+if local_env['USD_BUILD_MODE'] == 'static':
+    USD = local_env.StaticLibrary('hdArnold', source_files)
+else:
+	USD = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
+Return('USD')

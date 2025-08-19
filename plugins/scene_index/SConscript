@@ -28,6 +28,7 @@ source_files = [
     'fixPropagatedPrototypesVisibilitySIP.cpp',
 	'propagateDirtyPrimsSIP.cpp',
     'nurbsApproximatingSIP.cpp',
+    'meshLightResolvingSIP.cpp',
 ]
 
 if not system.is_windows:

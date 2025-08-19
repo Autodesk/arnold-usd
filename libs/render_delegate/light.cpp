@@ -346,7 +346,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
                             HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate)
 {
     TF_UNUSED(filter);
-    VtValue geomValue = sceneDelegate->Get( id, str::t_geometry);
+    VtValue geomValue = sceneDelegate->Get(id, str::t_geometry);
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
@@ -354,7 +354,18 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
-    }    
+    }
+#ifdef ENABLE_SCENE_INDEX
+    {
+        // With the scene index filter meshLightResolvingSIP.cpp, we create an hydra mesh light prim just under the mesh
+        // Since we know that the mesh is the parent of the light, we try to get the arnold node there
+        // It is possible that the mesh node hasn't been created yet
+        AtNode* mesh = renderDelegate->LookupNode(id.GetParentPath().GetText());
+        if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
+            mesh = nullptr;
+        AiNodeSetPtr(light, str::mesh, (void*)mesh);
+    }
+#endif
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 

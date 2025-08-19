@@ -8,6 +8,7 @@
 
 #include <cinttypes>
 #include <vector>
+#include <string>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 

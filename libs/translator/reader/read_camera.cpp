@@ -61,6 +61,7 @@ AtNode* UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         VtValue camTypeValue;
         if (camTypeAttr.Get(&camTypeValue, time.frame)) {
             camType = VtValueGetString(camTypeValue);
+            persp = (camType == "persp_camera");
         }
     }
 
