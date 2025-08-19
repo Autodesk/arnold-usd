@@ -283,13 +283,6 @@ void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time
     if(light.GetNormalizeAttr().Get(&normalizeAttr, time.frame))
        AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     */
-    // Normalize attribute only for meshlights
-    if (AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(node)) == str::mesh_light) {
-        VtValue normalize;
-        if (GET_LIGHT_ATTR(light, Normalize).Get(&normalize, time.frame)) {
-            AiNodeSetBool(node, str::normalize, VtValueGetBool(normalize));
-        }
-    }
 
     UsdLuxShadowAPI shadowAPI(prim);
     if (shadowAPI) {
@@ -304,6 +297,18 @@ void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time
         }
     }  
 
+}
+
+void ReadLightNormalize(const UsdPrim& prim, AtNode *node, const TimeSettings &time) {
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    VtValue normalize;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalize, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalize));
+    }
 }
 
 AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)

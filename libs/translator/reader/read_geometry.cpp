@@ -192,6 +192,7 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             AtNode *meshLightNode = context.CreateArnoldNode("mesh_light", lightName.c_str());
             AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
             ReadLightCommon(prim, meshLightNode, time);
+            ReadLightNormalize(prim, meshLightNode, time);
             ReadMatrix(prim, meshLightNode, time, context);
         }
 #endif
