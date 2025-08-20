@@ -171,17 +171,13 @@ struct HdArnoldConfig {
     ///
     std::string stats_file; ///< Output file for stats data.
 
-    /// Use HDARNOLD_texture_searchpath to set the value.
-    ///
-    std::string texture_searchpath; ///< Texture search path.
-
     /// Use HDARNOLD_plugin_searchpath to set the value.
     ///
     std::string plugin_searchpath; ///< Plugin search path.
 
-    /// Use HDARNOLD_procedural_searchpath to set the value.
+    /// Use HDARNOLD_asset_searchpath to set the value.
     ///
-    std::string procedural_searchpath; ///< Procedural search path.
+    std::string asset_searchpath; ///< Asset search path.
 
     /// Use HDARNOLD_osl_includepath to set the value.
     ///
