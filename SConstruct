@@ -307,6 +307,10 @@ if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGI
     env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
     env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
     env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']
+    # Deactivate the scene index plugin for usd version < 25.05
+    if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
+        env['BUILD_SCENE_INDEX_PLUGIN'] = False
+        BUILD_SCENE_INDEX_PLUGIN = False
 elif BUILD_TESTSUITE:
     # Need to set dummy values for the testsuite to run properly without 
     # recompiling arnold-usd
@@ -323,11 +327,6 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 #print(" - Environment:")
 #for k, v in os.environ.items():
 #    print("     {} = {}".format(k,v))
-
-# Deactivate the scene index plugin for usd version < 25.05
-if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
-    env['BUILD_SCENE_INDEX_PLUGIN'] = False
-    BUILD_SCENE_INDEX_PLUGIN = False
 
 
 # Platform definitions
