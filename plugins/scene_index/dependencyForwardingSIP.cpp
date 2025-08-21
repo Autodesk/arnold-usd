@@ -24,7 +24,9 @@ HdArnoldDependencyForwardingSceneIndexPlugin::HdArnoldDependencyForwardingSceneI
 HdSceneIndexBaseRefPtr HdArnoldDependencyForwardingSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene, const HdContainerDataSourceHandle &inputArgs)
 {
-    return HdDependencyForwardingSceneIndex::New(inputScene);
+    auto sceneIndexFilter = HdDependencyForwardingSceneIndex::New(inputScene);
+    sceneIndexFilter->SetDisplayName("Arnold: forward dependencies");
+    return sceneIndexFilter;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

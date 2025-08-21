@@ -174,7 +174,7 @@ protected:
     _DependenciesSceneIndex(const HdSceneIndexBaseRefPtr &inputSceneIndex)
         : HdSingleInputFilteringSceneIndexBase(inputSceneIndex)
     {
-        SetDisplayName("Arnold: declare Arnold dependencies");
+        SetDisplayName("Arnold: declare prim dependencies");
     }
 
     void _PrimsAdded(const HdSceneIndexBase &sender, const HdSceneIndexObserver::AddedPrimEntries &entries) override

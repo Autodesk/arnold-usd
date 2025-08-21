@@ -58,6 +58,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((arnoldFormat, "arnold:format"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
+    ((aovDriverName, "driver:parameters:aov:name"))
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
@@ -774,6 +775,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     // the beauty output should be called "RGBA" for arnold
                     aovName = isBeauty ? "RGBA" : sourceName.c_str();
                 }
+                std::string layerName(aovName);
+                layerName = _GetOptionalSetting<std::string>(
+                    binding.aovSettings, _tokens->aovDriverName, layerName);
+
                 // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
                 // cryptomatte metadatas through the user data "custom_attributes". We want to store 
                 // the driver node names in the render delegate, so that we can lookup this user data
@@ -784,11 +789,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     _renderDelegate->RegisterCryptomatteDriver(AtString(mainDriverName));
                 
                 buffer_pointers.push_back((void*)buffer.buffer);
-                buffer_names.push_back(AtString(aovName));
-                
+                buffer_names.push_back(AtString(layerName.c_str()));                
+
                 output = AtString{
                     TfStringPrintf(
-                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName)
+                        "%s %s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName, layerName.c_str())
                         .c_str()};
 
             }
