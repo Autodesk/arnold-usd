@@ -102,11 +102,9 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_report_file, "", "Output file for the Arnold HTML
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_stats_file, "", "Output file for stats information.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_texture_searchpath, "", "Texture search path.");
-
 TF_DEFINE_ENV_SETTING(HDARNOLD_plugin_searchpath, "", "Plugin search path.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_procedural_searchpath, "", "Procedural search path.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_asset_searchpath, "", "Asset search path.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_osl_includepath, "", "OSL include path.");
 
@@ -145,9 +143,8 @@ HdArnoldConfig::HdArnoldConfig()
     interactive_fps_min =
         std::max(1.0f, static_cast<float>(std::atof(TfGetEnvSetting(HDARNOLD_interactive_fps_min).c_str())));
     profile_file = TfGetEnvSetting(HDARNOLD_profile_file);
-    texture_searchpath = TfGetEnvSetting(HDARNOLD_texture_searchpath);
     plugin_searchpath = TfGetEnvSetting(HDARNOLD_plugin_searchpath);
-    procedural_searchpath = TfGetEnvSetting(HDARNOLD_procedural_searchpath);
+    asset_searchpath = TfGetEnvSetting(HDARNOLD_asset_searchpath);
     osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
     auto_generate_tx = TfGetEnvSetting(HDARNOLD_auto_generate_tx);
 }

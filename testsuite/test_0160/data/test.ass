@@ -14,7 +14,6 @@ options
  xres 160
  yres 120
  texture_per_file_stats on
- texture_searchpath "C:/maya/scenes/sourceimages"
  texture_automip off
  camera "/0persp/1pe.rsp-Sha:pe"
  frame 1

@@ -351,9 +351,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Stats Settings
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
         // Search paths
-        {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
-        {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
+        {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
 
         {str::t_subdiv_dicing_camera, {"Subdiv Dicing Camera", std::string{}}},

@@ -191,6 +191,7 @@ ASTR(aov_write_vector);
 ASTR(aperture_size);
 ASTR(append);
 ASTR(arnold);
+ASTR(asset_searchpath);
 ASTR(assignment);
 ASTR(atmosphere);
 ASTR(attribute);
