@@ -252,6 +252,9 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+#ifdef ENABLE_SCENE_INDEX                               
+                                 HdPrimTypeTokens->meshLight,
+#endif
                                  _tokens->GeometryLight, _tokens->ArnoldOptions,
                                  HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
                                  /*HdPrimTypeTokens->simpleLight*/};
@@ -349,9 +352,13 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Stats Settings
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
         // Search paths
-        {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
+        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
+#if ARNOLD_VERSION_NUM <= 70403
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
+#else
+        {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
+#endif
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
 
         {str::t_subdiv_dicing_camera, {"Subdiv Dicing Camera", std::string{}}},
@@ -1236,9 +1243,12 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return (_mask & AI_NODE_LIGHT) ? 
             HdArnoldLight::CreateDomeLight(this, sprimId) : nullptr;
     }
-    if (typeId == _tokens->GeometryLight) {
-        return (_mask & AI_NODE_LIGHT) ? 
-            HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
+    if (typeId == _tokens->GeometryLight
+#ifdef ENABLE_SCENE_INDEX
+        || typeId == HdPrimTypeTokens->meshLight
+#endif
+    ) {
+        return (_mask & AI_NODE_LIGHT) ? HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;

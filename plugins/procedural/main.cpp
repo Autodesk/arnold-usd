@@ -123,13 +123,17 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
     if (optionsNode) {
         // We want to allow using the procedural search path to point to directories containing .abc files in the same
         // way procedural search paths are used to resolve procedural .ass files.
-        // To do this we extract the procedural path from the options node, where environment variables specified using
+        // To do this we extract the asset path from the options node, where environment variables specified using
         // the Arnold standard (e.g. [HOME]) are expanded. If our .abc file exists in any of the directories we
         // concatenate the path and the relative filename to create a new procedural argument filename using the full
         // path.
+#if ARNOLD_VERSION_NUM <= 70403
         std::string proceduralPath = std::string(AiNodeGetStr(optionsNode, AtString("procedural_searchpath")));
         std::string expandedSearchpath = ExpandEnvironmentVariables(proceduralPath.c_str());
-
+#else
+        std::string assetPath = std::string(AiNodeGetStr(optionsNode, AtString("asset_searchpath")));
+        std::string expandedSearchpath = ExpandEnvironmentVariables(assetPath.c_str());
+#endif
         PathList pathList;
         TokenizePath(expandedSearchpath, pathList, ":;", true);
         if (!pathList.empty()) {

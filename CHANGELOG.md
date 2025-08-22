@@ -5,12 +5,20 @@
 
 ### Features
 - [usd#1633](https://github.com/Autodesk/arnold-usd/issues/1633) - Ignore verbosity settings from USD files when rendering with "kick -v"
+- [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
+- [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
+- [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
+
+### Bug Fixes
+
+- [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
 
 ## Unreleased bugfix version (7.4.3.1)
 
 ### Bug Fixes
 
 - [usd#2349](https://github.com/Autodesk/arnold-usd/issues/2349) - Husk renders with the Arnold product type overwrites the same output path when rendering mutliple frames in same process
+- [usd#2392](https://github.com/Autodesk/arnold-usd/issues/2392) - Fix a warning due to additional metadata parameters, typeName and colorSpace introduced in USD 25.05.
 
 ## [7.4.3.0] - 2025-07-25
 

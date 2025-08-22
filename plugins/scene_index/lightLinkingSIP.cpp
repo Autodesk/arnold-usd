@@ -64,7 +64,9 @@ protected:
     HdSceneIndexBaseRefPtr _AppendSceneIndex(
         const HdSceneIndexBaseRefPtr &inputScene, const HdContainerDataSourceHandle &inputArgs) override
     {
-        return HdsiLightLinkingSceneIndex::New(inputScene, inputArgs);
+        auto lightLinkingSceneIndex = HdsiLightLinkingSceneIndex::New(inputScene, inputArgs);
+        lightLinkingSceneIndex->SetDisplayName("Arnold: apply light linking");
+        return lightLinkingSceneIndex;
     }
 };
 
