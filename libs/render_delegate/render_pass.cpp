@@ -495,49 +495,70 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 std::swap(windowNDC[0], windowNDC[2]);
             if (windowNDC[1] > windowNDC[3])
                 std::swap(windowNDC[1], windowNDC[3]);
-            
-            // Get the exact resolution, as returned by the render settings.
-            // The one we received from the dataWindow might be affected by the 
-            // dataWindowNDC
-            GfVec2i renderSettingsRes = _renderDelegate->GetResolution();
 
-            // we want the output render buffer to have a resolution equal to 
+                // we want the output render buffer to have a resolution equal to 
             // _width/_height. This means we need to adjust xres/yres, so that
             // region min/max corresponds to the render resolution
             float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+
+            // Get the exact resolution, as returned by the render settings.
+            // The one we received from the dataWindow might be affected by the 
+            // dataWindowNDC
+            GfVec2i renderSettingsRes(-1);
+            if (_renderDelegate->IsBatchContext() && xDelta > AI_EPSILON && yDelta > AI_EPSILON)
+                renderSettingsRes = _renderDelegate->GetResolution();
+
             if (xDelta > AI_EPSILON) {
                 float xInvDelta = 1.f / xDelta;
                 // For batch renders, we want to ensure the arnold resolution is the one provided
                 // by the render settings
-                if (_renderDelegate->IsBatchContext() && renderSettingsRes[0] > 0)
+                if (renderSettingsRes[0] > 0) {                
                     AiNodeSetInt(options, str::xres, renderSettingsRes[0]);
+                }
                 else {
                     AiNodeSetInt(options, str::xres, std::round(_width * (xInvDelta)));    
+                    // Normalize windowNDC so that its delta is 1
+                    windowNDC[0] *= xInvDelta;
+                    windowNDC[2] *= xInvDelta;
                 }
-                // Normalize windowNDC so that its delta is 1
-                windowNDC[0] *= xInvDelta;
-                windowNDC[2] *= xInvDelta;
+                
             } else {
                 AiNodeSetInt(options, str::xres, _width);
             }
             // we want region_max_x - region_min_x to be equal to _width - 1
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
+            float region_min_x_flt = windowNDC[0] * (renderSettingsRes[0] > 0 ? renderSettingsRes[0] : _width);
+            float region_max_x_flt = windowNDC[2] * (renderSettingsRes[0] > 0 ? renderSettingsRes[0] : _width) - 1;
+            int region_min_x = std::round(region_min_x_flt);
+            int region_max_x = std::round(region_max_x_flt);
+
+            // We need region_max_x - region_min_x to be equal to _width - 1, so that the arnold render buffer
+            // matches the expected output
+            int mismatch_delta_x = region_max_x - region_min_x - _width + 1;
+            if (mismatch_delta_x != 0) {
+                // There could have been a precision issue, in that case we want to adjust either the region min or the max
+                float delta_min = std::abs(region_min_x_flt - region_min_x);
+                float delta_max = std::abs(region_max_x_flt - region_max_x);
+                if (delta_min > delta_max)
+                    region_min_x += mismatch_delta_x > 0 ? 1 : -1;
+            }
             
-            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+            AiNodeSetInt(options, str::region_min_x, region_min_x);
+            AiNodeSetInt(options, str::region_max_x, region_min_x + _width - 1);
+            
             if (yDelta > AI_EPSILON) {
                 float yInvDelta = 1.f / yDelta;
                 // For batch renders, we want to ensure the arnold resolution is the one provided
                 // by the render settings
-                if (_renderDelegate->IsBatchContext() && renderSettingsRes[1] > 0)
+                if (renderSettingsRes[1] > 0) {
                     AiNodeSetInt(options, str::yres, renderSettingsRes[1]);
+                }
                 else {
                     AiNodeSetInt(options, str::yres, std::round(_height * (yInvDelta)));
+                    windowNDC[1] *= yInvDelta;    
+                    windowNDC[3] *= yInvDelta;
                 }
-                // Normalize windowNDC so that its delta is 1
-                windowNDC[1] *= yInvDelta;    
-                windowNDC[3] *= yInvDelta;
-
+               
                 // For interactive renders, need to adjust the pixel aspect ratio to match the window NDC
                 if (!_renderDelegate->IsBatchContext()) {
                     pixelAspectRatio *= xDelta / yDelta;
@@ -548,8 +569,24 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
 
             // we want region_max_y - region_min_y to be equal to _height - 1
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
+            float region_min_y_flt = windowNDC[1] * (renderSettingsRes[1] > 0 ? renderSettingsRes[1] : _height);
+            float region_max_y_flt = windowNDC[3] * (renderSettingsRes[1] > 0 ? renderSettingsRes[1] : _height) - 1;
+            int region_min_y = std::round(region_min_y_flt);
+            int region_max_y = std::round(region_max_y_flt);
+            
+            // We need region_max_y - region_min_y to be equal to _height - 1, so that the arnold render buffer
+            // matches the expected output
+            int mismatch_delta_y = region_max_y - region_min_y - _height + 1;
+            if (mismatch_delta_y != 0) {
+                // There could have been a precision issue, in that case we want to adjust either the region min or the max
+                float delta_min = std::abs(region_min_y_flt - region_min_y);
+                float delta_max = std::abs(region_max_y_flt - region_max_y);
+                if (delta_min > delta_max)
+                    region_min_y += mismatch_delta_y > 0 ? 1 : -1;
+            }
+            AiNodeSetInt(options, str::region_min_y, region_min_y);
+            AiNodeSetInt(options, str::region_max_y, region_min_y + _height -1);
+
         } else {
             // the window was restored to defaults, we need to reset the region
             // attributes, as well as xres,yres, that could have been adjusted
