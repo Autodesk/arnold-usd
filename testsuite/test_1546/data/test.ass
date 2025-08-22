@@ -18,6 +18,7 @@ options
  xres 640
  yres 360
  asset_searchpath "tex"
+ texture_searchpath "tex"
  camera "/Camera"
  fps 30
  GI_diffuse_depth 1
