@@ -24,6 +24,7 @@
 #include "pxr/imaging/hd/materialBindingsSchema.h"
 
 #endif
+#include "timesettings.h"
 
 TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
 TF_DECLARE_REF_PTRS(UsdImagingRootOverridesSceneIndex);

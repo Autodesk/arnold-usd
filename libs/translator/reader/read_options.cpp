@@ -45,6 +45,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
 {
     SdfPath cameraPath;
-    return ReadRenderSettings(renderSettingsPrim, context, context.GetTimeSettings(), context.GetReader()->GetUniverse(), cameraPath);
+    return ReadRenderSettings(renderSettingsPrim, context, context.GetReader(), context.GetTimeSettings(), context.GetReader()->GetUniverse(), cameraPath);
 }
 

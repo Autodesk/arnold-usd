@@ -431,7 +431,7 @@ void ChooseRenderSettings(UsdStageRefPtr _stage, std::string &_renderSettings, T
 
 
 AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 
-    const TimeSettings &time, AtUniverse *universe, SdfPath& cameraPath) {
+    ProceduralReader *reader, const TimeSettings &time, AtUniverse *universe, SdfPath& cameraPath) {
 
     AtNode *options = AiUniverseGetOptions(universe);
     auto stage = renderSettingsPrim.GetStage();
@@ -808,6 +808,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
         }
     }
+    const std::string &commandLine = reader->GetCommandLine();
     if (colorManager == nullptr) {
         // use the default color manager
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
@@ -853,7 +854,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     // log file
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
-        if (logFileAttr.Get(&logFileValue, time.frame)) {
+        // We only read this attribute if it wasn't explicitely set in the command line
+        if (commandLine.find(" -logfile ") == std::string::npos && logFileAttr.Get(&logFileValue, time.frame)) {
             const std::string logFile = VtValueGetString(logFileValue);
             AiMsgSetLogFileName(logFile.c_str());
         }
@@ -862,7 +864,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     // log verbosity
     if (UsdAttribute logVerbosityAttr = renderSettingsPrim.GetAttribute(_tokens->logVerbosity)) {
         VtValue logVerbosityValue;
-        if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
+        // We only read this attribute if it wasn't explicitely set in the command line
+        if (commandLine.find(" -v ") == std::string::npos && logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
             int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
 #if ARNOLD_VERSION_NUM >= 70100
             AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
@@ -878,7 +881,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
 #if ARNOLD_VERSION_NUM >= 70401
     if (UsdAttribute reportFileAttr = renderSettingsPrim.GetAttribute(_tokens->reportFile)) {
         VtValue reportFileValue;
-        if (reportFileAttr.Get(&reportFileValue, time.frame)) {
+        // We only read this attribute if it's not explicitely set in the command line
+        if (commandLine.find(" -report ") == std::string::npos && reportFileAttr.Get(&reportFileValue, time.frame)) {
             const std::string reportFile = VtValueGetString(reportFileValue);
             AiReportSetFileName(reportFile.c_str());
         }
@@ -887,7 +891,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     // stats file
     if (UsdAttribute statsFileAttr = renderSettingsPrim.GetAttribute(_tokens->statsFile)) {
         VtValue statsFileValue;
-        if (statsFileAttr.Get(&statsFileValue, time.frame)) {
+        // We only read this attribute if it's not explicitely set in the command line
+        if (commandLine.find(" -statsfile ") == std::string::npos && statsFileAttr.Get(&statsFileValue, time.frame)) {
             const std::string statsFile = VtValueGetString(statsFileValue);
             AiStatsSetFileName(statsFile.c_str());
         }
@@ -896,7 +901,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     // profile file
     if (UsdAttribute profileFileAttr = renderSettingsPrim.GetAttribute(_tokens->profileFile)) {
         VtValue profileFileValue;
-        if (profileFileAttr.Get(&profileFileValue, time.frame)) {
+        // We only read this attribute if it's not explicitely set in the command line
+        if (commandLine.find(" -profile ") == std::string::npos && profileFileAttr.Get(&profileFileValue, time.frame)) {
             const std::string profileFile = VtValueGetString(profileFileValue);
             AiProfileSetFileName(profileFile.c_str());
         }

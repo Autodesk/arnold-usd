@@ -33,6 +33,9 @@ public:
     void SetInteractive(bool b) {_interactive = b;}
     bool GetInteractive() const {return _interactive;}
 
+    void SetCommandLine(const std::string& cmd) {_commandLine = cmd;}
+    const std::string &GetCommandLine() const {return _commandLine;}
+
     void Read(const std::string &filename, 
         AtArray *overrides, const std::string &path = "");
 
@@ -43,4 +46,5 @@ protected:
     AtArray *_overrides = nullptr;
     long int _cacheId = 0;   // usdStage cacheID used with a StageCache
     bool _interactive = false; // interactive readers can update Arnold when the usdStage changes
+    std::string _commandLine; // the eventual command line used to render this file (e.g. kick)
 };
