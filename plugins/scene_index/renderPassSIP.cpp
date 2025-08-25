@@ -8,7 +8,7 @@
 #include "renderPassSIP.h"
 
 #ifdef ENABLE_SCENE_INDEX
-
+#include "constant_strings.h"
 #include <pxr/base/tf/smallVector.h>
 #include <pxr/base/trace/trace.h>
 #include <pxr/imaging/hd/collectionSchema.h>
@@ -52,6 +52,7 @@ HdArnoldRenderPassSceneIndexRefPtr HdArnoldRenderPassSceneIndex::New(const HdSce
 HdArnoldRenderPassSceneIndex::HdArnoldRenderPassSceneIndex(const HdSceneIndexBaseRefPtr &inputSceneIndex)
     : HdSingleInputFilteringSceneIndexBase(inputSceneIndex)
 {
+    SetDisplayName("Arnold: render passes");
 }
 
 static bool _IsGeometryType(const TfToken &primType)
@@ -82,18 +83,18 @@ static bool _IsVisible(const HdContainerDataSourceHandle &primSource)
 
 static bool _IsVisibleToCamera(const HdContainerDataSourceHandle &primSource)
 {
-    // TODO riAttributesVisibilityCamera camera visibility
     if (const HdPrimvarsSchema primvarsSchema = HdPrimvarsSchema::GetFromParent(primSource)) {
-        // if (HdPrimvarSchema primvarSchema = primvarsSchema.GetPrimvar(_tokens->riAttributesVisibilityCamera)) {
-        //     if (const auto sampledDataSource = primvarSchema.GetPrimvarValue()) {
-        //         const VtValue value = sampledDataSource->GetValue(0);
-        //         if (!value.IsEmpty()) {
-        //             if (value.IsHolding<VtArray<bool>>()) {
-        //                 return value.UncheckedGet<bool>();
-        //             }
-        //         }
-        //     }
-        // }
+        // TODO: we should also check the arnold:visibility parameter
+        if (HdPrimvarSchema primvarSchema = primvarsSchema.GetPrimvar(str::t_visibilityCamera)) {
+            if (const auto sampledDataSource = primvarSchema.GetPrimvarValue()) {
+                const VtValue value = sampledDataSource->GetValue(0);
+                if (!value.IsEmpty()) {
+                    if (value.IsHolding<VtArray<bool>>()) {
+                        return value.UncheckedGet<bool>();
+                    }
+                }
+            }
+        }
     }
     return true;
 }
@@ -153,22 +154,21 @@ HdSceneIndexPrim HdArnoldRenderPassSceneIndex::GetPrim(const SdfPath &primPath) 
         prim.dataSource = HdOverlayContainerDataSource::New(invisDs, prim.dataSource);
     }
 
-    // TODO to Arnold visibility
-    // Camera Visibility -> ri:visibility:camera
+    // Camera Visibility -> arnold:visibility:camera
     //
     // Renderable prims that are camera-visible in the upstream scene index,
-    // but excluded from the pass cameraVisibility collection, get their
-    // riAttributesVisibilityCamera primvar overriden to 0.
+    // but excluded from the pass cameraVisibility collection
     //
-    // if (_activeRenderPass.DoesOverrideCameraVis(primPath, prim)) {
-    //     static const HdContainerDataSourceHandle cameraInvisDs =
-    //         HdPrimvarSchema::Builder()
-    //             .SetPrimvarValue(HdRetainedTypedSampledDataSource<int>::New(0))
-    //             .SetInterpolation(HdPrimvarSchema::BuildInterpolationDataSource(HdPrimvarSchemaTokens->constant))
-    //             .Build();
-    //     primvarNames.push_back(_tokens->riAttributesVisibilityCamera);
-    //     primvarVals.push_back(cameraInvisDs);
-    // }
+    // TODO: Since we have also the arnold:visibility parameter, we should merge visibility:camera with visibility 
+    if (_activeRenderPass.DoesOverrideCameraVis(primPath, prim)) {
+        static const HdContainerDataSourceHandle cameraInvisDs =
+            HdPrimvarSchema::Builder()
+                .SetPrimvarValue(HdRetainedTypedSampledDataSource<bool>::New(false))
+                .SetInterpolation(HdPrimvarSchema::BuildInterpolationDataSource(HdPrimvarSchemaTokens->constant))
+                .Build();
+        primvarNames.push_back(str::t_visibilityCamera);
+        primvarVals.push_back(cameraInvisDs);
+    }
 
     // TODO to Arnold matte
     // Matte -> ri:Matte
@@ -465,12 +465,7 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
         insertionPhase, HdSceneIndexPluginRegistry::InsertionOrderAtStart);
 }
 
-HdArnoldRenderPassSceneIndexPlugin::HdArnoldRenderPassSceneIndexPlugin()
-{
-#if PXR_VERSION >= 2308
-    SetDisplayName("Arnold: render passes");
-#endif
-}
+HdArnoldRenderPassSceneIndexPlugin::HdArnoldRenderPassSceneIndexPlugin() = default; 
 
 HdSceneIndexBaseRefPtr HdArnoldRenderPassSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene, const HdContainerDataSourceHandle &inputArgs)
