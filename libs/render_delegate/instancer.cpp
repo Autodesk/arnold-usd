@@ -439,8 +439,6 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 
 void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate )
 {
-    printf("Setting primvars for prototype: %s\n", prototypeId.GetText());
-
     VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
     size_t instanceCount = instanceIndices.size();
 

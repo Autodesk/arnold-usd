@@ -20,7 +20,6 @@
 #include <pxr/imaging/hd/primOriginSchema.h>
 
 #include <constant_strings.h>
-#include <sstream>
 #include "instancer.h"
 #include "utils.h"
 
@@ -183,7 +182,6 @@ void HdArnoldShape::_SyncInstances(
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
     for (size_t i = 0; i < _instancers.size(); ++i) {
-        printf("\tInstancer %zu: %s\n", i, AiNodeGetName(_instancers[i]));
         AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
         renderDelegate->TrackRenderTag(_instancers[i], renderTag);
 
