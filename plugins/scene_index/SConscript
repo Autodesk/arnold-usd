@@ -29,6 +29,7 @@ source_files = [
 	'propagateDirtyPrimsSIP.cpp',
     'nurbsApproximatingSIP.cpp',
     'meshLightResolvingSIP.cpp',
+    'renderPassSIP.cpp',
 ]
 
 if not system.is_windows:

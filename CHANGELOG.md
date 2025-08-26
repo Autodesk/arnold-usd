@@ -5,8 +5,13 @@
 
 ### Features
 
+## Special release htoa-644 for Houdini21
+
+### Features
+
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
+- [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
 
 ### Bug Fixes
 
