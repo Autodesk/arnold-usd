@@ -326,6 +326,27 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
     AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
 
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    // Declare and set a constant array INT user parameter for crypto_object_offset
+    AiNodeDeclare(instancerNode, AtString("instance_crypto_object"), "constant ARRAY STRING");
+    AtArray* cryptoOffsets = AiArrayAllocate(numInstances, 1, AI_TYPE_STRING);
+    for (int offset = 0; offset < numInstances; ++offset) {
+        std::string name = "/addpointinstancer1/Prototypes/cube1_" + std::to_string(offset);
+        AiArraySetStr(cryptoOffsets, offset, AtString(name.c_str()));
+    }
+    AiNodeSetArray(instancerNode, AtString("instance_crypto_object"), cryptoOffsets);
+
+    // Set a per instance offset
+    //AiNodeDeclare(instancerNode, AtString("instance_crypto_object_offset"), "constant ARRAY INT");
+    //AtArray* cryptoOffsets = AiArrayAllocate(numInstances, 1, AI_TYPE_INT);
+    //for (int offset = 0; offset < numInstances; ++offset) {
+    //    AiArraySetInt(cryptoOffsets, offset, offset);
+    //}
+    //AiNodeSetArray(instancerNode, AtString("instance_crypto_object_offset"), cryptoOffsets);
+#endif // ENABLE_SCENE_INDEX // Hydra2
+
+    // TODO create a string array userdata for each instance id
+
     if (sampleArray.count == 0 || sampleArray.values.front().empty()) {
         AiNodeResetParameter(instancerNode, str::instance_matrix);
         AiNodeResetParameter(instancerNode, str::node_idxs);
@@ -418,6 +439,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 
 void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate )
 {
+    printf("Setting primvars for prototype: %s\n", prototypeId.GetText());
 
     VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
     size_t instanceCount = instanceIndices.size();

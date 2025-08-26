@@ -17,7 +17,10 @@
 // limitations under the License.
 #include "shape.h"
 
+#include <pxr/imaging/hd/primOriginSchema.h>
+
 #include <constant_strings.h>
+#include <sstream>
 #include "instancer.h"
 #include "utils.h"
 
@@ -65,6 +68,26 @@ void HdArnoldShape::Sync(
         return;
 
     auto& id = rprim->GetId();
+//#ifdef ENABLE_SCENE_INDEX // Hydra2
+//    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+//    if (sceneIndex) {
+//        // Identify if this rprim comes from a prototype in a point instancer, then rename it
+//        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+//        HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
+//        if (primOrigin) {
+//            const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+//
+//            param.Interrupt();
+//
+//            if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
+//                AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
+//            }
+//            AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
+//        }
+//
+//    }
+//#endif // ENABLE_SCENE_INDEX // Hydra2
+
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
@@ -160,6 +183,7 @@ void HdArnoldShape::_SyncInstances(
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
     for (size_t i = 0; i < _instancers.size(); ++i) {
+        printf("\tInstancer %zu: %s\n", i, AiNodeGetName(_instancers[i]));
         AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
         renderDelegate->TrackRenderTag(_instancers[i], renderTag);
 
