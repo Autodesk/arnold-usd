@@ -5,8 +5,6 @@
 
 ### Features
 
-- [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
-
 ## Special release htoa-644 for Houdini21
 
 ### Features
