@@ -17,7 +17,9 @@
 // limitations under the License.
 #include "shape.h"
 
+#ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/primOriginSchema.h>
+#endif // ENABLE_SCENE_INDEX // Hydra2
 
 #include <constant_strings.h>
 #include "instancer.h"
