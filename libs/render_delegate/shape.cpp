@@ -19,6 +19,7 @@
 
 #ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/primOriginSchema.h>
+#include <pxr/imaging/hd/instancedBySchema.h>
 #endif // ENABLE_SCENE_INDEX // Hydra2
 
 #include <constant_strings.h>
@@ -73,20 +74,23 @@ void HdArnoldShape::Sync(
     HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
     if (sceneIndex) {
         // Identify if this rprim comes from a prototype in a point instancer,
-        // then set the metadata to override it's cryptomatte id
+        // then set the metadata to override it's cryptomatte id with the
+        // prototype path minus the hash suffix
         HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
-        HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
-        if (primOrigin) {
-            const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+        HdInstancedBySchema instancedBy = HdInstancedBySchema::GetFromParent(prim.dataSource).GetContainer();
+        if (instancedBy) {
+            HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
+            if (primOrigin) {
+                const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
 
-            param.Interrupt();
+                param.Interrupt();
 
-            if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
-                AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
+                if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
+                    AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
+                }
+                AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
             }
-            AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
         }
-
     }
 #endif // ENABLE_SCENE_INDEX // Hydra2
 
