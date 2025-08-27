@@ -72,7 +72,8 @@ void HdArnoldShape::Sync(
 #ifdef ENABLE_SCENE_INDEX // Hydra2
     HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
     if (sceneIndex) {
-        // Identify if this rprim comes from a prototype in a point instancer, then rename it
+        // Identify if this rprim comes from a prototype in a point instancer,
+        // then set the metadata to override it's cryptomatte id
         HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
         HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
         if (primOrigin) {
