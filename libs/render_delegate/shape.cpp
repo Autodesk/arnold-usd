@@ -67,25 +67,25 @@ void HdArnoldShape::Sync(
         return;
 
     auto& id = rprim->GetId();
-//#ifdef ENABLE_SCENE_INDEX // Hydra2
-//    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-//    if (sceneIndex) {
-//        // Identify if this rprim comes from a prototype in a point instancer, then rename it
-//        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
-//        HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
-//        if (primOrigin) {
-//            const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
-//
-//            param.Interrupt();
-//
-//            if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
-//                AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
-//            }
-//            AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
-//        }
-//
-//    }
-//#endif // ENABLE_SCENE_INDEX // Hydra2
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+    if (sceneIndex) {
+        // Identify if this rprim comes from a prototype in a point instancer, then rename it
+        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+        HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
+        if (primOrigin) {
+            const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+
+            param.Interrupt();
+
+            if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
+                AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
+            }
+            AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
+        }
+
+    }
+#endif // ENABLE_SCENE_INDEX // Hydra2
 
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         param.Interrupt();
