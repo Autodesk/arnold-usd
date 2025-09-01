@@ -110,6 +110,7 @@ ASTR2(transformKeys, "arnold:transform_keys");
 ASTR2(ui_groups, "ui.groups");
 ASTR2(usd_hide, "usd.hide");
 ASTR2(visibility_prefix, "visibility:");
+ASTR2(visibilityCamera, "arnold:visibility:camera");
 
 ASTR(AA_sample_clamp);
 ASTR(AA_sample_clamp_affects_aovs);
