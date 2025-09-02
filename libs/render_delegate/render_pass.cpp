@@ -48,6 +48,8 @@
 #include "utils.h"
 #include "rendersettings_utils.h"
 
+#include <iostream>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -172,16 +174,20 @@ const TfToken _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
     return _GetTokenFromHdFormat(buffer->GetFormat());
 }
 
-GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
+CameraUtilFraming _GetFraming(const HdRenderPassStateSharedPtr& renderPassState)
 {
     const auto& framing = renderPassState->GetFraming();
     if (framing.IsValid()) {
-        return framing.dataWindow;
+        return framing;
     } else {
         // For applications that use the old viewport API instead of
         // the new camera framing API.
-        const auto& vp = renderPassState->GetViewport();
-        return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));
+        const auto& viewport = renderPassState->GetViewport();
+        const auto viewportRect = GfRect2i(
+            GfVec2i(int(viewport[0]), int(viewport[1])), 
+            GfVec2i(int(viewport[2]), int(viewport[3]))
+        );
+        return CameraUtilFraming(viewportRect);
     }
 }
 
@@ -406,9 +412,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // TODO: We should test the type of the arnold camera instead ?
         isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;
     }
-    const auto dataWindow = _GetDataWindow(renderPassState);
-    const auto width = static_cast<int>(dataWindow.GetWidth());
-    const auto height = static_cast<int>(dataWindow.GetHeight());
 
     const auto projMtx = renderPassState->GetProjectionMatrix();
     const auto viewMtx = renderPassState->GetWorldToViewMatrix();
@@ -443,6 +446,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_camera, str::matrix, invViewMtx);
         }
     }
+
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(static_cast<int>(_framing.displayWindow.GetSize()[0]) * static_cast<int>(_framing.displayWindow.GetSize()[1]) * 4);
+        for (auto& buffer : storage) {
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->WriteBucket(0, 0, static_cast<int>(_framing.displayWindow.GetSize()[0]), static_cast<int>(_framing.displayWindow.GetSize()[1]), HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
+
+    const auto newFraming = _GetFraming(renderPassState);
+    const bool framingChanged = newFraming != _framing;
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -457,14 +473,24 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
 
-    if (width != _width || height != _height) {
+    if (framingChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
-        _width = width;
-        _height = height;
+        _framing = newFraming;
         auto* options = _renderDelegate->GetOptions();
-        AiNodeSetInt(options, str::xres, _width);
-        AiNodeSetInt(options, str::yres, _height);
+        std::cout << " width() : " << static_cast<int>(_framing.displayWindow.GetSize()[0]) << std::endl;
+        std::cout << " height() : " << static_cast<int>(_framing.displayWindow.GetSize()[1]) << std::endl;
+        AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
+        AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
+        clearBuffers(_renderBuffers);
+        std::cout << " GetMinX() : " << _framing.dataWindow.GetMinX() << std::endl;
+        std::cout << " GetMaxX() : " << _framing.dataWindow.GetMaxX() << std::endl;
+        std::cout << " GetMinY() : " << _framing.dataWindow.GetMinY() << std::endl;
+        std::cout << " GetMaxY() : " << _framing.dataWindow.GetMaxY() << std::endl;
+        AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
+        AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
+        AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
+        AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
         // With the ortho camera we need to update the screen_window_min/max when the window changes
         // This is unfortunate as we won't be able to have multiple viewport with the same ortho camera
         // Another option would be to keep an ortho camera on this class and update it ?
@@ -480,6 +506,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 
     if (windowChanged) {
+        std::cout << "windowCHanged" << std::endl;
         renderParam->Interrupt(true, false);
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
@@ -502,7 +529,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             GfVec2i renderSettingsRes = _renderDelegate->GetResolution();
 
             // we want the output render buffer to have a resolution equal to 
-            // _width/_height. This means we need to adjust xres/yres, so that
+            // width/height. This means we need to adjust xres/yres, so that
             // region min/max corresponds to the render resolution
             float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
             if (xDelta > AI_EPSILON) {
@@ -512,17 +539,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (_renderDelegate->IsBatchContext() && renderSettingsRes[0] > 0)
                     AiNodeSetInt(options, str::xres, renderSettingsRes[0]);
                 else {
-                    AiNodeSetInt(options, str::xres, std::round(_width * (xInvDelta)));    
+                    AiNodeSetInt(options, str::xres, std::round(_framing.displayWindow.GetSize()[0] * (xInvDelta)));    
                 }
                 // Normalize windowNDC so that its delta is 1
                 windowNDC[0] *= xInvDelta;
                 windowNDC[2] *= xInvDelta;
             } else {
-                AiNodeSetInt(options, str::xres, _width);
+                AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
             }
-            // we want region_max_x - region_min_x to be equal to _width - 1
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
+            // we want region_max_x - region_min_x to be equal to width - 1
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _framing.displayWindow.GetSize()[0]));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _framing.displayWindow.GetSize()[0]) - 1);
             
             float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
             if (yDelta > AI_EPSILON) {
@@ -532,7 +559,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (_renderDelegate->IsBatchContext() && renderSettingsRes[1] > 0)
                     AiNodeSetInt(options, str::yres, renderSettingsRes[1]);
                 else {
-                    AiNodeSetInt(options, str::yres, std::round(_height * (yInvDelta)));
+                    AiNodeSetInt(options, str::yres, std::round(_framing.displayWindow.GetSize()[1] * (yInvDelta)));
                 }
                 // Normalize windowNDC so that its delta is 1
                 windowNDC[1] *= yInvDelta;    
@@ -544,12 +571,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             
             } else {
-                AiNodeSetInt(options, str::yres, _height);
+                AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
             }
 
-            // we want region_max_y - region_min_y to be equal to _height - 1
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
+            // we want region_max_y - region_min_y to be equal to height - 1
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _framing.displayWindow.GetSize()[1]));
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _framing.displayWindow.GetSize()[1]) - 1);
         } else {
             // the window was restored to defaults, we need to reset the region
             // attributes, as well as xres,yres, that could have been adjusted
@@ -558,8 +585,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeResetParameter(options, str::region_min_y);
             AiNodeResetParameter(options, str::region_max_x);
             AiNodeResetParameter(options, str::region_max_y);
-            AiNodeSetInt(options, str::xres, _width);
-            AiNodeSetInt(options, str::yres, _height);
+            AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
+            AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
@@ -629,16 +656,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             }),
         aovBindings.end());
-
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(_width * _height * 4);
-        for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
-            }
-        }
-    };
 
     TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
 
