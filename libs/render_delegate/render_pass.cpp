@@ -48,8 +48,6 @@
 #include "utils.h"
 #include "rendersettings_utils.h"
 
-#include <iostream>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -478,15 +476,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         renderParam->Interrupt(true, false);
         _framing = newFraming;
         auto* options = _renderDelegate->GetOptions();
-        std::cout << " width() : " << static_cast<int>(_framing.displayWindow.GetSize()[0]) << std::endl;
-        std::cout << " height() : " << static_cast<int>(_framing.displayWindow.GetSize()[1]) << std::endl;
         AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
         AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
         clearBuffers(_renderBuffers);
-        std::cout << " GetMinX() : " << _framing.dataWindow.GetMinX() << std::endl;
-        std::cout << " GetMaxX() : " << _framing.dataWindow.GetMaxX() << std::endl;
-        std::cout << " GetMinY() : " << _framing.dataWindow.GetMinY() << std::endl;
-        std::cout << " GetMaxY() : " << _framing.dataWindow.GetMaxY() << std::endl;
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
         AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
@@ -506,7 +498,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 
     if (windowChanged) {
-        std::cout << "windowCHanged" << std::endl;
         renderParam->Interrupt(true, false);
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
