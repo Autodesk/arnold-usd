@@ -64,8 +64,6 @@ public:
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override;
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
-    void SetDebug(bool b) override;
-    void SetThreadCount(unsigned int t) override;
     void SetConvertPrimitives(bool b) override;
     void SetMask(int m) override { _mask = m; }
     void SetPurpose(const std::string &p) override { _purpose = TfToken(p.c_str()); }
@@ -78,11 +76,9 @@ public:
     UsdArnoldReaderRegistry *GetRegistry() { return _readerRegistry; }
     AtUniverse *GetUniverse() { return _universe; }
     const AtNode *GetProceduralParent() const { return _procParent; }
-    bool GetDebug() const { return _debug; }
     bool GetConvertPrimitives() const { return _convert; }
     const TimeSettings &GetTimeSettings() const { return _time; }
         
-    unsigned int GetThreadCount() const { return _threadCount; }
     int GetMask() const { return _mask; }
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
@@ -94,7 +90,6 @@ public:
     static unsigned int ProcessConnectionsThread(void *data);
 
     void TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
-                                    int threadId, int threadCount,
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix);
 
 
@@ -129,15 +124,11 @@ public:
     // we want to avoid this cost
     void LockReader()
     {
-        // for _threadCount = 0, or > 1 we want to lock
-        // for this reader
-        if (_threadCount != 1)
-            _readerLock.lock();
+        _readerLock.lock();
     }
     void UnlockReader()
     {
-        if (_threadCount != 1)
-            _readerLock.unlock();
+        _readerLock.unlock();
     }
 
     // Reading a stage in multithread implies to go
@@ -209,8 +200,6 @@ private:
     AtUniverse *_universe;              // only set if a specific universe is being used
     TimeSettings _time;
     bool _convert; // do we want to convert the primitives attributes
-    bool _debug;
-    unsigned int _threadCount;
     int _mask;             // mask based on the arnold flags (AI_NODE_SHADER, etc...) to control
                            // what type of nodes are being read
     std::string _renderSettings; // which RenderSettings prims to consider for the Arnold options
