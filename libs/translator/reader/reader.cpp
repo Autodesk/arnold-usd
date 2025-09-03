@@ -121,7 +121,6 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
         UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
         UsdArnoldReader *reader = threadContext.GetReader();
         TfToken visibility, purpose;
-        bool multithread = false;
         int index = 0;        
         int pointInstancerCount = 0;
         std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
@@ -479,18 +478,15 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // but won't process any connection between nodes, since we need to wait for
     // the target nodes to be created first. We stack the connections, and process them when finished
     UsdThreadData threadData;
-    void * threads = nullptr;
-
+    
     // First step, we traverse the stage in order to create all nodes
     _readStep = READ_TRAVERSE;
     threadData.threadContext.SetReader(this);
     threadData.rootPrim = rootPrimPtr;
     threadData.threadContext.SetDispatcher(_dispatcher);
     threadData.context = new UsdArnoldReaderContext(&threadData.threadContext);
-    threads = AiThreadCreate(UsdArnoldReader::ReaderThread, &threadData, AI_PRIORITY_HIGH);
+    ReaderThread(&threadData);
 
-    AiThreadWait(threads);
-    AiThreadClose(threads);
     UsdArnoldReaderThreadContext &context = threadData.threadContext;
     _nodes = context.GetNodes();
     _nodeNames = context.GetNodeNames();
@@ -500,7 +496,6 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     context.GetNodeNames().clear();
     context.GetLightLinksMap().clear();
     context.GetShadowLinksMap().clear();
-    threads = nullptr;
     
     // Clear the dispatcher here as we no longer need it.
     delete _dispatcher;
@@ -509,8 +504,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // In a second step, each thread goes through the connections it stacked
     // and processes them given that now all the nodes were supposed to be created.
     _readStep = READ_PROCESS_CONNECTIONS;
-        // now I just want to append the links from each thread context
-        threads = AiThreadCreate(UsdArnoldReader::ProcessConnectionsThread, &threadData, AI_PRIORITY_HIGH);
+    ProcessConnectionsThread(&threadData);
     
     std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections;
     // There is an exception though, some connections could be pointing
@@ -519,9 +513,6 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // need to force their export. Here, all the connections pointing
     // to nodes that don't exist yet are kept in each context connections list.
     // We append them in a list of "dangling connections".
-    AiThreadWait(threads);
-    AiThreadClose(threads);
-    threads = nullptr;
     danglingConnections = threadData.threadContext.GetConnections();
     threadData.threadContext.ClearConnections();
 

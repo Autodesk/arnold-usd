@@ -15,7 +15,6 @@ public:
     virtual void SetFrame(float frame) = 0;
     virtual void SetId(unsigned int id) = 0;
     virtual void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) = 0;
-    virtual void SetThreadCount(unsigned int t) {};
     virtual void SetConvertPrimitives(bool b) = 0;
     virtual void SetPurpose(const std::string &p) = 0;
     virtual void SetMask(int m) = 0;
