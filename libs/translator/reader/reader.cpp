@@ -115,7 +115,7 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
     // Traverse the stage, either the full one, or starting from a root primitive
     // (in case an object_path is set). We need to have "pre" and "post" visits in order
     // to keep track of the primvars list at every point in the hierarchy.
-    auto TraverseNodes = [](UsdPrimRange& range, UsdArnoldReaderContext &context, 
+    auto TraverseNodes = [](UsdPrimRange& range, UsdArnoldReaderContext &context,
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix, std::unordered_set<SdfPath, TfHash> *includeNodes = nullptr)
     {
         UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
@@ -488,10 +488,10 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     ReaderThread(&threadData);
 
     UsdArnoldReaderThreadContext &context = threadData.threadContext;
-    _nodes = context.GetNodes();
-    _nodeNames = context.GetNodeNames();
-    _lightLinksMap = context.GetLightLinksMap();
-    _shadowLinksMap = context.GetShadowLinksMap();
+    _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
+    _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
+    _lightLinksMap.insert(context.GetLightLinksMap().begin(), context.GetLightLinksMap().end());
+    _shadowLinksMap.insert(context.GetShadowLinksMap().begin(), context.GetShadowLinksMap().end());
     context.GetNodes().clear();
     context.GetNodeNames().clear();
     context.GetLightLinksMap().clear();
@@ -506,14 +506,15 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     _readStep = READ_PROCESS_CONNECTIONS;
     ProcessConnectionsThread(&threadData);
     
-    std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections;
     // There is an exception though, some connections could be pointing
     // to primitives that were skipped because they weren't visible.
     // In that case the arnold nodes still don't exist yet, and we
     // need to force their export. Here, all the connections pointing
     // to nodes that don't exist yet are kept in each context connections list.
     // We append them in a list of "dangling connections".
-    danglingConnections = threadData.threadContext.GetConnections();
+    std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections = 
+        threadData.threadContext.GetConnections();
+        
     threadData.threadContext.ClearConnections();
 
     // 3rd step, in case some links were pointing to nodes that didn't exist.

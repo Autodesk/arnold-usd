@@ -136,7 +136,6 @@ usd
  object_path ""
  frame 1
  debug on
- threads 1
  declare dcc_name constant STRING
  dcc_name "arnold_7_instanceableShape"
 }
