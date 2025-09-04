@@ -72,15 +72,6 @@ namespace {
             delete context;
         }
     };
-    struct UsdThreadData {
-        UsdThreadData() : rootPrim(nullptr), 
-                            context(nullptr), dispatcher(nullptr) {}
-
-        UsdPrim *rootPrim;
-        UsdArnoldReaderThreadContext threadContext;
-        UsdArnoldReaderContext *context;
-        WorkDispatcher *dispatcher;
-    };
 };
 
 
@@ -345,45 +336,6 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
     }
 }
 
-unsigned int UsdArnoldReader::ReaderThread(void *data)
-{
-    UsdThreadData *threadData = (UsdThreadData *)data;
-    if (!threadData) 
-        return 0;
-
-    UsdArnoldReaderThreadContext &threadContext = threadData->threadContext;
-    UsdArnoldReader *reader = threadContext.GetReader();
-    // Each thread context will have a stack of primvars vectors,
-    // which represent the primvars at the current level of hierarchy.
-    // Every time we find a Xform prim, we add an element to the stack 
-    // with the updated primvars list. In every "post" visit, we pop the last
-    // element. Thus, every time we'll read a prim, the last element of this 
-    // stack will represent its input primvars that it inherits (see #282)
-    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
-    primvarsStack.clear(); 
-    primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
-    primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
-    
-    // all nodes under a point instancer hierarchy need to be hidden. So during our 
-    // traversal we want to count the amount of point instancers below the current hierarchy,
-    // so that we can re-enable visibility when the count is back to 0 (#458)
-    reader->TraverseStage(threadData->rootPrim, *threadData->context, true, true, nullptr);
-
-    // Wait until all the jobs we started finished the translation
-    if (reader->GetDispatcher())
-        reader->GetDispatcher()->Wait();
-
-    return 0;
-}
-unsigned int UsdArnoldReader::ProcessConnectionsThread(void *data)
-{
-    UsdThreadData *threadData = (UsdThreadData *)data;
-    if (threadData) {
-        threadData->threadContext.ProcessConnections();
-    }
-    return 0;
-}
-
 void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 {
     UsdPrim *rootPrimPtr = nullptr;
@@ -477,25 +429,39 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // We'll be looping over the stage primitives,
     // but won't process any connection between nodes, since we need to wait for
     // the target nodes to be created first. We stack the connections, and process them when finished
-    UsdThreadData threadData;
     
     // First step, we traverse the stage in order to create all nodes
     _readStep = READ_TRAVERSE;
-    threadData.threadContext.SetReader(this);
-    threadData.rootPrim = rootPrimPtr;
-    threadData.threadContext.SetDispatcher(_dispatcher);
-    threadData.context = new UsdArnoldReaderContext(&threadData.threadContext);
-    ReaderThread(&threadData);
+    UsdArnoldReaderThreadContext threadContext;
+    threadContext.SetReader(this);
+    threadContext.SetDispatcher(_dispatcher);
+    UsdArnoldReaderContext context(&threadContext);
+    
+    // Each thread context will have a stack of primvars vectors,
+    // which represent the primvars at the current level of hierarchy.
+    // Every time we find a Xform prim, we add an element to the stack 
+    // with the updated primvars list. In every "post" visit, we pop the last
+    // element. Thus, every time we'll read a prim, the last element of this 
+    // stack will represent its input primvars that it inherits (see #282)
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
+    primvarsStack.clear(); 
+    primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
+    primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
+    
+    // all nodes under a point instancer hierarchy need to be hidden. So during our 
+    // traversal we want to count the amount of point instancers below the current hierarchy,
+    // so that we can re-enable visibility when the count is back to 0 (#458)
+    TraverseStage(rootPrimPtr, context, true, true, nullptr);
+    _dispatcher->Wait();
 
-    UsdArnoldReaderThreadContext &context = threadData.threadContext;
-    _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
-    _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
-    _lightLinksMap.insert(context.GetLightLinksMap().begin(), context.GetLightLinksMap().end());
-    _shadowLinksMap.insert(context.GetShadowLinksMap().begin(), context.GetShadowLinksMap().end());
-    context.GetNodes().clear();
-    context.GetNodeNames().clear();
-    context.GetLightLinksMap().clear();
-    context.GetShadowLinksMap().clear();
+    _nodes.insert(_nodes.end(), threadContext.GetNodes().begin(), threadContext.GetNodes().end());
+    _nodeNames.insert(threadContext.GetNodeNames().begin(), threadContext.GetNodeNames().end());
+    _lightLinksMap.insert(threadContext.GetLightLinksMap().begin(), threadContext.GetLightLinksMap().end());
+    _shadowLinksMap.insert(threadContext.GetShadowLinksMap().begin(), threadContext.GetShadowLinksMap().end());
+    threadContext.GetNodes().clear();
+    threadContext.GetNodeNames().clear();
+    threadContext.GetLightLinksMap().clear();
+    threadContext.GetShadowLinksMap().clear();
     
     // Clear the dispatcher here as we no longer need it.
     delete _dispatcher;
@@ -504,7 +470,8 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // In a second step, each thread goes through the connections it stacked
     // and processes them given that now all the nodes were supposed to be created.
     _readStep = READ_PROCESS_CONNECTIONS;
-    ProcessConnectionsThread(&threadData);
+    threadContext.ProcessConnections();
+    
     
     // There is an exception though, some connections could be pointing
     // to primitives that were skipped because they weren't visible.
@@ -513,9 +480,9 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // to nodes that don't exist yet are kept in each context connections list.
     // We append them in a list of "dangling connections".
     std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections = 
-        threadData.threadContext.GetConnections();
-        
-    threadData.threadContext.ClearConnections();
+        threadContext.GetConnections();
+
+    threadContext.ClearConnections();
 
     // 3rd step, in case some links were pointing to nodes that didn't exist.
     // If they were skipped because of their visibility, we need to force
@@ -523,7 +490,6 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // synchronizations between the threads.
     _readStep = READ_DANGLING_CONNECTIONS;
     if (!danglingConnections.empty()) {
-        UsdArnoldReaderThreadContext &context = threadData.threadContext;
         // loop over the dangling connections, ensure the node still doesn't exist
         // (as it might be referenced multiple times in our list),
         // and if not we try to read it
@@ -534,28 +500,26 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                 SdfPath sdfPath(name);
                 UsdPrim prim = _stage->GetPrimAtPath(sdfPath);
                 if (prim)
-                    ReadPrimitive(prim, *threadData.context);
+                    ReadPrimitive(prim, context);
             }
             // we can now process the connection
-            context.ProcessConnection(conn);
+            threadContext.ProcessConnection(conn);
         }
         // Some nodes were possibly created in the above loop,
         // we need to append them to our reader
-        _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
-        _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
-        _lightLinksMap.insert(context.GetLightLinksMap().begin(), context.GetLightLinksMap().end());
-        _shadowLinksMap.insert(context.GetShadowLinksMap().begin(), context.GetShadowLinksMap().end());
-        context.GetNodeNames().clear();
-        context.GetNodes().clear();
-        context.GetLightLinksMap().clear();
-        context.GetShadowLinksMap().clear();
+        _nodes.insert(_nodes.end(), threadContext.GetNodes().begin(), threadContext.GetNodes().end());
+        _nodeNames.insert(threadContext.GetNodeNames().begin(), threadContext.GetNodeNames().end());
+        _lightLinksMap.insert(threadContext.GetLightLinksMap().begin(), threadContext.GetLightLinksMap().end());
+        _shadowLinksMap.insert(threadContext.GetShadowLinksMap().begin(), threadContext.GetShadowLinksMap().end());
+        threadContext.GetNodeNames().clear();
+        threadContext.GetNodes().clear();
+        threadContext.GetLightLinksMap().clear();
+        threadContext.GetShadowLinksMap().clear();
     }
 
     // Finally, process all the light links
     ReadLightLinks();
 
-    delete threadData.context;
-    
     if (_cacheId != 0) {
         std::lock_guard<AtMutex> guard(s_globalReaderMutex);        
         const auto &cacheIter = s_cacheRefCount.find(_cacheId);
@@ -1068,11 +1032,9 @@ void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
 }
 void UsdArnoldReaderThreadContext::AddNodeName(const std::string &name, AtNode *node)
 {
-    if (_dispatcher)
-        _addNodeNameLock.lock();
+    _addNodeNameLock.lock();
     _nodeNames[name] = node;
-    if (_dispatcher)
-        _addNodeNameLock.unlock();
+    _addNodeNameLock.unlock();
 }
 
 void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
@@ -1106,11 +1068,9 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
         AiNodeSetUInt(node, str::id, _reader->GetId());
     }
 
-    if (_dispatcher)
-        _createNodeLock.lock();
+    _createNodeLock.lock();
     _nodes.push_back(node);
-    if (_dispatcher)
-        _createNodeLock.unlock();
+    _createNodeLock.unlock();
 
     return node;
 }
@@ -1121,14 +1081,9 @@ void UsdArnoldReaderThreadContext::AddConnection(
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
         // If we have a dispatcher, we want to lock here
-        if (_dispatcher)
-            _addConnectionLock.lock();
-
-
+        _addConnectionLock.lock();
         ArnoldAPIAdapter::AddConnection(source, attr, target, type, outputElement);
-
-        if (_dispatcher)
-            _addConnectionLock.unlock();
+        _addConnectionLock.unlock();
 
     } else if (_reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
         // we're in the main thread, processing the dangling connections. We want to
@@ -1200,22 +1155,16 @@ AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, c
 
 void UsdArnoldReaderThreadContext::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
-    // If we have a dispatcher, we want to lock here
-    if (_dispatcher)
-        _addConnectionLock.lock();
+    _addConnectionLock.lock();
     _lightLinksMap[lightName] = collectionAPI;
-    if (_dispatcher)
-        _addConnectionLock.unlock();
+    _addConnectionLock.unlock();
 }
 
 void UsdArnoldReaderThreadContext::RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
-    // If we have a dispatcher, we want to lock here
-    if (_dispatcher)
-        _addConnectionLock.lock();
+    _addConnectionLock.lock();
     _shadowLinksMap[lightName] = collectionAPI; 
-    if (_dispatcher)
-        _addConnectionLock.unlock();
+    _addConnectionLock.unlock();
 }
 
 

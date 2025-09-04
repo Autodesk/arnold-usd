@@ -86,9 +86,6 @@ public:
 
     bool IsUpdating() const {return _updating;}
 
-    static unsigned int ReaderThread(void *data);
-    static unsigned int ProcessConnectionsThread(void *data);
-
     void TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix);
 
