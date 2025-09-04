@@ -106,17 +106,15 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
     // Traverse the stage, either the full one, or starting from a root primitive
     // (in case an object_path is set). We need to have "pre" and "post" visits in order
     // to keep track of the primvars list at every point in the hierarchy.
-    auto TraverseNodes = [](UsdPrimRange& range, UsdArnoldReaderContext &context,
+    auto TraverseNodes = [&](UsdPrimRange& range, UsdArnoldReaderContext &context,
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix, std::unordered_set<SdfPath, TfHash> *includeNodes = nullptr)
     {
-        UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
-        UsdArnoldReader *reader = threadContext.GetReader();
         TfToken visibility, purpose;
         int index = 0;        
         int pointInstancerCount = 0;
-        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
+        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = _apiAdapter->GetPrimvarsStack();
         UsdAttribute attr;
-        const TimeSettings &time = reader->GetTimeSettings();
+        const TimeSettings &time = GetTimeSettings();
         int includeNodesCount = 0;
         float frame = time.frame;
 
@@ -159,12 +157,12 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                     if (--pointInstancerCount <= 0)
                     {
                         pointInstancerCount = 0; // safety, to ensure we don't have negative values
-                        threadContext.SetHidden(false);
+                        _apiAdapter->SetHidden(false);
                     }                
                 }
                 if (isSkelRoot) {
                     // FIXME make it a vector of pointers
-                    threadContext.ClearSkelData();
+                    _apiAdapter->ClearSkelData();
                 }
 
                 if (!updateHiddenNodes.empty() && updateHiddenNodes.back() == prim.GetPath()) {
@@ -176,7 +174,7 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             }
       
             if (isSkelRoot) {
-                threadContext.CreateSkelData(prim);
+                _apiAdapter->CreateSkelData(prim);
             }
             // Get the inheritable primvars for this xform, by giving its parent ones as input
             UsdGeomPrimvarsAPI primvarsAPI(prim);
@@ -209,7 +207,7 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                     pruneChildren |= ((attr.Get(&purpose, frame) && 
                             !purpose.IsEmpty() && 
                             purpose != UsdGeomTokens->default_ && 
-                            purpose != reader->GetPurpose()));
+                            purpose != GetPurpose()));
                 }
                 
                 if (pruneChildren ) {
@@ -236,15 +234,15 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                     
                 // If this primitive was previously visible and it's now hidden, we must force
                 // the thread context to be hidden before we read this primitive
-                bool restoreHidden = updateHiddenNodes.empty() ? false : !threadContext.IsHidden();
+                bool restoreHidden = updateHiddenNodes.empty() ? false : !_apiAdapter->IsHidden();
                 if (restoreHidden)
-                    threadContext.SetHidden(true);
+                    _apiAdapter->SetHidden(true);
 
-                reader->ReadPrimitive(prim, context, isInstanceable, matrix);
+                ReadPrimitive(prim, context, isInstanceable, matrix);
 
                 // Eventually restore the hidden context, to be visible again
                 if (restoreHidden)
-                    threadContext.SetHidden(false);                    
+                    _apiAdapter->SetHidden(false);                    
             }
             // Note: if the registry didn't find any primReader, we're not prunning
             // its children nodes, but just skipping this one.
@@ -260,7 +258,7 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             if (isPointInstancer)
             {
                 ++pointInstancerCount;
-                threadContext.SetHidden(true);
+                _apiAdapter->SetHidden(true);
             }
         }
     };
@@ -329,7 +327,7 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
         // Otherwise, we just have a single primitive to export
         UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
         UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
-        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
+        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = _apiAdapter->GetPrimvarsStack();
         primvarsStack.resize(1);  
         primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
         TraverseNodes(range, context, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
@@ -432,10 +430,12 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     
     // First step, we traverse the stage in order to create all nodes
     _readStep = READ_TRAVERSE;
-    UsdArnoldReaderThreadContext threadContext;
-    threadContext.SetReader(this);
-    threadContext.SetDispatcher(_dispatcher);
-    UsdArnoldReaderContext context(&threadContext);
+    if (_apiAdapter == nullptr)
+        _apiAdapter = new UsdArnoldAPI();
+    
+    _apiAdapter->SetReader(this);
+    _apiAdapter->SetDispatcher(_dispatcher);
+    UsdArnoldReaderContext context(_apiAdapter);
     
     // Each thread context will have a stack of primvars vectors,
     // which represent the primvars at the current level of hierarchy.
@@ -443,7 +443,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // with the updated primvars list. In every "post" visit, we pop the last
     // element. Thus, every time we'll read a prim, the last element of this 
     // stack will represent its input primvars that it inherits (see #282)
-    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = _apiAdapter->GetPrimvarsStack();
     primvarsStack.clear(); 
     primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
     primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
@@ -454,14 +454,14 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     TraverseStage(rootPrimPtr, context, true, true, nullptr);
     _dispatcher->Wait();
 
-    _nodes.insert(_nodes.end(), threadContext.GetNodes().begin(), threadContext.GetNodes().end());
-    _nodeNames.insert(threadContext.GetNodeNames().begin(), threadContext.GetNodeNames().end());
-    _lightLinksMap.insert(threadContext.GetLightLinksMap().begin(), threadContext.GetLightLinksMap().end());
-    _shadowLinksMap.insert(threadContext.GetShadowLinksMap().begin(), threadContext.GetShadowLinksMap().end());
-    threadContext.GetNodes().clear();
-    threadContext.GetNodeNames().clear();
-    threadContext.GetLightLinksMap().clear();
-    threadContext.GetShadowLinksMap().clear();
+    _nodes.insert(_nodes.end(), _apiAdapter->GetNodes().begin(), _apiAdapter->GetNodes().end());
+    _nodeNames.insert(_apiAdapter->GetNodeNames().begin(), _apiAdapter->GetNodeNames().end());
+    _lightLinksMap.insert(_apiAdapter->GetLightLinksMap().begin(), _apiAdapter->GetLightLinksMap().end());
+    _shadowLinksMap.insert(_apiAdapter->GetShadowLinksMap().begin(), _apiAdapter->GetShadowLinksMap().end());
+    _apiAdapter->GetNodes().clear();
+    _apiAdapter->GetNodeNames().clear();
+    _apiAdapter->GetLightLinksMap().clear();
+    _apiAdapter->GetShadowLinksMap().clear();
     
     // Clear the dispatcher here as we no longer need it.
     delete _dispatcher;
@@ -470,7 +470,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // In a second step, each thread goes through the connections it stacked
     // and processes them given that now all the nodes were supposed to be created.
     _readStep = READ_PROCESS_CONNECTIONS;
-    threadContext.ProcessConnections();
+    _apiAdapter->ProcessConnections();
     
     
     // There is an exception though, some connections could be pointing
@@ -479,10 +479,10 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // need to force their export. Here, all the connections pointing
     // to nodes that don't exist yet are kept in each context connections list.
     // We append them in a list of "dangling connections".
-    std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections = 
-        threadContext.GetConnections();
+    std::vector<UsdArnoldAPI::Connection> danglingConnections = 
+        _apiAdapter->GetConnections();
 
-    threadContext.ClearConnections();
+    _apiAdapter->ClearConnections();
 
     // 3rd step, in case some links were pointing to nodes that didn't exist.
     // If they were skipped because of their visibility, we need to force
@@ -503,18 +503,18 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                     ReadPrimitive(prim, context);
             }
             // we can now process the connection
-            threadContext.ProcessConnection(conn);
+            _apiAdapter->ProcessConnection(conn);
         }
         // Some nodes were possibly created in the above loop,
         // we need to append them to our reader
-        _nodes.insert(_nodes.end(), threadContext.GetNodes().begin(), threadContext.GetNodes().end());
-        _nodeNames.insert(threadContext.GetNodeNames().begin(), threadContext.GetNodeNames().end());
-        _lightLinksMap.insert(threadContext.GetLightLinksMap().begin(), threadContext.GetLightLinksMap().end());
-        _shadowLinksMap.insert(threadContext.GetShadowLinksMap().begin(), threadContext.GetShadowLinksMap().end());
-        threadContext.GetNodeNames().clear();
-        threadContext.GetNodes().clear();
-        threadContext.GetLightLinksMap().clear();
-        threadContext.GetShadowLinksMap().clear();
+        _nodes.insert(_nodes.end(), _apiAdapter->GetNodes().begin(), _apiAdapter->GetNodes().end());
+        _nodeNames.insert(_apiAdapter->GetNodeNames().begin(), _apiAdapter->GetNodeNames().end());
+        _lightLinksMap.insert(_apiAdapter->GetLightLinksMap().begin(), _apiAdapter->GetLightLinksMap().end());
+        _shadowLinksMap.insert(_apiAdapter->GetShadowLinksMap().begin(), _apiAdapter->GetShadowLinksMap().end());
+        _apiAdapter->GetNodeNames().clear();
+        _apiAdapter->GetNodes().clear();
+        _apiAdapter->GetLightLinksMap().clear();
+        _apiAdapter->GetShadowLinksMap().clear();
     }
 
     // Finally, process all the light links
@@ -591,11 +591,10 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     const TimeSettings &time = context.GetTimeSettings();
 
     std::string objType = prim.GetTypeName().GetText();
-    UsdArnoldReaderThreadContext *threadContext = context.GetThreadContext();
     if (isInstance) {
         auto proto = prim.GetPrototype();
         if (proto) {
-            if (threadContext->GetSkelData()) {
+            if (_apiAdapter->GetSkelData()) {
                 // if we need to apply skinning to this instance, then we need to expand it
                 AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
                 const std::string prevPrototypeName = context.GetPrototypeName();
@@ -612,13 +611,13 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
             AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
             // if this instanceable prim is under the hierarchy of a point instancer it should be hidden
-            AiNodeSetByte(ginstance, str::visibility, context.GetThreadContext()->IsHidden() ? 0 : AI_RAY_ALL);
+            AiNodeSetByte(ginstance, str::visibility, _apiAdapter->IsHidden() ? 0 : AI_RAY_ALL);
             AiNodeSetBool(ginstance, str::inherit_xform, false);
             {
                 // Read primvars assigned to this instance prim
                 // We need to use a context that will have the proper primvars stack
-                UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), 
-                    threadContext->IsHidden(), nullptr);
+                UsdArnoldReaderContext jobContext(context, nullptr, _apiAdapter->GetPrimvarsStack().back(), 
+                    _apiAdapter->IsHidden(), nullptr);
                 // Read both the regular primvars and also the arnold primvars (#1100) that can be used for matte, etc...
                 ReadPrimvars(prim, ginstance, time, jobContext);
                 ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
@@ -651,8 +650,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             // Read the matrix
             if (parentMatrix && matrix)
                 ApplyParentMatrices(matrix, parentMatrix);
-            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix ? matrix : parentMatrix, threadContext->GetPrimvarsStack().back(), 
-                        threadContext->IsHidden(), threadContext->GetSkelData() ? new UsdArnoldSkelData(*threadContext->GetSkelData()) : nullptr);
+            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix ? matrix : parentMatrix, _apiAdapter->GetPrimvarsStack().back(), 
+                        _apiAdapter->IsHidden(), _apiAdapter->GetSkelData() ? new UsdArnoldSkelData(*_apiAdapter->GetSkelData()) : nullptr);
 
             _UsdArnoldPrimReaderJob job = 
                 {prim, primReader, jobContext };
@@ -1007,7 +1006,7 @@ AtNode *UsdArnoldReader::CreateNestedProc(const char *objectPath, UsdArnoldReade
     return proto;
 }
 
-UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
+UsdArnoldAPI::~UsdArnoldAPI()
 {
     if (_xformCache)
         delete _xformCache;
@@ -1020,7 +1019,7 @@ UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
 
     ClearSkelData();
 }
-void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
+void UsdArnoldAPI::SetReader(UsdArnoldReader *r)
 {
     if (r == nullptr)
         return; // shouldn't happen
@@ -1030,20 +1029,20 @@ void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
     if (_xformCache == nullptr)
         _xformCache = new UsdGeomXformCache(UsdTimeCode(r->GetTimeSettings().frame));
 }
-void UsdArnoldReaderThreadContext::AddNodeName(const std::string &name, AtNode *node)
+void UsdArnoldAPI::AddNodeName(const std::string &name, AtNode *node)
 {
     _addNodeNameLock.lock();
     _nodeNames[name] = node;
     _addNodeNameLock.unlock();
 }
 
-void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
+void UsdArnoldAPI::SetDispatcher(WorkDispatcher *dispatcher)
 {
 
     _dispatcher = dispatcher;
 }
 
-AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
+AtNode *UsdArnoldAPI::CreateArnoldNode(const char *type, const char *name)
 {   
     // If we're doing an interactive update, we first want to check if the AtNode
     // already exists. If so, we return it
@@ -1074,7 +1073,7 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
 
     return node;
 }
-void UsdArnoldReaderThreadContext::AddConnection(
+void UsdArnoldAPI::AddConnection(
     AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, 
     const std::string &outputElement)
 {
@@ -1097,7 +1096,7 @@ void UsdArnoldReaderThreadContext::AddConnection(
         ProcessConnection(conn);
     }
 }
-void UsdArnoldReaderThreadContext::ProcessConnections()
+void UsdArnoldAPI::ProcessConnections()
 {
     _primvarsStack.clear();
     _primvarsStack.push_back(std::vector<UsdGeomPrimvar>());
@@ -1113,7 +1112,7 @@ void UsdArnoldReaderThreadContext::ProcessConnections()
     // that couldn't be resolved
     _connections = danglingConnections;
 }
-AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType type)
+AtNode* UsdArnoldAPI::LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType type)
 {
     UsdArnoldReader::ReadStep step = _reader->GetReadStep();
     AtNode *target = _reader->LookupNode(targetName, true);
@@ -1153,14 +1152,14 @@ AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, c
     return target;
 }
 
-void UsdArnoldReaderThreadContext::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
+void UsdArnoldAPI::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
     _addConnectionLock.lock();
     _lightLinksMap[lightName] = collectionAPI;
     _addConnectionLock.unlock();
 }
 
-void UsdArnoldReaderThreadContext::RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
+void UsdArnoldAPI::RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
     _addConnectionLock.lock();
     _shadowLinksMap[lightName] = collectionAPI; 
@@ -1168,7 +1167,7 @@ void UsdArnoldReaderThreadContext::RegisterShadowLinks(const std::string &lightN
 }
 
 
-UsdGeomXformCache *UsdArnoldReaderThreadContext::GetXformCache(float frame)
+UsdGeomXformCache *UsdArnoldAPI::GetXformCache(float frame)
 {
     const TimeSettings &time = _reader->GetTimeSettings();
 
@@ -1200,7 +1199,7 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
 {
     if (IsHidden())
         return false;
-    UsdArnoldReader *reader = _threadContext->GetReader();
+    UsdArnoldReader *reader = _apiAdapter->GetReader();
     // Only compute the visibility when processing the dangling connections,
     // or when updating a specific primitive.
     // Otherwise we return true to avoid costly computation.
