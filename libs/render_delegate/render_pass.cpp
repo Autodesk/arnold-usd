@@ -445,18 +445,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(static_cast<int>(_framing.displayWindow.GetSize()[0]) * static_cast<int>(_framing.displayWindow.GetSize()[1]) * 4);
-        for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, static_cast<int>(_framing.displayWindow.GetSize()[0]), static_cast<int>(_framing.displayWindow.GetSize()[1]), HdFormatUNorm8Vec4, zeroData.data());
-            }
-        }
-    };
-
     const auto newFraming = _GetFraming(renderPassState);
     const bool framingChanged = newFraming != _framing;
+    const int width = static_cast<int>(_framing.displayWindow.GetSize()[0]);
+    const int height = static_cast<int>(_framing.displayWindow.GetSize()[1]);
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -470,14 +462,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[2], _windowNDC[2], AI_EPSILON)) || 
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(width * height * 4);
+        for (auto& buffer : storage) {
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->WriteBucket(0, 0, width, height, HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
 
     if (framingChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _framing = newFraming;
         auto* options = _renderDelegate->GetOptions();
-        AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
-        AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
+        AiNodeSetInt(options, str::xres, width);
+        AiNodeSetInt(options, str::yres, height);
         clearBuffers(_renderBuffers);
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
@@ -530,17 +531,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (_renderDelegate->IsBatchContext() && renderSettingsRes[0] > 0)
                     AiNodeSetInt(options, str::xres, renderSettingsRes[0]);
                 else {
-                    AiNodeSetInt(options, str::xres, std::round(_framing.displayWindow.GetSize()[0] * (xInvDelta)));    
+                    AiNodeSetInt(options, str::xres, std::round(width * (xInvDelta)));    
                 }
                 // Normalize windowNDC so that its delta is 1
                 windowNDC[0] *= xInvDelta;
                 windowNDC[2] *= xInvDelta;
             } else {
-                AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
+                AiNodeSetInt(options, str::xres, width);
             }
             // we want region_max_x - region_min_x to be equal to width - 1
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _framing.displayWindow.GetSize()[0]));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _framing.displayWindow.GetSize()[0]) - 1);
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * width));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * width) - 1);
             
             float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
             if (yDelta > AI_EPSILON) {
@@ -550,7 +551,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (_renderDelegate->IsBatchContext() && renderSettingsRes[1] > 0)
                     AiNodeSetInt(options, str::yres, renderSettingsRes[1]);
                 else {
-                    AiNodeSetInt(options, str::yres, std::round(_framing.displayWindow.GetSize()[1] * (yInvDelta)));
+                    AiNodeSetInt(options, str::yres, std::round(height * (yInvDelta)));
                 }
                 // Normalize windowNDC so that its delta is 1
                 windowNDC[1] *= yInvDelta;    
@@ -562,12 +563,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             
             } else {
-                AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
+                AiNodeSetInt(options, str::yres, height);
             }
 
             // we want region_max_y - region_min_y to be equal to height - 1
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _framing.displayWindow.GetSize()[1]));
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _framing.displayWindow.GetSize()[1]) - 1);
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * height));
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * height) - 1);
         } else {
             // the window was restored to defaults, we need to reset the region
             // attributes, as well as xres,yres, that could have been adjusted
@@ -576,8 +577,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeResetParameter(options, str::region_min_y);
             AiNodeResetParameter(options, str::region_max_x);
             AiNodeResetParameter(options, str::region_max_y);
-            AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
-            AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
+            AiNodeSetInt(options, str::xres, width);
+            AiNodeSetInt(options, str::yres, height);
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
