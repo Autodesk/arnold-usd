@@ -479,10 +479,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
         AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
         clearBuffers(_renderBuffers);
-        AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
-        AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
-        AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
-        AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
+        
         // With the ortho camera we need to update the screen_window_min/max when the window changes
         // This is unfortunate as we won't be able to have multiple viewport with the same ortho camera
         // Another option would be to keep an ortho camera on this class and update it ?
@@ -492,13 +489,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetVec2(_camera, str::screen_window_max, screen[2], screen[3]);
         }
 
-        // if we have a window, then we need to recompute it anyway
-        if (hasWindowNDC)
-            windowChanged = true;
-    }
-
-    if (windowChanged) {
-        renderParam->Interrupt(true, false);
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
             
@@ -569,15 +559,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _framing.displayWindow.GetSize()[1]));
             AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _framing.displayWindow.GetSize()[1]) - 1);
         } else {
-            // the window was restored to defaults, we need to reset the region
-            // attributes, as well as xres,yres, that could have been adjusted
-            // in previous iterations
-            AiNodeResetParameter(options, str::region_min_x);
-            AiNodeResetParameter(options, str::region_min_y);
-            AiNodeResetParameter(options, str::region_max_x);
-            AiNodeResetParameter(options, str::region_max_y);
-            AiNodeSetInt(options, str::xres, static_cast<int>(_framing.displayWindow.GetSize()[0]));
-            AiNodeSetInt(options, str::yres, static_cast<int>(_framing.displayWindow.GetSize()[1]));
+            AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
+            AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
+            AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
+            AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
