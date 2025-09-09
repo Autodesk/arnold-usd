@@ -96,12 +96,15 @@ node_parameters
     AiParameterStr("filename", "");
     AiParameterStr("object_path", "");
     AiParameterFlt("frame", 0.0);
-    AiParameterBool("debug", false);
-    AiParameterInt("threads", 0);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
+
     AiParameterInt("cache_id", 0);
     AiParameterBool("interactive", false);
+    
+    AiParameterBool("debug", false);
+    AiParameterInt("threads", 0);
     AiParameterBool("hydra", true);
+    
     // Note : if a new attribute is added here, it should be added to the schema in createSchemaFile.py
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
@@ -114,6 +117,16 @@ node_parameters
 
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
+
+    // These 2 attributes are needed internally but should not be exposed to the
+    // user interface
+    AiMetaDataSetBool(nentry, str::cache_id, str::hide, true);
+    AiMetaDataSetBool(nentry, str::interactive, str::hide, true);
+    
+    // deprecated parameters
+    AiMetaDataSetBool(nentry, str::debug, str::deprecated, true);
+    AiMetaDataSetBool(nentry, str::threads, str::deprecated, true);
+    AiMetaDataSetBool(nentry, str::hydra, str::deprecated, true);
 }
 typedef std::vector<std::string> PathList;
 
@@ -164,8 +177,6 @@ procedural_init
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     data->SetFrame(AiNodeGetFlt(node, AtString("frame")));
-    data->SetDebug(AiNodeGetBool(node, AtString("debug")));
-    data->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
     data->SetId(AiNodeGetUInt(node, AtString("id")));
     data->SetInteractive(interactive);
 
@@ -312,8 +323,7 @@ procedural_viewport
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
     reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
-    reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
-
+    
     bool listNodes = false;
     // If we receive the bool param value "list" set to true, then we're being
     // asked to return the list of nodes in the usd file. We just need to create
@@ -446,22 +456,10 @@ scene_load
     ProceduralReader *reader = CreateProceduralReader(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), AtString("frame"));
-    int threadCount = 0;
-
-    // It is currently not possible to pass any custom arguments when we kick a usd file.
-    // In order to support any amount of threads in that use case, we're checking if an 
-    // environment variable is set, and use that value in that case    
-    const static std::string envThreads = "ARNOLD_USD_READER_THREADS";
-    if (ArchHasEnv(envThreads)) {
-        std::string envThreadsVal = ArchGetEnv(envThreads);
-        threadCount = std::max(0, std::stoi(envThreadsVal));
-    }
     
     if (params) {
         // eventually check the input param map in case we have an entry for "frame"
         AiParamValueMapGetFlt(params, str::frame, &frame);
-        // eventually get an amount of threads to read the usd file
-        AiParamValueMapGetInt(params, str::threads, &threadCount);
         int mask = AI_NODE_ALL;
         if (AiParamValueMapGetInt(params, str::mask, &mask))
             reader->SetMask(mask);
@@ -470,10 +468,8 @@ scene_load
             reader->SetRenderSettings(std::string(renderSettings.c_str()));
         
     }
- 
-    reader->SetFrame(frame);
-    reader->SetThreadCount(threadCount);
-
+     reader->SetFrame(frame);
+    
     // Read the USD file
     reader->Read(filename, nullptr);
     delete reader;

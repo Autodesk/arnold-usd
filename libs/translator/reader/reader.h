@@ -41,7 +41,7 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReaderRegistry;
-
+class UsdArnoldAPI;
 /**
  *  Class handling the translation of USD data to Arnold
  **/
@@ -64,8 +64,6 @@ public:
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override;
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
-    void SetDebug(bool b) override;
-    void SetThreadCount(unsigned int t) override;
     void SetConvertPrimitives(bool b) override;
     void SetMask(int m) override { _mask = m; }
     void SetPurpose(const std::string &p) override { _purpose = TfToken(p.c_str()); }
@@ -78,11 +76,9 @@ public:
     UsdArnoldReaderRegistry *GetRegistry() { return _readerRegistry; }
     AtUniverse *GetUniverse() { return _universe; }
     const AtNode *GetProceduralParent() const { return _procParent; }
-    bool GetDebug() const { return _debug; }
     bool GetConvertPrimitives() const { return _convert; }
     const TimeSettings &GetTimeSettings() const { return _time; }
         
-    unsigned int GetThreadCount() const { return _threadCount; }
     int GetMask() const { return _mask; }
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
@@ -90,11 +86,7 @@ public:
 
     bool IsUpdating() const {return _updating;}
 
-    static unsigned int ReaderThread(void *data);
-    static unsigned int ProcessConnectionsThread(void *data);
-
     void TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
-                                    int threadId, int threadCount,
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix);
 
 
@@ -129,15 +121,11 @@ public:
     // we want to avoid this cost
     void LockReader()
     {
-        // for _threadCount = 0, or > 1 we want to lock
-        // for this reader
-        if (_threadCount != 1)
-            _readerLock.lock();
+        _readerLock.lock();
     }
     void UnlockReader()
     {
-        if (_threadCount != 1)
-            _readerLock.unlock();
+        _readerLock.unlock();
     }
 
     // Reading a stage in multithread implies to go
@@ -209,8 +197,6 @@ private:
     AtUniverse *_universe;              // only set if a specific universe is being used
     TimeSettings _time;
     bool _convert; // do we want to convert the primitives attributes
-    bool _debug;
-    unsigned int _threadCount;
     int _mask;             // mask based on the arnold flags (AI_NODE_SHADER, etc...) to control
                            // what type of nodes are being read
     std::string _renderSettings; // which RenderSettings prims to consider for the Arnold options
@@ -218,6 +204,8 @@ private:
                            // finished reading
     std::vector<AtNode *> _nodes;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+
+    UsdArnoldAPI *_apiAdapter = nullptr;
 
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
@@ -243,10 +231,10 @@ private:
     bool _updating = false; // boolean enabled during the Update() function
 };
 
-class UsdArnoldReaderThreadContext : public ArnoldAPIAdapter {
+class UsdArnoldAPI : public ArnoldAPIAdapter {
 public:
-    UsdArnoldReaderThreadContext() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr) {}
-    ~UsdArnoldReaderThreadContext();
+    UsdArnoldAPI() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr) {}
+    ~UsdArnoldAPI();
 
     UsdArnoldReader *GetReader() { return _reader; }
     void SetReader(UsdArnoldReader *r);
@@ -320,17 +308,17 @@ class UsdArnoldReaderContext : public ArnoldAPIAdapter {
 
 public:
 
-    UsdArnoldReaderContext(UsdArnoldReaderThreadContext *t) : 
-        _threadContext(t),
+    UsdArnoldReaderContext(UsdArnoldAPI *t) : 
+        _apiAdapter(t),
         _matrix(nullptr) {}
 
     UsdArnoldReaderContext() : 
-        _threadContext(nullptr),
+        _apiAdapter(nullptr),
         _matrix(nullptr) {}
 
     UsdArnoldReaderContext(const UsdArnoldReaderContext &src, 
         AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide, UsdArnoldSkelData *skelData = nullptr) : 
-            _threadContext(src._threadContext),
+            _apiAdapter(src._apiAdapter),
             _matrix(matrix),
             _primvars(primvars),
             _hide(hide),
@@ -347,20 +335,20 @@ public:
         _skelData = nullptr;
     }
 
-    UsdArnoldReaderThreadContext *_threadContext;
-    AtArray *_matrix;
+    UsdArnoldAPI *_apiAdapter = nullptr;
+    AtArray *_matrix = nullptr;
     std::vector<UsdGeomPrimvar> _primvars;
     bool _hide = false;
     UsdArnoldSkelData *_skelData = nullptr;
     std::string _prototypeName;
 
-    UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
-    void AddNodeName(const std::string &name, AtNode *node) override {_threadContext->AddNodeName(name, node);}
-    const TimeSettings &GetTimeSettings() const { return _threadContext->GetTimeSettings(); }
+    UsdArnoldReader *GetReader() { return _apiAdapter->GetReader(); }
+    void AddNodeName(const std::string &name, AtNode *node) override {_apiAdapter->AddNodeName(name, node);}
+    const TimeSettings &GetTimeSettings() const { return _apiAdapter->GetTimeSettings(); }
     const AtString& GetPxrMtlxPath() override {return GetReader()->GetPxrMtlxPath();}
     
     UsdGeomXformCache *GetXformCache(float frame) {
-        return _threadContext->GetXformCache(frame);
+        return _apiAdapter->GetXformCache(frame);
     }
 
     std::string GetArnoldNodeName(const char *name)
@@ -378,28 +366,28 @@ public:
     }
     AtNode *CreateArnoldNode(const char *type, const char *name) override {
         if (_prototypeName.empty())
-            return _threadContext->CreateArnoldNode(type, name);
+            return _apiAdapter->CreateArnoldNode(type, name);
 
         std::string primName = GetArnoldNodeName(name);
-        return _threadContext->CreateArnoldNode(type, primName.c_str());
+        return _apiAdapter->CreateArnoldNode(type, primName.c_str());
     }
     AtNode* LookupTargetNode(const char *name, const AtNode* sourceNode, ConnectionType type) override {
-        return _threadContext->LookupTargetNode(name, sourceNode, type);
+        return _apiAdapter->LookupTargetNode(name, sourceNode, type);
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
         ConnectionType type, const std::string &outputElement = std::string()) override {
-        _threadContext->AddConnection(source, attr, target, type, outputElement);
+        _apiAdapter->AddConnection(source, attr, target, type, outputElement);
     }
     void RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
-        _threadContext->RegisterLightLinks(lightName, collectionAPI);
+        _apiAdapter->RegisterLightLinks(lightName, collectionAPI);
     }
     void RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
-        _threadContext->RegisterShadowLinks(lightName, collectionAPI);
+        _apiAdapter->RegisterShadowLinks(lightName, collectionAPI);
     }
     UsdArnoldSkelData *GetSkelData() {
-        if (!_threadContext->GetDispatcher())
-            return _threadContext->GetSkelData();
+        if (!_apiAdapter->GetDispatcher())
+            return _apiAdapter->GetSkelData();
         
         if (_skelData && !_skelData->IsValid())
             return nullptr;
@@ -407,15 +395,15 @@ public:
     }
     
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {
-        if (!_threadContext->GetDispatcher())
-            return _threadContext->GetPrimvarsStack().back();
+        if (!_apiAdapter->GetDispatcher())
+            return _apiAdapter->GetPrimvarsStack().back();
         return _primvars;
     }
 
     bool IsHidden() const
     {
-        if (!_threadContext->GetDispatcher())
-            return _threadContext->IsHidden();
+        if (!_apiAdapter->GetDispatcher())
+            return _apiAdapter->IsHidden();
         return _hide;
     }
     ///
@@ -426,7 +414,7 @@ public:
 
     AtArray* GetMatrices() {return _matrix;}
     void SetMatrices(AtArray *m) {_matrix = m;}
-    UsdArnoldReaderThreadContext *GetThreadContext() {return _threadContext;}
+    UsdArnoldAPI *GetThreadContext() {return _apiAdapter;}
 
     const std::string &GetPrototypeName() const {return _prototypeName;}
     void SetPrototypeName(const std::string &p) {_prototypeName = p;}

@@ -21,7 +21,6 @@ def RenderSettings "Arnold_rendersettings"
     float arnold:meters_per_unit = 0.01
     bool arnold:texture_automip = 0
     bool arnold:texture_per_file_stats = 1
-    int arnold:threads = 64
     int arnold:xres = 160
     int arnold:yres = 120
     string primvars:render_layer = "defaultRenderLayer" (

@@ -51,7 +51,6 @@ usd
  override_nodes off
  filename "scene.usda"
  frame 1
- debug on
  declare maya_full_name constant STRING
  maya_full_name "|aiUsd1|aiUsdShape1"
 }

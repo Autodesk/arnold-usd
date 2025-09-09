@@ -47,8 +47,6 @@ public:
     
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
-    void SetDebug(bool b) override;
-    void SetThreadCount(unsigned int t) override;
     void SetConvertPrimitives(bool b) override;
     void SetMask(int m) override;
     void SetPurpose(const std::string &p) override;
