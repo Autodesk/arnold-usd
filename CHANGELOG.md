@@ -14,6 +14,7 @@
 ### Bug Fixes
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
+- [usd#2415](https://github.com/Autodesk/arnold-usd/issues/2415) - Remove matrix parenting when exporting to usd file
 
 ## Unreleased bugfix version (7.4.3.1)
 
