@@ -690,9 +690,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
             AiDeviceAutoSelect(GetRenderSession());
         });
-    } else if (key == str::t_log_verbosity && 
-        (_reader == nullptr || _reader->GetCommandLine().find(" -v ") == std::string::npos)) {
-        // Only read this attribute if it's not explicitely set in the (kick) command line
+    } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
@@ -703,31 +701,24 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                 #endif
             }
         }
-    } else if (key == str::t_log_file && 
-        (_reader == nullptr || _reader->GetCommandLine().find(" -logfile ") == std::string::npos)) {
-        // Only read this attribute if it's not explicitely set in the (kick) command line
+    } else if (key == str::t_log_file) {
         if (value.IsHolding<std::string>()) {
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
 #if ARNOLD_VERSION_NUM >= 70401
-    } else if (key == str::t_report_file &&
-        (_reader == nullptr || _reader->GetCommandLine().find(" -report ") == std::string::npos)) {
-        // only do it if not specified in command line ? -report
+    } else if (key == str::t_report_file) {
         if (value.IsHolding<std::string>()) {
             _reportFile = value.UncheckedGet<std::string>();
             AiReportSetFileName(_reportFile.c_str());
         }
 #endif
-    } else if (key == str::t_stats_file && 
-        (_reader == nullptr || _reader->GetCommandLine().find(" -statsfile ") == std::string::npos)) {
+    } else if (key == str::t_stats_file) {
         if (value.IsHolding<std::string>()) {
             _statsFile = value.UncheckedGet<std::string>();
             AiStatsSetFileName(_statsFile.c_str());
         }
-    } else if (key == str::t_profile_file && 
-        (_reader == nullptr || _reader->GetCommandLine().find(" -profile ") == std::string::npos)) {
-        // only do it if not present in the file -profile
+    } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
             _profileFile = value.UncheckedGet<std::string>();
             AiProfileSetFileName(_profileFile.c_str());
