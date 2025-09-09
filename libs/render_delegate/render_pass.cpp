@@ -447,8 +447,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     const auto newFraming = _GetFraming(renderPassState);
     const bool framingChanged = newFraming != _framing;
-    const int width = static_cast<int>(_framing.displayWindow.GetSize()[0]);
-    const int height = static_cast<int>(_framing.displayWindow.GetSize()[1]);
+    const int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
+    const int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
