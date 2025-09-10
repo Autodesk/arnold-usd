@@ -195,9 +195,11 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
 
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
+        _stageSceneIndex->SetTime(UsdTimeCode(_time.frame));
 #endif        
     } else {        
         _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
+        _imagingDelegate->SetTime(UsdTimeCode(_time.frame));
     }
 
     const char *debugScene = std::getenv("HDARNOLD_DEBUG_SCENE");
@@ -372,6 +374,9 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
+
+    if (frame == _time.frame)
+        return;
     _time.frame = frame;
     if (_useSceneIndex) {
         _stageSceneIndex->SetTime(UsdTimeCode(frame));

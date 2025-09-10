@@ -112,6 +112,13 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
+    const AtString procEntryName(XARNOLDUSDSTRINGIZE(USD_PROCEDURAL_NAME));
+    // in the usd procedural built with arnold, we want the frame to trigger 
+    // a reload of the procedural, as it's not possible to change the usd stage between renders.
+    if (procEntryName == str::usd) {
+        AiMetaDataSetBool(nentry, str::frame, AtString("_triggers_reload"), true);
+    }
+
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
 }
@@ -245,6 +252,7 @@ procedural_update
     if (!reader)
         return;
  
+    reader->SetFrame(AiNodeGetFlt(node, str::frame)); 
     // Update the arnold scene based on the modified USD contents
     reader->Update();
 }
@@ -307,7 +315,7 @@ procedural_viewport
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
-    reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
+    reader->SetFrame(AiNodeGetFlt(node, str::frame));
     reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
 
     bool listNodes = false;
