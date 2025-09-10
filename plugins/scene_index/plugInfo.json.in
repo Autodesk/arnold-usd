@@ -68,6 +68,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: mesh lights"
+                    },
+                    "HdArnoldRenderPassSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: render passes"
                     }
                 }
             },

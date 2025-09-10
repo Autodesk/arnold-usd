@@ -38,7 +38,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((matte, "arnold:matte"))
     ((visibility, "arnold:visibility"))
     ((visibilityPrefix, "arnold:visibility:"))
-    ((visibilityCamera, "arnold:visibility:camera"))
     ((visibilityShadow, "arnold:visibility:shadow"))
     ((visibilityDiffuseTransmit, "arnold:visibility:diffuse_transmit"))
     ((visibilitySpecularTransmit, "arnold:visibility:specular_transmit"))
@@ -391,7 +390,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
                 rayFlags.SetRayFlag(rayName, visVal);
             }
         };
-        applyRayFlags(_tokens->visibilityCamera);
+        applyRayFlags(str::t_visibilityCamera);
         applyRayFlags(_tokens->visibilityShadow);
         applyRayFlags(_tokens->visibilityDiffuseTransmit);
         applyRayFlags(_tokens->visibilitySpecularTransmit);

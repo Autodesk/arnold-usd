@@ -7,11 +7,14 @@
 
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
+- [usd#2408](https://github.com/Autodesk/arnold-usd/issues/2408) - Fix render region calculation when based on windowNDC
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
+- [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
 
 ### Bug Fixes
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
+- [usd#2415](https://github.com/Autodesk/arnold-usd/issues/2415) - Remove matrix parenting when exporting to usd file
 
 ## Unreleased bugfix version (7.4.3.1)
 
