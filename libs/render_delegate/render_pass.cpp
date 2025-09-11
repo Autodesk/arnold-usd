@@ -183,7 +183,7 @@ CameraUtilFraming _GetFraming(const HdRenderPassStateSharedPtr& renderPassState)
         const auto& viewport = renderPassState->GetViewport();
         const auto viewportRect = GfRect2i(
             GfVec2i(int(viewport[0]), int(viewport[1])), 
-            GfVec2i(int(viewport[2]), int(viewport[3]))
+            int(viewport[2]), int(viewport[3])
         );
         return CameraUtilFraming(viewportRect);
     }
