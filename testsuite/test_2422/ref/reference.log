@@ -1,0 +1,38 @@
+Executing D:\arnold\arnold-usd\testsuite_results\test_2422\test
+00:00:00    71MB         | log started Wed Sep 10 09:26:19 2025
+00:00:00    71MB         | Arnold 7.4.4.0 [c057dbe0] windows x86_64 clang-20.1.4 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.8.2.57 clmhub-3.1.1.43 rlm-17.0.1 optix-8.0.0 2025/09/05 07:18:26
+00:00:00    71MB         | running on ADSKEM00ZH29, pid=25116
+00:00:00    71MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
+00:00:00    71MB         |  NVIDIA driver version 572.83
+00:00:00    71MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (5451MB available) (NVLink:0)
+00:00:00    71MB         |  Windows 10 (version 10.0, build 26100)
+00:00:00    71MB         |  soft limit for open files changed from 512 to 2048
+00:00:00    71MB         |  
+00:00:00    71MB         | Installing system handler with mask 255
+00:00:00   116MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.24.11_arnold-7.4.4.0\plugins\procedural ...
+00:00:00   125MB         |  usd_proc.dll: usd uses Arnold 7.4.4.0
+00:00:00   125MB         | loaded 1 plugins from 1 lib(s) in 0:00.01
+00:00:00   125MB         | loading plugins from D:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   125MB         |  alembic_proc.dll: alembic uses Arnold 7.4.4.0
+00:00:00   125MB         |  skipping already loaded plugin: D:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   125MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   127MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+waaaaaaaaaaaaaaaaaaaaaa
+
+        RLM DEBUG for all products
+
+        In license file: C:\arnold\license\arnold_04d9c8c1a45e_20260306.lic: 
+        Product: arnold, ISV: solidangle, Uncounted
+
+        1 product instances found
+
+00:00:00   304MB         |  
+00:00:00   304MB         | releasing resources
+00:00:00   198MB         |   
+00:00:00   198MB         |  releasing resources
+00:00:00   186MB         |   unloading 2 plugins
+00:00:00   186MB         |    closing usd_proc.dll ...
+00:00:00   186MB         |    closing alembic_proc.dll ...
+00:00:00   185MB         |   unloading plugins done
+00:00:00   185MB         |  Arnold shutdown
+00:00:00   172MB         |  Installing system handler with mask 0

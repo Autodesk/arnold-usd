@@ -1,14 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Unreleased bugfix version (7.4.3.1)
+## Unreleased bugfix version (7.4.3.2)
+- [usd#2422](https://github.com/Autodesk/arnold-usd/issues/2422) - Fix regression on frame changes in the usd procedural
+
+## [7.4.3.1] - 2025-08-27
 
 ### Bug Fixes
 
 - [usd#2349](https://github.com/Autodesk/arnold-usd/issues/2349) - Husk renders with the Arnold product type overwrites the same output path when rendering mutliple frames in same process
 - [usd#2392](https://github.com/Autodesk/arnold-usd/issues/2392) - Fix a warning due to additional metadata parameters, typeName and colorSpace introduced in USD 25.05.
 
-## Next feature release (7.4.3.0)
+## [7.4.3.0] - 2025-07-25
+
 
 ### Features
 

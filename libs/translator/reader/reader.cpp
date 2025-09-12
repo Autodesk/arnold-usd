@@ -783,8 +783,6 @@ void UsdArnoldReader::SetThreadCount(unsigned int t)
 }
 void UsdArnoldReader::SetFrame(float frame)
 {
-    ClearNodes(); // FIXME do we need to clear here ? We should rather re-export
-                  // the data
     _time.frame = frame;
 }
 

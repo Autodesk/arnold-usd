@@ -1,0 +1,8 @@
+Frame not propagated properly during procedural updates
+
+See #2422
+
+author: sebastien.ortega
+
+
+
