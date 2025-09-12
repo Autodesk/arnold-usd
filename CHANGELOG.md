@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next feature release (7.4.4.0)
+## Htoa-6.4.4.1 (Unreleased)
 
-### Features
+### Bug Fixes
+- [usd#2422](https://github.com/Autodesk/arnold-usd/issues/2422) - Fix regression on frame changes in the usd procedural
 
-## Special release htoa-644 for Houdini21
+## Htoa-6.4.4.0 for Houdini21
 
 ### Features
 
@@ -17,7 +18,7 @@
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
 
-## Unreleased bugfix version (7.4.3.1)
+## [7.4.3.1] - 2025-08-27
 
 ### Bug Fixes
 
