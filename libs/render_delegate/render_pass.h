@@ -38,6 +38,7 @@
 #include "api.h"
 
 #include <pxr/base/gf/matrix4d.h>
+#include <pxr/imaging/cameraUtil/framing.h>
 #include <pxr/imaging/hd/renderPass.h>
 
 #include "hdarnold.h"
@@ -132,8 +133,7 @@ private:
     GfMatrix4d _viewMtx; ///< View matrix of the camera.
     GfMatrix4d _projMtx; ///< Projection matrix of the camera.
 
-    int _width = 0;  ///< Width of the render buffer.
-    int _height = 0; ///< Height of the render buffer.
+    CameraUtilFraming _framing;
 
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
