@@ -115,6 +115,13 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
+    const AtString procEntryName(XARNOLDUSDSTRINGIZE(USD_PROCEDURAL_NAME));
+    // in the usd procedural built with arnold, we want the frame to trigger 
+    // a reload of the procedural, as it's not possible to change the usd stage between renders.
+    if (procEntryName == str::usd) {
+        AiMetaDataSetBool(nentry, str::frame, AtString("_triggers_reload"), true);
+    }
+
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
 
@@ -260,6 +267,7 @@ procedural_update
     if (!reader)
         return;
  
+    reader->SetFrame(AiNodeGetFlt(node, str::frame)); 
     // Update the arnold scene based on the modified USD contents
     reader->Update();
 }
@@ -322,8 +330,7 @@ procedural_viewport
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
-    reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
-    
+    reader->SetFrame(AiNodeGetFlt(node, str::frame));
     bool listNodes = false;
     // If we receive the bool param value "list" set to true, then we're being
     // asked to return the list of nodes in the usd file. We just need to create
@@ -456,8 +463,13 @@ scene_load
     ProceduralReader *reader = CreateProceduralReader(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), AtString("frame"));
-    
     if (params) {
+        AtString commandLine;
+        if (AiParamValueMapGetStr(params, str::command_line, &commandLine)) {
+            const std::string commandLineStr(commandLine.c_str());
+            reader->SetCommandLine(commandLineStr);
+        }
+
         // eventually check the input param map in case we have an entry for "frame"
         AiParamValueMapGetFlt(params, str::frame, &frame);
         int mask = AI_NODE_ALL;
@@ -468,7 +480,7 @@ scene_load
             reader->SetRenderSettings(std::string(renderSettings.c_str()));
         
     }
-     reader->SetFrame(frame);
+    reader->SetFrame(frame);
     
     // Read the USD file
     reader->Read(filename, nullptr);

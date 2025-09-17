@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "render_delegate.h"
+#include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
 
