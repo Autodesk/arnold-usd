@@ -24,7 +24,6 @@
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
-#include <pxr/usd/usdGeom/xformCommonAPI.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/materialBindingAPI.h>
 #include <pxr/usd/usdShade/shader.h>
@@ -1119,63 +1118,93 @@ bool UsdArnoldPrimWriter::WriteAttribute(
 void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode* node, UsdArnoldWriter& writer)
 {
     _exportedAttrs.insert("matrix");
+
+    const UsdPrim &prim = xformable.GetPrim();
+    const AtUniverse* universe = writer.GetUniverse();
+
+    AtMatrix parentMatrix = AiM4Identity();
+    AtMatrix invParentMtx = AiM4Identity();
+    bool applyInvParentMtx = false;
+
+    for (UsdPrim p = prim.GetParent(); !p.IsPseudoRoot(); p = p.GetParent()) {
+        AtNode *parent = AiNodeLookUpByName(universe, AtString(p.GetPath().GetText()));
+        if (parent == nullptr)
+            continue;
+        // Special case for mesh lights pointing at our current mesh. Their transform will not be authored
+        // to USD so we must skip it here.
+        if (AiNodeIs(parent, str::mesh_light) && AiNodeGetPtr(parent, str::mesh) == (void*)node)
+            continue;
+
+        AtMatrix mtx = AiNodeGetMatrix(parent, str::matrix);
+        if (mtx == AiM4Identity())
+            continue;
+        parentMatrix =  AiM4Mult(mtx, parentMatrix);
+        applyInvParentMtx = true;
+    }
+    if (applyInvParentMtx)
+        invParentMtx = AiM4Invert(parentMatrix);
+
     AtArray* array = AiNodeGetArray(node, AtString("matrix"));
-    if (array) {
-        unsigned int numKeys = AiArrayGetNumKeys(array);
-        const AtMatrix* matrices = (const AtMatrix*)AiArrayMapConst(array);
-        bool hasMatrix = false;
-        if (matrices) {
-            for (unsigned int i = 0; i < numKeys; ++i) {
-                if (!AiM4IsIdentity(matrices[i])) {
-                    hasMatrix = true;
-                }
+    if (array == nullptr)
+        return;
+
+    unsigned int numKeys = AiArrayGetNumKeys(array);
+
+    const AtMatrix* matrices = (const AtMatrix*)AiArrayMapConst(array);
+    if (matrices == nullptr)
+        return;
+
+    bool hasMatrix = applyInvParentMtx;
+
+    if (!hasMatrix) {
+        for (unsigned int i = 0; i < numKeys; ++i) {
+            if (!AiM4IsIdentity(matrices[i])) {
+                hasMatrix = true;
             }
         }
+    }
+    // Identity matrix, nothing to write
+    if (!hasMatrix)
+        return;
 
-        // Identity matrix, nothing to write
-        if (hasMatrix) {
-            UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
-            UsdAttribute attr = xformOp.GetAttr();
+    UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
+    UsdAttribute attr = xformOp.GetAttr();
 
-            if (!writer.GetAuthoredFrames().empty()) {
-                VtValue previousVal;
-                // If previous frames were authored, we want to verify
-                // that a value was already set. If not, it means that
-                // the previous value was an identify matrix, and thus
-                // skipped a few lines above. We need to set it now
-                // before we call SetAttribute (see #871)
-                if (!attr.Get(&previousVal)) {
-                    GfMatrix4d m;
-                    attr.Set(m);
-                }
-            }
-
-            std::vector<double> xform;
-            xform.reserve(16);
-            // Get array of times based on motion_start / motion_end
-            
-            double m[4][4];
-            bool hasMotion = (numKeys > 1);
-            float timeDelta =  hasMotion ? (_motionEnd - _motionStart) / (int)(numKeys - 1) : 0.f;
-            float time = _motionStart;
-
-            for (unsigned int k = 0; k < numKeys; ++k) {
-                const AtMatrix &mtx = matrices[k];
-                for (int i = 0; i < 4; ++i) {
-                    for (int j = 0; j < 4; ++j) {
-                        m[i][j] = mtx[i][j];
-                    }
-                }
-                writer.SetAttribute(attr, GfMatrix4d(m), (hasMotion) ? &time : nullptr);
-                time += timeDelta;
-            }
+    if (!writer.GetAuthoredFrames().empty()) {
+        VtValue previousVal;
+        // If previous frames were authored, we want to verify
+        // that a value was already set. If not, it means that
+        // the previous value was an identify matrix, and thus
+        // skipped a few lines above. We need to set it now
+        // before we call SetAttribute (see #871)
+        if (!attr.Get(&previousVal)) {
+            GfMatrix4d m;
+            attr.Set(m);
         }
-        AiArrayUnmapConst(array);
     }
 
-    // Prepend an resetXform as the first operator, this discard the matrix parenting
-    UsdGeomXformCommonAPI api(xformable.GetPrim());
-    api.SetResetXformStack(true);
+    std::vector<double> xform;
+    xform.reserve(16);
+    // Get array of times based on motion_start / motion_end
+    
+    double m[4][4];
+    bool hasMotion = (numKeys > 1);
+    float timeDelta =  hasMotion ? (_motionEnd - _motionStart) / (int)(numKeys - 1) : 0.f;
+    float time = _motionStart;
+
+    for (unsigned int k = 0; k < numKeys; ++k) {
+        AtMatrix mtx = matrices[k];
+        if (applyInvParentMtx)
+            mtx = AiM4Mult(mtx, invParentMtx);
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                m[i][j] = mtx[i][j];
+            }
+        }
+        writer.SetAttribute(attr, GfMatrix4d(m), (hasMotion) ? &time : nullptr);
+        time += timeDelta;
+    }
+    AiArrayUnmapConst(array);
 }
 
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)

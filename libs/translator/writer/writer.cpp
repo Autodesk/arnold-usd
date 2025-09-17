@@ -24,7 +24,6 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/xform.h>
-#include <pxr/usd/usdGeom/xformCache.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/base/vt/dictionary.h>
 #include <cstdio>
@@ -47,7 +46,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (startFrame)
      (endFrame)
 );
-// clang-format on
+
 // global writer registry, will be used in the default case
 static UsdArnoldWriterRegistry *s_writerRegistry = nullptr;
 
@@ -206,30 +205,6 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     
     _universe = nullptr;
 
-    // Loop over the prim and remove the resetStack operators on the transforms
-    auto removeResetStackOperator = [](UsdGeomXformable &xform, UsdTimeCode timeCode) {
-        UsdGeomXformCache xformCache(timeCode);
-        GfMatrix4d parentToWorld = xformCache.GetParentToWorldTransform(xform.GetPrim());
-        if (parentToWorld != GfMatrix4d(1.0)) {
-            GfMatrix4d localToParent;
-            bool resetstack = false;
-            xform.GetLocalTransformation(&localToParent, &resetstack, timeCode);
-            UsdGeomXformOp xformOp = xform.MakeMatrixXform();
-            xformOp.Set(localToParent * parentToWorld.GetInverse(), timeCode);
-        }
-    };
-    for (auto prim : _stage->Traverse()) {
-        UsdGeomXformable xform(prim);
-        if (xform.GetResetXformStack()) {
-            xform.SetResetXformStack(false);
-            removeResetStackOperator(xform, UsdTimeCode::Default());
-            std::vector<double> times;
-            xform.GetTimeSamples(&times);
-            for (double timeSample : times) {
-                removeResetStackOperator(xform, UsdTimeCode(timeSample));
-            }
-        }
-    }
     // Set the defaultPrim in the current stage (#1063)
     if (!_defaultPrim.empty()) {
         // as explained in the USD API, the defaultPrim is not a path but a name,
