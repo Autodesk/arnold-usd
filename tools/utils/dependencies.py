@@ -88,7 +88,6 @@ def ndr_plugin(env, sources):
         'tf',
         'gf',
         'vt',
-        'ndr',
         'sdr',
         'sdf',
         'usd',
@@ -99,6 +98,8 @@ def ndr_plugin(env, sources):
     ]
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
+    if env['USD_VERSION_INT'] < 2508:
+        usd_libs += ['ndr',]
     return add_plugin_deps(env, sources, usd_libs, False)
 
 def usd_imaging_plugin(env, sources):
@@ -111,7 +112,6 @@ def usd_imaging_plugin(env, sources):
         'vt',
         'gf',
         'work',
-        'ndr',
         'sdf',
         'sdr',
         'hf',
@@ -129,6 +129,8 @@ def usd_imaging_plugin(env, sources):
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['ts',]
+    if env['USD_VERSION_INT'] < 2508:
+        usd_libs += ['ndr',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_index_plugin(env, sources):
@@ -141,7 +143,6 @@ def scene_index_plugin(env, sources):
         'vt',
         'gf',
         'work',
-        'ndr',
         'sdf',
         'sdr',
         'hf',
@@ -161,6 +162,8 @@ def scene_index_plugin(env, sources):
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['ts',]
+    if env['USD_VERSION_INT'] < 2508:
+        usd_libs += ['ndr',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_delegate(env, sources):
