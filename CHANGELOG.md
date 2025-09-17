@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2418](https://github.com/Autodesk/arnold-usd/issues/2418) - Deprecate legacy parameters "threads", "debug" and "hydra" in the procedural
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
 - [usd#2408](https://github.com/Autodesk/arnold-usd/issues/2408) - Fix render region calculation when based on windowNDC
