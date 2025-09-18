@@ -4,6 +4,8 @@
 ## [7.4.4.0] (Unreleased)
 
 ### Features
+
+- [usd#2418](https://github.com/Autodesk/arnold-usd/issues/2418) - Deprecate legacy parameters "threads", "debug" and "hydra" in the procedural
 - [usd#1633](https://github.com/Autodesk/arnold-usd/issues/1633) - Ignore verbosity settings from USD files when rendering with "kick -v"
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI

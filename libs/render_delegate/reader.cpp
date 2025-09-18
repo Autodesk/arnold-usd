@@ -434,8 +434,6 @@ void HydraArnoldReader::SetFrame(float frame) {
     }
 }
 void HydraArnoldReader::SetMotionBlur(bool motionBlur, float motionStart , float motionEnd ) {}
-void HydraArnoldReader::SetDebug(bool b) {}
-void HydraArnoldReader::SetThreadCount(unsigned int t) {}
 void HydraArnoldReader::SetConvertPrimitives(bool b) {}
 void HydraArnoldReader::SetMask(int m) {GetArnoldRenderDelegate()->SetMask(m); }
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }

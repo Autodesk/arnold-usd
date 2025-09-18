@@ -427,10 +427,10 @@ void ReadSubsetsMaterialBinding(
 
     // Set the shaders array, for the array connections to be applied later
     if (!shadersArrayStr.empty()) {
-        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldAPI::CONNECTION_ARRAY);
     }
     if (hasDisplacement) {
-        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldAPI::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
     AiNodeSetArray(node, str::shidxs, shidxsArray);

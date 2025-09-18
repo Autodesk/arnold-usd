@@ -59,7 +59,6 @@ usd
  filename "cube.usda"
  object_path ""
  frame 0
- debug off
 }
 
 skydome_light
