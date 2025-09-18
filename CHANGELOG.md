@@ -11,6 +11,10 @@
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
 - [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
 
+### Features
+
+- [usd#2400](https://github.com/Autodesk/arnold-usd/issues/2400) Support resolutions with a different aspect ratio than the data window
+
 ### Bug Fixes
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
