@@ -460,22 +460,26 @@ find_package_handle_standard_args(USD
 
 setup_usd_python()
 
-# TODO: BUILD_CUSTOM_BOOST should be removed from the cmake build
-if (NOT BUILD_USE_CUSTOM_BOOST)
-    # Forcing SHARED_LIBS: See here: https://github.com/boostorg/boost_install/issues/5
-    set(BUILD_SHARED_LIBS ON)
-    if (USD_HAS_PYTHON)
-        find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
-    else ()
-        find_package(Boost REQUIRED PATHS ${USD_LOCATION})
+# Boost has been removed since 25.05
+if (${USD_VERSION} VERSION_LESS "0.25.05")
+    # TODO: BUILD_CUSTOM_BOOST should be removed from the cmake build
+    if (NOT BUILD_USE_CUSTOM_BOOST)
+        # Forcing SHARED_LIBS: See here: https://github.com/boostorg/boost_install/issues/5
+        set(BUILD_SHARED_LIBS ON)
+        if (USD_HAS_PYTHON)
+            find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
+        else ()
+            find_package(Boost REQUIRED PATHS ${USD_LOCATION})
+        endif ()
     endif ()
-endif ()
 
-# This disables explicit linking from boost headers on Windows.
-if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
-    add_compile_definitions(BOOST_ALL_NO_LIB=1)
-    # This is for Houdini's boost libs. TODO: should that go up ? in the houdini search
-    add_compile_definitions(HBOOST_ALL_NO_LIB=1)
+
+    # This disables explicit linking from boost headers on Windows.
+    if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
+        add_compile_definitions(BOOST_ALL_NO_LIB=1)
+        # This is for Houdini's boost libs. TODO: should that go up ? in the houdini search
+        add_compile_definitions(HBOOST_ALL_NO_LIB=1)
+    endif ()
 endif ()
 
 # TBB
