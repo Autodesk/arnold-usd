@@ -87,6 +87,9 @@ public:
           _typeName(typeName)
     {
     }
+
+#if PXR_VERSION < 2508
+
 #if PXR_VERSION >= 2505
     SdrSdfTypeIndicator
 #elif PXR_VERSION >= 2411
@@ -109,10 +112,10 @@ public:
 #if PXR_VERSION >= 2111
     const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
 #endif
+#endif // PXR_VERSION < 2508
 private:
     SdfValueTypeName _typeName;
 };
-
 } // namespace
 
 NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}

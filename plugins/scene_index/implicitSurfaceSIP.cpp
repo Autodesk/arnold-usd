@@ -180,8 +180,8 @@ HdArnoldImplicitSurfaceSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene,
     const HdContainerDataSourceHandle &inputArgs)
 {
-#if PXR_VERSION <= 2505
     auto implicitSurfaceSceneIndex = HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs);
+#if PXR_VERSION <= 2505
     implicitSurfaceSceneIndex->SetDisplayName("Arnold: implicit surface scene index");
     return _FixImplicitSurfaceSidedNessSceneIndex::New(implicitSurfaceSceneIndex);
 #else // Assuming the sidedness bug is fixed in 25.08
