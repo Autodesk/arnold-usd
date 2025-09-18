@@ -1,4 +1,5 @@
 #include "propagateDirtyPrimsSIP.h"
+#ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
 
@@ -98,3 +99,4 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
+#endif // ENABLE_SCENE_INDEX
