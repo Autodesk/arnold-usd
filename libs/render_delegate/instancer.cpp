@@ -187,7 +187,7 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
 
 
 // Should that be SyncPrototypeTransforms
-// This method use the scatter_matrix feature to create instances
+// This method use the instance_matrix feature to create instances
 void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
@@ -224,7 +224,7 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
 
-    AiNodeSetArray(prototypeNode, str::scatter_matrix, matrices);
+    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
 }
