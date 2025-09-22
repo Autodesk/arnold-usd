@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "render_delegate.h"
+#include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
 
@@ -352,7 +353,12 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
         // Search paths
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
+#if ARNOLD_VERSION_NUM <= 70403
+        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
+        {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
+#else
         {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
+#endif
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
 
         {str::t_subdiv_dicing_camera, {"Subdiv Dicing Camera", std::string{}}},

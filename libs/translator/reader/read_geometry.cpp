@@ -1871,8 +1871,14 @@ AtNode* UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderCont
 
     // copy the asset search path string from the input universe
     AiNodeSetStr(
+#if ARNOLD_VERSION_NUM <= 70403
+        AiUniverseGetOptions(tmpUniverse), str::procedural_searchpath,
+        AiNodeGetStr(AiUniverseGetOptions(universe), str::procedural_searchpath)
+#else
         AiUniverseGetOptions(tmpUniverse), str::asset_searchpath,
-        AiNodeGetStr(AiUniverseGetOptions(universe), str::asset_searchpath));
+        AiNodeGetStr(AiUniverseGetOptions(universe), str::asset_searchpath)
+#endif
+    );
 
     // Create a procedural with the given node type
     AtNode *proc = AiNode(tmpUniverse, AtString(nodeType.c_str()), AtString("viewport_proc"));

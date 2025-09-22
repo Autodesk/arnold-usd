@@ -196,6 +196,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         std::lock_guard<AtMutex> lock(s_renderDelegateCreationMutex);
         _renderDelegate = HdRendererPluginRegistry::GetInstance().CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"), settingsMap);
     }
+
     assert(_renderDelegate);
     //_renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
@@ -203,6 +204,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
         _renderIndex = HdRenderIndex::New(GetArnoldRenderDelegate(), HdDriverVector());
     }
+    GetArnoldRenderDelegate()->SetReader(this);
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
@@ -227,9 +229,11 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
             _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
         }
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
+        _stageSceneIndex->SetTime(UsdTimeCode(_time.frame));
 #endif        
     } else {        
         _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
+        _imagingDelegate->SetTime(UsdTimeCode(_time.frame));
     }
 
     const char *debugScene = std::getenv("HDARNOLD_DEBUG_SCENE");
@@ -292,7 +296,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), _time, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, renderCameraPath);
         }
     } 
 
@@ -419,6 +423,9 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
+
+    if (frame == _time.frame)
+        return;
     _time.frame = frame;
     if (_useSceneIndex) {
         _stageSceneIndex->SetTime(UsdTimeCode(frame));

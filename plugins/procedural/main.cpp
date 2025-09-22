@@ -112,6 +112,13 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
+    const AtString procEntryName(XARNOLDUSDSTRINGIZE(USD_PROCEDURAL_NAME));
+    // in the usd procedural built with arnold, we want the frame to trigger 
+    // a reload of the procedural, as it's not possible to change the usd stage between renders.
+    if (procEntryName == str::usd) {
+        AiMetaDataSetBool(nentry, str::frame, AtString("_triggers_reload"), true);
+    }
+
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
 }
@@ -127,9 +134,13 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
         // the Arnold standard (e.g. [HOME]) are expanded. If our .abc file exists in any of the directories we
         // concatenate the path and the relative filename to create a new procedural argument filename using the full
         // path.
+#if ARNOLD_VERSION_NUM <= 70403
+        std::string proceduralPath = std::string(AiNodeGetStr(optionsNode, AtString("procedural_searchpath")));
+        std::string expandedSearchpath = ExpandEnvironmentVariables(proceduralPath.c_str());
+#else
         std::string assetPath = std::string(AiNodeGetStr(optionsNode, AtString("asset_searchpath")));
         std::string expandedSearchpath = ExpandEnvironmentVariables(assetPath.c_str());
-
+#endif
         PathList pathList;
         TokenizePath(expandedSearchpath, pathList, ":;", true);
         if (!pathList.empty()) {
@@ -245,6 +256,7 @@ procedural_update
     if (!reader)
         return;
  
+    reader->SetFrame(AiNodeGetFlt(node, str::frame)); 
     // Update the arnold scene based on the modified USD contents
     reader->Update();
 }
@@ -307,7 +319,7 @@ procedural_viewport
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
-    reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
+    reader->SetFrame(AiNodeGetFlt(node, str::frame));
     reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
 
     bool listNodes = false;
@@ -452,8 +464,14 @@ scene_load
         std::string envThreadsVal = ArchGetEnv(envThreads);
         threadCount = std::max(0, std::stoi(envThreadsVal));
     }
-    
+
     if (params) {
+        AtString commandLine;
+        if (AiParamValueMapGetStr(params, str::command_line, &commandLine)) {
+            const std::string commandLineStr(commandLine.c_str());
+            reader->SetCommandLine(commandLineStr);
+        }
+
         // eventually check the input param map in case we have an entry for "frame"
         AiParamValueMapGetFlt(params, str::frame, &frame);
         // eventually get an amount of threads to read the usd file

@@ -1,0 +1,7 @@
+Ignore verbosity settings when set through kick -v
+
+See #1633
+
+author: sebastien.ortega
+
+PARAMS: {}

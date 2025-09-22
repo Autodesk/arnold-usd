@@ -1,19 +1,27 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next feature release (7.4.4.0)
+## [7.4.4.0] (Unreleased)
 
 ### Features
-
+- [usd#1633](https://github.com/Autodesk/arnold-usd/issues/1633) - Ignore verbosity settings from USD files when rendering with "kick -v"
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
+- [usd#2408](https://github.com/Autodesk/arnold-usd/issues/2408) - Fix render region calculation when based on windowNDC
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
+- [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
 
 ### Bug Fixes
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
 
-## Unreleased bugfix version (7.4.3.1)
+## [7.4.3.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2422](https://github.com/Autodesk/arnold-usd/issues/2422) - Fix regression on frame changes in the usd procedural
+
+## [7.4.3.1] - 2025-08-27
 
 ### Bug Fixes
 
