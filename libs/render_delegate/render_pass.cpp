@@ -445,10 +445,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
-    const auto newFraming = _GetFraming(renderPassState);
+    CameraUtilFraming newFraming = _GetFraming(renderPassState);
+    GfVec2i delegateResolution = _renderDelegate->GetResolution();
+    int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
+    int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
+    
+    if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
+        delegateResolution[0] != width && delegateResolution[1] != height) {
+
+        // If a resolution is provided through the render settings, we use
+        // that instead of the viewport.
+        width = delegateResolution[0];
+        height = delegateResolution[1];
+        newFraming = CameraUtilFraming(GfRect2i(
+            GfVec2i(0, 0), width, height));
+    }
+
     const bool framingChanged = newFraming != _framing;
-    const int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
-    const int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -462,12 +475,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[2], _windowNDC[2], AI_EPSILON)) || 
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage, bool allocate) {
+
         static std::vector<uint8_t> zeroData;
         zeroData.resize(width * height * 4);
+
         for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, width, height, HdFormatUNorm8Vec4, zeroData.data());
+            HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
+            if (renderBuffer != nullptr) {
+                if (allocate)
+                    renderBuffer->Allocate(GfVec3i(width, height, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
+
+                renderBuffer->WriteBucket(0, 0, width, height, HdFormatUNorm8Vec4, zeroData.data());
             }
         }
     };
@@ -479,7 +498,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, width);
         AiNodeSetInt(options, str::yres, height);
-        clearBuffers(_renderBuffers);
+
+        clearBuffers(_renderBuffers, true);
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
         AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
@@ -1070,7 +1090,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             aovShaders.empty()
                 ? AiArray(0, 1, AI_TYPE_NODE)
                 : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-        clearBuffers(_renderBuffers);
+        clearBuffers(_renderBuffers, true);
     }
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
@@ -1089,7 +1109,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (!aovBindings.empty()) {
         // Clearing all AOVs if render was aborted.
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
-            clearBuffers(_renderBuffers);
+            clearBuffers(_renderBuffers, false);
         }
         for (auto& buffer : _renderBuffers) {
             if (buffer.second.buffer != nullptr) {
