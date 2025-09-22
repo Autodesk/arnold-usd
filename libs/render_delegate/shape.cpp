@@ -253,18 +253,22 @@ bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnol
     if (!instancer) {
         return false;
     }
+#ifdef USE_NATIVE_INSTANCING
     // If we have a nested instancer configuration, we'll use an arnold instancer node.
     HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
     if (parentInstancer) {
         return true;
     }
 
-    // Current limitation with the scatter instancing
+    // Current limitation of the new instancing mechanism // TODO remove once GPU is implemented
     if (renderDelegate->IsUsingGPU()) {
         return true;
     }
 
-    // polymesh has its own instancing mechanism, so we don't need to create an arnold instancer node
-    return !AiNodeIs(_shape, str::polymesh); 
+    // polymesh has its own instancing mechanism, so we don't need to create an Arnold instancer node
+    return !AiNodeIs(_shape, str::polymesh);
+#else
+    return true;
+#endif
 }
 PXR_NAMESPACE_CLOSE_SCOPE

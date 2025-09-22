@@ -417,7 +417,7 @@ public:
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
                 break;
-#if ARNOLD_VERSION_NUM > 70401 // TODO fix version
+#ifdef USE_NATIVE_INSTANCING
             case AI_USERDEF_SCATTER:
                 category = TfToken("instance"); // TODO have a static token
                 break;
