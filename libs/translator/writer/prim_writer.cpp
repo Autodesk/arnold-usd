@@ -418,7 +418,7 @@ public:
                 category = UsdGeomTokens->faceVarying;
                 break;
 #ifdef USE_NATIVE_INSTANCING
-            case AI_USERDEF_SCATTER:
+            case AI_USERDEF_PER_INSTANCE:
                 category = TfToken("instance"); // TODO have a static token
                 break;
 #endif
