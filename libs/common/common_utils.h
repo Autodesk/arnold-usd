@@ -43,7 +43,7 @@ constexpr auto AiArrayUnmapConst = AiArrayUnmap;
 static const int AI_NODE_IMAGER = AI_NODE_DRIVER;
 #endif
 
-#if ARNOLD_VERSION_NUM > 70404 // use new instancing
+#if ARNOLD_VERSION_NUM >= 70404 // use new instancing
 #define USE_NATIVE_INSTANCING
 #endif
 

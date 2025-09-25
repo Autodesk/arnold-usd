@@ -23,6 +23,7 @@
 #endif // ENABLE_SCENE_INDEX // Hydra2
 
 #include <constant_strings.h>
+#include "common_utils.h" // for USE_NATIVE_INSTANCING
 #include "instancer.h"
 #include "utils.h"
 
