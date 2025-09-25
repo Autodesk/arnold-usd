@@ -702,7 +702,16 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
 void HdArnoldGenericLight::SetupTexture(const VtValue& value)
 {
+    //Allow user to specify mirroring effect on light textures
+    bool isMirrored;
     const auto* nentry = AiNodeGetNodeEntry(_light);
+    const AtUserParamEntry* param = AiNodeLookUpUserParameter(_light, AtString("mirrored"));
+        if (param != nullptr) {
+            isMirrored = AiNodeGetBool(_light, AiUserParamGetName(param));
+        }else {
+            isMirrored = false;
+        }
+    
 
     std::string path;
     if (value.IsHolding<SdfAssetPath>()) {
@@ -729,7 +738,7 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        AiNodeSetBool(_texture, str::sflip, true);
+        AiNodeSetBool(_texture, str::sflip, isMirrored);
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
     AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);

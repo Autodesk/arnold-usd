@@ -1,0 +1,6 @@
+Rect-lights should have option to display in either true-image or mirror-image
+
+Author: Libby O'Meara
+
+
+PARAMS: {'scene':'test.usda'}

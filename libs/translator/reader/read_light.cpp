@@ -531,9 +531,20 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             std::string imageName(prim.GetPath().GetText());
             imageName += "/texture_file";
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
+            //Set the mirrored quality
+            bool isMirrored;
+            const auto* nentry = AiNodeGetNodeEntry(node);
+            const AtUserParamEntry* param = AiNodeLookUpUserParameter(node, AtString("mirrored"));
+            if (param != nullptr) {
+                isMirrored = AiNodeGetBool(node, AiUserParamGetName(param));
+                AiMsgWarning("we got the bool");
+            }else {
+                isMirrored = false;
+                AiMsgWarning("we don't got the bool");
+            }
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeSetBool(image, str::sflip, true);
+            AiNodeSetBool(image, str::sflip, isMirrored);
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
             AiNodeResetParameter(node, str::color);
