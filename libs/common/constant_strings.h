@@ -329,6 +329,7 @@ ASTR(input);
 ASTR(inputs);
 ASTR(input1);
 ASTR(input2);
+ASTR(instance_crypto_object_offset);
 ASTR(instance_inherit_xform);
 ASTR(instance_intensity);
 ASTR(instance_matrix);
