@@ -702,17 +702,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
 void HdArnoldGenericLight::SetupTexture(const VtValue& value)
 {
-    //Allow user to specify mirroring effect on light textures
-    bool isMirrored;
-    const auto* nentry = AiNodeGetNodeEntry(_light);
-    const AtUserParamEntry* param = AiNodeLookUpUserParameter(_light, AtString("mirrored"));
-        if (param != nullptr) {
-            isMirrored = AiNodeGetBool(_light, AiUserParamGetName(param));
-        }else {
-            isMirrored = false;
-        }
     
-
     std::string path;
     if (value.IsHolding<SdfAssetPath>()) {
         const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
@@ -737,8 +727,17 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
     
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
+    const auto* nentry = AiNodeGetNodeEntry(_light);
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        AiNodeSetBool(_texture, str::sflip, isMirrored);
+        //Allow user to specify mirroring effect on light textures
+        AtString mirrorName("mirrored");
+        const AtUserParamEntry* param = AiNodeLookUpUserParameter(_light, mirrorName);
+        if (param != nullptr) {
+            AiNodeSetBool(_texture, str::sflip, AiNodeGetBool(_light, mirrorName));
+        } else {
+            AiNodeSetBool(_texture, str::sflip, false);
+        }
+        
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
     AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);
