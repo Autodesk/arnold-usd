@@ -567,6 +567,126 @@ void ReadArnoldParameters(
     }
 }
 
+/**
+ *   Read all the arnold-specific attributes that were saved in this USD
+ *primitive. Arnold attributes are prefixed with the namespace 'arnold:' We will
+ *strip this prefix, look for the corresponding arnold parameter, and convert it
+ *based on its type. 
+ **/
+void ReadArnoldParameters(
+    const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time, bool& isMirrored,
+    const std::string &scope)
+{    
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    if (nodeEntry == nullptr) {
+        return; // shouldn't happen
+    }
+
+    UsdAttributeVector attributes;
+    // Check if the scope refers to primvars
+    bool readPrimvars = (scope.length() >= 8 && scope.substr(0, 8) == "primvars");
+    size_t attributeCount;
+
+    // The reader context will return us the list of primvars for this primitive,
+    // which was computed during the stage traversal, taking account the full
+    // hierarchy.
+    const std::vector<UsdGeomPrimvar> &primvars = context.GetPrimvars();
+
+    if (readPrimvars) {
+        attributeCount = primvars.size();
+    }
+    else {
+        // Get the full attributes list defined in this primitive
+        attributes = prim.GetAttributes();
+        attributeCount = attributes.size();
+    }
+
+    bool isShape = (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHAPE);
+
+    // We currently support the following namespaces for arnold input attributes
+    TfToken scopeToken(scope);
+    for (size_t i = 0; i < attributeCount; ++i) {
+        // The attribute can either come from the attributes list, or from the primvars list
+        const UsdAttribute &attr = (readPrimvars) ? primvars[i].GetAttr() : attributes[i];
+        if (!attr.HasAuthoredValue() && !attr.HasAuthoredConnections())
+            continue;
+
+        TfToken attrNamespace = attr.GetNamespace();
+        std::string attrNamespaceStr = attrNamespace.GetString();
+        std::string arnoldAttr = attr.GetBaseName().GetString();
+        if (arnoldAttr.empty())
+            continue;
+        if (arnoldAttr == "mirrored"){
+            // Check for the custom value "mirrored"
+            VtValue nameValue;
+            attr.Get(&nameValue);
+            isMirrored = VtValueGetBool(nameValue);
+            continue;
+        }
+
+        if (attrNamespace != scope) { // only deal with attributes of the desired scope
+
+            bool namespaceIncludesScope = (!scope.empty()) && (scope.length() < attrNamespaceStr.length()) &&
+                                          (attrNamespaceStr.find(scope) == 0);
+
+            if (isShape && namespaceIncludesScope) {
+                // Special case for ray-type visibility flags that can appedar as
+                // visibility:camera, sidedness:shadow, etc... see #637
+                std::string lastToken = attrNamespaceStr.substr(scope.length() + 1);
+                if (lastToken == "visibility" || lastToken == "sidedness" || lastToken == "autobump_visibility") {
+                    VtValue value;
+                    if (attr.Get(&value, time.frame))
+                        _SetRayFlag(node, lastToken, arnoldAttr, value);
+                }                    
+            }
+            
+            // Linked array attributes : This isn't supported natively in USD, so we need
+            // to read it in a specific format. If attribute "attr" has element 1 linked to
+            // a shader, we will write it as attr:i1
+            if (arnoldAttr[0] == 'i' && (scope.empty() || namespaceIncludesScope)) {
+                ReadArrayLink(prim, attr, time, context, node, scope);
+            }
+            continue;
+        }
+
+        if (arnoldAttr == "name") {
+            // If attribute "name" is set in the usd prim, we need to set the node name
+            // accordingly. We also store this node original name in a map, that we
+            // might use later on, when processing connections.
+            VtValue nameValue;
+            if (attr.Get(&nameValue, time.frame)) {
+                std::string nameStr = VtValueGetString(nameValue);
+                std::string usdName = prim.GetPath().GetText();
+                if ((!nameStr.empty()) && nameStr != usdName) {
+                    AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
+                    context.AddNodeName(usdName, node);
+                }
+            }
+            continue;
+        }
+        
+        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
+        if (paramEntry == nullptr) {
+            // For custom procedurals, there will be an attribute node_entry that should be ignored.
+            // In any other case, let's dump a warning
+            if (arnoldAttr != "node_entry" || AiNodeEntryGetDerivedType(nodeEntry) != AI_NODE_SHAPE_PROCEDURAL) {
+                AiMsgWarning(
+                    "USD arnold attribute %s not recognized in %s for %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry), AiNodeGetName(node));
+            }
+            continue;
+        }
+        uint8_t paramType = AiParamGetType(paramEntry);
+
+        int arrayType = AI_TYPE_NONE;
+        if (paramType == AI_TYPE_ARRAY) {
+            const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
+            // Getting the default array, and checking its type
+            arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
+        }
+        ReadAttribute(attr, node, arnoldAttr, time, context, paramType, arrayType);
+    }
+}
+
 
 bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
 {

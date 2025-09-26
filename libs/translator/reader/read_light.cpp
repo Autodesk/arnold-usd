@@ -518,8 +518,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+    bool isMirrored = false;
     ReadMatrix(prim, node, time, context);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, isMirrored, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
 
     VtValue textureFileValue;
@@ -531,17 +532,6 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             std::string imageName(prim.GetPath().GetText());
             imageName += "/texture_file";
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
-            //Set the mirrored quality
-            bool isMirrored;
-            const auto* nentry = AiNodeGetNodeEntry(node);
-            const AtUserParamEntry* param = AiNodeLookUpUserParameter(node, AtString("mirrored"));
-            if (param != nullptr) {
-                isMirrored = AiNodeGetBool(node, AiUserParamGetName(param));
-                AiMsgWarning("we got the bool");
-            }else {
-                isMirrored = false;
-                AiMsgWarning("we don't got the bool");
-            }
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
             AiNodeSetBool(image, str::sflip, isMirrored);
