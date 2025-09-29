@@ -10,6 +10,8 @@
 - [usd#2408](https://github.com/Autodesk/arnold-usd/issues/2408) - Fix render region calculation when based on windowNDC
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
 - [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
+- [usd#2440](https://github.com/Autodesk/arnold-usd/issues/2440) - Support render settings resolution with windowNDC
+
 
 ### Bug Fixes
 
