@@ -518,9 +518,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
-    bool isMirrored = false;
+
     ReadMatrix(prim, node, time, context);
-    ReadArnoldParameters(prim, context, node, time, isMirrored, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
 
     VtValue textureFileValue;
@@ -534,7 +534,13 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeSetBool(image, str::sflip, isMirrored);
+            // usdlux_version determines mirroring or not
+            AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+            if (AiNodeGetInt(options, str::usdlux_version) == 0){
+                AiNodeSetBool(image, str::sflip, false);
+            } else {
+                AiNodeSetBool(image, str::sflip, true);
+            }
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
             AiNodeResetParameter(node, str::color);

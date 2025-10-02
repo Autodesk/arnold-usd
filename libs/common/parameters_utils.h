@@ -52,10 +52,6 @@ void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");
 
-void ReadArnoldParameters(
-        const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time, bool& isMirrored,
-        const std::string &scope = "arnold");
-
 void ReadArrayLink(
     const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
     ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);

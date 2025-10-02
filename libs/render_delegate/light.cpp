@@ -730,13 +730,13 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     const auto* nentry = AiNodeGetNodeEntry(_light);
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
         //Allow user to specify mirroring effect on light textures
-        AtString mirrorName("mirrored");
-        const AtUserParamEntry* param = AiNodeLookUpUserParameter(_light, mirrorName);
-        if (param != nullptr) {
-            AiNodeSetBool(_texture, str::sflip, AiNodeGetBool(_light, mirrorName));
-        } else {
+        AtNode* options = AiUniverseGetOptions(_delegate->GetUniverse());
+        if (AiNodeGetInt(options, str::usdlux_version) == 0){
             AiNodeSetBool(_texture, str::sflip, false);
+        } else {
+            AiNodeSetBool(_texture, str::sflip, true);
         }
+       
         
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
