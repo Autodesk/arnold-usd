@@ -11,6 +11,7 @@
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
 - [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
 - [usd#2436](https://github.com/Autodesk/arnold-usd/issues/2436) - Support cryptomatte with instances in hydra2
+- [usd#2441](https://github.com/Autodesk/arnold-usd/issues/2441) - Fix invalid motion ranges caused by motion_start / motion_end attributes
 
 ### Bug Fixes
 
