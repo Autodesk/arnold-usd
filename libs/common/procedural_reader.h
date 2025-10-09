@@ -13,8 +13,6 @@ public:
     ProceduralReader() {};
     virtual ~ProceduralReader() {};
     virtual void SetFrame(float frame) = 0;
-    virtual void SetDebug(bool b) = 0;
-    virtual void SetThreadCount(unsigned int t) = 0;
     virtual void SetId(unsigned int id) = 0;
     virtual void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) = 0;
     virtual void SetConvertPrimitives(bool b) = 0;

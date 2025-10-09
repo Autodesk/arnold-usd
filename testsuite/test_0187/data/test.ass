@@ -62,5 +62,4 @@ usd
 {
   name /myUsd
   filename "scene.usda"
-  threads 1
 }
