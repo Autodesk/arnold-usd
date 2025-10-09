@@ -4,12 +4,15 @@
 ## [7.4.4.0] (Unreleased)
 
 ### Features
+
+- [usd#2418](https://github.com/Autodesk/arnold-usd/issues/2418) - Deprecate legacy parameters "threads", "debug" and "hydra" in the procedural
 - [usd#1633](https://github.com/Autodesk/arnold-usd/issues/1633) - Ignore verbosity settings from USD files when rendering with "kick -v"
 - [usd#2331](https://github.com/Autodesk/arnold-usd/issues/2331) - Support multiple AOVs with the same name in hydra render products
 - [usd#2390](https://github.com/Autodesk/arnold-usd/issues/2390) - Add support for the MeshLightAPI
 - [usd#2408](https://github.com/Autodesk/arnold-usd/issues/2408) - Fix render region calculation when based on windowNDC
 - [usd#2404](https://github.com/Autodesk/arnold-usd/issues/2404) - Support asset_searchpath as a replacement for procedural & texture search paths.
 - [usd#2407](https://github.com/Autodesk/arnold-usd/issues/2407) - Add support for RenderPass prim when using hydra2.
+- [usd#2436](https://github.com/Autodesk/arnold-usd/issues/2436) - Support cryptomatte with instances in hydra2
 
 ### Bug Fixes
 
