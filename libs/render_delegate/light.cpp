@@ -732,9 +732,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         //Allow user to specify mirroring effect on light textures
         AtNode* options = AiUniverseGetOptions(_delegate->GetUniverse());
         if (AiNodeGetInt(options, str::usdlux_version) == 0){
-            AiNodeSetBool(_texture, str::sflip, false);
-        } else {
             AiNodeSetBool(_texture, str::sflip, true);
+        } else {
+            AiNodeSetBool(_texture, str::sflip, false);
         }
        
         

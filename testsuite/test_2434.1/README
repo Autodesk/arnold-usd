@@ -1,4 +1,4 @@
-Rect-lights have option to display in mirror-image: mirrored = false
+Rect-lights display in non-mirror-image when usdlux version set to 25.05
 
 Author: Libby O'Meara
 

@@ -537,9 +537,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             // usdlux_version determines mirroring or not
             AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
             if (AiNodeGetInt(options, str::usdlux_version) == 0){
-                AiNodeSetBool(image, str::sflip, false);
-            } else {
                 AiNodeSetBool(image, str::sflip, true);
+            } else {
+                AiNodeSetBool(image, str::sflip, false);
             }
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);

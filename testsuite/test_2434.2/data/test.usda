@@ -17,6 +17,7 @@ def Scope "Render"
         custom int arnold:global:AA_samples = 6
         custom bool arnold:global:enable_progressive_render = 1
         custom int arnold:global:GI_total_depth = 0
+        custom string arnold:global:usdlux_version = "None"
         rel camera = </cameras/camera1>
         float4 dataWindowNDC = (0, 0, 1, 1)
         uniform bool disableMotionBlur = 1
@@ -111,7 +112,6 @@ def Xform "lights"
         float inputs:width = 1
         custom bool karma:light:renderlightgeo = 1
         rel light:filters = None
-        bool primvars:arnold:mirrored = 1
         float primvars:arnold:camera = 1 (
             interpolation = "constant"
         )
