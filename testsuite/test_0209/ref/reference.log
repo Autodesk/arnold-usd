@@ -1,32 +1,32 @@
 Executing kick test.usda -dw -r 160 120 -bs 16 -sm lambert -sl -o /Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/testsuite/test_0209/testrender.tif -set driver_tiff.dither false -dp -v 6
-00:00:00    90MB         | log started Fri Sep  5 18:08:00 2025
-00:00:00    90MB         | Arnold 7.4.4.0 [83cff216] darwin arm64 clang-20.1.4 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.5.0.53 clmhub-3.1.1.43 rlm-16.1.1 2025/09/04 23:14:59
-00:00:00    90MB         | running on ADSKMXQQT7TCQJ, pid=53542
-00:00:00    90MB         |  1 x Apple M1 Max (10 cores, 10 logical) with 65536MB
-00:00:00    90MB         |  Mac OS 15.5.0, Darwin kernel 24.5.0
-00:00:00    90MB         |  soft limit for open files is set at 10238
-00:00:00    90MB         |  
-00:00:00    90MB         | Installing system handler with mask 255
-00:00:00    99MB         | loading plugins from /Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/plugins/procedural ...
-00:00:00    99MB         |  usd_proc.dylib: usd uses Arnold 7.4.4.0
-00:00:00    99MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
-00:00:00    99MB         | loading plugins from /Users/picharc/installs/Arnold-7.4.4.0_20250904231009_83cff216_darwin_47/bin/../plugins ...
-00:00:00    99MB         |  skipping already loaded plugin: /Users/picharc/installs/Arnold-7.4.4.0_20250904231009_83cff216_darwin_47/bin/../plugins/usd_proc.dylib ...
-00:00:00    99MB         |  alembic_proc.dylib: alembic uses Arnold 7.4.4.0
-00:00:00    99MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00    91MB         | log started Thu Oct  9 10:36:11 2025
+00:00:00    91MB         | Arnold 7.4.4.0 [30c02394] darwin arm64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.5.0.53 clmhub-3.1.1.43 rlm-16.1.1 2025/10/09 07:52:55
+00:00:00    91MB         | running on ADSKMXQQT7TCQJ, pid=63062
+00:00:00    91MB         |  1 x Apple M1 Max (10 cores, 10 logical) with 65536MB
+00:00:00    91MB         |  Mac OS 15.7.1, Darwin kernel 24.6.0
+00:00:00    91MB         |  soft limit for open files is set at 10238
+00:00:00    91MB         |  
+00:00:00    91MB         | Installing system handler with mask 255
+00:00:00   100MB         | loading plugins from /Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/plugins/procedural ...
+00:00:00   100MB         |  usd_proc.dylib: usd uses Arnold 7.4.4.0
+00:00:00   100MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   100MB         | loading plugins from /Users/picharc/installs/Arnold-7.4.4.0_20251009042909_30c02394_darwin_86/bin/../plugins ...
+00:00:00   100MB         |  skipping already loaded plugin: /Users/picharc/installs/Arnold-7.4.4.0_20251009042909_30c02394_darwin_86/bin/../plugins/usd_proc.dylib ...
+00:00:00   101MB         |  alembic_proc.dylib: alembic uses Arnold 7.4.4.0
+00:00:00   101MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
 00:00:00   101MB         | [kick] command: kick test.usda -dw -r 160 120 -bs 16 -sm lambert -sl -o /Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/testsuite/test_0209/testrender.tif -set driver_tiff.dither false -dp -v 6
 00:00:00   101MB         | loading plugins from . ...
 00:00:00   101MB         | no plugins loaded
 00:00:00   101MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
-Warning (secondary thread): in BindingsAtPrim at line 671 of /Users/picharc/develop/picharc/arnold-kook/usd/build/usd-25.05.01_darwin-arm64_static_clang-15.0.0_cxx17/pxr/usd/usdShade/materialBindingAPI.cpp -- Found material bindings on prim at path (/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh) but MaterialBindingAPI is not applied on the prim
-00:00:00   112MB WARNING | USD arnold attribute light not recognized in polymesh for /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh
-00:00:00   112MB         | [kick] applying 2 attr value overrides
-00:00:00   112MB         | 
-00:00:00   112MB WARNING | rendering with watermarks because the skip_license_check option was enabled
-00:00:00   112MB         | 
-00:00:00   112MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
-00:00:00   114MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/picharc/installs/Arnold-7.4.4.0_20250904231009_83cff216_darwin_47/bin/../ocio/configs/arnold/config.ocio
-00:00:00   114MB         | [color_manager] rendering color space is "ACEScg"
+Warning (secondary thread): in BindingsAtPrim at line 671 of /Users/picharc/develop/picharc/arnold-kook/usd/build/usd-25.05_darwin-arm64_static_clang-16.0.0_cxx17/pxr/usd/usdShade/materialBindingAPI.cpp -- Found material bindings on prim at path (/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh) but MaterialBindingAPI is not applied on the prim
+00:00:00   111MB WARNING | USD arnold attribute light not recognized in polymesh for /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh
+00:00:00   111MB         | [kick] applying 2 attr value overrides
+00:00:00   111MB         | 
+00:00:00   111MB WARNING | rendering with watermarks because the skip_license_check option was enabled
+00:00:00   111MB         | 
+00:00:00   111MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   113MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/picharc/installs/Arnold-7.4.4.0_20251009042909_30c02394_darwin_86/bin/../ocio/configs/arnold/config.ocio
+00:00:00   113MB         | [color_manager] rendering color space is "ACEScg"
 00:00:00   155MB         |  
 00:00:00   155MB         | there are 1 light and 3 objects:
 00:00:00   155MB         |       1 persp_camera
@@ -55,104 +55,101 @@ Warning (secondary thread): in BindingsAtPrim at line 671 of /Users/picharc/deve
 00:00:00   155MB         |   light             <using per light samples>
 00:00:00   155MB         |   transparency      depth 10
 00:00:00   155MB         | full scene initialize (15 nodes)
-00:00:00   156MB         |  creating root object list ...
-00:00:00   156MB         | full scene initialize done in 0:00.00 (multithreaded)
-00:00:00   156MB         | fast scene update (15 of 16 nodes)
-00:00:00   156MB         |  /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light: mesh_light using 1 sample, 2 volume samples
-00:00:00   156MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/picharc/installs/Arnold-7.4.4.0_20250904231009_83cff216_darwin_47/bin/../ocio/configs/arnold/config.ocio
+00:00:00   155MB         |  creating root object list ...
+00:00:00   155MB         | full scene initialize done in 0:00.00 (multithreaded)
+00:00:00   155MB         | fast scene update (15 of 16 nodes)
+00:00:00   155MB         |  /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light: mesh_light using 1 sample, 2 volume samples
+00:00:00   156MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/picharc/installs/Arnold-7.4.4.0_20251009042909_30c02394_darwin_86/bin/../ocio/configs/arnold/config.ocio
 00:00:00   156MB         |  procedural instancing optimization done in 0:00.00 (0 object promoted)
 00:00:00   156MB         |  scene bounds: (-13.4414387 -1.35595 -13.4414387) -> (13.4414387 1.24383485 13.4414387)
 00:00:00   156MB         | fast scene update done in 0:00.00 (multithreaded)
 00:00:00   156MB         | [light_sampler] Group 0: Total number of lights 1, sampled lights 0, fixed lights 1
-00:00:00   156MB         | [light_sampler] Group 0: Took 0.000000 ms to build the tree
+00:00:00   156MB         | [light_sampler] Group 0: Took 0.001000 ms to build the tree
 00:00:00   156MB         | [aov] parsing 1 output statements ...
 00:00:00   156MB         | [aov] registered driver: "kick_driver" (driver_tiff)
 00:00:00   156MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_filter" (gaussian_filter)
 00:00:00   156MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
 00:00:00   157MB         | starting 10 bucket workers of size 16x16 ...
-00:00:00   157MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 2 prims, 1 key
-00:00:00   161MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 100 prims, 1 key
-00:00:00   161MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 60 prims, 1 key
-00:00:00   170MB         |    1% done - 107 rays/pixel
-00:00:00   170MB         |    5% done - 130 rays/pixel
-00:00:00   170MB         |   10% done - 268 rays/pixel
-00:00:00   170MB         |   15% done - 251 rays/pixel
-00:00:00   170MB         |   20% done - 77 rays/pixel
-00:00:00   170MB         |   25% done - 74 rays/pixel
-00:00:00   170MB         |   30% done - 119 rays/pixel
-00:00:00   170MB         |   35% done - 149 rays/pixel
-00:00:00   170MB         |   40% done - 126 rays/pixel
-00:00:00   170MB         |   45% done - 72 rays/pixel
-00:00:00   170MB         |   50% done - 83 rays/pixel
-00:00:00   170MB         |   55% done - 31 rays/pixel
-00:00:00   170MB         |   60% done - 15 rays/pixel
-00:00:00   170MB         |   65% done - 103 rays/pixel
-00:00:00   170MB         |   70% done - 110 rays/pixel
-00:00:00   170MB         |   75% done - 72 rays/pixel
-00:00:00   170MB         |   80% done - 84 rays/pixel
-00:00:00   170MB         |   85% done - 107 rays/pixel
-00:00:00   170MB         |   90% done - 50 rays/pixel
-00:00:00   170MB         |   95% done - 85 rays/pixel
-00:00:00   170MB         |  100% done - 19 rays/pixel
-00:00:00   170MB         | render done in 0:00.094
-00:00:00   170MB         | [driver_tiff] writing file `/Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/testsuite/test_0209/testrender.tif'
+00:00:00   160MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 2 prims, 1 key
+00:00:00   160MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 100 prims, 1 key
+00:00:00   160MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 60 prims, 1 key
+00:00:00   161MB         |    1% done - 106 rays/pixel
+00:00:00   168MB         |    5% done - 121 rays/pixel
+00:00:00   169MB         |   10% done - 178 rays/pixel
+00:00:00   169MB         |   15% done - 175 rays/pixel
+00:00:00   170MB         |   20% done - 131 rays/pixel
+00:00:00   170MB         |   25% done - 38 rays/pixel
+00:00:00   170MB         |   30% done - 121 rays/pixel
+00:00:00   170MB         |   35% done - 135 rays/pixel
+00:00:00   170MB         |   40% done - 103 rays/pixel
+00:00:00   170MB         |   45% done - 73 rays/pixel
+00:00:00   171MB         |   50% done - 116 rays/pixel
+00:00:00   171MB         |   55% done - 32 rays/pixel
+00:00:00   171MB         |   60% done - 8 rays/pixel
+00:00:00   171MB         |   65% done - 36 rays/pixel
+00:00:00   171MB         |   70% done - 183 rays/pixel
+00:00:00   171MB         |   75% done - 41 rays/pixel
+00:00:00   171MB         |   80% done - 94 rays/pixel
+00:00:00   171MB         |   85% done - 95 rays/pixel
+00:00:00   171MB         |   90% done - 25 rays/pixel
+00:00:00   171MB         |   95% done - 87 rays/pixel
+00:00:00   171MB         |  100% done - 33 rays/pixel
+00:00:00   171MB         | render done in 0:00.173
+00:00:00   171MB         | [driver_tiff] writing file `/Users/picharc/develop/cpichard/arnold-usd/build/darwin_arm64/gcc_opt/usd-0.25.5_arnold-7.4.4.0/testsuite/test_0209/testrender.tif'
 00:00:00   171MB         | render done
 00:00:00   171MB         |  
 00:00:00   171MB         | -----------------------------------------------------------------------------------
-00:00:00   171MB         | scene creation time          0:00.14    machine utilization (1.89%) 
-00:00:00   171MB         |  unaccounted                 0:00.14 
+00:00:00   171MB         | scene creation time          0:00.15    machine utilization (1.27%) 
+00:00:00   171MB         |  unaccounted                 0:00.15 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
-00:00:00   171MB         | frame time                   0:00.10    machine utilization (84.60%) 
-00:00:00   171MB         |  rendering                   0:00.09 
-00:00:00   171MB         |   pixel rendering            0:00.09 
+00:00:00   171MB         | frame time                   0:00.19    machine utilization (44.50%) 
+00:00:00   171MB         |  driver init/close           0:00.01 
+00:00:00   171MB         |  rendering                   0:00.17 
+00:00:00   171MB         |   pixel rendering            0:00.17 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
 00:00:00   171MB         | top session self-times by category 
-00:00:00   171MB         |  surface closure (aiStandardSurface1)                               0:00.02 (22.23%) 
-00:00:00   171MB         |  TraceCameraRay                                                     0:00.01 (10.51%) 
-00:00:00   171MB         |  ADP                                                                0:00.01 (10.15%) 
-00:00:00   171MB         |  AiLightsTrace                                                      0:00.01 ( 9.87%) 
-00:00:00   171MB         |  standard_surface (aiStandardSurface1)                              0:00.00 ( 8.87%) 
-00:00:00   171MB         |  ray traversal+intersection                                         0:00.00 ( 7.10%) 
-00:00:00   171MB         |  BVH::intersect                                                     0:00.00 ( 6.08%) 
-00:00:00   171MB         |   /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh           0:00.00 ( 4.96%) 
-00:00:00   171MB         |   root                                                              0:00.00 ( 1.12%) 
-00:00:00   171MB         |  AiLightsPrepare (/pPlane1/pPlaneShape1)                            0:00.00 ( 5.15%) 
-00:00:00   171MB         |  polymesh::intersect                                                0:00.00 ( 4.48%) 
-00:00:00   171MB         |   /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh           0:00.00 ( 3.35%) 
-00:00:00   171MB         |   /pPlane1/pPlaneShape1                                             0:00.00 ( 1.13%) 
-00:00:00   171MB         |  LightSampling (/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light)     0:00.00 ( 3.38%) 
-00:00:00   171MB         |  sampleNextBatch                                                    0:00.00 ( 3.32%) 
-00:00:00   171MB         |  AiMakeRay                                                          0:00.00 ( 2.48%) 
-00:00:00   171MB         |  accumulateBucketSamples                                            0:00.00 ( 2.19%) 
+00:00:00   171MB         |  surface closure (aiStandardSurface1)                               0:00.03 (23.27%) 
+00:00:00   171MB         |  AiLightsTrace                                                      0:00.02 (15.58%) 
+00:00:00   171MB         |  ray traversal+intersection                                         0:00.01 ( 8.78%) 
+00:00:00   171MB         |  ADP                                                                0:00.01 ( 8.74%) 
+00:00:00   171MB         |  LightSampling (/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light)     0:00.01 ( 8.04%) 
+00:00:00   171MB         |  polymesh::intersect (/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh)     0:00.01 ( 6.76%) 
+00:00:00   171MB         |  RenderBucket                                                       0:00.01 ( 6.61%) 
+00:00:00   171MB         |  TraceCameraRay                                                     0:00.00 ( 4.04%) 
+00:00:00   171MB         |  BVH::intersect                                                     0:00.00 ( 3.82%) 
+00:00:00   171MB         |   /pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh           0:00.00 ( 2.49%) 
+00:00:00   171MB         |   root                                                              0:00.00 ( 1.33%) 
+00:00:00   171MB         |  standard_surface (aiStandardSurface1)                              0:00.00 ( 3.60%) 
+00:00:00   171MB         |  accumulateBucketSamples                                            0:00.00 ( 3.06%) 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
 00:00:00   171MB         | top session self-times by node 
-00:00:00   171MB         |  standard_surface:aiStandardSurface1                                0:00.05 (50.55%) 
-00:00:00   171MB         |   surface closure                                                   0:00.02 (22.23%) 
-00:00:00   171MB         |   AiLightsTrace                                                     0:00.01 ( 9.87%) 
-00:00:00   171MB         |   ray traversal+intersection                                        0:00.00 ( 7.10%) 
-00:00:00   171MB         |   AiMakeRay                                                         0:00.00 ( 2.48%) 
-00:00:00   171MB         |  TraceCameraRay                                                     0:00.01 (10.51%) 
-00:00:00   171MB         |  ADP                                                                0:00.01 (10.15%) 
-00:00:00   171MB         |  polymesh:/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh     0:00.00 ( 8.31%) 
-00:00:00   171MB         |   BVH::intersect                                                    0:00.00 ( 4.96%) 
-00:00:00   171MB         |   polymesh::intersect                                               0:00.00 ( 3.35%) 
-00:00:00   171MB         |  polymesh:/pPlane1/pPlaneShape1                                     0:00.00 ( 6.28%) 
-00:00:00   171MB         |   AiLightsPrepare                                                   0:00.00 ( 5.15%) 
-00:00:00   171MB         |   polymesh::intersect                                               0:00.00 ( 1.13%) 
-00:00:00   171MB         |  mesh_light:/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light     0:00.00 ( 3.38%) 
-00:00:00   171MB         |   LightSampling                                                     0:00.00 ( 3.38%) 
-00:00:00   171MB         |  sampleNextBatch                                                    0:00.00 ( 3.32%) 
-00:00:00   171MB         |  accumulateBucketSamples                                            0:00.00 ( 2.19%) 
+00:00:00   171MB         |  standard_surface:aiStandardSurface1                                0:00.08 (52.68%) 
+00:00:00   171MB         |   surface closure                                                   0:00.03 (23.27%) 
+00:00:00   171MB         |   AiLightsTrace                                                     0:00.02 (15.58%) 
+00:00:00   171MB         |   ray traversal+intersection                                        0:00.01 ( 8.78%) 
+00:00:00   171MB         |   AiMakeRay                                                         0:00.00 ( 1.45%) 
+00:00:00   171MB         |  polymesh:/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh     0:00.01 ( 9.25%) 
+00:00:00   171MB         |   polymesh::intersect                                               0:00.01 ( 6.76%) 
+00:00:00   171MB         |   BVH::intersect                                                    0:00.00 ( 2.49%) 
+00:00:00   171MB         |  mesh_light:/pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh/light     0:00.01 ( 8.82%) 
+00:00:00   171MB         |   LightSampling                                                     0:00.01 ( 8.04%) 
+00:00:00   171MB         |   TraceShadow                                                       0:00.00 ( 0.77%) 
+00:00:00   171MB         |  ADP                                                                0:00.01 ( 8.74%) 
+00:00:00   171MB         |  RenderBucket                                                       0:00.01 ( 6.61%) 
+00:00:00   171MB         |  TraceCameraRay                                                     0:00.00 ( 4.04%) 
+00:00:00   171MB         |  accumulateBucketSamples                                            0:00.00 ( 3.06%) 
+00:00:00   171MB         |  list_aggregate:root                                                0:00.00 ( 2.17%) 
+00:00:00   171MB         |   BVH::intersect                                                    0:00.00 ( 1.33%) 
+00:00:00   171MB         |   BVH::build                                                        0:00.00 ( 0.84%) 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
-00:00:00   171MB         | peak CPU memory used      171.19MB 
-00:00:00   171MB         |  at startup                90.06MB 
-00:00:00   171MB         |  plugins                    0.03MB 
+00:00:00   171MB         | peak CPU memory used      171.55MB 
+00:00:00   171MB         |  at startup                91.73MB 
 00:00:00   171MB         |  AOV samples                0.11MB 
 00:00:00   171MB         |  output buffers             0.11MB 
 00:00:00   171MB         |  framebuffers               0.31MB 
 00:00:00   171MB         |  node overhead              0.01MB 
 00:00:00   171MB         |  message passing            0.02MB 
-00:00:00   171MB         |  memory pools              12.89MB 
+00:00:00   171MB         |  memory pools              11.39MB 
 00:00:00   171MB         |  geometry                   0.01MB 
 00:00:00   171MB         |   top level                 0.00MB 
 00:00:00   171MB         |   polymesh                  0.01MB 
@@ -168,16 +165,16 @@ Warning (secondary thread): in BindingsAtPrim at line 671 of /Users/picharc/deve
 00:00:00   171MB         |  mesh importance map        0.02MB 
 00:00:00   171MB         |  strings                   24.50MB 
 00:00:00   171MB         |  profiler                   0.01MB 
-00:00:00   171MB         |  unaccounted               43.08MB 
+00:00:00   171MB         |  unaccounted               43.30MB 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
 00:00:00   171MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
-00:00:00   171MB         |  camera                   192800 (  10.04,    1.00) (  9.69%) (     0.85) (       1)
-00:00:00   171MB         |  shadow                   481714 (  25.09,    2.50) ( 24.21%) (     0.01) (       1)
-00:00:00   171MB         |  diffuse_reflect          658492 (  34.30,    3.42) ( 33.09%) (     0.00) (       0)
-00:00:00   171MB         |  specular_reflect         656920 (  34.21,    3.41) ( 33.01%) (     0.11) (       1)
-00:00:00   171MB         |  total                   1989926 ( 103.64,   10.32) (100.00%) (     0.12) (       1)
+00:00:00   171MB         |  camera                   192800 (  10.04,    1.00) ( 11.00%) (     0.85) (       1)
+00:00:00   171MB         |  shadow                   244369 (  12.73,    1.27) ( 13.94%) (     0.00) (       0)
+00:00:00   171MB         |  diffuse_reflect          658492 (  34.30,    3.42) ( 37.57%) (     0.00) (       0)
+00:00:00   171MB         |  specular_reflect         656920 (  34.21,    3.41) ( 37.48%) (     0.11) (       1)
+00:00:00   171MB         |  total                   1752581 (  91.28,    9.09) (100.00%) (     0.13) (       1)
 00:00:00   171MB         | by ray depth:              0     1
-00:00:00   171MB         |  total                   33.9% 66.1% 
+00:00:00   171MB         |  total                   24.9% 75.1% 
 00:00:00   171MB         | -----------------------------------------------------------------------------------
 00:00:00   171MB         | shader calls                     (  /pixel,  /sample) (% total)
 00:00:00   171MB         |  primary                  234493 (   12.21,     1.22) (100.00%)
@@ -210,11 +207,11 @@ Warning (secondary thread): in BindingsAtPrim at line 671 of /Users/picharc/deve
 00:00:00   171MB         | -----------------------------------------------------------------------------------
 00:00:00   171MB         |  
 00:00:00   171MB         | releasing resources
-00:00:00   139MB         |   
-00:00:00   139MB         |  releasing resources
-00:00:00   139MB         |   unloading 2 plugins
-00:00:00   139MB         |    closing usd_proc.dylib ...
-00:00:00   139MB         |    closing alembic_proc.dylib ...
-00:00:00   138MB         |   unloading plugins done
-00:00:00   138MB         |  Arnold shutdown
-00:00:00   138MB         |  Installing system handler with mask 0
+00:00:00   155MB         |   
+00:00:00   155MB         |  releasing resources
+00:00:00   155MB         |   unloading 2 plugins
+00:00:00   155MB         |    closing usd_proc.dylib ...
+00:00:00   155MB         |    closing alembic_proc.dylib ...
+00:00:00   155MB         |   unloading plugins done
+00:00:00   155MB         |  Arnold shutdown
+00:00:00   155MB         |  Installing system handler with mask 0
