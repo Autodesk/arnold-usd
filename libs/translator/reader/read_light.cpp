@@ -518,6 +518,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -533,7 +534,13 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeSetBool(image, str::sflip, true);
+            // usdlux_version determines mirroring or not
+            AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+            if (AiNodeGetInt(options, str::usdlux_version) == 0){
+                AiNodeSetBool(image, str::sflip, true);
+            } else {
+                AiNodeSetBool(image, str::sflip, false);
+            }
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
             AiNodeResetParameter(node, str::color);

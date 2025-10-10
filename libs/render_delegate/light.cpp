@@ -702,8 +702,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
 void HdArnoldGenericLight::SetupTexture(const VtValue& value)
 {
-    const auto* nentry = AiNodeGetNodeEntry(_light);
-
+    
     std::string path;
     if (value.IsHolding<SdfAssetPath>()) {
         const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
@@ -728,8 +727,17 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
     
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
+    const auto* nentry = AiNodeGetNodeEntry(_light);
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        AiNodeSetBool(_texture, str::sflip, true);
+        //Allow user to specify mirroring effect on light textures
+        AtNode* options = AiUniverseGetOptions(_delegate->GetUniverse());
+        if (AiNodeGetInt(options, str::usdlux_version) == 0){
+            AiNodeSetBool(_texture, str::sflip, true);
+        } else {
+            AiNodeSetBool(_texture, str::sflip, false);
+        }
+       
+        
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
     AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);
