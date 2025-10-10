@@ -986,6 +986,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
                             renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
                             aovShaders);
+                        
+                        if (aovName == "crypto_object" || aovName == "crypto_asset"
+                            || aovName == "crypto_material") {
+                            _renderDelegate->SetHasCryptomatte(true);
+                        }
+                        
                         // Check if the AOV has a specific filter
                         const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                         AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);

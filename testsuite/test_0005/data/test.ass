@@ -67,7 +67,6 @@ usd
  0 1 0 0
  0 0 1 0
  0 -7.26828718 0 1
- debug on
  use_light_group off
  override_nodes off
  filename "sphere.usd"

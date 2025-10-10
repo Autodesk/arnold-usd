@@ -56,6 +56,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((arnoldMotionEnd, "arnold:motion_end"))
+    ((arnoldMotionStart, "arnold:motion_start"))
     ((arnoldVisibility, "arnold:visibility"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
@@ -296,6 +298,8 @@ bool ConvertPrimvarToBuiltinParameter(
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
     }
+    if (name == _tokens->arnoldMotionStart || name == _tokens->arnoldMotionEnd)
+        return true;
 
     // In addition to parameters like arnold:visibility:camera, etc...
     // we also want to support arnold:visibility as this is what the arnold-usd writer 

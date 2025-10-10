@@ -544,6 +544,9 @@ void ReadArnoldParameters(
             }
             continue;
         }
+        // Ignore motion_start / motion_end attributes #2441
+        if (arnoldAttr == "motion_start" || arnoldAttr == "motion_end")
+            continue;
         
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {
