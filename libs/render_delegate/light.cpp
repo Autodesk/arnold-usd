@@ -729,15 +729,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
     const auto* nentry = AiNodeGetNodeEntry(_light);
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        //Allow user to specify mirroring effect on light textures
+        //Set mirror to false when usdlux version is at least 25.05
         AtNode* options = AiUniverseGetOptions(_delegate->GetUniverse());
-        if (AiNodeGetInt(options, str::usdlux_version) == 0){
-            AiNodeSetBool(_texture, str::sflip, true);
-        } else {
-            AiNodeSetBool(_texture, str::sflip, false);
-        }
-       
-        
+        AiNodeSetBool(_texture, str::sflip, (AiNodeGetInt(options, str::usdlux_version) == 0));
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
     AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);

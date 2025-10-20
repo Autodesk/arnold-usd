@@ -534,13 +534,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            // usdlux_version determines mirroring or not
+            // usdlux_version sets texture mirroring to false when set to 25.05 or later
             AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
-            if (AiNodeGetInt(options, str::usdlux_version) == 0){
-                AiNodeSetBool(image, str::sflip, true);
-            } else {
-                AiNodeSetBool(image, str::sflip, false);
-            }
+            AiNodeSetBool(image, str::sflip,  (AiNodeGetInt(options, str::usdlux_version) == 0));
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
             AiNodeResetParameter(node, str::color);

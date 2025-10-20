@@ -1,4 +1,4 @@
-Rect-lights display in non-mirror-image when usdlux version set to 25.05
+Rect-lights display in non-mirror-image when usdlux_version set to at least 25.05
 
 Author: Libby O'Meara
 
