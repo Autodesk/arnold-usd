@@ -16,6 +16,7 @@
 - [usd#2436](https://github.com/Autodesk/arnold-usd/issues/2436) - Support cryptomatte with instances in hydra2
 - [usd#2441](https://github.com/Autodesk/arnold-usd/issues/2441) - Fix invalid motion ranges caused by motion_start / motion_end attributes
 - [usd#2452](https://github.com/Autodesk/arnold-usd/issues/2452) - Imager updates should not restart IPR renders
+- [usd#2415](https://github.com/Autodesk/arnold-usd/issues/2415) - Incorrect transform when exporting complex object hierarchy to USD
 
 ### Bug Fixes
 
