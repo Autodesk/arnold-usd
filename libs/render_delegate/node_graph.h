@@ -174,7 +174,12 @@ public:
         return node;
     }    
 
+
+    /// Notify this graph that it is an imager graph, which requires a different
+    /// way to update the render
+    HDARNOLD_API
     void SetImagerGraph(bool b) {_imagerGraph = b;}
+    
 protected:
 
     using ConnectedInputs = std::unordered_map<SdfPath, std::vector<const HdMaterialRelationship*>, TfHash>;
