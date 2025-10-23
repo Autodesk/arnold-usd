@@ -228,7 +228,7 @@ if (HOUDINI_LOCATION)
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ hdsi;usdSkelImaging)
+            list(APPEND ARNOLD_USD_LIBS_ hdsi;usdSkelImaging;ts)
         endif()
         foreach (lib ${ARNOLD_USD_LIBS_})
             # We alias standard usd targets to the Houdini ones
