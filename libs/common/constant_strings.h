@@ -441,6 +441,7 @@ ASTR(region_min_x);
 ASTR(region_min_y);
 ASTR(render_device);
 ASTR(render_settings);
+ASTR(request_imager_update);
 ASTR(repeat);
 ASTR(rotation);
 ASTR(roughness);
