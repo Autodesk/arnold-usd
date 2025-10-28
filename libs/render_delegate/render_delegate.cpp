@@ -619,7 +619,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
 
     // Check if shape instancing is supported
-#ifdef USE_NATIVE_INSTANCING
+#if ARNOLD_VERSION_NUM >= 70405
     std::string envShapeInstancing = TfGetEnvSetting(HDARNOLD_SHAPE_INSTANCING);
     _supportShapeInstancing = envShapeInstancing != std::string("0");
 #else

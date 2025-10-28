@@ -66,10 +66,10 @@ public:
 
 
     HDARNOLD_API
-    void ComputeMeshInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+    void ComputeShapeInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
 
     HDARNOLD_API
-    void ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+    void ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
 
     HDARNOLD_API
     void ApplyInstancerVisibilityToArnoldNode(AtNode *node);

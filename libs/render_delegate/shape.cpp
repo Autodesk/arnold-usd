@@ -111,11 +111,7 @@ void HdArnoldShape::Sync(
      }
 #endif
 
-    // TODO: Instances are synced differently, check different shapes
-    if (UsingArnoldInstancer(sceneDelegate, _renderDelegate, rprim->GetInstancerId())) {
-        _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
-    }
-
+    _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelegate, HdArnoldRenderParamInterrupt& param){
@@ -180,42 +176,50 @@ void HdArnoldShape::_SyncInstances(
 
     // Rebuild the instancer
     param.Interrupt();
-    // First destroy the arnold parent instancers to this mesh
-    for (auto &instancerNode : _instancers) {
-        _renderDelegate->DestroyArnoldNode(instancerNode);
-    }
-    _instancers.clear();
-    // We need to hide the source mesh.
-    AiNodeSetByte(_shape, str::visibility, 0);
 
-    // We want to create an arnold instancer for any type that is node an polymesh
     if (UsingArnoldInstancer(sceneDelegate, _renderDelegate, instancerId)) {
+        // First destroy the arnold parent instancers to this mesh
+        for (auto &instancerNode : _instancers) {
+            _renderDelegate->DestroyArnoldNode(instancerNode);
+        }
+        _instancers.clear();
+
+        // We need to hide the source mesh.
+        AiNodeSetByte(_shape, str::visibility, 0);
+
         // Get the hydra instancer and rebuild the arnold instancer
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
         hydraInstancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
-    }
 
-    const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+        const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
-    for (size_t i = 0; i < _instancers.size(); ++i) {
-        AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
-        renderDelegate->TrackRenderTag(_instancers[i], renderTag);
+        for (size_t i = 0; i < _instancers.size(); ++i) {
+            AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
+            renderDelegate->TrackRenderTag(_instancers[i], renderTag);
 
-        // At this point the instancers might have set their instance visibilities.
-        // In this case we want to apply the proto shape visibility on top of it. 
-        // Otherwise we just set the shape visibility as its instance_visibility
-        AtArray *instanceVisibility = AiNodeGetArray(_instancers[i], str::instance_visibility);
-        unsigned int instanceVisibilityCount = (instanceVisibility) ? AiArrayGetNumElements(instanceVisibility) : 0;
-        if (instanceVisibilityCount  > 0) {
-            unsigned char* instVisArray = static_cast<unsigned char*>(AiArrayMap(instanceVisibility));
-            for (unsigned int j = 0; j < instanceVisibilityCount; ++j) {
-                instVisArray[j] &= _visibility;
-            }
-            AiArrayUnmap(instanceVisibility);
-            AiNodeSetArray(_instancers[i], str::instance_visibility, instanceVisibility);
-        } else
-            AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+            // At this point the instancers might have set their instance visibilities.
+            // In this case we want to apply the proto shape visibility on top of it. 
+            // Otherwise we just set the shape visibility as its instance_visibility
+            AtArray *instanceVisibility = AiNodeGetArray(_instancers[i], str::instance_visibility);
+            unsigned int instanceVisibilityCount = (instanceVisibility) ? AiArrayGetNumElements(instanceVisibility) : 0;
+            if (instanceVisibilityCount  > 0) {
+                unsigned char* instVisArray = static_cast<unsigned char*>(AiArrayMap(instanceVisibility));
+                for (unsigned int j = 0; j < instanceVisibilityCount; ++j) {
+                    instVisArray[j] &= _visibility;
+                }
+                AiArrayUnmap(instanceVisibility);
+                AiNodeSetArray(_instancers[i], str::instance_visibility, instanceVisibility);
+            } else
+                AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+        }
+    } else
+    {
+        auto& renderIndex = sceneDelegate->GetRenderIndex();
+        auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape);
+        instancer->ComputeShapeInstancesPrimvars(_renderDelegate, id, _shape);
+        instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
     }
 }
 
@@ -224,13 +228,16 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
     if (_instancers.empty())
         return;
 
-    param.Interrupt();
     for (auto &instancer : _instancers) {
         AtArray* instanceVisibility = AiNodeGetArray(instancer, str::instance_visibility);
         unsigned int instVisibilityCount = (instanceVisibility) ? AiArrayGetNumElements(instanceVisibility) : 0;
         
         if (instVisibilityCount == 0) {
-            AiNodeSetArray(instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+            AtArray *visArray = AiNodeGetArray(instancer, str::instance_visibility);
+            if (visArray == nullptr || AiArrayGetNumElements(visArray) != 1 || AiArrayGetByte(visArray, 0) != _visibility) {
+                param.Interrupt();
+                AiNodeSetArray(instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+            }            
         } else {
             bool changed = false;
             unsigned char* instVisArray = static_cast<unsigned char*>(AiArrayMap(instanceVisibility));
@@ -242,7 +249,10 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
             }
             AiArrayUnmap(instanceVisibility);
             if (changed)
+            {
+                param.Interrupt();
                 AiNodeSetArray(instancer, str::instance_visibility, instanceVisibility);
+            }
         }
     }
 }

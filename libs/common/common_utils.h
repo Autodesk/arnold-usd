@@ -44,11 +44,6 @@ constexpr auto AiArrayUnmapConst = AiArrayUnmap;
 static const int AI_NODE_IMAGER = AI_NODE_DRIVER;
 #endif
 
-#if ARNOLD_VERSION_NUM >= 70405 // use new instancing
-#define USE_NATIVE_INSTANCING
-#endif
-
-
 // convert from "snake_case" to "camelCase"
 // ignores the capitalization of input strings: letters are only capitalized
 // if they follow an underscore

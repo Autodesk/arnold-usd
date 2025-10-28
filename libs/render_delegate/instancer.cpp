@@ -187,7 +187,7 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
 
 // Should that be SyncPrototypeTransforms
 // This method use the instance_matrix feature to create instances
-void HdArnoldInstancer::ComputeMeshInstancesTransforms(
+void HdArnoldInstancer::ComputeShapeInstancesTransforms(
     HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
     const SdfPath& instancerId = GetId();
@@ -232,7 +232,7 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
 }
 
-void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+void HdArnoldInstancer::ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
     const SdfPath& instancerId = GetId();
     if (!prototypeNode) return;
 
@@ -433,11 +433,6 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
         AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
     AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
 
-#ifdef ENABLE_SCENE_INDEX // Hydra2
-    if (renderDelegate->HasCryptomatte())
-        renderDelegate->SetInstancerCryptoOffset(instancerNode, numInstances);
-#endif
-
     if (sampleArray.count == 0 || sampleArray.values.front().empty()) {
         AiNodeResetParameter(instancerNode, str::instance_matrix);
         AiNodeResetParameter(instancerNode, str::node_idxs);
@@ -445,7 +440,11 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
     } else {
         const auto sampleCount = sampleArray.count;
         const auto instanceCount = sampleArray.values.front().size();
-        
+
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+        if (renderDelegate->HasCryptomatte())
+            renderDelegate->SetInstancerCryptoOffset(instancerNode, instanceCount);
+#endif        
         auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
         auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
         auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
