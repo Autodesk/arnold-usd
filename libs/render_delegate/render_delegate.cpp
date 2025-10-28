@@ -128,6 +128,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 #define PXR_VERSION_STR \
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
+TF_DEFINE_ENV_SETTING(HDARNOLD_SHAPE_INSTANCING, "", "Set to 0 to disable inner shape instancing");
+
 namespace {
 
 const HdFormat _GetHdFormatFromToken(const TfToken& token)
@@ -615,6 +617,14 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
         }
     }
+
+    // Check if shape instancing is supported
+#ifdef USE_NATIVE_INSTANCING
+    std::string envShapeInstancing = TfGetEnvSetting(HDARNOLD_SHAPE_INSTANCING);
+    _supportShapeInstancing = envShapeInstancing != std::string("0");
+#else
+    _supportShapeInstancing = false;
+#endif    
     
 }
 
@@ -1888,11 +1898,5 @@ bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdComma
     return false;
 }
 #endif // PXR_VERSION
-
-bool HdArnoldRenderDelegate::IsUsingGPU()
-{
-    return AiDeviceGetSelectedType(GetRenderSession()) == AI_DEVICE_TYPE_GPU;
-}
-
 
 PXR_NAMESPACE_CLOSE_SCOPE

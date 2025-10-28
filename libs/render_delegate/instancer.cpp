@@ -21,7 +21,6 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
-#include <iostream>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -187,7 +186,7 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
 
 
 // Should that be SyncPrototypeTransforms
-// This method use the instancing_matrix feature to create instances
+// This method use the instance_matrix feature to create instances
 void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
@@ -224,11 +223,11 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
 
-    // Declare instancing_matrix as a user param
-    if (!AiNodeLookUpUserParameter(prototypeNode, str::instancing_matrix)) {
-        AiNodeDeclare(prototypeNode, str::instancing_matrix, "constant ARRAY MATRIX");
+    // Declare instance_matrix as a user param
+    if (!AiNodeLookUpUserParameter(prototypeNode, str::instance_matrix)) {
+        AiNodeDeclare(prototypeNode, str::instance_matrix, "constant ARRAY MATRIX");
     }
-    AiNodeSetArray(prototypeNode, str::instancing_matrix, matrices);
+    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
 }

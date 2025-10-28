@@ -248,28 +248,21 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
 }
 
 bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath& instanceId) const {
-    
+
     // No instancer, no need to use an arnold instancer node
     HdInstancer * instancer = sceneDelegate->GetRenderIndex().GetInstancer(instanceId);
-    if (!instancer) {
+    if (!instancer)
         return false;
-    }
-#ifdef USE_NATIVE_INSTANCING
+
+    if (!renderDelegate->SupportShapeInstancing())
+        return true;
+
     // If we have a nested instancer configuration, we'll use an arnold instancer node.
     HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
-    if (parentInstancer) {
+    if (parentInstancer)
         return true;
-    }
-
-    // Current limitation of the new instancing mechanism // TODO remove once GPU is implemented
-    if (renderDelegate->IsUsingGPU()) {
-        return true;
-    }
-
+    
     // polymesh has its own instancing mechanism, so we don't need to create an Arnold instancer node
     return !AiNodeIs(_shape, str::polymesh);
-#else
-    return true;
-#endif
 }
 PXR_NAMESPACE_CLOSE_SCOPE

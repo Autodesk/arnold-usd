@@ -6,4 +6,4 @@ Fixes #1427
 
 author: cyril.pichard@autodesk.com 
 
-PARAMS: {'scene':'test.usd', 'kick_params': '-frame 224 -r 160 90', 'diff_hardfail': 0.66}
+PARAMS: {'scene':'test.usd', 'kick_params': '-frame 224 -r 160 90'}

@@ -337,7 +337,6 @@ ASTR(instance_motion_start);
 ASTR(instance_shader);
 ASTR(instance_visibility);
 ASTR(instancer);
-ASTR(instancing_matrix);
 ASTR(intensity);
 ASTR(interactive);
 ASTR(interactive_fps_min);
