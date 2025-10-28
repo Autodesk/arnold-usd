@@ -700,6 +700,9 @@ public:
 
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
+    bool HasCryptomatte() const {return _hasCryptomatte;}
+    void SetHasCryptomatte(bool b);
+    void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -711,6 +714,7 @@ private:
 
     void _ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
 
+    void _SetHasCryptomatte(bool b);
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
@@ -831,7 +835,7 @@ private:
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
     int _mask = AI_NODE_ALL;  // mask for node types to be translated
-
+    bool _hasCryptomatte = false;
     std::mutex _nodesMutex;
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;

@@ -17,7 +17,6 @@ def RenderSettings "options"
     string arnold:name = "options"
     bool arnold:texture_automip = 0
     bool arnold:texture_per_file_stats = 1
-    int arnold:threads = 64
     int arnold:xres = 960
     int arnold:yres = 540
     rel camera = </persp/perspShape>

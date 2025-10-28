@@ -1127,28 +1127,40 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     const UsdPrim &prim = xformable.GetPrim();
     const AtUniverse* universe = writer.GetUniverse();
 
-    AtMatrix parentMatrix = AiM4Identity();
     AtMatrix invParentMtx = AiM4Identity();
     bool applyInvParentMtx = false;
-
+    // Iterator through USD parents until we find one matching an arnold node.
+    // This node's matrix will give us the parent transform at this level of the USD hierarchy.
+    // We'll need to apply the inverse of this transform to our node's matrix so that its final
+    // world transform matches the arnold scene #2415
     for (UsdPrim p = prim.GetParent(); !p.IsPseudoRoot(); p = p.GetParent()) {
-        AtNode *parent = AiNodeLookUpByName(universe, AtString(p.GetPath().GetText()));
+        
+        // By default the arnold node name is the same as the usd prim path, 
+        // unless we authored primvars:arnold:name on the primitive
+        std::string parentName = p.GetPath().GetString();
+        UsdAttribute parentNameAttr = p.GetAttribute(str::t_primvars_arnold_name);
+        if (parentNameAttr && parentNameAttr.HasAuthoredValue()) {
+            VtValue parentNameValue;
+            if (parentNameAttr.Get(&parentNameValue) && parentNameValue.IsHolding<std::string>())
+                parentName = parentNameValue.UncheckedGet<std::string>();
+        }
+        
+        AtNode *parent = AiNodeLookUpByName(universe, AtString(parentName.c_str()));
         if (parent == nullptr)
             continue;
         // Special case for mesh lights pointing at our current mesh. Their transform will not be authored
         // to USD so we must skip it here.
         if (AiNodeIs(parent, str::mesh_light) && AiNodeGetPtr(parent, str::mesh) == (void*)node)
             continue;
-
-        AtMatrix mtx = AiNodeGetMatrix(parent, str::matrix);
-        if (mtx == AiM4Identity())
-            continue;
-        parentMatrix =  AiM4Mult(mtx, parentMatrix);
-        applyInvParentMtx = true;
+        
+        AtMatrix parentMatrix = AiNodeGetMatrix(parent, str::matrix);
+        if (!AiM4IsIdentity(parentMatrix)) {
+            invParentMtx = AiM4Invert(parentMatrix);
+            applyInvParentMtx = true;
+        }
+        break;
     }
-    if (applyInvParentMtx)
-        invParentMtx = AiM4Invert(parentMatrix);
-
+    
     AtArray* array = AiNodeGetArray(node, AtString("matrix"));
     if (array == nullptr)
         return;

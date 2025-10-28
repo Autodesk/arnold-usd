@@ -84,6 +84,10 @@ node_initialize
 {
     AiDriverInitialize(node, true);
     AiNodeSetLocalData(node, new DriverMainData());
+    const AtNode* render_options = AiRenderSessionGetOptions(render_session);
+    AiNodeAddDependency(node, render_options, str::region_min_x);
+    AiNodeAddDependency(node, render_options, str::region_min_y);
+
 }
 
 node_update

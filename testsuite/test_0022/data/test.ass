@@ -68,7 +68,6 @@ usd
  0 -7.26828718 0 1
  use_light_group off
  override_nodes off
- debug on
  filename "scene.usd"
  declare maya_full_name constant STRING
  maya_full_name "|aiUsd2|aiUsdShape2"

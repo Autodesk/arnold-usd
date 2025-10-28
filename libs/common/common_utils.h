@@ -33,7 +33,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#if ARNOLD_VERSION_NUM <= 70307
+// This new const API was introduced in 7.3.7.0
+#if ARNOLD_VERSION_NUM < 70307 
 constexpr auto AiArrayMapConst = AiArrayMap;
 constexpr auto AiArrayUnmapConst = AiArrayUnmap;
 #endif
