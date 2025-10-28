@@ -33,9 +33,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// Unfortunately this new const API was introduced in 7.3.7.1,
-// so this will fail to build with 7.3.7.0 but compile with 7.3.7.+
-// And there is no way to easily to get the patch
+// This new const API was introduced in 7.3.7.0
 #if ARNOLD_VERSION_NUM < 70307 
 constexpr auto AiArrayMapConst = AiArrayMap;
 constexpr auto AiArrayUnmapConst = AiArrayUnmap;
