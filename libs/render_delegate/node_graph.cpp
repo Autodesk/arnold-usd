@@ -158,7 +158,11 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         bool nodeGraphChanged = false;
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
-            param.Interrupt();
+            // Do not interrupt the render if this is an imager graph, as imagers
+            // can be refreshed independantly of the render itself
+            if (!_imagerGraph)
+                param.Interrupt();
+
             const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
             // Before translation starts, we store the previous list of AtNodes
             // for this NodeGraph. After we translated everything, all unused nodes
@@ -228,6 +232,10 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         if (_wasSyncedOnce && nodeGraphChanged) {
             _renderDelegate->DirtyDependency(id);
         }
+        // If this node graph is an imager graph, the render won't be interrupted / restarted
+        // and instead we just call this render hint that updates the imagers #2452
+        if (_imagerGraph)
+            AiRenderSetHintBool(_renderDelegate->GetRenderSession(), str::request_imager_update, true);
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;
