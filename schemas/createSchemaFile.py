@@ -508,12 +508,11 @@ proceduralUsdAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'oper
 proceduralUsdAppendAttrs = ['string arnold:filename = ""', 
                             'string arnold:object_path = ""', 
                             'float arnold:frame = 0',
-                            'bool arnold:debug = 0',
-                            'int arnold:threads = 0',
                             'string[] arnold:overrides',
                             'int arnold:cache_id = 0', 
                             'bool arnold:interactive = 0',
-                            'bool arnold:hydra = 1']
+                            'bool arnold:hydra = 1',
+                            'string arnold:node_entry = ""']
 createArnoldClass('usd', 'Gprim', proceduralCustomAttrs, ai.AiNodeEntryLookUp('procedural'), 
     ignoreShapeAttributes, False, True, proceduralUsdAppendAttrs)
 

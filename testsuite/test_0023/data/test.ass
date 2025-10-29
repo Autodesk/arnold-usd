@@ -82,7 +82,6 @@ usd
  override_nodes off
  filename "scene.usda"
  frame 32
- debug on
  motion_start 0
  motion_end 1
  declare maya_full_name constant STRING

@@ -173,6 +173,13 @@ public:
         _nodes[nodeName] = node;
         return node;
     }    
+
+
+    /// Notify this graph that it is an imager graph, which requires a different
+    /// way to update the render
+    HDARNOLD_API
+    void SetImagerGraph(bool b) {_imagerGraph = b;}
+    
 protected:
 
     using ConnectedInputs = std::unordered_map<SdfPath, std::vector<const HdMaterialRelationship*>, TfHash>;
@@ -271,6 +278,7 @@ protected:
     ArnoldNodeGraph _nodeGraphCache;         ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
+    bool _imagerGraph = false;
     std::unordered_map<std::string, AtNode*> _nodes;  /// List of nodes used in this translator
     std::unordered_map<std::string, AtNode*> _previousNodes;  /// Transient list of previously stored nodes
 };

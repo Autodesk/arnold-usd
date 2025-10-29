@@ -1836,8 +1836,12 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
-    if (nodeGraph)
+    if (nodeGraph) {
+        // Indicate to this node graph that it is an imager graph, so that 
+        // it doesn't interrupt / restart the render when a node changes
+        const_cast<HdArnoldNodeGraph*>(nodeGraph)->SetImagerGraph(true);
         return nodeGraph->GetCachedTerminal(str::t_input);
+    }
     return nullptr;
 }
 
@@ -1860,11 +1864,57 @@ AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
 {
     _cryptomatteDrivers.insert(driver);
+    SetHasCryptomatte(true);
 
 }
 void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
 {
    _cryptomatteDrivers.clear();
+}
+void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numInstances)
+{   
+    // For cryptomatte to give consistent results with instances in hydra2, we need to use the 
+    // user data "crypto_object" and "crypto_object_offset" that will be used by cryptomatte 
+    // instead of the node names (prototype names aren't consistent in hydra2). 
+    if (AiNodeLookUpUserParameter(node, str::instance_crypto_object_offset)) {
+        AtArray *array = AiNodeGetArray(node, str::instance_crypto_object_offset);
+        // if the crypto offsets were already set with the same amount of instances,
+        // we don't need to do it again
+        if (array && AiArrayGetNumElements(array) == numInstances)
+            return;        
+    }
+    else
+        AiNodeDeclare(node, str::instance_crypto_object_offset, "constant array INT");        
+        
+    std::vector<int> crypto_object_offsets(numInstances);
+    for (size_t i = 0; i < numInstances; ++i)
+        crypto_object_offsets[i] = i;
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+}
+
+void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)
+{    
+    if (b == _hasCryptomatte)
+        return;
+    _hasCryptomatte = b;
+    if (_hasCryptomatte) {
+        // We set this flag for the first time, let's iterate through all the 
+        // instancers in the scene in order to set their user data for crypto_object_offset.
+        // This is needed to ensure instancers have a consistent name for cryptomatte.
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_SHAPE);
+        while (!AiNodeIteratorFinished(nodeIter))
+        {
+            AtNode *node = AiNodeIteratorGetNext(nodeIter);
+            if (!AiNodeIs(node, str::instancer))
+                continue;
+            
+            const AtArray *instanceMatrix = AiNodeGetArray(node, str::instance_matrix);
+            size_t numInstances = instanceMatrix ? AiArrayGetNumElements(instanceMatrix) : 0;
+            SetInstancerCryptoOffset(node, numInstances);
+        }        
+        AiNodeIteratorDestroy(nodeIter);
+    }
+
 }
 
 #if PXR_VERSION >= 2108

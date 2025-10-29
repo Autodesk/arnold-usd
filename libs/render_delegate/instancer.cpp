@@ -322,8 +322,14 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
     instancers.push_back(instancerNode);
 
-    AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
+    if (AiNodeLookUpUserParameter(instancerNode, str::instance_inherit_xform) == nullptr)
+        AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
     AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
+
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    if (renderDelegate->HasCryptomatte())
+        renderDelegate->SetInstancerCryptoOffset(instancerNode, numInstances);
+#endif
 
     if (sampleArray.count == 0 || sampleArray.values.front().empty()) {
         AiNodeResetParameter(instancerNode, str::instance_matrix);

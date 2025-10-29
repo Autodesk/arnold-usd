@@ -106,6 +106,8 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
 
         const AtParamEntry* param = AiParamIteratorGetNext(paramIter);
         const AtString paramName = AiParamGetName(param);
+        if (paramName == str::motion_start || paramName == str::motion_end)
+            continue;
         
         TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
         const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);

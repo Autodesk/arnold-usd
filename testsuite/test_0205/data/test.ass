@@ -94,7 +94,6 @@ usd
  0 0 0 1
  use_light_group off
  override_nodes off
- threads 1
  filename "scene.usda"
  object_path ""
  frame 0

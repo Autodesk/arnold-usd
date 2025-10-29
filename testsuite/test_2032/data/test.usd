@@ -44,38 +44,9 @@ def "Root"
                 float inputs:roughness = 0.32467532
                 color3f inputs:specularColor
                 int inputs:useSpecularWorkflow
-                token outputs:mtlx:surface.connect = </Root/MaterialX/Materials/USD_Plastic/ND_UsdPreviewSurface_surfaceshader.outputs:surface>
-
-                def Shader "ND_UsdPreviewSurface_surfaceshader"
-                {
-                    uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
-                    float inputs:clearcoat.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:clearcoat>
-                    float inputs:clearcoatRoughness.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:clearcoatRoughness>
-                    color3f inputs:diffuseColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:diffuseColor>
-                    float inputs:displacement.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:displacement>
-                    color3f inputs:emissiveColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:emissiveColor>
-                    float inputs:ior.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:ior>
-                    float inputs:metallic.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:metallic>
-                    float3 inputs:normal.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:normal>
-                    float inputs:occlusion.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:occlusion>
-                    float inputs:opacity.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:opacity>
-                    float inputs:opacityThreshold.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:opacityThreshold>
-                    float inputs:roughness.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:roughness>
-                    color3f inputs:specularColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:specularColor>
-                    int inputs:useSpecularWorkflow.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:useSpecularWorkflow>
-                    token outputs:surface
-                }
             }
         }
 
-        def "Shaders"
-        {
-            def Shader "ND_UsdPreviewSurface_surfaceshader"
-            {
-                uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
-                token outputs:surface
-            }
-        }
     }
 
     def DistantLight "Light"
@@ -93,9 +64,6 @@ def "Root"
         prepend apiSchemas = ["MaterialBindingAPI"]
     )
     {
-        rel material:mtlx:binding = </Root/MaterialX/Materials/USD_Plastic> (
-            bindMaterialAs = "strongerThanDescendants"
-        )
         double3 xformOp:translate = (-13.64212680979459, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
 
