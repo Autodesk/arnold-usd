@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.5.0] (Unreleased)
+
+### Features
+
+- [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
+
 ## [7.4.4.0] (Unreleased)
 
 ### Features
