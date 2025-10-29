@@ -251,7 +251,7 @@ void HdArnoldInstancer::ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* re
              instanceValue = desc.value;
         
         DeclareAndAssignParameter(prototypeNode, TfToken{paramName}, 
-            TfToken("instance"), instanceValue, renderDelegate->GetAPIAdapter(), 
+            str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(), 
             desc.role == HdPrimvarRoleTokens->color);
     }
 
