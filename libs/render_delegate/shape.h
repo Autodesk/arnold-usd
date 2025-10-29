@@ -111,11 +111,7 @@ public:
         return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
                HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
     }
-    /// If this shape is instanced by hydra, this function returns whether or not we should use
-    /// an Arnold instancer node for the instancing
-    bool UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath& shapeId) const;
-
-
+    
 protected:
     /// Sets a new hydra-provided primId.
     ///

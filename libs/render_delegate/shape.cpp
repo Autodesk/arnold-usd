@@ -135,6 +135,19 @@ void HdArnoldShape::SetVisibility(uint8_t visibility)
     _visibility = visibility;
 }
 
+static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, HdInstancer *instancer, AtNode *node)
+{
+    if (!renderDelegate->SupportShapeInstancing())
+        return true;
+
+    // If we have a nested instancer configuration, we'll use an arnold instancer node.
+    HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
+    if (parentInstancer)
+        return true;
+
+    // Procedural nodes do not currently support shapes inner instancing
+    return AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE_PROCEDURAL;
+}
 void HdArnoldShape::_SetPrimId(int32_t primId)
 {
     if (_shape == nullptr)
@@ -161,6 +174,9 @@ void HdArnoldShape::_SyncInstances(
     if (instancerId.IsEmpty()) {
         return;
     }
+    HdInstancer * instancer = sceneDelegate->GetRenderIndex().GetInstancer(instancerId);
+    if (!instancer)
+        return;
 
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
@@ -177,7 +193,7 @@ void HdArnoldShape::_SyncInstances(
     // Rebuild the instancer
     param.Interrupt();
 
-    if (UsingArnoldInstancer(sceneDelegate, _renderDelegate, instancerId)) {
+    if (UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
         for (auto &instancerNode : _instancers) {
             _renderDelegate->DestroyArnoldNode(instancerNode);
@@ -257,22 +273,5 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
     }
 }
 
-bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath& instanceId) const {
 
-    // No instancer, no need to use an arnold instancer node
-    HdInstancer * instancer = sceneDelegate->GetRenderIndex().GetInstancer(instanceId);
-    if (!instancer)
-        return false;
-
-    if (!renderDelegate->SupportShapeInstancing())
-        return true;
-
-    // If we have a nested instancer configuration, we'll use an arnold instancer node.
-    HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
-    if (parentInstancer)
-        return true;
-    
-    // polymesh has its own instancing mechanism, so we don't need to create an Arnold instancer node
-    return !AiNodeIs(_shape, str::polymesh);
-}
 PXR_NAMESPACE_CLOSE_SCOPE
