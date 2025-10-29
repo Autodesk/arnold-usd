@@ -111,7 +111,7 @@ public:
         return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
                HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
     }
-    
+
 protected:
     /// Sets a new hydra-provided primId.
     ///

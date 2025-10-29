@@ -157,9 +157,8 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         AiNodeSetFlt(node, str::motion_start, samplingInterval[0]);
         AiNodeSetFlt(node, str::motion_end, samplingInterval[1]);
     } else {
-    // TODO : here we don't really want to reset the motion_* if the geometry is animated.
-    //  AiNodeResetParameter(node, str::motion_start);
-    //  AiNodeResetParameter(node, str::motion_end);
+        AiNodeResetParameter(node, str::motion_start);
+        AiNodeResetParameter(node, str::motion_end);
     }
 }
 

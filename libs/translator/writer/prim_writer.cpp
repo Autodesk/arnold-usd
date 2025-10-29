@@ -419,7 +419,7 @@ public:
                 break;
 #ifdef USE_NATIVE_INSTANCING
             case AI_USERDEF_PER_INSTANCE:
-                category = TfToken("instance"); // TODO have a static token
+                category = str::t_instance;
                 break;
 #endif
             case AI_USERDEF_CONSTANT:
