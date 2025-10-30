@@ -21,8 +21,9 @@ def Mesh "pCube1" (
     point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
     uint primvars:arnold:id = 137147339
     uchar primvars:arnold:subdiv_iterations = 1
-    uchar primvars:arnold:visibility = 253
     bool primvars:arnold:visibility:camera = 0
+    uchar primvars:arnold:visibility = 253
+    
     
     string primvars:dcc_name = "pCubeShape1" (
         elementSize = 1
