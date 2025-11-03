@@ -51,9 +51,10 @@ void HdArnoldNativeRprim::Sync(
         *dirtyBits & HdChangeTracker::DirtyVisibility);
 
     if (updateVisibility) {
-        CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
         _visibilityFlags.ClearPrimvarFlags();
         _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
+        CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
+        _sidednessFlags.SetHydraFlag(AI_RAY_ALL);
     }
     auto GetArnoldAttributes = [&]() {
         // Try to get the arnold attributes via the scene delegate
@@ -142,6 +143,11 @@ void HdArnoldNativeRprim::Sync(
     if (updateVisibility) {
         param.Interrupt();
         UpdateVisibilityAndSidedness();
+        // For procedurals, explicitely setting the sidedness can override
+        // the sidedness of the child nodes, so we only want to set it if it 
+        // has a non-default value
+        if (AiNodeGetByte(node, str::sidedness) == AI_RAY_ALL)
+            AiNodeResetParameter(node, str::sidedness);
     }
     
     // NOTE: HdArnoldSetTransform must be set after the primvars as, at the moment, we might rewrite the transform in the
