@@ -109,7 +109,6 @@ vars.AddVariables(
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the node registry plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCENE_INDEX_PLUGIN', 'Directory to install the scene index plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_SCENE_DELEGATE', 'Directory to install the scene delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCHEMAS', 'Directory to install the schemas under.', os.path.join('$PREFIX', 'schema'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
@@ -121,7 +120,6 @@ vars.AddVariables(
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_SCENE_INDEX_PLUGIN', 'Whether or not to build the scene index plugin.', False),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
-    BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
@@ -189,7 +187,6 @@ USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_USDGENSCHEMA_ARNOLD    = env['BUILD_USDGENSCHEMA_ARNOLD']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' or env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] else False
-BUILD_SCENE_DELEGATE         = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
 BUILD_DOCS                   = env['BUILD_DOCS']
@@ -249,7 +246,6 @@ PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
 PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
 PREFIX_SCENE_INDEX_PLUGIN = env.subst(env['PREFIX_SCENE_INDEX_PLUGIN'])
-PREFIX_SCENE_DELEGATE     = env.subst(env['PREFIX_SCENE_DELEGATE'])
 PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
 PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
@@ -299,7 +295,7 @@ if env['PROC_SCENE_FORMAT']:
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
     
-if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS or BUILD_SCENE_INDEX_PLUGIN:
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_PROCEDURAL or BUILD_DOCS or BUILD_SCENE_INDEX_PLUGIN:
     # Get USD Version
     header_info = get_usd_header_info(USD_INCLUDE) 
     env['USD_VERSION'] = header_info['USD_VERSION']
@@ -581,11 +577,6 @@ sceneindexplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'scene_index')
 sceneindexplugin_plug_info = os.path.join('plugins', 'scene_index', 'plugInfo.json.in')
 sceneindexplugin_out_plug_info = os.path.join(sceneindexplugin_build, 'plugInfo.json')
 
-scenedelegate_script = os.path.join('plugins', 'scene_delegate', 'SConscript')
-scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'scene_delegate')
-scenedelegate_plug_info = os.path.join('plugins', 'scene_delegate', 'plugInfo.json.in')
-scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
-
 testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
@@ -666,14 +657,6 @@ if BUILD_SCENE_INDEX_PLUGIN:
 else:
     SCENEINDEXPLUGIN = None
 
-if BUILD_SCENE_DELEGATE:
-    SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
-    Depends(SCENEDELEGATE, COMMON[0])
-    SConscriptChdir(0)
-else:
-    SCENEDELEGATE = None
-
-
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
     PROCEDURAL = env.SConscript(procedural_script,
@@ -737,7 +720,6 @@ else:
 
 plugInfos = [
     (renderdelegateplugin_plug_info, renderdelegateplugin_out_plug_info),
-    (scenedelegate_plug_info, scenedelegate_out_plug_info),
 ]
 
 for (source, target) in plugInfos:
@@ -761,9 +743,6 @@ if BUILD_SCENE_INDEX_PLUGIN:
 
 if RENDERDELEGATEPLUGIN:
     Depends(RENDERDELEGATEPLUGIN, renderdelegateplugin_plug_info)
-
-if SCENEDELEGATE:
-    Depends(SCENEDELEGATE, scenedelegate_plug_info)
 
 # We now include the node_registry plugin in the procedural, so we must add the plugInfo.json as well
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
@@ -894,15 +873,6 @@ if SCENEINDEXPLUGIN:
     INSTALL_SCENEINDEXPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_index'), env.Glob(os.path.join('scene_index', '*.h')))
     env.Alias('sceneindexplugin-install', INSTALL_SCENEINDEXPLUGIN)
 
-if SCENEDELEGATE:
-    if is_windows:
-        INSTALL_SCENEDELEGATE = env.Install(PREFIX_SCENE_DELEGATE, SCENEDELEGATE)
-    else:
-        INSTALL_SCENEDELEGATE = env.InstallAs(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold%s' % system.LIB_EXTENSION), SCENEDELEGATE)
-    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold', 'resources'), [scenedelegate_out_plug_info])
-    INSTALL_SCENEDELEGATE += env.Install(PREFIX_SCENE_DELEGATE, ['plugInfo.json'])
-    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_delegate'), env.Glob(os.path.join('scene_delegate', '*.h')))
-    env.Alias('scenedelegate-install', INSTALL_SCENEDELEGATE)
 
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:
