@@ -47,6 +47,15 @@ void HdArnoldNativeRprim::Sync(
         _renderDelegate->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
     }
 
+    bool updateVisibility = (*dirtyBits & HdChangeTracker::DirtyPrimvar || 
+        *dirtyBits & HdChangeTracker::DirtyVisibility);
+
+    if (updateVisibility) {
+        _visibilityFlags.ClearPrimvarFlags();
+        _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
+        CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
+        _sidednessFlags.SetHydraFlag(AI_RAY_ALL);
+    }
     auto GetArnoldAttributes = [&]() {
         // Try to get the arnold attributes via the scene delegate
         const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
@@ -70,7 +79,6 @@ void HdArnoldNativeRprim::Sync(
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
 
-    int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
     bool syncBuiltinParameters = *dirtyBits & ArnoldUsdRprimBitsParams;
  #ifdef ENABLE_SCENE_INDEX // Hydra2 - we have to pass the arnold::attributes via the DirtyPrimvar bit unfortunately,
@@ -86,8 +94,10 @@ void HdArnoldNativeRprim::Sync(
                 HdArnoldSetParameter(
                     GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second,
                     GetRenderDelegate());
-                if (param.first == str::t_visibility)
-                    defaultVisibility = (int)AiNodeGetByte(GetArnoldNode(), str::visibility);
+                if (param.first == str::t_visibility) {
+                    int visibilityValue = (int)AiNodeGetByte(GetArnoldNode(), str::visibility);
+                    _visibilityFlags.SetPrimvarFlag(~visibilityValue, false);
+                }
             }
         }
     }
@@ -110,18 +120,8 @@ void HdArnoldNativeRprim::Sync(
         }
     }
     AtNode* node = GetArnoldNode();
-    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
-
-    if (*dirtyBits & HdChangeTracker::DirtyPrimvar || 
-        *dirtyBits & HdChangeTracker::DirtyVisibility) {
-
-        _visibilityFlags.ClearPrimvarFlags();
-        _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
-        if (defaultVisibility != AI_RAY_ALL) {
-            _visibilityFlags.SetPrimvarFlag(AI_RAY_ALL, false);
-            _visibilityFlags.SetPrimvarFlag(defaultVisibility, true);
-        }
-
+    
+    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         HdArnoldPrimvarMap primvars;
         std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
         HdArnoldGetPrimvars(sceneDelegate, GetId(), *dirtyBits, primvars, &interpolations);
@@ -138,8 +138,16 @@ void HdArnoldNativeRprim::Sync(
                     nullptr, nullptr, _renderDelegate);
         }
         
-        const auto visibility = _visibilityFlags.Compose();
-        AiNodeSetByte(node, str::visibility, visibility);
+    }
+
+    if (updateVisibility) {
+        param.Interrupt();
+        UpdateVisibilityAndSidedness();
+        // For procedurals, explicitely setting the sidedness can override
+        // the sidedness of the child nodes, so we only want to set it if it 
+        // has a non-default value
+        if (AiNodeGetByte(node, str::sidedness) == AI_RAY_ALL)
+            AiNodeResetParameter(node, str::sidedness);
     }
     
     // NOTE: HdArnoldSetTransform must be set after the primvars as, at the moment, we might rewrite the transform in the
