@@ -355,8 +355,30 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         // and the eventual procedural mask set above
         _mask = _mask & procMask;
 
+        bool universeCreated = false;
+        // If a universe is already active, we can just use it, otherwise we need to
+        // call AiBegin.
+        //  But if we do so, we'll have to call AiEnd() when we finish
+#if ARNOLD_VERSION_NUM >= 70100
+        if (!AiArnoldIsActive()) {
+#else
+        if (!AiUniverseIsActive()) {
+#endif
+            universeCreated = true;
+            AiBegin();
+        }
+
+        // We need to make sure we have recuperated the usdlux_version setting
+        ChooseRenderSettings(_stage, _renderSettings, _time, rootPrimPtr);
+            if (!_renderSettings.empty()) {
+                auto prim = _stage->GetPrimAtPath(SdfPath(_renderSettings));
+                ComputeUsdLux_Version(_stage, prim, _time, _universe);}
+
         _readerRegistry->RegisterPrimitiveReaders();
-    
+
+        if (universeCreated) {
+            AiEnd();
+        }
 
         if (!path.empty()) {
             SdfPath sdfPath(path);
