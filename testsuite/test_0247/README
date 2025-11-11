@@ -1,0 +1,5 @@
+Point Instancer with points
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'diff_hardfail': 0.036}

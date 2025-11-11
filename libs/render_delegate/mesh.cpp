@@ -534,7 +534,7 @@ void HdArnoldMesh::Sync(
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
-
+    
     *dirtyBits = HdChangeTracker::Clean;
 }
 
