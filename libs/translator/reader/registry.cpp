@@ -82,6 +82,18 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("RenderSettings", new UsdArnoldReadRenderSettings());
 
     // Now let's iterate over all the arnold classes known at this point
+    bool universeCreated = false;
+    // If a universe is already active, we can just use it, otherwise we need to
+    // call AiBegin.
+    //  But if we do so, we'll have to call AiEnd() when we finish
+#if ARNOLD_VERSION_NUM >= 70100
+    if (!AiArnoldIsActive()) {
+#else
+    if (!AiUniverseIsActive()) {
+#endif
+        AiBegin();
+        universeCreated = true;
+    }
 
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
@@ -107,6 +119,9 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     // Generic schema for custom procedurals
     RegisterReader("ArnoldProceduralCustom", new UsdArnoldReadProceduralCustom());
 
+    if (universeCreated) {
+        AiEnd();
+    }
 }
 UsdArnoldReaderRegistry::~UsdArnoldReaderRegistry()
 {

@@ -518,7 +518,6 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
-
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
