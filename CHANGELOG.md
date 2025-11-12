@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.4.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2467](https://github.com/Autodesk/arnold-usd/issues/2467) - Hidden primitives turned visible in IPR do not always show up in the render
+
 ## [7.4.4.0] (Unreleased)
 
 ### Features
