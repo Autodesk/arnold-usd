@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.5.0] (Unreleased)
+
+### Features
+
+- [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
+
 ## [7.4.4.0] (Unreleased)
 
 ### Features
