@@ -104,6 +104,17 @@ public:
 
         // If this geometry isn't visible, we want to disable it and skip the translation
         bool skip = !this->_sharedData.visible;
+        if (skip) {
+            // If we're about to skip this prim, we want to clean 
+            // its dirtyBits, so that the next modification triggers a new Sync #2467
+            *dirtyBits = HdChangeTracker::Clean;
+        } else if (_skipped) {
+            // This prim was previously skipped and is now visible. Since the translation
+            // in previous iterations was bypassed, we must now ensure that
+            // it will be fully translated to Arnold #2467
+            *dirtyBits = HdChangeTracker::AllDirty;
+        }
+        _skipped = skip; // Remember if this prim was skipped for next iteration
         AtNode* node = GetArnoldNode();
         if (node == nullptr)
             return skip;
@@ -194,6 +205,7 @@ protected:
     HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
     int _deformKeys = 2;                                      ///< Number of deform keys. Used with velocity and accelerations
+    bool _skipped = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
