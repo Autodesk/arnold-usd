@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.4.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) Fix regression in default value of texture_auto_generate_tx in the render delegate plugin
+
 ## [7.4.4.0] 2025-11-12
 
 ### Features
