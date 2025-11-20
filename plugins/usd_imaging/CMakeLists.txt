@@ -43,7 +43,12 @@ if (NOT BUILD_WITH_USD_STATIC)
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(usdImagingArnold PRIVATE ${HDR})
     endif ()
+
     set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+        list(APPEND USDIMAGING_LIBS hdsi)
+    endif()
+
     if (${USD_VERSION} VERSION_LESS "0.25.05")
         list(APPEND USDIMAGING_LIBS ndr)
     endif()

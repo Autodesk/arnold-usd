@@ -426,9 +426,7 @@ public:
             default:
                 category = UsdGeomTokens->constant;
         }
-        unsigned int elementSize =
-            (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, AtString(paramName))) : 1;
-
+        
         // Special case for displayColor, that needs to be set as a color array
         static AtString displayColorStr("displayColor");
         if (paramNameStr == displayColorStr && type == SdfValueTypeNames->Color3f) {
@@ -456,7 +454,7 @@ public:
             return;
         }
 
-        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category, elementSize);
+        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category);
         writer.SetPrimVar(_primVar, value);
 
         if (category == UsdGeomTokens->faceVarying) {
