@@ -131,4 +131,12 @@ bool HdArnoldRendererPlugin::IsSupported(bool /*gpuEnabled*/) const { return tru
 #else
 bool HdArnoldRendererPlugin::IsSupported() const { return true; }
 #endif
+#if PXR_VERSION >= 2511
+bool HdArnoldRendererPlugin::IsSupported(
+    HdRendererCreateArgs const &rendererCreateArgs, std::string *reasonWhyNot) const
+{
+    return true;
+};
+#endif
+
 PXR_NAMESPACE_CLOSE_SCOPE
