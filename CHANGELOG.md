@@ -6,6 +6,7 @@
 ### Features
 
 - [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
+- [usd#2476](https://github.com/Autodesk/arnold-usd/issues/2476) - log_verbosity setting should affect both console and file logs 
 
 ## [7.4.4.1] (Unreleased)
 
