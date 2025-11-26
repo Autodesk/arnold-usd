@@ -283,20 +283,20 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         arnoldRenderDelegate->SetNodeId(_id);
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
-    SdfPath renderCameraPath;
-    
+    _renderCameraPath = SdfPath();
+
     // Find the camera as its motion blur values influence how hydra generates the geometry
     if (!arnoldRenderDelegate->GetProceduralParent()) {
         if (universeCamera) {
             UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
             if (cameraPrim)
-                renderCameraPath = SdfPath(cameraPrim.GetPath());
+                _renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
 
         ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
         }
     } 
 
@@ -312,14 +312,15 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
         _shutter = {static_cast<float>(shutter_start), static_cast<float>(shutter_end)};
     } else {
-        if (!renderCameraPath.IsEmpty()) {
-            SetCameraForSampling(stage, renderCameraPath);
+        if (!_renderCameraPath.IsEmpty()) {
+            SetCameraForSampling(stage, _renderCameraPath);
         } else {
             // Use the first camera available
             for (const auto &it: stage->Traverse()) {
                 if (it.IsA<UsdGeomCamera>()) {
                     UsdPrim cameraPrim = it;
-                    SetCameraForSampling(stage, cameraPrim.GetPath());
+                    _renderCameraPath = cameraPrim.GetPath();
+                    SetCameraForSampling(stage, _renderCameraPath);
                     break;
                 }
             }
@@ -386,7 +387,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
+    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
         arnoldRenderDelegate->ProcessConnections();
     }
@@ -451,7 +452,7 @@ void HydraArnoldReader::Update()
     else
         _imagingDelegate->ApplyPendingUpdates();        
 
-    arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
+    arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
     // Connections may have been made as part of the sync pass, so we need to process them
     // again to make sure that the nodes are up to date. (#2269)
