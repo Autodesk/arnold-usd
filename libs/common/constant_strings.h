@@ -121,6 +121,7 @@ ASTR(AA_seed);
 ASTR(ArnoldUsd);
 ASTR(ArnoldNodeGraph);
 ASTR(ArnoldOptions);
+ASTR(ArnoldMarkPrimsDirty);
 ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
