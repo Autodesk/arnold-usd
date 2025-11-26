@@ -16,12 +16,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "instancer.h"
-
+#include "shape_utils.h"
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -185,10 +184,15 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
     }
 }
 
-void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
-    const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
+
+// Should that be SyncPrototypeTransforms
+// This method use the instance_matrix feature to create instances
+void HdArnoldInstancer::ComputeShapeInstancesTransforms(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
     const SdfPath& instancerId = GetId();
+    if (!prototypeNode)
+        return;
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
 
     // If the sampling interval has changed we need to resample the translate, orientations and scales
@@ -200,10 +204,97 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     if (instanceIndices.empty()) {
         return;
     }
-    HdArnoldSampledMatrixArrayType sampleArray;
-    
-    const auto numInstances = instanceIndices.size();
 
+    HdArnoldSampledMatrixArrayType sampleArray;
+    ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+
+    AtArray* matrices = AiArrayAllocate(instanceIndices.size(), sampleArray.count, AI_TYPE_MATRIX);
+    for (size_t n = 0; n < sampleArray.count; ++n) {
+        const auto& instanceMatrices = sampleArray.values[n];
+        std::vector<AtMatrix> matrixVector;
+        for (const auto& instanceMatrix : instanceMatrices) {
+            AtMatrix arnoldMatrix;
+            ConvertValue(arnoldMatrix, instanceMatrix);
+            matrixVector.push_back(arnoldMatrix);
+        }
+        AiArraySetKey(matrices, n, matrixVector.data());
+    }
+
+    HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    param->Interrupt();
+
+    // Declare instance_matrix as a user param
+    if (!AiNodeLookUpUserParameter(prototypeNode, str::instance_matrix)) {
+        AiNodeDeclare(prototypeNode, str::instance_matrix, "constant ARRAY MATRIX");
+    }
+    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
+    AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
+    AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
+}
+
+void HdArnoldInstancer::ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+    const SdfPath& instancerId = GetId();
+    if (!prototypeNode) return;
+
+    // When polymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+
+    for (auto& primvar : _primvars) {
+        auto& desc = primvar.second;
+        const char* paramName = primvar.first.GetText();
+
+        VtValue instanceValue;
+        if (instanceIndices.empty() || !FlattenIndexedValue(desc.value, instanceIndices, instanceValue))
+             instanceValue = desc.value;
+        
+        DeclareAndAssignParameter(prototypeNode, TfToken{paramName}, 
+            str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(), 
+            desc.role == HdPrimvarRoleTokens->color);
+    }
+
+}
+
+void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
+{
+    const SdfPath& instancerId = GetId();
+    VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
+    if (!matteVal.IsEmpty())
+        AiNodeSetBool(node, str::matte, VtValueGetBool(matteVal));
+
+    VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
+    if (!visVal.IsEmpty()) {
+        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+    } else {
+        bool assignVisibility = false;
+        HdArnoldRayFlags rayFlags{AI_RAY_ALL};
+        auto applyRayFlags = [&](const TfToken& attr) {
+            visVal = GetDelegate()->Get(instancerId, attr);
+            if (!visVal.IsEmpty()) {
+                assignVisibility = true;
+                const char* rayName = attr.GetText() + _tokens->visibilityPrefix.size();
+                rayFlags.SetRayFlag(rayName, visVal);
+            }
+        };
+        applyRayFlags(str::t_visibilityCamera);
+        applyRayFlags(_tokens->visibilityShadow);
+        applyRayFlags(_tokens->visibilityDiffuseTransmit);
+        applyRayFlags(_tokens->visibilitySpecularTransmit);
+        applyRayFlags(_tokens->visibilityDiffuseReflect);
+        applyRayFlags(_tokens->visibilitySpecularReflect);
+        applyRayFlags(_tokens->visibilityVolume);
+        applyRayFlags(_tokens->visibilitySubsurface);
+        if (assignVisibility)
+            AiNodeSetByte(node, str::visibility, rayFlags.Compose());
+    }
+}
+
+
+// private
+void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray) {
+    const SdfPath& instancerId = GetId();
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
     SampleInstancerTransform(GetDelegate(), instancerId, _samplingInterval, &instancerTransforms);
     HdArnoldEnsureSamplesCount(_samplingInterval, instancerTransforms);
@@ -260,6 +351,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const bool hasAccelerations = !accelerations.empty();
     const bool hasAngularVelocities = !angularVelocities.empty();
     const bool velBlur = hasAccelerations || hasVelocities || hasAngularVelocities;
+    const size_t numInstances = instanceIndices.size();
 
     // TODO(pal): This resamples the values for all the instance indices, not only the ones belonging to the processed prototype.
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
@@ -316,7 +408,22 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             sampleArray.values[sample][instance] = matrix;
         }
     }
+}
 
+
+void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
+    const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
+{
+    const SdfPath& instancerId = GetId();
+
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+    HdArnoldSampledMatrixArrayType sampleArray;
+    ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+
+    // Implementation with the arnold instancer
     std::stringstream ss;
     ss << prototypeId << "_instancer";
     AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
@@ -326,11 +433,6 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
     AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
 
-#ifdef ENABLE_SCENE_INDEX // Hydra2
-    if (renderDelegate->HasCryptomatte())
-        renderDelegate->SetInstancerCryptoOffset(instancerNode, numInstances);
-#endif
-
     if (sampleArray.count == 0 || sampleArray.values.front().empty()) {
         AiNodeResetParameter(instancerNode, str::instance_matrix);
         AiNodeResetParameter(instancerNode, str::node_idxs);
@@ -338,7 +440,11 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     } else {
         const auto sampleCount = sampleArray.count;
         const auto instanceCount = sampleArray.values.front().size();
-        
+
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+        if (renderDelegate->HasCryptomatte())
+            renderDelegate->SetInstancerCryptoOffset(instancerNode, instanceCount);
+#endif        
         auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
         auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
         auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
@@ -378,35 +484,8 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         AiNodeSetArray(instancerNode, str::node_idxs, nodeIdxsArray);
         SetPrimvars(instancerNode, prototypeId, instanceCount, renderDelegate);
     }
-    VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
-    if (!matteVal.IsEmpty())
-        AiNodeSetBool(instancerNode, str::matte, VtValueGetBool(matteVal));
 
-    VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
-    if (!visVal.IsEmpty()) {
-        AiNodeSetInt(instancerNode, str::visibility, VtValueGetInt(visVal));
-    } else {
-        bool assignVisibility = false;
-        HdArnoldRayFlags rayFlags{AI_RAY_ALL};
-        auto applyRayFlags = [&](const TfToken& attr) {
-            visVal = GetDelegate()->Get(instancerId, attr);
-            if (!visVal.IsEmpty()) {
-                assignVisibility = true;
-                const char* rayName = attr.GetText() + _tokens->visibilityPrefix.size();
-                rayFlags.SetRayFlag(rayName, visVal);
-            }
-        };
-        applyRayFlags(str::t_visibilityCamera);
-        applyRayFlags(_tokens->visibilityShadow);
-        applyRayFlags(_tokens->visibilityDiffuseTransmit);
-        applyRayFlags(_tokens->visibilitySpecularTransmit);
-        applyRayFlags(_tokens->visibilityDiffuseReflect);
-        applyRayFlags(_tokens->visibilitySpecularReflect);
-        applyRayFlags(_tokens->visibilityVolume);
-        applyRayFlags(_tokens->visibilitySubsurface);
-        if (assignVisibility)
-            AiNodeSetByte(instancerNode, str::visibility, rayFlags.Compose());
-    }
+    ApplyInstancerVisibilityToArnoldNode(instancerNode);
     
     const auto parentId = GetParentId();
     if (parentId.IsEmpty()) {
@@ -416,7 +495,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     if (ARCH_UNLIKELY(parentInstancer == nullptr)) {
         return;
     }
-    parentInstancer->CalculateInstanceMatrices(renderDelegate, instancerId, instancers);
+    parentInstancer->CreateArnoldInstancer(renderDelegate, instancerId, instancers);
     AiNodeSetByte(instancerNode, str::visibility, 0);
 }
 
@@ -437,6 +516,31 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
     std::vector<HdArnoldRayFlags> visibilityFlags;
     std::vector<HdArnoldRayFlags> sidednessFlags;
     std::vector<HdArnoldRayFlags> autobumpVisibilityFlags;
+    
+    auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+    auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
+        // check if the primvar name starts with the provided prefix
+        if (!charStartsWithToken(primvar, prefix))
+            return false;
+
+        // Store a default HdArnoldRayFlags, with the proper values
+        HdArnoldRayFlags defaultFlags;
+        defaultFlags.SetHydraFlag(AI_RAY_ALL);
+       
+        if (value.IsHolding<VtBoolArray>()) {
+            const VtBoolArray &array = value.UncheckedGet<VtBoolArray>();
+            if (array.size() > rayFlags.size()) {                        
+                rayFlags.resize(array.size(), defaultFlags);
+            }
+            // extract the attribute namespace, to get the ray type component (camera, etc...)
+            const auto* rayName = primvar + prefix.size();                    
+            for (size_t i = 0; i < array.size(); ++i) {
+                // apply the ray flag for each instance
+                rayFlags[i].SetRayFlag(rayName, VtValue(array[i]));
+            }
+        }
+        return true;
+    };
 
     // Loop over this instancer primvars
     for (auto& primvar : _primvars) {
@@ -448,37 +552,10 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
 
         // For arnold primvars, we want to remove the arnold: prefix in the primvar name. This way, 
         // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
-       
-        auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
         if (charStartsWithToken(paramName, str::t_arnold_prefix)) {
             // extract the arnold prefix from the primvar name
-            paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
-    
+            paramName = primvar.first.GetText() + str::t_arnold_prefix.size();
             // Apply each component value to the corresponding ray flag
-            auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
-                // check if the primvar name starts with the provided prefix
-                if (!charStartsWithToken(primvar, prefix))
-                    return false;
-
-                // Store a default HdArnoldRayFalgs, with the proper values
-                HdArnoldRayFlags defaultFlags;
-                defaultFlags.SetHydraFlag(AI_RAY_ALL);
-               
-                if (value.IsHolding<VtBoolArray>()) {
-                    const VtBoolArray &array = value.UncheckedGet<VtBoolArray>();
-                    if (array.size() > rayFlags.size()) {                        
-                        rayFlags.resize(array.size(), defaultFlags);
-                    }
-                    // extract the attribute namespace, to get the ray type component (camera, etc...)
-                    const auto* rayName = primvar + prefix.size();                    
-                    for (size_t i = 0; i < array.size(); ++i) {
-                        // apply the ray flag for each instance
-                        rayFlags[i].SetRayFlag(rayName, VtValue(array[i]));
-                    }
-                }
-                return true;
-            };
-
             if (applyRayFlags(paramName, str::t_visibility_prefix, desc.value, visibilityFlags))
                 continue;
             if (applyRayFlags(paramName, str::t_sidedness_prefix, desc.value, sidednessFlags))
