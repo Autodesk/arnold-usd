@@ -1618,7 +1618,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 }
 
                 if (!dirtyEntries.empty()) {
-                auto dataSource = HdRetainedTypedSampledDataSource<
+                    auto dataSource = HdRetainedTypedSampledDataSource<
                         TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
                     sceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
                 }
