@@ -33,6 +33,7 @@
 #include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
+#include <pxr/base/tf/envSetting.h>
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
