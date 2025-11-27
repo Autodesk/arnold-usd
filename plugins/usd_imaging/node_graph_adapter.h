@@ -19,7 +19,7 @@
 
 #include <pxr/pxr.h>
 #include "api.h"
-
+#include "ai.h"
 #include <pxr/usdImaging/usdImaging/primAdapter.h>
 #include <pxr/usdImaging/usdImaging/materialAdapter.h>
 
