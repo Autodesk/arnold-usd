@@ -25,3 +25,5 @@ if (BUILD_PROCEDURAL)
     add_subdirectory(procedural)
 endif ()
 
+add_subdirectory(bundle)
+
