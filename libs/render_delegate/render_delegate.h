@@ -694,6 +694,10 @@ public:
     }
 
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
+    
+    // Return true if the render delegate supports shape instancing
+    bool SupportShapeInstancing () const {return _supportShapeInstancing;}
+
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
     bool HasCryptomatte() const {return _hasCryptomatte;}
@@ -835,7 +839,7 @@ private:
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
-
+    bool _supportShapeInstancing = true;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
     // We store a list of functions that must be run once all the prims are synced and have filled the 

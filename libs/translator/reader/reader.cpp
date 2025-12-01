@@ -356,7 +356,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         _mask = _mask & procMask;
 
         _readerRegistry->RegisterPrimitiveReaders();
-    
+
 
         if (!path.empty()) {
             SdfPath sdfPath(path);
@@ -411,6 +411,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             if (!_renderSettings.empty()) {
                 auto prim = _stage->GetPrimAtPath(SdfPath(_renderSettings));
                 ComputeMotionRange(_stage, prim, _time);
+                ComputeUsdLuxVersion(_stage, prim, _time, _universe);
             }
         }
 

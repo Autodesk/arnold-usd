@@ -417,6 +417,11 @@ public:
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
                 break;
+#ifdef USE_NATIVE_INSTANCING
+            case AI_USERDEF_PER_INSTANCE:
+                category = str::t_instance;
+                break;
+#endif
             case AI_USERDEF_CONSTANT:
             default:
                 category = UsdGeomTokens->constant;
