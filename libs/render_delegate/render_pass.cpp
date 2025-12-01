@@ -398,6 +398,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto* currentUniverseCamera =
         static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
+    const SdfPath cameraId = camera ? camera->GetId() : SdfPath();
     const auto useOwnedCamera = camera == nullptr;
     AtNode* currentCamera = nullptr;
     // If camera is nullptr from the render pass state, we are using a camera created by the renderpass.
@@ -1096,7 +1097,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
     bool hasPendingChanges = _renderDelegate->HasPendingChanges(
-        GetRenderIndex(),
+        GetRenderIndex(), cameraId,
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
     
     // If we still have pending Hydra changes, we don't want to start / update the render just yet,
