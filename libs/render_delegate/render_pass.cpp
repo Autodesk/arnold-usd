@@ -101,6 +101,12 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter, "box_filter", "Default filter type for RenderVars.");
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter_attributes, "", "Default filter attributes for RenderVars.");
 
+#ifdef HYDRA_NORMALIZE_DEPTH
+    static const char* _depthOutputValue = "P VECTOR";
+#else
+    static const char* _depthOutputValue = "Z FLOAT";
+#endif
+
 namespace {
 
 template <typename T>
@@ -335,7 +341,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     const auto beautyString =
         TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
     const auto positionString =
-        TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
+        TfStringPrintf("%s %s %s", _depthOutputValue, AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     const auto idString = TfStringPrintf(
         "%s INT %s %s", str::hydraPrimId.c_str(), AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
@@ -718,7 +724,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         std::vector<AtNode*> aovShaders;
         // When creating the outputs array we follow this logic:
         // - color -> RGBA RGBA for the beauty box filter by default
-        // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
+        // - depth -> Z FLOAT closest filter by default
+        //     (if HYDRA_NORMALIZE_DEPTH is defined, use P VECTOR instead)
         // - primId -> ID UINT closest filter by default
         // - everything else -> aovName RGB closest filter by default
         // We are using box filter for the color and closest for everything else.
@@ -760,7 +767,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
             } else if (isRaw && sourceName == HdAovTokens->depth) {
-                output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
+                output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
             } else if (isRaw && sourceName == HdAovTokens->primId) {
                 aovShaders.push_back(_primIdWriter);

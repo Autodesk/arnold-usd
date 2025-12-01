@@ -33,6 +33,7 @@
 #include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
+#include <pxr/base/tf/envSetting.h>
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
@@ -127,6 +128,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 #define PXR_VERSION_STR \
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_SHAPE_INSTANCING, "", "Set to 0 to disable inner shape instancing");
 
 namespace {
 
@@ -615,6 +618,14 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
         }
     }
+
+    // Check if shape instancing is supported
+#if ARNOLD_VERSION_NUM >= 70405
+    std::string envShapeInstancing = TfGetEnvSetting(HDARNOLD_SHAPE_INSTANCING);
+    _supportShapeInstancing = envShapeInstancing != std::string("0");
+#else
+    _supportShapeInstancing = false;
+#endif    
     
 }
 
