@@ -317,18 +317,6 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
     return driver;
 }
 
-void ComputeUsdLuxVersion(
-    UsdStageRefPtr _stage, const UsdPrim &options, TimeSettings &_time, const AtUniverse *universe)
-{
-    // Recuperate usdlux_version from render settings and send it to the core
-    UsdAttribute usdlux_setting = options.GetAttribute(str::t_usdlux_setting);
-    if (usdlux_setting && usdlux_setting.HasAuthoredValue()) {
-        std::string usdluxName;
-        usdlux_setting.Get(&usdluxName, _time.frame);
-        AtNode *arnoldOptions = AiUniverseGetOptions(universe);
-        AiNodeSetStr(arnoldOptions, str::usdlux_version, AtString(usdluxName.c_str()));
-    }
-}
 
 // THIS IS NOT USED in the render delegate
 void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time)

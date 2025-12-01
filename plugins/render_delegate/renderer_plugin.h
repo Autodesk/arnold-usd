@@ -88,10 +88,6 @@ public:
     bool IsSupported() const override;
 #endif
 
-#if PXR_VERSION >= 2511
-    bool IsSupported(
-        HdRendererCreateArgs const& rendererCreateArgs, std::string* reasonWhyNot = nullptr) const override;
-#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

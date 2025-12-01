@@ -1,6 +1,0 @@
-Rect-lights display in mirror-image when usdlux version set to None
-
-Author: Libby O'Meara
-
-
-PARAMS: {'scene':'test.usda'}

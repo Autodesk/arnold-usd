@@ -23,8 +23,6 @@ option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to h
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the  procedural (experimental)" ON)
 option(BUILD_SCENE_INDEX_PLUGIN "Build and enable scene index aka hydra 2" OFF)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
-option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
-
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 
 option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
@@ -33,6 +31,7 @@ option(BUILD_NDR_PLUGIN "Builds the NDR Plugin" ON)
 option(BUILD_PROCEDURAL "Builds the Procedural" ON)
 option(BUILD_PROC_SCENE_FORMAT "Enables the Procedural Scene format" ON)
 option(BUILD_USD_IMAGING_PLUGIN "Builds the USD Imaging plugins" ON)
+option(BUILD_SCENE_DELEGATE "Builds the Scene Delegate" OFF)
 option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)

@@ -55,12 +55,8 @@ public:
         if (!primOriginSchema) {
             return prim;
         }
-        // Get the originating prim, make sure it is not a relative path
-        SdfPath originPath = primOriginSchema.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
-        if (!originPath.IsAbsolutePath()) {
-            originPath = originPath.MakeAbsolutePath(primPath);
-        }
-        HdSceneIndexPrim originPrim = _GetInputSceneIndex()->GetPrim(originPath);
+        // Get the originating prim
+        HdSceneIndexPrim originPrim = _GetInputSceneIndex()->GetPrim(primOriginSchema.GetOriginPath(HdPrimOriginSchemaTokens->scenePath));
         if (!originPrim.dataSource) {
             return prim;
         }
@@ -78,6 +74,7 @@ public:
                             .SetVisibility(visibilityDs)
                             .Build())
                     .Finish() };
+        return prim;
     }
 
     SdfPathVector GetChildPrimPaths(const SdfPath &primPath) const override

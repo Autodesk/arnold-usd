@@ -417,16 +417,13 @@ public:
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
                 break;
-#ifdef USE_NATIVE_INSTANCING
-            case AI_USERDEF_PER_INSTANCE:
-                category = str::t_instance;
-                break;
-#endif
             case AI_USERDEF_CONSTANT:
             default:
                 category = UsdGeomTokens->constant;
         }
-        
+        unsigned int elementSize =
+            (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, AtString(paramName))) : 1;
+
         // Special case for displayColor, that needs to be set as a color array
         static AtString displayColorStr("displayColor");
         if (paramNameStr == displayColorStr && type == SdfValueTypeNames->Color3f) {
@@ -454,7 +451,7 @@ public:
             return;
         }
 
-        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category);
+        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category, elementSize);
         writer.SetPrimVar(_primVar, value);
 
         if (category == UsdGeomTokens->faceVarying) {

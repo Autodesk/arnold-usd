@@ -113,7 +113,7 @@ WARN_LOGFILE           =
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
 # List input directories as strings and separate them by space.
-INPUT                  = "README.md" "LICENSE.md" "CONTRIBUTING.md" "render_delegate" "node_registry" "usd_imaging" "docs"
+INPUT                  = "README.md" "LICENSE.md" "CONTRIBUTING.md" "render_delegate" "node_registry" "scene_delegate" "usd_imaging" "docs"
 USE_MDFILE_AS_MAINPAGE = "README.md"
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.cpp \

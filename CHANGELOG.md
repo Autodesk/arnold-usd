@@ -1,16 +1,6 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.5.0] (Unreleased)
-
-### Features
-
-- [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
-- [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
-- [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
-- [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
-
-
 ## [7.4.4.1] (Unreleased)
 
 ### Bug Fixes

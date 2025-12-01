@@ -1,5 +1,0 @@
-Point Instancer with curves
-
-author: sebastien.ortega
-
-PARAMS: {'scene':'test.usda', 'kick_params': '-frame 32 ',  'diff_hardfail': 0.11}

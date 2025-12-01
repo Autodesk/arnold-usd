@@ -166,6 +166,23 @@ def scene_index_plugin(env, sources):
         usd_libs += ['ndr',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
+def scene_delegate(env, sources):
+    usd_libs = [
+        'arch',
+        'js',
+        'plug',
+        'tf',
+        'trace',
+        'vt',
+        'gf',
+        'work',
+        'sdf',
+        'hf',
+        'hd',
+    ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
+    return add_plugin_deps(env, sources, usd_libs, True)
 
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':

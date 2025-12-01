@@ -263,7 +263,8 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
-        visibility->SetPrimvarFlag(~visibilityValue, false);
+        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
+        visibility->SetPrimvarFlag(visibilityValue, true);
         return true;
     }
     const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
@@ -308,7 +309,8 @@ bool ConvertPrimvarToBuiltinParameter(
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
-        visibility->SetPrimvarFlag(~visibilityValue, false);
+        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
+        visibility->SetPrimvarFlag(visibilityValue, true);
         return true;
     }
 

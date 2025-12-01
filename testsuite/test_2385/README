@@ -1,5 +1,0 @@
-Support arnold:visibility in combination with arnold:visibility:camera
-
-see #2385
-
-PARAMS: {'scene': 'test.usda'}

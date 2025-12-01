@@ -972,16 +972,11 @@ void ReadPrimvars(
         int arrayType = AI_TYPE_NONE;
         
         if (typeName.IsArray() && interpolation == UsdGeomTokens->constant &&
-            primvarType != AI_TYPE_ARRAY) 
+            primvarType != AI_TYPE_ARRAY && primvar.GetElementSize() > 1) 
         {
-            // We cannot use GetElementSize() to get the size of the array, 
-            // so we need to get the value and consider its size
-            VtValue tmp;
-            if (primvar.Get(&tmp, time.frame) && tmp.GetArraySize() > 1) {                
-                arrayType = primvarType;
-                primvarType = AI_TYPE_ARRAY;
-                declaration += " ARRAY ";
-            }
+            arrayType = primvarType;
+            primvarType = AI_TYPE_ARRAY;
+            declaration += " ARRAY ";
         }
 
         declaration += " ";
