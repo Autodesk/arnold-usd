@@ -543,6 +543,7 @@ ASTR(wrapS);
 ASTR(wrapT);
 ASTR(xres);
 ASTR(yres);
+ASTR(Z);
 
 #undef ASTR
 #undef ASTR2
