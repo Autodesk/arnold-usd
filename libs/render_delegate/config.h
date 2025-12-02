@@ -43,6 +43,7 @@
 #include "api.h"
 
 #include <string>
+#include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

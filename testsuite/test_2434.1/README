@@ -1,0 +1,6 @@
+Rect-lights display in non-mirror-image when usdlux_version set to at least 25.05
+
+Author: Libby O'Meara
+
+
+PARAMS: {'scene':'test.usda'}

@@ -1,0 +1,176 @@
+Executing kick /Users/omearal/Documents/Arnold-USD/arnold-usd/testsuite/test_2434/data/test.usda
+00:00:00    89MB         | log started Mon Sep 22 19:14:47 2025
+00:00:00    89MB         | Arnold 7.4.4.0 [bb8b57f3] darwin arm64 clang-20.1.4 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.5.0.53 clmhub-3.1.1.43 rlm-16.1.1 2025/09/12 16:34:36
+00:00:00    89MB         | running on ADSKG4QHPJ24J7, pid=33741
+00:00:00    89MB         |  1 x Apple M3 Pro (12 cores, 12 logical) with 36864MB
+00:00:00    89MB         |  Mac OS 15.6.1, Darwin kernel 24.6.0
+00:00:00    89MB         |  soft limit for open files is set at 10238
+00:00:00    89MB         |  
+00:00:00    98MB         | loading plugins from /Users/omearal/Documents/Arnold-7.4.4.0_20250912160352_bb8b57f3_darwin_52/bin/../plugins ...
+00:00:00    99MB         | loaded 2 plugins from 2 lib(s) in 0:00.00
+00:00:00    99MB         | [kick] command: kick /Users/omearal/Documents/Arnold-USD/arnold-usd/testsuite/test_2434/data/visibleRect.usda
+00:00:00    99MB         | loading plugins from . ...
+00:00:00    99MB         | no plugins loaded
+00:00:00   113MB         | 
+00:00:00   113MB         | authorizing with default license managers: rlm, network, user ...
+00:00:00   116MB         | [rlm] authorized for "arnold 20260910" node-locked to 603e5f58d426
+00:00:00   116MB         | [rlm] expiration date: 10-sep-2026 (354 days left)
+00:00:00   116MB         | 
+00:00:00   116MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   117MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/omearal/Documents/Arnold-7.4.4.0_20250912160352_bb8b57f3_darwin_52/bin/../ocio/configs/arnold/config.ocio
+00:00:00   117MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   159MB         |  
+00:00:00   159MB         | there are 1 light and 1 object:
+00:00:00   159MB         |       1 persp_camera
+00:00:00   159MB         |       1 quad_light
+00:00:00   159MB         |       1 image
+00:00:00   159MB         |       2 utility
+00:00:00   159MB         |       2 box_filter
+00:00:00   159MB         |       1 gaussian_filter
+00:00:00   159MB         |       2 list_aggregate
+00:00:00   159MB         |       2 color_manager_ocio
+00:00:00   159MB         |       1 driver_kick
+00:00:00   159MB         |  
+00:00:00   159MB         | rendering image at 512 x 512, -4 AA samples
+00:00:00   159MB         |   AA samples max    <disabled>
+00:00:00   159MB         |   AA sample clamp   <disabled>
+00:00:00   159MB         |   diffuse           samples  2 / depth  1
+00:00:00   159MB         |   specular          samples  2 / depth  1
+00:00:00   159MB         |   transmission      samples  2 / depth  8
+00:00:00   159MB         |   volume indirect   <disabled by depth>
+00:00:00   159MB         |   total                          depth  0
+00:00:00   159MB         |   bssrdf            samples  2
+00:00:00   159MB         |   light             <using per light samples>
+00:00:00   159MB         |   transparency      depth 10
+00:00:00   159MB         | full scene initialize (10 nodes)
+00:00:00   159MB         |  creating root object list ...
+00:00:00   159MB         | full scene initialize done in 0:00.00 (multithreaded)
+00:00:00   159MB         | fast scene update (10 of 11 nodes)
+00:00:00   159MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file /Users/omearal/Documents/Arnold-7.4.4.0_20250912160352_bb8b57f3_darwin_52/bin/../ocio/configs/arnold/config.ocio
+00:00:00   159MB         |  procedural instancing optimization done in 0:00.00 (0 object promoted)
+00:00:00   159MB         |  scene bounds: (-0.5 -0.5 0) -> (0.5 0.5 0)
+00:00:00   159MB         | fast scene update done in 0:00.00 (multithreaded)
+00:00:00   244MB         | [texturesys] generating /Users/omearal/Documents/Arnold-USD/arnold-usd/testsuite/test_2434/data/dome_grid_2k_raw.exr.tx file from /Users/omearal/Documents/Arnold-USD/arnold-usd/testsuite/test_2434/data/dome_grid_2k.exr
+00:00:00   249MB         | [quad_light] /lights/visibleRect_light: 512x512 importance map done in 0:00.21, average energy 0.444828
+00:00:00   249MB         | [light_sampler] Group 0: Total number of lights 1, sampled lights 0, fixed lights 1
+00:00:00   249MB         | [light_sampler] Group 0: Took 0.002000 ms to build the tree
+00:00:00   249MB         | [aov] parsing 1 output statements ...
+00:00:00   249MB         | [aov] registered driver: "kick_display" (driver_kick)
+00:00:00   249MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_display_filter" (gaussian_filter)
+00:00:00   249MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   293MB         | starting 12 bucket workers of size 64x64 ...
+00:00:00   299MB         | render done in 0:00.002
+00:00:00   299MB         | render done
+00:00:00   299MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   299MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   299MB         |  
+00:00:00   299MB         | rendering image at 512 x 512, -3 AA samples
+00:00:00   299MB         |   AA samples max    <disabled>
+00:00:00   299MB         |   AA sample clamp   <disabled>
+00:00:00   299MB         |   diffuse           samples  1 / depth  1
+00:00:00   299MB         |   specular          samples  2 / depth  1
+00:00:00   299MB         |   transmission      samples  2 / depth  8
+00:00:00   299MB         |   volume indirect   <disabled by depth>
+00:00:00   299MB         |   total                          depth  0
+00:00:00   299MB         |   bssrdf            samples  2
+00:00:00   299MB         |   light             <using per light samples>
+00:00:00   299MB         |   transparency      depth 10
+00:00:00   299MB         | fast scene initialize (1 of 11 nodes)
+00:00:00   299MB         |  creating root object list ...
+00:00:00   299MB         | fast scene initialize done in 0:00.00 (multithreaded)
+00:00:00   299MB         | fast scene update (1 of 11 nodes)
+00:00:00   299MB         |  scene bounds: (-0.5 -0.5 0) -> (0.5 0.5 0)
+00:00:00   299MB         | fast scene update done in 0:00.00 (multithreaded)
+00:00:00   299MB         | [aov] parsing 1 output statements ...
+00:00:00   299MB         | [aov] registered driver: "kick_display" (driver_kick)
+00:00:00   299MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_display_filter" (gaussian_filter)
+00:00:00   299MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   299MB         | starting 12 bucket workers of size 64x64 ...
+00:00:00   300MB         | render done in 0:00.004
+00:00:00   300MB         | render done
+00:00:00   300MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   300MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   300MB         |  
+00:00:00   300MB         | rendering image at 512 x 512, -2 AA samples
+00:00:00   300MB         |   AA samples max    <disabled>
+00:00:00   300MB         |   AA sample clamp   <disabled>
+00:00:00   300MB         |   diffuse           samples  1 / depth  1
+00:00:00   300MB         |   specular          samples  2 / depth  1
+00:00:00   300MB         |   transmission      samples  2 / depth  8
+00:00:00   300MB         |   volume indirect   <disabled by depth>
+00:00:00   300MB         |   total                          depth  0
+00:00:00   300MB         |   bssrdf            samples  2
+00:00:00   300MB         |   light             <using per light samples>
+00:00:00   300MB         |   transparency      depth 10
+00:00:00   300MB         | fast scene initialize (1 of 11 nodes)
+00:00:00   300MB         |  creating root object list ...
+00:00:00   300MB         | fast scene initialize done in 0:00.00 (multithreaded)
+00:00:00   300MB         | fast scene update (1 of 11 nodes)
+00:00:00   300MB         |  scene bounds: (-0.5 -0.5 0) -> (0.5 0.5 0)
+00:00:00   300MB         | fast scene update done in 0:00.00 (multithreaded)
+00:00:00   300MB         | [aov] parsing 1 output statements ...
+00:00:00   300MB         | [aov] registered driver: "kick_display" (driver_kick)
+00:00:00   300MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_display_filter" (gaussian_filter)
+00:00:00   300MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   300MB         | starting 12 bucket workers of size 64x64 ...
+00:00:00   307MB         | render done in 0:00.007
+00:00:00   307MB         | render done
+00:00:00   307MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   307MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   307MB         |  
+00:00:00   307MB         | rendering image at 512 x 512, -1 AA samples
+00:00:00   307MB         |   AA samples max    <disabled>
+00:00:00   307MB         |   AA sample clamp   <disabled>
+00:00:00   307MB         |   diffuse           samples  1 / depth  1
+00:00:00   307MB         |   specular          samples  2 / depth  1
+00:00:00   307MB         |   transmission      samples  2 / depth  8
+00:00:00   307MB         |   volume indirect   <disabled by depth>
+00:00:00   307MB         |   total                          depth  0
+00:00:00   307MB         |   bssrdf            samples  2
+00:00:00   307MB         |   light             <using per light samples>
+00:00:00   307MB         |   transparency      depth 10
+00:00:00   307MB         | fast scene initialize (1 of 11 nodes)
+00:00:00   307MB         |  creating root object list ...
+00:00:00   307MB         | fast scene initialize done in 0:00.00 (multithreaded)
+00:00:00   307MB         | fast scene update (1 of 11 nodes)
+00:00:00   307MB         |  scene bounds: (-0.5 -0.5 0) -> (0.5 0.5 0)
+00:00:00   307MB         | fast scene update done in 0:00.00 (multithreaded)
+00:00:00   307MB         | [aov] parsing 1 output statements ...
+00:00:00   307MB         | [aov] registered driver: "kick_display" (driver_kick)
+00:00:00   307MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_display_filter" (gaussian_filter)
+00:00:00   307MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   307MB         | starting 12 bucket workers of size 64x64 ...
+00:00:00   313MB         | render done in 0:00.014
+00:00:00   313MB         | render done
+00:00:00   313MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   313MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   313MB         |  
+00:00:00   313MB         | rendering image at 512 x 512, 6 AA samples
+00:00:00   313MB         |   AA samples max    <disabled>
+00:00:00   313MB         |   AA sample clamp   <disabled>
+00:00:00   313MB         |   diffuse           samples  2 / depth  1
+00:00:00   313MB         |   specular          samples  2 / depth  1
+00:00:00   313MB         |   transmission      samples  2 / depth  8
+00:00:00   313MB         |   volume indirect   <disabled by depth>
+00:00:00   313MB         |   total                          depth  0
+00:00:00   313MB         |   bssrdf            samples  2
+00:00:00   313MB         |   light             <using per light samples>
+00:00:00   313MB         |   transparency      depth 10
+00:00:00   313MB         | fast scene initialize (1 of 11 nodes)
+00:00:00   313MB         |  creating root object list ...
+00:00:00   313MB         | fast scene initialize done in 0:00.00 (multithreaded)
+00:00:00   313MB         | fast scene update (1 of 11 nodes)
+00:00:00   313MB         |  scene bounds: (-0.5 -0.5 0) -> (0.5 0.5 0)
+00:00:00   313MB         | fast scene update done in 0:00.00 (multithreaded)
+00:00:00   313MB         | [aov] parsing 1 output statements ...
+00:00:00   313MB         | [aov] registered driver: "kick_display" (driver_kick)
+00:00:00   313MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_display_filter" (gaussian_filter)
+00:00:00   313MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   313MB         | starting 12 bucket workers of size 64x64 ...
+00:00:01   343MB         | render done in 0:00.925
+00:00:01   343MB         | render done
+00:00:16   344MB         |  
+00:00:16   344MB         | releasing resources
+00:00:16   344MB         |   
+00:00:16   344MB         |  releasing resources
+00:00:22   343MB         |  Arnold shutdown

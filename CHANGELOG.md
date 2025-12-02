@@ -1,7 +1,26 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.4.0] (Unreleased)
+## [7.4.5.0] (Unreleased)
+
+### Features
+
+- [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
+- [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
+- [usd#2476](https://github.com/Autodesk/arnold-usd/issues/2476) - log_verbosity setting should affect both console and file logs 
+- [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
+- [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
+
+## [7.4.4.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2467](https://github.com/Autodesk/arnold-usd/issues/2467) - Hidden primitives turned visible in IPR do not always show up in the render
+- [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) Fix regression in default value of texture_auto_generate_tx in the render delegate plugin
+- [usd#2481](https://github.com/Autodesk/arnold-usd/issues/2481) Fix regression with camera motion blur in Solaris
+- [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Support using the Z AOV for the hydra depth buffer
+
+## [7.4.4.0] 2025-11-12
 
 ### Features
 
@@ -22,7 +41,7 @@
 
 - [usd#2391](https://github.com/Autodesk/arnold-usd/issues/2391) Remove warnings when rendering with an Arnold camera
 
-## [7.4.3.2] (Unreleased)
+## [7.4.3.2] 2025-09-24
 
 ### Bug Fixes
 

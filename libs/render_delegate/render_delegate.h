@@ -336,7 +336,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.
@@ -694,6 +694,10 @@ public:
     }
 
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
+    
+    // Return true if the render delegate supports shape instancing
+    bool SupportShapeInstancing () const {return _supportShapeInstancing;}
+
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
     bool HasCryptomatte() const {return _hasCryptomatte;}
@@ -826,7 +830,6 @@ private:
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
@@ -836,7 +839,7 @@ private:
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
-
+    bool _supportShapeInstancing = true;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
     // We store a list of functions that must be run once all the prims are synced and have filled the 
