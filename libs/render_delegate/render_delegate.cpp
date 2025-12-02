@@ -1061,6 +1061,9 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
 
+    if(!AiUniverseGetOptions(_universe))
+        return stats;
+
     float total_progress = 100.0f;
     AiRenderGetHintFlt(GetRenderSession(), str::total_progress, total_progress);
     stats[_tokens->percentDone] = total_progress;

@@ -291,6 +291,12 @@ HdArnoldRenderPass::HdArnoldRenderPass(
       _renderDelegate(renderDelegate)
 {
     auto* universe = _renderDelegate->GetUniverse();
+    if(!AiUniverseGetOptions(universe))
+    {
+        printf("HdArnoldRenderPass ctor options null, skiping init\n");
+        return;
+    }
+
     _camera = _renderDelegate->CreateArnoldNode(str::persp_camera, 
         _renderDelegate->GetLocalNodeName(str::renderPassCamera));
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
@@ -351,6 +357,10 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 
 HdArnoldRenderPass::~HdArnoldRenderPass()
 {
+    AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
+    if(!options)
+        return;
+
     reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam())->Interrupt();
     _renderDelegate->DestroyArnoldNode(_camera);
     _renderDelegate->DestroyArnoldNode(_defaultFilter);
@@ -388,6 +398,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
 
     AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
+    if(!options)
+        return;
+
     bool isOrtho = false;
     const auto* currentUniverseCamera =
         static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
