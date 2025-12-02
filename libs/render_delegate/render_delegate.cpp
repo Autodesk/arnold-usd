@@ -1568,7 +1568,7 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
-bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
     if (!_deferredFunctionCalls.empty()) {
         // TODO: depending on the size, we could do the update in parallel.
@@ -1595,6 +1595,11 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     if (_renderParam->UpdateShutter(shutter)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
+        // If the shutter has changed, we also need to update the render camera
+        if (!cameraId.IsEmpty()) {
+            renderIndex->GetChangeTracker().MarkSprimDirty(cameraId, HdCamera::AllDirty);
+        }
+
     }
     /// TODO(pal): Investigate if this is needed.
     /// When FPS changes we have to dirty points and primvars.
@@ -1625,10 +1630,20 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                         dirtyEntries.insert({id, locators});
                     }
                 }
+                // if the shutter was modified, we also want to update the camera
+                if (bits & HdChangeTracker::DirtyTransform && !cameraId.IsEmpty()) {
+                    HdSceneIndexPrim prim = sceneIndex->GetPrim(cameraId);
+                    HdDataSourceLocatorSet locators;
+                    HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, HdCamera::AllDirty, &locators);
+                    if (!locators.IsEmpty()) {
+                        dirtyEntries.insert({cameraId, locators});
+                    }
+                }
+
                 if (!dirtyEntries.empty()) {
-                    auto toto = HdRetainedTypedSampledDataSource<
+                    auto dataSource = HdRetainedTypedSampledDataSource<
                         TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
-                    sceneIndex->SystemMessage(TfToken("ArnoldMarkAllRprimsDirty"), toto);
+                    sceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
                 }
             }
         } else {

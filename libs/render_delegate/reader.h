@@ -88,6 +88,7 @@ private:
     std::string _debugScene;
     bool _useSceneIndex = false; 
     TimeSettings _time;
+    SdfPath _renderCameraPath;
 
 #ifdef ARNOLD_SCENE_INDEX
     HdSceneIndexBaseRefPtr

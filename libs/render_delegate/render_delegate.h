@@ -336,7 +336,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.

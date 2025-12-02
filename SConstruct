@@ -133,7 +133,7 @@ vars.AddVariables(
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
-    BoolVariable('HYDRA_NORMALIZE_DEPTH', 'If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth', False),
+    BoolVariable('HYDRA_NORMALIZE_DEPTH', 'If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth', True),
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     StringVariable('JUNIT_TESTSUITE_NAME', 'Optional name for the JUnit report', None),
