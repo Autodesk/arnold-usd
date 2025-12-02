@@ -189,6 +189,13 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
         return node;
     }
+    // If usdlux_version is enabled use a point light
+    AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+    if (options && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::usdlux_version)) {
+        if (AiNodeGetByte(options, str::usdlux_version) != 0) {
+            return nullptr;
+        }
+    }
     VtValue coneAngleValue;
     float coneAngle = 0;
     UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
@@ -223,6 +230,42 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
 }
 
+// Read cone angle, softness, focus, and focus tint
+void _ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettings& time)
+{
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (!shapingAPI)
+        return;
+
+    VtValue coneAngleValue;
+    UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
+    if (coneAngleAttr.HasAuthoredValue()) {
+        if (coneAngleAttr.Get(&coneAngleValue, time.frame)) {
+            AiNodeSetFlt(node, str::cone_angle, VtValueGetFloat(coneAngleValue));
+        }
+    } else {
+        UsdAttribute oldAttr = prim.GetAttribute(_tokens->ShapingConeAngle);
+        if (oldAttr.HasAuthoredValue() && oldAttr.Get(&coneAngleValue, time.frame)) {
+            AiNodeSetFlt(node, str::cone_angle, VtValueGetFloat(coneAngleValue));
+        }
+    }
+
+    VtValue coneSoftnessValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingConeSoftness).Get(&coneSoftnessValue, time.frame)) {
+        AiNodeSetFlt(node, str::cone_softness, VtValueGetFloat(coneSoftnessValue));
+    }
+
+    VtValue shapingFocusValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingFocus).Get(&shapingFocusValue, time.frame)) {
+        AiNodeSetFlt(node, str::shaping_focus, VtValueGetFloat(shapingFocusValue));
+    }
+
+    VtValue shapingFocusTintValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingFocusTint).Get(&shapingFocusTintValue, time.frame)) {
+        GfVec3f rgb = VtValueGetVec3f(shapingFocusTintValue);
+        AiNodeSetRGB(node, str::shaping_focus_tint, rgb[0], rgb[1], rgb[2]);
+    }
+}
 
 } // namespace
 
@@ -428,6 +471,9 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+    // Apply shaping parameters
+    _ReadLightShapingParams(prim, node, time);
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -467,6 +513,11 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
             }
         }
+    }
+
+    // Apply shaping parameters for point_light
+    if (AiNodeIs(node, str::point_light)) {
+        _ReadLightShapingParams(prim, node, time);
     }
 
     ReadMatrix(prim, node, time, context);
@@ -517,6 +568,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
+
+    // Apply shaping parameters
+    _ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -576,6 +630,9 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
+
+    // Apply shaping parameters
+    _ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
