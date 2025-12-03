@@ -164,7 +164,7 @@ void readUserData(
         }
     }
 }
-AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
+AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id, HdArnoldRenderDelegate* renderDelegate)
 {
     auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
         auto val = delegate->GetLightParamValue(id, paramName);
@@ -206,7 +206,12 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
     if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
-            return str::point_light;    //TODO: add usdlux_version if/else
+        // If usdlux_version is enabled use a point light
+        AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
+        if (AiNodeGetByte(options, str::usdlux_version) != 0) 
+            return str::point_light;
+        else 
+            return str::spot_light;
     }
     // Finally, we default to a point light
     return str::point_light;
@@ -537,7 +542,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
         if (_light == nullptr || lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
-            const auto newLightType = getLightType(sceneDelegate, id);
+            const auto newLightType = getLightType(sceneDelegate, id, _delegate);
             if (newLightType != lightType) {
                 if (_light) {
                     AiNodeSetStr(_light, str::name, AtString());
