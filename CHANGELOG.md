@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths
 - [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
 - [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
 - [usd#2476](https://github.com/Autodesk/arnold-usd/issues/2476) - log_verbosity setting should affect both console and file logs 
