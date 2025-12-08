@@ -234,7 +234,7 @@ inline void CollectDependenciesFromLayer(
  * Returns all dependencies found in a USD scene.
  *
  * The function iterates over all prims in all used layers
- * and collects dependencies defined in asset type attrbutes.
+ * and collects dependencies defined in asset type attributes.
  * Also collects sublayers, references and payloads.
  */
 std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
