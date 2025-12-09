@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
 - [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths
 - [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
 - [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
