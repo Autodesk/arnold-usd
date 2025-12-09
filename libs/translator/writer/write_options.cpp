@@ -78,6 +78,16 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     );
 // clang-format on
 
+struct ArnoldOutput {
+    AtNode *driver = nullptr;
+    AtNode *filter = nullptr;
+    AtNode *camera = nullptr;
+    std::string aovName;
+    std::string aovType;
+    std::string layerName;
+    bool halfPrecision = false;
+};
+
 // Function to create an ArnoldNodeGraph for a given options attribute
 static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& attr,  
     UsdArnoldWriter &writer)
@@ -253,6 +263,7 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("camera");
     // outputs will be handled below
     _exportedAttrs.insert("outputs");
+    _exportedAttrs.insert("drivers");
 
     // The following attributes have a different default in Arnold core than in 
     // plugins, so we always want to author them
@@ -315,19 +326,16 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
     // write the remaining Arnold attributes with the arnold: namespace    
     _WriteArnoldParameters(node, writer, prim, "arnold");
 
-    AtArray *outputs = AiNodeGetArray(node, str::outputs);
-    unsigned int numOutputs = outputs ? AiArrayGetNumElements(outputs) : 0;
+    std::vector<ArnoldOutput> outputs;
     
-    UsdRelationship productsList = renderSettings.CreateProductsRel();
-    std::unordered_set<AtNode*> drivers;
-    std::unordered_set<std::string> aovNames;
-
-    if (numOutputs > 0) {
-        writer.CreateScopeHierarchy(writer.GetRenderVarsScope());
-        const std::string renderVarsPrefix = writer.GetRenderVarsScope().GetString() + std::string("/");
-
-        for (unsigned int i = 0; i < numOutputs; ++i) {
-            AtString outputAtStr = AiArrayGetStr(outputs, i);
+    AtArray *outputsList = AiNodeGetArray(node, str::outputs);
+    unsigned int outputsListSize = outputsList ? AiArrayGetNumElements(outputsList) : 0;
+    if (outputsListSize > 0) {
+        outputs.reserve(outputsListSize);
+        for (unsigned int i = 0; i < outputsListSize; ++i) {
+            // manually parse the outputs string to extract the different elements
+            ArnoldOutput output;
+            AtString outputAtStr = AiArrayGetStr(outputsList, i);
             if (outputAtStr.empty())
                 continue;
             std::string outputStr(outputAtStr.c_str());
@@ -343,50 +351,101 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                 // not enough tokens in the output string
                 continue;
             }
-            
-            const AtNode* camNode = AiNodeLookUpByName(universe, AtString(tokens[0].c_str()));
-            bool hasCamera = camNode != nullptr && tokens.size() >= 5 &&
-                AiNodeEntryGetType(AiNodeGetNodeEntry(camNode)) == AI_NODE_CAMERA;
             size_t tokenIndex = 0;
-
-            std::string camera;
-            if (hasCamera) {
-                camera = tokens[tokenIndex++];
+            AtNode* camNode = AiNodeLookUpByName(universe, AtString(tokens[0].c_str()));
+            if (camNode != nullptr && tokens.size() >= 5 &&
+                    AiNodeEntryGetType(AiNodeGetNodeEntry(camNode)) == AI_NODE_CAMERA) {
+                output.camera = camNode;
+                tokenIndex++;
             }
             
-            std::string aovName = tokens[tokenIndex++];
-            std::string aovType = tokens[tokenIndex++];
+            output.aovName = tokens[tokenIndex++];
+            output.aovType = tokens[tokenIndex++];
             
-            AtNode* filter = AiNodeLookUpByName(universe, AtString(tokens[tokenIndex++].c_str()));
-            if (filter == nullptr)
+            output.filter = AiNodeLookUpByName(universe, AtString(tokens[tokenIndex++].c_str()));
+            if (output.filter == nullptr)
                 continue;
             
             std::string driverName = tokens[tokenIndex++];
-            AtNode* driver = AiNodeLookUpByName(universe, AtString(driverName.c_str()));
-            if (driver == nullptr)
+            output.driver = AiNodeLookUpByName(universe, AtString(driverName.c_str()));
+            if (output.driver == nullptr)
                 continue;
-
-            std::string layerName;
-            bool isHalf = false;
 
             if(tokens.size() > tokenIndex) {
                 // there are still remaining tokens
                 // it can either be 
                 if (tokens[tokenIndex] == "HALF") {
-                    isHalf = true;
+                    output.halfPrecision = true;
                 } else {
-                    layerName = tokens[tokenIndex++];
+                    output.layerName = tokens[tokenIndex++];
                     if (tokens.size() > tokenIndex && tokens[tokenIndex] == "HALF")
-                        isHalf = true;
+                        output.halfPrecision = true;
 
                 }
             }
+            outputs.push_back(output);
+        }
+    }
 
+    // Starting with 7.4.5.0, Arnold options have an attribute "drivers" 
+    // with a new representation of the outputs
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::drivers)) {
+        AtArray *driversList = AiNodeGetArray(node, str::drivers);
+        unsigned int numDrivers = driversList ? AiArrayGetNumElements(driversList) : 0;
+        if (numDrivers > 0) {
+            // Loop through the drivers assigned to the options
+            for (unsigned int i = 0; i < numDrivers; ++i) {
+                AtNode *driverNode = (AtNode*)AiArrayGetPtr(driversList, i);
+                if (driverNode == nullptr)
+                    continue;
+                
+                // For each driver, list the render_output nodes
+                AtArray *renderOutputsList = AiNodeGetArray(driverNode, str::render_outputs);
+                unsigned int renderOutputsSize = renderOutputsList ? AiArrayGetNumElements(renderOutputsList) : 0;
+                if (renderOutputsSize == 0)
+                    continue;
+
+                // For each render_output node, create an AOV                
+                for (unsigned int j = 0; j < renderOutputsSize; ++j) {
+                    AtNode *renderOutputNode = (AtNode*)AiArrayGetPtr(renderOutputsList, j);
+                    if (renderOutputNode == nullptr)
+                        continue;
+                    
+                    ArnoldOutput output;
+                    output.driver = driverNode;
+                    output.filter = (AtNode*)AiNodeGetPtr(renderOutputNode, str::filter);
+                    if (output.filter == nullptr)
+                        continue;
+                    output.camera = (AtNode*)AiNodeGetPtr(renderOutputNode, str::camera);
+                    output.aovName = AiNodeGetStr(renderOutputNode, str::aov_name).c_str();
+                    output.aovType = AiNodeGetStr(renderOutputNode, str::type).c_str();
+                    output.layerName = AiNodeGetStr(renderOutputNode, str::layer_name).c_str();
+                    output.halfPrecision = AiNodeGetBool(renderOutputNode, str::half_precision);
+                    outputs.push_back(output);
+                }
+            }
+        }
+    }
+
+    UsdRelationship productsList = renderSettings.CreateProductsRel();
+    std::unordered_set<AtNode*> drivers;
+    std::unordered_set<std::string> aovNames;
+
+    if (!outputs.empty()) {
+        writer.CreateScopeHierarchy(writer.GetRenderVarsScope());
+        const std::string renderVarsPrefix = writer.GetRenderVarsScope().GetString() + std::string("/");
+
+        for (const auto &output : outputs) {            
+            // Now we'll author a new prim for Render Vars,
+            // let's clear _exportedAttrs so that it doesn't
+            // conflict between different nodes
+            _exportedAttrs.clear();
+            
             // Create the RenderVar for this AOV
-            std::string varName = renderVarsPrefix + aovName;
+            std::string varName = renderVarsPrefix + output.aovName;
             int aovIndex = 0;
             while (aovNames.find(varName) != aovNames.end()) {
-                varName = renderVarsPrefix + aovName + std::to_string(++aovIndex);
+                varName = renderVarsPrefix + output.aovName + std::to_string(++aovIndex);
             }
             aovNames.insert(varName);
 
@@ -395,55 +454,50 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                 varName += std::string("all");
             }
 
-            // Now we'll author a new prim for Render Vars,
-            // let's clear _exportedAttrs so that it doesn't
-            // conflict between different nodes
-            _exportedAttrs.clear();
-            
             SdfPath aovPath(varName);
             UsdRenderVar renderVar = UsdRenderVar::Define(stage, aovPath);
             UsdPrim renderVarPrim = renderVar.GetPrim();
             writer.SetAttribute(
-                renderVar.CreateSourceNameAttr(), aovName);
-            const TfToken usdDataType = _GetUsdDataType(aovType, isHalf);
+                renderVar.CreateSourceNameAttr(), output.aovName);
+            const TfToken usdDataType = _GetUsdDataType(output.aovType, output.halfPrecision);
             writer.SetAttribute(
                 renderVar.CreateDataTypeAttr(), usdDataType);
             // sourceType will tell us if this AOVs is a LPE, a primvar, etc...
 
-            if (!layerName.empty()) {
+            if (!output.layerName.empty()) {
                 writer.SetAttribute(
-                    renderVarPrim.CreateAttribute(_tokens->aovSettingName, SdfValueTypeNames->String), layerName);
+                    renderVarPrim.CreateAttribute(_tokens->aovSettingName, SdfValueTypeNames->String), output.layerName);
             }
-            if (!camera.empty()) {
+            if (output.camera) {
+                std::string cameraName = UsdArnoldPrimWriter::GetArnoldNodeName(output.camera, writer);
                 writer.SetAttribute(
-                    renderVarPrim.CreateAttribute(_tokens->aovSettingCamera, SdfValueTypeNames->String), camera);
+                    renderVarPrim.CreateAttribute(_tokens->aovSettingCamera, SdfValueTypeNames->String), cameraName);
             }
 
-            std::string filterType = AiNodeEntryGetName(AiNodeGetNodeEntry(filter));
+            std::string filterType = AiNodeEntryGetName(AiNodeGetNodeEntry(output.filter));
             writer.SetAttribute(
                 renderVarPrim.CreateAttribute(_tokens->aovSettingFilter, SdfValueTypeNames->String),
                 filterType);
 
             // We always author the width as arnold:width
-            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
+            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(output.filter), str::width)) {
                 writer.SetAttribute(
                     renderVarPrim.CreateAttribute(_tokens->aovSettingWidth, SdfValueTypeNames->Float),
-                    AiNodeGetFlt(filter, str::width));
+                    AiNodeGetFlt(output.filter, str::width));
             }
             // Author the filter attributes with the arnold:{filterType}: prefix
             std::string filterAttrPrefix = std::string("arnold:") + filterType;
-            _WriteArnoldParameters(filter, writer, renderVarPrim, filterAttrPrefix);
-
+            _WriteArnoldParameters(output.filter, writer, renderVarPrim, filterAttrPrefix);
 
             // Ensure the render product is authored
-            writer.WritePrimitive(driver);
-            const SdfPath driverPath(GetArnoldNodeName(driver, writer).c_str());
+            writer.WritePrimitive(output.driver);
+            const SdfPath driverPath(GetArnoldNodeName(output.driver, writer).c_str());
             
-            if (drivers.find(driver) == drivers.end()) {
+            if (drivers.find(output.driver) == drivers.end()) {
                 // First AOV using this driver, let's add it to the 
                 // products list
                 productsList.AddTarget(driverPath);
-                drivers.insert(driver);
+                drivers.insert(output.driver);
             }
             UsdRenderProduct renderProduct(stage->GetPrimAtPath(driverPath));
             if (renderProduct) {
@@ -480,11 +534,13 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
    
    // FIXME add color space as arnold:color_space
    AtString colorSpace = AiNodeGetStr(node, str::color_space);
-   if (!colorSpace.empty()) {
+    if (!colorSpace.empty()) {
         writer.SetAttribute(
             renderProductPrim.CreateAttribute(_tokens->aovColorSpace, SdfValueTypeNames->String),
             std::string(colorSpace.c_str())); 
-   }
+    }
+    // Skip render_outputs attribute that is already exported in write_options
+    _exportedAttrs.insert("render_outputs");
 
     // If this driver has an input imager, we need to create a node graph #2025
     AtNode* input = (AtNode*)AiNodeGetPtr(node, str::input);
