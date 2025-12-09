@@ -78,6 +78,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     );
 // clang-format on
 
+// Structure representing an arnold render output.
+// It can be represented in arnold in different ways
 struct ArnoldOutput {
     AtNode *driver = nullptr;
     AtNode *filter = nullptr;
@@ -261,7 +263,7 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetScope("");
 
     _exportedAttrs.insert("camera");
-    // outputs will be handled below
+    // outputs and drivers will be handled below
     _exportedAttrs.insert("outputs");
     _exportedAttrs.insert("drivers");
 
