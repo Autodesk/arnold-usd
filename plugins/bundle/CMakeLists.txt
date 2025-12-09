@@ -16,7 +16,11 @@ target_sources(ArnoldUsdBundle PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/../render_delegate/renderer_plugin.cpp
 	${CMAKE_CURRENT_LIST_DIR}/../procedural/main.cpp
 )
-target_compile_definitions(ArnoldUsdBundle PRIVATE USD_PROCEDURAL_NAME=ArnoldUsdBundle)
+target_compile_definitions(ArnoldUsdBundle PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
+if (${PROC_SCENE_FORMAT})
+	target_compile_definitions(ArnoldUsdBundle PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
+endif()
+
 
 target_include_directories(ArnoldUsdBundle PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/reader")
 target_include_directories(ArnoldUsdBundle PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/writer")
@@ -27,10 +31,10 @@ if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
     target_compile_definitions(ArnoldUsdBundle PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
 endif()
 
-target_link_libraries(ArnoldUsdBundle PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects sceneIndexArnoldObjects)
+target_link_libraries(ArnoldUsdBundle PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects)
 target_link_libraries(ArnoldUsdBundle PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
 if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-	target_link_libraries(ArnoldUsdBundle PRIVATE hdsi;usdSkelImaging;ts)
+	target_link_libraries(ArnoldUsdBundle PRIVATE sceneIndexArnoldObjects;hdsi;usdSkelImaging;ts)
 endif ()
 
 install(TARGETS ArnoldUsdBundle DESTINATION "${PREFIX_PLUGINS}")

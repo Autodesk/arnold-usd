@@ -106,7 +106,7 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
         message(STATUS "USD version ${USD_VERSION}")
 
         # The mayausd libraries are only x86_64 on osx for the moment
-        set(CMAKE_OSX_ARCHITECTURES x86_64)
+        set(CMAKE_OSX_ARCHITECTURES x86_64;arm64)
 
         set(USD_MONOLITHIC_BUILD OFF)
         if (LINUX)
