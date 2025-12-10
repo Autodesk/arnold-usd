@@ -33,6 +33,7 @@
 #include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
+#include <pxr/base/tf/envSetting.h>
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
@@ -550,27 +551,24 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     if (_renderDelegateOwnsUniverse) {
         // Msg & log settings should be skipped if we have a procedural parent. 
         // In this case, a procedural shouldn't affect the global scene settings
-        if (config.log_flags_console >= 0) {
-            _ignoreVerbosityLogFlags = true;
+        AiMsgSetConsoleFlags(
             #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+                GetRenderSession(),
             #else
-                AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+                _universe,
             #endif
-        } else {
+            (config.log_flags_console >= 0) ? 
+                config.log_flags_console : _verbosityLogFlags);
+
+        AiMsgSetLogFileFlags(
             #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+                GetRenderSession(),
             #else
-                AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+                _universe,
             #endif
-        }
-        if (config.log_flags_file >= 0) {
-            #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
-            #else
-                AiMsgSetLogFileFlags(_universe, config.log_flags_file);
-            #endif
-        }
+            (config.log_flags_file >= 0) ? 
+                config.log_flags_file : _verbosityLogFlags);
+
         if (!config.log_file.empty())
         {
             AiMsgSetLogFileName(config.log_file.c_str());
@@ -703,12 +701,27 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
-            if (!_ignoreVerbosityLogFlags) {
-                #if ARNOLD_VERSION_NUM < 70100
-                    AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
-                #else
-                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-                #endif
+            static const auto& config = HdArnoldConfig::GetInstance();
+            // Do not set the console and file flags, if the corresponding
+            // environment variable was set in the config
+            if (config.log_flags_console < 0) {
+                AiMsgSetConsoleFlags(
+                    #if ARNOLD_VERSION_NUM < 70100                    
+                        GetRenderSession(), 
+                    #else
+                        _universe,
+                    #endif
+                    _verbosityLogFlags);
+            }
+            if (config.log_flags_file < 0) {
+                AiMsgSetLogFileFlags(
+                    #if ARNOLD_VERSION_NUM < 70100                    
+                        GetRenderSession(), 
+                    #else
+                        _universe,
+                    #endif
+                    _verbosityLogFlags);
+
             }
         }
     } else if (key == str::t_log_file) {
@@ -1555,7 +1568,7 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
-bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
     if (!_deferredFunctionCalls.empty()) {
         // TODO: depending on the size, we could do the update in parallel.
@@ -1582,6 +1595,11 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     if (_renderParam->UpdateShutter(shutter)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
+        // If the shutter has changed, we also need to update the render camera
+        if (!cameraId.IsEmpty()) {
+            renderIndex->GetChangeTracker().MarkSprimDirty(cameraId, HdCamera::AllDirty);
+        }
+
     }
     /// TODO(pal): Investigate if this is needed.
     /// When FPS changes we have to dirty points and primvars.
@@ -1612,10 +1630,20 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                         dirtyEntries.insert({id, locators});
                     }
                 }
+                // if the shutter was modified, we also want to update the camera
+                if (bits & HdChangeTracker::DirtyTransform && !cameraId.IsEmpty()) {
+                    HdSceneIndexPrim prim = sceneIndex->GetPrim(cameraId);
+                    HdDataSourceLocatorSet locators;
+                    HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, HdCamera::AllDirty, &locators);
+                    if (!locators.IsEmpty()) {
+                        dirtyEntries.insert({cameraId, locators});
+                    }
+                }
+
                 if (!dirtyEntries.empty()) {
-                    auto toto = HdRetainedTypedSampledDataSource<
+                    auto dataSource = HdRetainedTypedSampledDataSource<
                         TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
-                    sceneIndex->SystemMessage(TfToken("ArnoldMarkAllRprimsDirty"), toto);
+                    sceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
                 }
             }
         } else {

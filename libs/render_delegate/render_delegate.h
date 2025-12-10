@@ -336,7 +336,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.
@@ -830,7 +830,6 @@ private:
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;

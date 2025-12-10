@@ -109,7 +109,7 @@ public:
 
         // Check prim type info
         const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-        if (primInfo) {
+        if (primInfo && primInfo.GetTypeName()) {
             // Force all closed implicit surfaces to be doubleSided.
             const TfToken &typeName = primInfo.GetTypeName()->GetTypedValue(0.0);
             if (typeName == TfToken("Cube") || typeName == TfToken("Cone") || typeName == TfToken("Cylinder") ||

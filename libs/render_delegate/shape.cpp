@@ -139,9 +139,6 @@ static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDel
     if (!renderDelegate->SupportShapeInstancing())
         return true;
 
-    if (AiDeviceGetSelectedType(renderDelegate->GetRenderSession()) == AI_DEVICE_TYPE_GPU)
-        return true;
-
     // If we have a nested instancer configuration, we'll use an arnold instancer node.
     HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
     if (parentInstancer)

@@ -5,18 +5,22 @@
 
 ### Features
 
+- [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths
 - [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
 - [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
+- [usd#2476](https://github.com/Autodesk/arnold-usd/issues/2476) - log_verbosity setting should affect both console and file logs 
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
-
 
 ## [7.4.4.1] (Unreleased)
 
 ### Bug Fixes
 
 - [usd#2467](https://github.com/Autodesk/arnold-usd/issues/2467) - Hidden primitives turned visible in IPR do not always show up in the render
-- [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) Fix regression in default value of texture_auto_generate_tx in the render delegate plugin
+- [usd#2486](https://github.com/Autodesk/arnold-usd/issues/2486) - Fix a crash in the scene index happening when the typename is not yet defined
+- [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) - Fix regression in default value of texture_auto_generate_tx in the render delegate plugin
+- [usd#2481](https://github.com/Autodesk/arnold-usd/issues/2481) - Fix regression with camera motion blur in Solaris
+- [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Support using the Z AOV for the hydra depth buffer
 
 ## [7.4.4.0] 2025-11-12
 

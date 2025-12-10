@@ -53,7 +53,7 @@ public:
 
         // Check prim type info
         const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-        if (primInfo && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
+        if (primInfo && primInfo.GetTypeName() && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
             prim.primType != HdPrimTypeTokens->material) {
             prim.primType = HdPrimTypeTokens->material;
         }
@@ -87,7 +87,7 @@ protected:
 
             // Check prim type info
             const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-            if (primInfo && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
+            if (primInfo && primInfo.GetTypeName() && primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Material") &&
                 prim.primType != HdPrimTypeTokens->material) {
                 entry.primType = HdPrimTypeTokens->material;
             }

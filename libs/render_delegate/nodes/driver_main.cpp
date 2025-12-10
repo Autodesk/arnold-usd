@@ -183,7 +183,9 @@ driver_process_bucket
         } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
             positionData = bucketData;
         } else if (pixelType == AI_TYPE_FLOAT && checkOutputName(str::Z)) {
+#ifndef HYDRA_NORMALIZE_DEPTH
             depthData = bucketData;
+#endif
         } else if (pixelType == AI_TYPE_INT && checkOutputName(str::hydraPrimId)) {
             if (driverData->idBuffer) {
                 ids.resize(pixelCount, -1);
