@@ -184,7 +184,15 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     }
 
     // First, if we have a IES filename, let's export this light as a photometric light (#1316)
+    // Unless usdlux_version is set, in which case we use point_light
     if (!iesFile.empty()) {
+        // If usdlux_version is set (non-zero), default to point_light; otherwise use photometric_light
+        AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+        if (AiNodeGetInt(options, str::usdlux_version)) {
+            AtNode *node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
+            AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            return node;
+        }
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
         return node;
@@ -428,6 +436,18 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+    // Transfer IES filename from shaping API
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (shapingAPI) {
+        VtValue iesFileValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+            std::string iesFile = VtValueGetString(iesFileValue);
+            if (!iesFile.empty()) {
+                AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            }
+        }
+    }
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -465,6 +485,21 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
             VtValue normalizeValue;
             if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
                 AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+            }
+        }
+    }
+
+    // Transfer IES filename from shaping API if not already set by _ReadLightShaping
+    // Eventually, _ReadLightShaping should be obsolete
+    if (!AiNodeGetStr(node, str::filename).length()) {
+        UsdLuxShapingAPI shapingAPI(prim);
+        if (shapingAPI) {
+            VtValue iesFileValue;
+            if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+                std::string iesFile = VtValueGetString(iesFileValue);
+                if (!iesFile.empty()) {
+                    AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+                }
             }
         }
     }
@@ -516,6 +551,18 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     VtValue normalizeValue;
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
+
+    // Transfer IES filename from shaping API
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (shapingAPI) {
+        VtValue iesFileValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+            std::string iesFile = VtValueGetString(iesFileValue);
+            if (!iesFile.empty()) {
+                AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            }
+        }
     }
 
     ReadMatrix(prim, node, time, context);
@@ -577,6 +624,18 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
     VtValue normalizeValue;
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
+
+    // Transfer IES filename from shaping API
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (shapingAPI) {
+        VtValue iesFileValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+            std::string iesFile = VtValueGetString(iesFileValue);
+            if (!iesFile.empty()) {
+                AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            }
+        }
     }
 
     ReadMatrix(prim, node, time, context);
