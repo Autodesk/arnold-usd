@@ -176,7 +176,7 @@ HdArnoldMesh::~HdArnoldMesh() {
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
-
+#if SHARED_ARRAYS_USE_GLOBAL_MAP == 0
     // Reset the shared buffers
     // We are assuming there is only one reference pointing on each of them. If this is not the
     // case, the following code will not correctly deallocate the VtValue and pointers in Arnold could
@@ -195,6 +195,7 @@ HdArnoldMesh::~HdArnoldMesh() {
     // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
     // shared VtArray buffers still used in Arnold. We check this condition in debug mode.
     assert(_arrayHandler.empty());
+#endif
 }
 
 void HdArnoldMesh::Sync(
@@ -534,7 +535,7 @@ void HdArnoldMesh::Sync(
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
-
+    
     *dirtyBits = HdChangeTracker::Clean;
 }
 

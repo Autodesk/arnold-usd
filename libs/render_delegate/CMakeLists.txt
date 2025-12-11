@@ -19,6 +19,7 @@ set(SRC
     render_param.cpp
     render_pass.cpp
     shape.cpp
+	shared_arrays.cpp
     utils.cpp
     volume.cpp
     )
@@ -68,6 +69,10 @@ target_link_libraries(render_delegate INTERFACE common)
 if (ENABLE_SHARED_ARRAYS)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SHARED_ARRAYS=1)
 endif()
+if (HYDRA_NORMALIZE_DEPTH)
+    target_compile_definitions(render_delegate PUBLIC HYDRA_NORMALIZE_DEPTH=1)
+endif()
+
 target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
 if (BUILD_SCENE_INDEX_PLUGIN)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SCENE_INDEX=1)

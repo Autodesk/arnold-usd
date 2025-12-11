@@ -110,6 +110,7 @@ ASTR2(sidedness_prefix, "sidedness:");
 ASTR2(transformKeys, "arnold:transform_keys");
 ASTR2(ui_groups, "ui.groups");
 ASTR2(usd_hide, "usd.hide");
+ASTR2(usdlux_setting, "arnold:global:usdlux_version");
 ASTR2(visibility_prefix, "visibility:");
 ASTR2(visibilityCamera, "arnold:visibility:camera");
 
@@ -121,6 +122,7 @@ ASTR(AA_seed);
 ASTR(ArnoldUsd);
 ASTR(ArnoldNodeGraph);
 ASTR(ArnoldOptions);
+ASTR(ArnoldMarkPrimsDirty);
 ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
@@ -334,6 +336,7 @@ ASTR(input);
 ASTR(inputs);
 ASTR(input1);
 ASTR(input2);
+ASTR(instance);
 ASTR(instance_crypto_object_offset);
 ASTR(instance_inherit_xform);
 ASTR(instance_intensity);
@@ -511,6 +514,7 @@ ASTR(twrap);
 ASTR(uniform);
 ASTR(usd);
 ASTR(usd_legacy_distant_light_normalize);
+ASTR(usdlux_version);
 ASTR(usd_legacy_translation);
 ASTR(useMetadata);
 ASTR(useSpecularWorkflow);
@@ -544,6 +548,7 @@ ASTR(wrapS);
 ASTR(wrapT);
 ASTR(xres);
 ASTR(yres);
+ASTR(Z);
 
 #undef ASTR
 #undef ASTR2
