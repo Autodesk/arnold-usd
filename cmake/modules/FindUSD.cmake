@@ -95,11 +95,11 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
     # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
     # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
     # For maya usd, we need maya and mayausd as they are provided separately
-    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}/mayausd/USD)
-    find_package(pxr PATHS ${PXR_USD_LOCATION})
+    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}) # TODO change since now the version is added to USD -> USD_2411
+    find_package(pxr PATHS ${PXR_USD_LOCATION} ${MAYAUSD_LOCATION})
     if (pxr_FOUND)
         set(USD_LOCATION ${PXR_USD_LOCATION})
-        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}/mayausd/USD")
+        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}")
 
         # Set USD_VERSION
         find_usd_version(${PXR_INCLUDE_DIRS}) 
@@ -116,6 +116,7 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
         # Variable for running usdGenSchema
         # USD_LIBRARY_DIR is needed by the schema script
         set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+        set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
             PATHS "${PXR_USD_LOCATION}/bin"
@@ -123,6 +124,8 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
 
         unset(PXR_USD_LOCATION)
         return()
+    else()
+        message(WARNING "pxrConfig.cmake was not found in ${PXR_USD_LOCATION} or ${MAYAUSD_LOCATION}")
     endif()
     unset(PXR_USD_LOCATION)
 else()
