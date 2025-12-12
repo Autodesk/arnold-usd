@@ -195,6 +195,15 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
         }
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+        //Send iesNormalize and iesAngleScale to the node
+        VtValue iesNormalizeValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesNormalize).Get(&iesNormalizeValue, time.frame)) {
+            AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+        }
+        VtValue iesAngleScaleValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesAngleScale).Get(&iesAngleScaleValue, time.frame)) {
+            AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+        }
         return node;
     }
     VtValue coneAngleValue;
