@@ -446,8 +446,10 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
             resolvedPath = dep.authoredPath;
 
         // add the dependency to the asset list
-        assets.push_back(AiAsset(resolvedPath.c_str(), dep.GetArnoldFileType(), StdToAtString(dep.authoredPath),
-            StdToAtString(dep.primPath), StdToAtString(dep.attribute)));
+        AtAsset* asset = AiAsset(resolvedPath.c_str(), dep.GetArnoldFileType());
+        AiAssetAddReference(asset, StdToAtString(dep.authoredPath),
+            StdToAtString(dep.primPath), StdToAtString(dep.attribute));
+        assets.push_back(asset);
     }
 
     return true;
