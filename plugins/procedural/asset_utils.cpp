@@ -37,8 +37,8 @@ inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::st
 /**
  * Adds the given dependency to our list.
  */
-inline void AddDependency(const std::string& ref, const std::string& depType,
-    const std::string& primPath, const std::string& attribute,
+inline void AddDependency(const std::string& ref, USDDependency::Type type,
+    const SdfPath& primPath, const SdfPath& attribute,
     std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
     const SdfLayerHandle& layer, ArResolver& resolver, 
     std::unordered_set<std::string>& seenReferences)
@@ -63,8 +63,8 @@ inline void AddDependency(const std::string& ref, const std::string& depType,
     }
 
     // create a dependency
-    dependencies.push_back(USDDependency(depType, finalRefPath, 
-        resolvedPath, layer->GetIdentifier(), primPath, attribute));
+    dependencies.push_back(USDDependency(type, finalRefPath, 
+        resolvedPath, layer, primPath, attribute));
     seenReferences.insert(ref);
 }
 
@@ -109,16 +109,15 @@ inline void CollectDependenciesFromLayer(
     // collect sublayers
     for (const std::string& sub : layer->GetSubLayerPaths())
     {
-        AddDependency(sub, "sublayer", layer->GetDisplayName(),
-            "sublayer", dependencies, stage, layer, resolver, seenReferences);
+        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), SdfPath(),
+            dependencies, stage, layer, resolver, seenReferences);
     }
 
     // iterate all prims in this layer
-    TraverseLayer(layer, [&](const SdfPrimSpecHandle& primSpec) {
-        const std::string primPath = primSpec->GetPath().GetString();
+    TraverseLayer(layer, [&](const SdfPrimSpecHandle& prim) {
 
         // collect dependencies from attributes
-        for (const SdfAttributeSpecHandle& attr : primSpec->GetAttributes())
+        for (const SdfAttributeSpecHandle& attr : prim->GetAttributes())
         {
             if (!attr)
                 continue;
@@ -133,7 +132,8 @@ inline void CollectDependenciesFromLayer(
                 if (defaultVal.IsHolding<SdfAssetPath>())
                 {
                     SdfAssetPath val = defaultVal.UncheckedGet<SdfAssetPath>();
-                    AddDependency(val.GetAssetPath(), "attr", primPath, attrName,
+                    AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
+                        prim->GetPath(), attr->GetPath(),
                         dependencies, stage, layer, resolver, seenReferences);
                 }
 
@@ -144,7 +144,8 @@ inline void CollectDependenciesFromLayer(
                     SdfAssetPath val_t;
                     if (layer->QueryTimeSample(attr->GetPath(), t, &val_t))
                     {
-                        AddDependency(val_t.GetAssetPath(), "attr", primPath, attrName,
+                        AddDependency(val_t.GetAssetPath(), USDDependency::Type::Attribute,
+                            prim->GetPath(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
                     }
                 }
@@ -161,7 +162,8 @@ inline void CollectDependenciesFromLayer(
 
                     for (SdfAssetPath val : arr)
                     {
-                        AddDependency(val.GetAssetPath(), "attr", primPath, attrName,
+                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
+                            prim->GetPath(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
                     }
                 }
@@ -175,7 +177,8 @@ inline void CollectDependenciesFromLayer(
                     {
                         for (SdfAssetPath val : arr_t)
                         {
-                            AddDependency(val.GetAssetPath(), "attr", primPath, attrName,
+                            AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
+                                prim->GetPath(), attr->GetPath(),
                                 dependencies, stage, layer, resolver, seenReferences);
                         }
                     }
@@ -184,7 +187,7 @@ inline void CollectDependenciesFromLayer(
         }
         
         // collect references
-        const auto& refList = primSpec->GetReferenceList();
+        const auto& refList = prim->GetReferenceList();
         SdfReferenceVector refs;
         {
             // combine all authored list-op opinions
@@ -203,12 +206,13 @@ inline void CollectDependenciesFromLayer(
         }
         for (const SdfReference& ref : refs)
         {
-            AddDependency(ref.GetAssetPath(), "reference", primPath, "reference",
+            AddDependency(ref.GetAssetPath(), USDDependency::Type::Reference, 
+                prim->GetPath(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
 
         // collect payloads
-        const auto& payloadList = primSpec->GetPayloadList();
+        const auto& payloadList = prim->GetPayloadList();
         SdfPayloadVector payloads;
         {
             // combine all authored list-op opinions
@@ -227,7 +231,8 @@ inline void CollectDependenciesFromLayer(
         }
         for (const SdfPayload& p : payloads)
         {
-            AddDependency(p.GetAssetPath(), "payload", primPath, "payload",
+            AddDependency(p.GetAssetPath(), USDDependency::Type::Payload,
+                prim->GetPath(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
     });
@@ -374,9 +379,76 @@ private:
     AtUniverse* m_universe = nullptr;
 };
 
+/**
+ * Helper function to convert an std::string to AtString.
+ */
 inline AtString StdToAtString(const std::string& str)
 {
     return !str.empty() ? AtString(str.c_str()) : AtString();
+}
+
+/**
+ * Helper function to define the Arnold file type based on the dependency.
+ */
+inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
+{
+    // We consider dependencies defined by prim attributes as 'Asset' type,
+    // thus they can be resolved using the Arnold asset search path.
+    //
+    // TODO This is not entirely correct, because not all of these dependencies
+    // might be translated as Arnold assets.
+    // We would need to explicitly define which dependency is an Arnold asset.
+    return dep.type == USDDependency::Type::Attribute ? AtFileType::Asset : AtFileType::Custom;
+}
+
+/**
+ * Helper function to define the node name of an AtAsset reference.
+ * This is the node that defines the asset in an Arnold scene, 
+ * but of course node is an Arnold term and needs to be interpreted
+ * differently in a USD scene based on the dependency.
+ */
+inline std::string GetNodeNameFromDependency(const USDDependency& dep)
+{
+    switch (dep.type)
+    {
+        // if the dependency comes from a prim (attribute, reference, payload)
+        // we use the prim path
+        case USDDependency::Type::Attribute:
+        case USDDependency::Type::Reference:
+        case USDDependency::Type::Payload:
+            return dep.primPath.GetString();
+        // otherwise (sublayer)
+        // we use the layer name
+        default:
+            return dep.layer->GetDisplayName();
+    }
+}
+
+/**
+ * Helper function to define the node parameter of an AtAsset reference.
+ * This is the node parameter that defines the asset in an Arnold scene, 
+ * but of course node is an Arnold term and needs to be interpreted
+ * differently in a USD scene based on the dependency.
+ */
+inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
+{
+    switch (dep.type)
+    {
+        // if the dependency comes from a prim attribute
+        // we use the attribute name
+        case USDDependency::Type::Attribute: 
+        {
+            SdfAttributeSpecHandle attr = dep.layer->GetAttributeAtPath(dep.attribute);
+            return attr ? attr->GetName() : std::string();
+        }
+        // if the dependency is a sublayer, reference or payload
+        // we use a specific string
+        case USDDependency::Type::Sublayer: return "sublayer";
+        case USDDependency::Type::Reference: return "reference";
+        case USDDependency::Type::Payload: return "payload";
+        // return empty string for everything else
+        default: return std::string();
+    }
 }
 
 /**
@@ -422,19 +494,19 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         // resolve the path with Arnold
         if (dep.resolvedPath.empty())
-            dep.resolvedPath = arnoldPathResolver.resolve(dep.authoredPath, dep.GetArnoldFileType());
+            dep.resolvedPath = arnoldPathResolver.resolve(dep.authoredPath, GetArnoldFileTypeFromDependency(dep));
     }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)
     {
-        std::string src = dep.primPath;
-        if (dep.type == "attr" && !dep.attribute.empty())
-            src += "/" + dep.attribute;
+        std::string src = GetNodeNameFromDependency(dep);        
+        if (dep.type == USDDependency::Type::Attribute && !dep.attribute.IsEmpty())
+            src = dep.attribute.GetString();
         AiMsgDebug("[usd] scene dependency: %s (ref: %s, type: %s, src: %s, layer: %s)",
             !dep.resolvedPath.empty() ? dep.resolvedPath.c_str() : dep.authoredPath.c_str(),
-            dep.authoredPath.c_str(), dep.type.c_str(), !src.empty() ? src.c_str() : "", 
-            dep.layer.c_str());
+            dep.authoredPath.c_str(), USDDependency::GetTypeName(dep.type).c_str(), !src.empty() ? src.c_str() : "", 
+            dep.layer->GetIdentifier().c_str());
     }
 
     // convert dependencies to assets
@@ -449,9 +521,10 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
             resolvedPath = dep.authoredPath;
 
         // add the dependency to the asset list
-        AtAsset* asset = AiAsset(resolvedPath.c_str(), dep.GetArnoldFileType());
+        AtAsset* asset = AiAsset(resolvedPath.c_str(), GetArnoldFileTypeFromDependency(dep));
         AiAssetAddReference(asset, StdToAtString(dep.authoredPath),
-            StdToAtString(dep.primPath), StdToAtString(dep.attribute));
+            StdToAtString(GetNodeNameFromDependency(dep)),
+            StdToAtString(GetNodeParameterFromDependency(dep)));
         assets.push_back(asset);
     }
 
