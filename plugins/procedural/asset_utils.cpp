@@ -4,6 +4,9 @@
 
 #include "asset_utils.h"
 
+// Asset API was added in Arnold 7.4.5.0
+#if ARNOLD_VERSION_NUM >= 70405
+
 #include <filesystem>
 #include <pxr/pxr.h>
 #include <pxr/usd/ar/resolver.h>
@@ -506,4 +509,6 @@ void ComputeAllDependencies(const std::string& filename, std::vector<std::string
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // Asset API
 

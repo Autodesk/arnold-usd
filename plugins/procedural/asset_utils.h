@@ -6,9 +6,10 @@
 
 #include <pxr/pxr.h>
 #include <pxr/usd/usd/stage.h>
-//#include <pxr/usd/usd/stageCache.h>
-//#include <pxr/usd/usdUtils/stageCache.h>
 #include <ai.h>
+
+// Asset API was added in Arnold 7.4.5.0
+#if ARNOLD_VERSION_NUM >= 70405
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -63,4 +64,6 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage);
 bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets, bool isProcedural);
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif // Asset API
 
