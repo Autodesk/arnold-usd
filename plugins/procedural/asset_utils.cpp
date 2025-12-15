@@ -531,56 +531,6 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
     return true;
 }
 
-/**
- * Collects dependencies using standard USD API.
- * This function returns only resolve paths, but can not tell
- * how and where these files are references in the scene.
- */
-void ComputeAllDependencies(const std::string& filename, std::vector<std::string>& dependencies)
-{
-    // collect all asset dependencies (layers, references, payloads, unresolved) for a USD file
-    // prepare containers for outputs
-    std::vector<SdfLayerRefPtr> layerDeps;
-    std::vector<std::string> assetDeps;
-    std::vector<std::string> unresolvedDeps;
-
-    // create an SdfAssetPath for the input
-    SdfAssetPath rootAssetPath(filename);
-
-    // read dependencies
-    bool ok = UsdUtilsComputeAllDependencies(
-        rootAssetPath,
-        &layerDeps,
-        &assetDeps,
-        &unresolvedDeps);
-
-    if (!ok)
-    {
-        AiMsgError("Could not resolve dependencies for %s", filename.c_str());
-        return;
-    }
-
-    // layer dependencies (opened as layers)
-    for (auto const &layerPtr : layerDeps)
-    {
-        const std::string& layerPath = layerPtr->GetIdentifier();
-        dependencies.push_back(layerPath);
-        AiMsgDebug("[usd] scene dependency: %s (type: layer)", layerPath.c_str());
-    }
-    // other asset dependencies (references, payloads, clips, etc)
-    for (const std::string& path : assetDeps)
-    {
-        dependencies.push_back(path);
-        AiMsgDebug("[usd] scene dependency: %s (type: asset)", path.c_str());
-    }
-    // unresolved asset paths (could not resolve)
-    for (const std::string& unresolvedPath : unresolvedDeps)
-    {
-        dependencies.push_back(unresolvedPath);
-        AiMsgWarning("[usd] unresolved scene dependency: %s", unresolvedPath.c_str());
-    }
-}
-
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // Asset API
