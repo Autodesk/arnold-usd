@@ -96,7 +96,11 @@ std::vector<ParamDesc> genericParams = {
     {"shadow_color", UsdLuxTokens->inputsShadowColor},
 };
 
-std::vector<ParamDesc> pointParams = {{"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> pointParams = {
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
 std::vector<ParamDesc> spotParams = {
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
@@ -109,11 +113,22 @@ std::vector<ParamDesc> photometricParams = {
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
-std::vector<ParamDesc> diskParams = {{"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> diskParams = {
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
-std::vector<ParamDesc> quadParams = {{"filename", UsdLuxTokens->inputsShapingIesFile}};
+std::vector<ParamDesc> quadParams = {
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
-std::vector<ParamDesc> cylinderParams = {{"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> cylinderParams = {
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
