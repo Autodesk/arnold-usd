@@ -1,5 +1,6 @@
 set(SRC
-    main.cpp)
+    main.cpp
+    asset_utils.cpp)
 
 set(PROC_NAME "${USD_PROCEDURAL_NAME}_proc")
 
