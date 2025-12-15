@@ -204,7 +204,7 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
         }
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
-        
+      
         return node;
     }
     VtValue coneAngleValue;
