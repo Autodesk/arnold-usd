@@ -556,7 +556,7 @@ void ComputeAllDependencies(const std::string& filename, std::vector<std::string
 
     if (!ok)
     {
-        AiMsgError("Could not resolve dependencies for %s", filename);
+        AiMsgError("Could not resolve dependencies for %s", filename.c_str());
         return;
     }
 
