@@ -33,26 +33,36 @@ inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::st
 {
     std::string rootLayerPath = stage->GetRootLayer()->GetRealPath();
     std::string rootDir = TfGetPathName(rootLayerPath);
+
+    std::string relative;
     // This is a basic implementation replacing std::filesystem::relative().
     // We assume that the paths are normalized absolute paths (no '.' or '..')
     // and just cut the root folder.
-    // NOTE that rootDir has a trailing slash.
-    std::string absPathNorm = absPath;
-    std::replace(absPathNorm.begin(), absPathNorm.end(), '\\', '/');
-    std::string rootDirNorm = rootDir;
-    std::replace(rootDirNorm.begin(), rootDirNorm.end(), '\\', '/');
-#ifdef WIN32
-    std::transform(absPathNorm.begin(), absPathNorm.end(), absPathNorm.begin(), ::tolower);
-    std::transform(rootDirNorm.begin(), rootDirNorm.end(), rootDirNorm.begin(), ::tolower);
-#endif
-    if (absPathNorm.find(rootDirNorm) == 0)
     {
-        std::string relative = absPath.substr(rootDir.length());
-        // always use forward-slashes in the returned relative path
-        std::replace(relative.begin(), relative.end(), '\\', '/');
-        return relative;
+        // normalize the paths
+        std::string absPathNorm = TfNormPath(absPath);
+        std::string rootDirNorm = TfNormPath(rootDir);
+#ifdef WIN32
+        // Windows is not case-sensitive, therefore we convert paths to lower case
+        // before comparing them as strings
+        std::transform(absPathNorm.begin(), absPathNorm.end(), absPathNorm.begin(), ::tolower);
+        std::transform(rootDirNorm.begin(), rootDirNorm.end(), rootDirNorm.begin(), ::tolower);
+#endif
+        // add trailing '/' to root dir
+        if (rootDirNorm.back() != '/')
+            rootDirNorm += "/";
+
+        // check if our path is under the root folder
+        if (absPathNorm.find(rootDirNorm) == 0)
+        {
+            // make the path relative to the root folder
+            relative = absPath.substr(rootDir.length());
+            // always use forward-slashes in the returned relative path
+            std::replace(relative.begin(), relative.end(), '\\', '/');
+        }
     }
-    return {};
+
+    return relative;
 }
 
 /**
