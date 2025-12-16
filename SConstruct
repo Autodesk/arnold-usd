@@ -63,7 +63,7 @@ vars = Variables('custom.py')
 vars.AddVariables(
     PathVariable('BUILD_DIR', 'Directory where temporary build files are placed by scons', 'build', PathVariable.PathIsDirCreate),
     PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
-    EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
+    EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'dev', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'warn-only', allowed_values=('strict', 'warn-only', 'none')),
     StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
@@ -426,6 +426,11 @@ if env['_COMPILER'] in ['gcc', 'clang']:
         env.Append(CCFLAGS = Split('-g'))
         env.Append(LINKFLAGS = Split('-g'))
         env.Append(CCFLAGS = Split('-O0'))
+    
+    # Release build with debug symbols
+    if env['MODE'] == 'dev':
+        env.Append(CCFLAGS = Split('-O2 -g'))
+        env.Append(LINKFLAGS = Split('-g'))
 
     # Linux profiling
     if system.os == 'linux' and env['MODE'] == 'profile':
