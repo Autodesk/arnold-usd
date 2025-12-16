@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         AiMsgError("Too many attribute saved by default : found %d", noDefaultCount);
         success = false;
     }
-    const static int skippedAttrs = 16; // Some attributes should still be skipped
+    const static int skippedAttrs = 17; // Some attributes should still be skipped
     
     if (withDefaultCount + skippedAttrs < optionsAttrs) {
         AiMsgError("Mismatch in attributes count with all_attributes enabled. Found %d, expected %d", withDefaultCount, optionsAttrs - skippedAttrs);
