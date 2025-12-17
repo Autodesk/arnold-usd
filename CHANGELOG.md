@@ -17,7 +17,7 @@
 
 ### Bug Fixes
 
-- [usd#2501](https://github.com/Autodesk/arnold-usd/issues/2501) - Fix incorrect transforms when authoring usd files with meshes parented under instances
+- [usd#2501](https://github.com/Autodesk/arnold-usd/issues/2501) - Fix incorrect transforms and materials when authoring usd files with meshes parented under instances
 - [usd#2467](https://github.com/Autodesk/arnold-usd/issues/2467) - Hidden primitives turned visible in IPR do not always show up in the render
 - [usd#2486](https://github.com/Autodesk/arnold-usd/issues/2486) - Fix a crash in the scene index happening when the typename is not yet defined
 - [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) - Fix regression in default value of texture_auto_generate_tx in the render delegate plugin
