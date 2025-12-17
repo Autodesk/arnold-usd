@@ -6,6 +6,18 @@
 #include <pxr/pxr.h>
 #include "utils.h"
 
+// We have two methods for storing the arrays we share with Arnold
+// 1. Keep the shared arrays in each hydra objets
+// 2. Keep all the shared arrays in a static global map
+// The first one can lead to issues if the arrays are copied somewhere else, for example in another plugin
+// or in the core, since the copy will add a reference to it. The deletion of the hydra object will delete the array
+// while other entities are still using it.
+// The second is safer since the arrays are deleted when there are not reference to them anymore and they are not
+// dependent on an hydra object. It also allows to share arrays between hydra objects. However it needs more testing to
+// make sure there is no degradation of performance due to contention or high load in the hash map.
+// The following define allows to switch between the two methods for testing
+#define SHARED_ARRAYS_USE_GLOBAL_MAP 0
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Compile time mapping of USD type to Arnold types
@@ -85,6 +97,13 @@ struct ArrayHolder : public ArrayOperations<ArrayHolder> {
         VtValue val;
     };
 
+#if SHARED_ARRAYS_USE_GLOBAL_MAP
+    using BufferMapT = std::unordered_map<const void*, HeldArray>;
+    // The buffer map is static here
+    static BufferMapT _bufferMap;
+    // bufferMapMutex is used to make sure the bufferMap is not accessed concurrently in the Sync function.
+    static std::mutex _bufferMapMutex;
+#else
     // This structure holds a Key Value map in a vector, which should have a smaller footprint in memory and be fast for small numbers of elements (<10)
     // It is interchangeable with a unordered_map in ArrayHolder. However for scenes with many timesamples the map can quickly fill and using a linear search
     // might become to slow compared to unordered_map.
@@ -112,6 +131,7 @@ struct ArrayHolder : public ArrayOperations<ArrayHolder> {
     BufferMapT _bufferMap;
     // bufferMapMutex is used to make sure the bufferMap is not accessed concurrently in the Sync function.
     std::mutex _bufferMapMutex;
+#endif
 
     // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
     template <typename T>

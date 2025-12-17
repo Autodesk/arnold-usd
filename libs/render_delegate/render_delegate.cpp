@@ -30,8 +30,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "render_delegate.h"
+#include "reader.h"
 
 #include <pxr/base/tf/getenv.h>
+#include <pxr/base/tf/envSetting.h>
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
@@ -126,6 +128,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 #define PXR_VERSION_STR \
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_SHAPE_INSTANCING, "", "Set to 0 to disable inner shape instancing");
 
 namespace {
 
@@ -251,6 +255,9 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+#ifdef ENABLE_SCENE_INDEX                               
+                                 HdPrimTypeTokens->meshLight,
+#endif
                                  _tokens->GeometryLight, _tokens->ArnoldOptions,
                                  HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
                                  /*HdPrimTypeTokens->simpleLight*/};
@@ -348,9 +355,13 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Stats Settings
         {str::t_stats_file, {"File Output for Stats", config.stats_file}},
         // Search paths
-        {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
+        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
+#if ARNOLD_VERSION_NUM <= 70403
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
+#else
+        {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
+#endif
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
 
         {str::t_subdiv_dicing_camera, {"Subdiv Dicing Camera", std::string{}}},
@@ -540,27 +551,24 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     if (_renderDelegateOwnsUniverse) {
         // Msg & log settings should be skipped if we have a procedural parent. 
         // In this case, a procedural shouldn't affect the global scene settings
-        if (config.log_flags_console >= 0) {
-            _ignoreVerbosityLogFlags = true;
+        AiMsgSetConsoleFlags(
             #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+                GetRenderSession(),
             #else
-                AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+                _universe,
             #endif
-        } else {
+            (config.log_flags_console >= 0) ? 
+                config.log_flags_console : _verbosityLogFlags);
+
+        AiMsgSetLogFileFlags(
             #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+                GetRenderSession(),
             #else
-                AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+                _universe,
             #endif
-        }
-        if (config.log_flags_file >= 0) {
-            #if ARNOLD_VERSION_NUM < 70100
-                AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
-            #else
-                AiMsgSetLogFileFlags(_universe, config.log_flags_file);
-            #endif
-        }
+            (config.log_flags_file >= 0) ? 
+                config.log_flags_file : _verbosityLogFlags);
+
         if (!config.log_file.empty())
         {
             AiMsgSetLogFileName(config.log_file.c_str());
@@ -607,6 +615,14 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
         }
     }
+
+    // Check if shape instancing is supported
+#if ARNOLD_VERSION_NUM >= 70405
+    std::string envShapeInstancing = TfGetEnvSetting(HDARNOLD_SHAPE_INSTANCING);
+    _supportShapeInstancing = envShapeInstancing != std::string("0");
+#else
+    _supportShapeInstancing = false;
+#endif    
     
 }
 
@@ -685,12 +701,27 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
-            if (!_ignoreVerbosityLogFlags) {
-                #if ARNOLD_VERSION_NUM < 70100
-                    AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
-                #else
-                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-                #endif
+            static const auto& config = HdArnoldConfig::GetInstance();
+            // Do not set the console and file flags, if the corresponding
+            // environment variable was set in the config
+            if (config.log_flags_console < 0) {
+                AiMsgSetConsoleFlags(
+                    #if ARNOLD_VERSION_NUM < 70100                    
+                        GetRenderSession(), 
+                    #else
+                        _universe,
+                    #endif
+                    _verbosityLogFlags);
+            }
+            if (config.log_flags_file < 0) {
+                AiMsgSetLogFileFlags(
+                    #if ARNOLD_VERSION_NUM < 70100                    
+                        GetRenderSession(), 
+                    #else
+                        _universe,
+                    #endif
+                    _verbosityLogFlags);
+
             }
         }
     } else if (key == str::t_log_file) {
@@ -1226,9 +1257,12 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return (_mask & AI_NODE_LIGHT) ? 
             HdArnoldLight::CreateDomeLight(this, sprimId) : nullptr;
     }
-    if (typeId == _tokens->GeometryLight) {
-        return (_mask & AI_NODE_LIGHT) ? 
-            HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
+    if (typeId == _tokens->GeometryLight
+#ifdef ENABLE_SCENE_INDEX
+        || typeId == HdPrimTypeTokens->meshLight
+#endif
+    ) {
+        return (_mask & AI_NODE_LIGHT) ? HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;
@@ -1534,7 +1568,7 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
-bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
     if (!_deferredFunctionCalls.empty()) {
         // TODO: depending on the size, we could do the update in parallel.
@@ -1561,6 +1595,11 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     if (_renderParam->UpdateShutter(shutter)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
+        // If the shutter has changed, we also need to update the render camera
+        if (!cameraId.IsEmpty()) {
+            renderIndex->GetChangeTracker().MarkSprimDirty(cameraId, HdCamera::AllDirty);
+        }
+
     }
     /// TODO(pal): Investigate if this is needed.
     /// When FPS changes we have to dirty points and primvars.
@@ -1591,10 +1630,20 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                         dirtyEntries.insert({id, locators});
                     }
                 }
+                // if the shutter was modified, we also want to update the camera
+                if (bits & HdChangeTracker::DirtyTransform && !cameraId.IsEmpty()) {
+                    HdSceneIndexPrim prim = sceneIndex->GetPrim(cameraId);
+                    HdDataSourceLocatorSet locators;
+                    HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, HdCamera::AllDirty, &locators);
+                    if (!locators.IsEmpty()) {
+                        dirtyEntries.insert({cameraId, locators});
+                    }
+                }
+
                 if (!dirtyEntries.empty()) {
-                    auto toto = HdRetainedTypedSampledDataSource<
+                    auto dataSource = HdRetainedTypedSampledDataSource<
                         TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
-                    sceneIndex->SystemMessage(TfToken("ArnoldMarkAllRprimsDirty"), toto);
+                    sceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
                 }
             }
         } else {
@@ -1825,8 +1874,12 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
-    if (nodeGraph)
+    if (nodeGraph) {
+        // Indicate to this node graph that it is an imager graph, so that 
+        // it doesn't interrupt / restart the render when a node changes
+        const_cast<HdArnoldNodeGraph*>(nodeGraph)->SetImagerGraph(true);
         return nodeGraph->GetCachedTerminal(str::t_input);
+    }
     return nullptr;
 }
 
@@ -1849,11 +1902,57 @@ AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
 {
     _cryptomatteDrivers.insert(driver);
+    SetHasCryptomatte(true);
 
 }
 void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
 {
    _cryptomatteDrivers.clear();
+}
+void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numInstances)
+{   
+    // For cryptomatte to give consistent results with instances in hydra2, we need to use the 
+    // user data "crypto_object" and "crypto_object_offset" that will be used by cryptomatte 
+    // instead of the node names (prototype names aren't consistent in hydra2). 
+    if (AiNodeLookUpUserParameter(node, str::instance_crypto_object_offset)) {
+        AtArray *array = AiNodeGetArray(node, str::instance_crypto_object_offset);
+        // if the crypto offsets were already set with the same amount of instances,
+        // we don't need to do it again
+        if (array && AiArrayGetNumElements(array) == numInstances)
+            return;        
+    }
+    else
+        AiNodeDeclare(node, str::instance_crypto_object_offset, "constant array INT");        
+        
+    std::vector<int> crypto_object_offsets(numInstances);
+    for (size_t i = 0; i < numInstances; ++i)
+        crypto_object_offsets[i] = i;
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+}
+
+void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)
+{    
+    if (b == _hasCryptomatte)
+        return;
+    _hasCryptomatte = b;
+    if (_hasCryptomatte) {
+        // We set this flag for the first time, let's iterate through all the 
+        // instancers in the scene in order to set their user data for crypto_object_offset.
+        // This is needed to ensure instancers have a consistent name for cryptomatte.
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_SHAPE);
+        while (!AiNodeIteratorFinished(nodeIter))
+        {
+            AtNode *node = AiNodeIteratorGetNext(nodeIter);
+            if (!AiNodeIs(node, str::instancer))
+                continue;
+            
+            const AtArray *instanceMatrix = AiNodeGetArray(node, str::instance_matrix);
+            size_t numInstances = instanceMatrix ? AiArrayGetNumElements(instanceMatrix) : 0;
+            SetInstancerCryptoOffset(node, numInstances);
+        }        
+        AiNodeIteratorDestroy(nodeIter);
+    }
+
 }
 
 #if PXR_VERSION >= 2108

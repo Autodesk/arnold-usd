@@ -52,6 +52,7 @@
 
 #include <ai.h>
 
+class HydraArnoldReader;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -335,7 +336,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.
@@ -694,6 +695,15 @@ public:
 
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
+    // Return true if the render delegate supports shape instancing
+    bool SupportShapeInstancing () const {return _supportShapeInstancing;}
+
+    HydraArnoldReader *GetReader() {return _reader;} 
+    void SetReader(HydraArnoldReader *r) {_reader = r;} 
+    bool HasCryptomatte() const {return _hasCryptomatte;}
+    void SetHasCryptomatte(bool b);
+    void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -704,6 +714,7 @@ private:
 
     void _ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
 
+    void _SetHasCryptomatte(bool b);
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
@@ -819,17 +830,16 @@ private:
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
     int _mask = AI_NODE_ALL;  // mask for node types to be translated
-
+    bool _hasCryptomatte = false;
     std::mutex _nodesMutex;
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
-
+    bool _supportShapeInstancing = true;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
     // We store a list of functions that must be run once all the prims are synced and have filled the 
@@ -837,6 +847,7 @@ private:
     // They will be ran in the _Execute function
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
+    HydraArnoldReader *_reader = nullptr;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

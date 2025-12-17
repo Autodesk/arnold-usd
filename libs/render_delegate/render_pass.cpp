@@ -58,6 +58,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((arnoldFormat, "arnold:format"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
+    ((aovDriverName, "driver:parameters:aov:name"))
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
@@ -99,6 +100,12 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter, "box_filter", "Default filter type for RenderVars.");
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter_attributes, "", "Default filter attributes for RenderVars.");
+
+#ifdef HYDRA_NORMALIZE_DEPTH
+    static const char* _depthOutputValue = "P VECTOR";
+#else
+    static const char* _depthOutputValue = "Z FLOAT";
+#endif
 
 namespace {
 
@@ -171,16 +178,20 @@ const TfToken _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
     return _GetTokenFromHdFormat(buffer->GetFormat());
 }
 
-GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
+CameraUtilFraming _GetFraming(const HdRenderPassStateSharedPtr& renderPassState)
 {
     const auto& framing = renderPassState->GetFraming();
     if (framing.IsValid()) {
-        return framing.dataWindow;
+        return framing;
     } else {
         // For applications that use the old viewport API instead of
         // the new camera framing API.
-        const auto& vp = renderPassState->GetViewport();
-        return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));
+        const auto& viewport = renderPassState->GetViewport();
+        const auto viewportRect = GfRect2i(
+            GfVec2i(int(viewport[0]), int(viewport[1])), 
+            int(viewport[2]), int(viewport[3])
+        );
+        return CameraUtilFraming(viewportRect);
     }
 }
 
@@ -330,7 +341,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     const auto beautyString =
         TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
     const auto positionString =
-        TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
+        TfStringPrintf("%s %s %s", _depthOutputValue, AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     const auto idString = TfStringPrintf(
         "%s INT %s %s", str::hydraPrimId.c_str(), AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
@@ -387,6 +398,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto* currentUniverseCamera =
         static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
+    const SdfPath cameraId = camera ? camera->GetId() : SdfPath();
     const auto useOwnedCamera = camera == nullptr;
     AtNode* currentCamera = nullptr;
     // If camera is nullptr from the render pass state, we are using a camera created by the renderpass.
@@ -405,9 +417,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // TODO: We should test the type of the arnold camera instead ?
         isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;
     }
-    const auto dataWindow = _GetDataWindow(renderPassState);
-    const auto width = static_cast<int>(dataWindow.GetWidth());
-    const auto height = static_cast<int>(dataWindow.GetHeight());
 
     const auto projMtx = renderPassState->GetProjectionMatrix();
     const auto viewMtx = renderPassState->GetWorldToViewMatrix();
@@ -442,6 +451,24 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_camera, str::matrix, invViewMtx);
         }
     }
+
+    CameraUtilFraming newFraming = _GetFraming(renderPassState);
+    GfVec2i delegateResolution = _renderDelegate->GetResolution();
+    int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
+    int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
+    
+    if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
+        delegateResolution[0] != width && delegateResolution[1] != height) {
+
+        // If a resolution is provided through the render settings, we use
+        // that instead of the viewport.
+        width = delegateResolution[0];
+        height = delegateResolution[1];
+        newFraming = CameraUtilFraming(GfRect2i(
+            GfVec2i(0, 0), width, height));
+    }
+
+    const bool framingChanged = newFraming != _framing;
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -455,15 +482,35 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[2], _windowNDC[2], AI_EPSILON)) || 
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage, bool allocate, int w, int h) {
 
-    if (width != _width || height != _height) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(w * h * 4);
+
+        for (auto& buffer : storage) {
+            HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
+            if (renderBuffer != nullptr) {
+                if (allocate)
+                    renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
+
+                renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
+
+    if (framingChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
-        _width = width;
-        _height = height;
+        _framing = newFraming;
         auto* options = _renderDelegate->GetOptions();
-        AiNodeSetInt(options, str::xres, _width);
-        AiNodeSetInt(options, str::yres, _height);
+        AiNodeSetInt(options, str::xres, width);
+        AiNodeSetInt(options, str::yres, height);
+
+        clearBuffers(_renderBuffers, true, width, height);
+        AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
+        AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
+        AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
+        AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
         // With the ortho camera we need to update the screen_window_min/max when the window changes
         // This is unfortunate as we won't be able to have multiple viewport with the same ortho camera
         // Another option would be to keep an ortho camera on this class and update it ?
@@ -494,61 +541,85 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 std::swap(windowNDC[0], windowNDC[2]);
             if (windowNDC[1] > windowNDC[3])
                 std::swap(windowNDC[1], windowNDC[3]);
-            
-            // Get the exact resolution, as returned by the render settings.
-            // The one we received from the dataWindow might be affected by the 
-            // dataWindowNDC
-            GfVec2i renderSettingsRes = _renderDelegate->GetResolution();
+
+
+            // return the min region in a given axis X or Y, provided the input data that we receive from hydra
+            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes) -> GfVec2i {
+                // if an explicit render settings resolution was provided, we want to use it, otherwise we use the 
+                // render buffer resolution
+                float regionMinFlt = windowMin * (settingsRes > 0 ? settingsRes : bufferRes);
+                float regionMaxFlt = windowMax * (settingsRes > 0 ? settingsRes : bufferRes) - 1;
+                GfVec2i region(std::round(regionMinFlt), std::round(regionMaxFlt));
+
+                if (settingsRes <= 0) {
+                    // In the arnold options attributes, we need 
+                    // region_max_x - region_min_x = width - 1
+                    // region_max_y - region_min_y = height - 1
+                    // so that the render buffer matches the expected output. 
+                    int mismatchDelta = region[1] - region[0] - bufferRes + 1;
+                    if (mismatchDelta != 0) {
+                        // There could have been a precision issue, in that case we want to adjust either the region min or the max
+                        float deltaMin = std::abs(regionMinFlt - region[0]);
+                        float deltaMax = std::abs(regionMaxFlt - region[1]);
+                        // We want to tweak whichever between min & max float value is the most distant from the 
+                        // rounded integer we used
+                        if (deltaMin > deltaMax)
+                            region[0] += mismatchDelta > 0 ? 1 : -1;
+                        // if deltaMax is higher, then it's the regionMax that will automatically be tweaked,
+                        // here we are just returning the region min
+                    }
+                    region[1] = region[0] + bufferRes - 1;
+                }
+                return region;
+            };
 
             // we want the output render buffer to have a resolution equal to 
-            // _width/_height. This means we need to adjust xres/yres, so that
+            // width/height. This means we need to adjust xres/yres, so that
             // region min/max corresponds to the render resolution
             float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+
             if (xDelta > AI_EPSILON) {
                 float xInvDelta = 1.f / xDelta;
-                // For batch renders, we want to ensure the arnold resolution is the one provided
-                // by the render settings
-                if (_renderDelegate->IsBatchContext() && renderSettingsRes[0] > 0)
-                    AiNodeSetInt(options, str::xres, renderSettingsRes[0]);
-                else {
-                    AiNodeSetInt(options, str::xres, std::round(_width * (xInvDelta)));    
-                }
-                // Normalize windowNDC so that its delta is 1
-                windowNDC[0] *= xInvDelta;
-                windowNDC[2] *= xInvDelta;
-            } else {
-                AiNodeSetInt(options, str::xres, _width);
+                // If no resolution was explicitely set in the render settings, 
+                // we use the framing window which has possibly been affected by 
+                // the dataWindowNDC, providing only the renderable buffer size.
+                // In this case, we need to extrapolate and find what is the 
+                // "full" resolution that would provide the expected buffer size for 
+                // this windowNDC
+                if (delegateResolution[0] <= 0) {
+                    AiNodeSetInt(options, str::xres, std::round(width * (xInvDelta)));
+                    // Normalize windowNDC so that its delta is 1
+                    windowNDC[0] *= xInvDelta;
+                    windowNDC[2] *= xInvDelta;
+                }                
             }
-            // we want region_max_x - region_min_x to be equal to _width - 1
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
             
-            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width);
+
+            AiNodeSetInt(options, str::region_min_x, regionX[0]);
+            AiNodeSetInt(options, str::region_max_x, regionX[1]);
+            
             if (yDelta > AI_EPSILON) {
                 float yInvDelta = 1.f / yDelta;
-                // For batch renders, we want to ensure the arnold resolution is the one provided
-                // by the render settings
-                if (_renderDelegate->IsBatchContext() && renderSettingsRes[1] > 0)
-                    AiNodeSetInt(options, str::yres, renderSettingsRes[1]);
-                else {
-                    AiNodeSetInt(options, str::yres, std::round(_height * (yInvDelta)));
+                if (delegateResolution[1] <= 0) {
+                    AiNodeSetInt(options, str::yres, std::round(height * (yInvDelta)));
+                    windowNDC[1] *= yInvDelta;    
+                    windowNDC[3] *= yInvDelta;
                 }
-                // Normalize windowNDC so that its delta is 1
-                windowNDC[1] *= yInvDelta;    
-                windowNDC[3] *= yInvDelta;
-
+               
                 // For interactive renders, need to adjust the pixel aspect ratio to match the window NDC
                 if (!_renderDelegate->IsBatchContext()) {
                     pixelAspectRatio *= xDelta / yDelta;
                 }
             
-            } else {
-                AiNodeSetInt(options, str::yres, _height);
-            }
+            } 
+            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height);
+            AiNodeSetInt(options, str::region_min_y, regionY[0]);
+            AiNodeSetInt(options, str::region_max_y, regionY[1]);
 
-            // we want region_max_y - region_min_y to be equal to _height - 1
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
+            clearBuffers(_renderBuffers, true, regionX[1] - regionX[0] + 1, regionY[1] - regionY[0] + 1);;
+            
         } else {
             // the window was restored to defaults, we need to reset the region
             // attributes, as well as xres,yres, that could have been adjusted
@@ -557,8 +628,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeResetParameter(options, str::region_min_y);
             AiNodeResetParameter(options, str::region_max_x);
             AiNodeResetParameter(options, str::region_max_y);
-            AiNodeSetInt(options, str::xres, _width);
-            AiNodeSetInt(options, str::yres, _height);
+            AiNodeSetInt(options, str::xres, width);
+            AiNodeSetInt(options, str::yres, height);
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
@@ -629,16 +700,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }),
         aovBindings.end());
 
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(_width * _height * 4);
-        for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
-            }
-        }
-    };
-
     TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
 
     // AOV bindings exists, so first we are checking if anything has changed.
@@ -663,7 +724,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         std::vector<AtNode*> aovShaders;
         // When creating the outputs array we follow this logic:
         // - color -> RGBA RGBA for the beauty box filter by default
-        // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
+        // - depth -> Z FLOAT closest filter by default
+        //     (if HYDRA_NORMALIZE_DEPTH is defined, use P VECTOR instead)
         // - primId -> ID UINT closest filter by default
         // - everything else -> aovName RGB closest filter by default
         // We are using box filter for the color and closest for everything else.
@@ -705,7 +767,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
             } else if (isRaw && sourceName == HdAovTokens->depth) {
-                output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
+                output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
             } else if (isRaw && sourceName == HdAovTokens->primId) {
                 aovShaders.push_back(_primIdWriter);
@@ -774,6 +836,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     // the beauty output should be called "RGBA" for arnold
                     aovName = isBeauty ? "RGBA" : sourceName.c_str();
                 }
+                std::string layerName(aovName);
+                layerName = _GetOptionalSetting<std::string>(
+                    binding.aovSettings, _tokens->aovDriverName, layerName);
+
                 // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
                 // cryptomatte metadatas through the user data "custom_attributes". We want to store 
                 // the driver node names in the render delegate, so that we can lookup this user data
@@ -784,11 +850,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     _renderDelegate->RegisterCryptomatteDriver(AtString(mainDriverName));
                 
                 buffer_pointers.push_back((void*)buffer.buffer);
-                buffer_names.push_back(AtString(aovName));
-                
+                buffer_names.push_back(AtString(layerName.c_str()));                
+
                 output = AtString{
                     TfStringPrintf(
-                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName)
+                        "%s %s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName, layerName.c_str())
                         .c_str()};
 
             }
@@ -928,6 +994,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
                             renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
                             aovShaders);
+                        
+                        if (aovName == "crypto_object" || aovName == "crypto_asset"
+                            || aovName == "crypto_material") {
+                            _renderDelegate->SetHasCryptomatte(true);
+                        }
+                        
                         // Check if the AOV has a specific filter
                         const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                         AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
@@ -1020,12 +1092,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             aovShaders.empty()
                 ? AiArray(0, 1, AI_TYPE_NODE)
                 : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-        clearBuffers(_renderBuffers);
+        clearBuffers(_renderBuffers, true, width, height);
     }
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
     bool hasPendingChanges = _renderDelegate->HasPendingChanges(
-        GetRenderIndex(),
+        GetRenderIndex(), cameraId,
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
     
     // If we still have pending Hydra changes, we don't want to start / update the render just yet,
@@ -1039,7 +1111,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (!aovBindings.empty()) {
         // Clearing all AOVs if render was aborted.
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
-            clearBuffers(_renderBuffers);
+            clearBuffers(_renderBuffers, false, width, height);
         }
         for (auto& buffer : _renderBuffers) {
             if (buffer.second.buffer != nullptr) {

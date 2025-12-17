@@ -94,7 +94,6 @@ def Scope "Render"
         custom int arnold:global:texture_autotile = 0
         custom float arnold:global:texture_max_memory_MB = 2048
         custom int arnold:global:texture_max_open_files = 0
-        custom int arnold:global:threads = 0
         uniform token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/cameras_ctrl/lightset_cam>
         uniform float4 dataWindowNDC = (0, 0, 1, 1)

@@ -102,7 +102,10 @@ std::vector<ParamDesc> spotParams = {
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
 
 std::vector<ParamDesc> photometricParams = {
-    {"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+    {"filename", UsdLuxTokens->inputsShapingIesFile}, 
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
@@ -346,7 +349,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
                             HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate)
 {
     TF_UNUSED(filter);
-    VtValue geomValue = sceneDelegate->Get( id, str::t_geometry);
+    VtValue geomValue = sceneDelegate->Get(id, str::t_geometry);
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
@@ -354,7 +357,18 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
-    }    
+    }
+#ifdef ENABLE_SCENE_INDEX
+    {
+        // With the scene index filter meshLightResolvingSIP.cpp, we create an hydra mesh light prim just under the mesh
+        // Since we know that the mesh is the parent of the light, we try to get the arnold node there
+        // It is possible that the mesh node hasn't been created yet
+        AtNode* mesh = renderDelegate->LookupNode(id.GetParentPath().GetText());
+        if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
+            mesh = nullptr;
+        AiNodeSetPtr(light, str::mesh, (void*)mesh);
+    }
+#endif
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
@@ -629,7 +643,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             // The Sync function seems to be called automatically for shapes, but 
             // not for lights
             instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
+            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
             const TfToken renderTag = sceneDelegate->GetRenderTag(id);
             float lightIntensity = AiNodeGetFlt(_light, str::intensity);
             // For instance of lights, we need to disable the prototype light
@@ -691,8 +705,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
 void HdArnoldGenericLight::SetupTexture(const VtValue& value)
 {
-    const auto* nentry = AiNodeGetNodeEntry(_light);
-
+    
     std::string path;
     if (value.IsHolding<SdfAssetPath>()) {
         const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
@@ -717,8 +730,11 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
     
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
+    const auto* nentry = AiNodeGetNodeEntry(_light);
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        AiNodeSetBool(_texture, str::sflip, true);
+        //Set mirror to false when usdlux version is at least 25.05
+        AtNode* options = AiUniverseGetOptions(_delegate->GetUniverse());
+        AiNodeSetBool(_texture, str::sflip, (AiNodeGetInt(options, str::usdlux_version) == 0));
     }
     AtRGB color = AiNodeGetRGB(_light, str::color);
     AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);

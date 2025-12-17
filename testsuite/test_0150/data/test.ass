@@ -101,7 +101,6 @@ usd
  filename "scene.usd"
  object_path ""
  frame 0
- debug on
  declare dcc_name constant STRING
  dcc_name "aiStandInShape"
  shader uv

@@ -1,5 +1,6 @@
 set(SRC
-    main.cpp)
+    main.cpp
+    asset_utils.cpp)
 
 set(PROC_NAME "${USD_PROCEDURAL_NAME}_proc")
 
@@ -11,11 +12,7 @@ target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../
 target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/writer")
 
 target_compile_definitions(${PROC_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
-
-if (EXISTS "${ARNOLD_INCLUDE_DIR}/ai_scene_format.h" AND BUILD_PROC_SCENE_FORMAT)
-    target_compile_definitions(${PROC_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
-endif ()
-
+target_compile_definitions(${PROC_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
 
 if (LINUX)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
@@ -43,15 +40,17 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE ndrObjects usdImagingArnoldObjects hdArnoldObjects)
     if (BUILD_SCENE_INDEX_PLUGIN)
         target_link_libraries(${PROC_NAME} PRIVATE sceneIndexArnoldObjects)
     endif()
     target_link_libraries(${PROC_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
-    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-        target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
-    endif ()
-
+    if (NOT BUILD_WITH_USD_STATIC)
+        target_link_libraries(${PROC_NAME} PRIVATE usdImaging)
+        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+            target_link_libraries(${PROC_NAME} PRIVATE hdsi;usdSkelImaging;ts)
+        endif ()
+    endif()
 endif()
 
 if (APPLE OR LINUX)
@@ -83,6 +82,13 @@ if (BUILD_WITH_USD_STATIC)
         install_usdimaging_arnold_pluginfo(
             ../../usd_proc
             "${CMAKE_CURRENT_BINARY_DIR}/usd/usdImagingArnold/resources/plugInfo.json"
+            "${PREFIX_PROCEDURAL}/usd")
+
+        # install the render delegate arnold pluginfo
+        set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+        install_hdarnold_arnold_pluginfo(
+            ../../usd_proc
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/resources/plugInfo.json"
             "${PREFIX_PROCEDURAL}/usd")
 
          # install the scene index arnold pluginfo

@@ -427,10 +427,10 @@ void ReadSubsetsMaterialBinding(
 
     // Set the shaders array, for the array connections to be applied later
     if (!shadersArrayStr.empty()) {
-        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldAPI::CONNECTION_ARRAY);
     }
     if (hasDisplacement) {
-        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldAPI::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
     AiNodeSetArray(node, str::shidxs, shidxsArray);
@@ -972,11 +972,16 @@ void ReadPrimvars(
         int arrayType = AI_TYPE_NONE;
         
         if (typeName.IsArray() && interpolation == UsdGeomTokens->constant &&
-            primvarType != AI_TYPE_ARRAY && primvar.GetElementSize() > 1) 
+            primvarType != AI_TYPE_ARRAY) 
         {
-            arrayType = primvarType;
-            primvarType = AI_TYPE_ARRAY;
-            declaration += " ARRAY ";
+            // We cannot use GetElementSize() to get the size of the array, 
+            // so we need to get the value and consider its size
+            VtValue tmp;
+            if (primvar.Get(&tmp, time.frame) && tmp.GetArraySize() > 1) {                
+                arrayType = primvarType;
+                primvarType = AI_TYPE_ARRAY;
+                declaration += " ARRAY ";
+            }
         }
 
         declaration += " ";

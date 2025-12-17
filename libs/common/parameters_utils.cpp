@@ -262,14 +262,16 @@ void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, c
                         // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
                         // this is apparently to make sure they will be always searched again.
                         // This is not what we want, so we make sure the path is anchored
-                        if (filenameStr[0] != '.') {
-                            filenameStr = "./" + filenameStr;
+                        std::string searchFilename = filenameStr;
+                        if (searchFilename[0] != '.') {
+                            searchFilename = "./" + searchFilename;
                         }
+
                         for (const auto& sdfProp : attr.GetPropertyStack()) {
                             const auto& layer = sdfProp->GetLayer();
                             if (layer && !layer->GetRealPath().empty()) {
-                                std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, filenameStr);
-                                if (!layerPath.empty() && layerPath != filenameStr &&
+                                std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, searchFilename);
+                                if (!layerPath.empty() && layerPath != searchFilename &&
                                     TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
                                     filenameStr = layerPath;
                                     break;
@@ -544,6 +546,9 @@ void ReadArnoldParameters(
             }
             continue;
         }
+        // Ignore motion_start / motion_end attributes #2441
+        if (arnoldAttr == "motion_start" || arnoldAttr == "motion_end")
+            continue;
         
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {

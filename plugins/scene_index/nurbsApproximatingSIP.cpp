@@ -28,7 +28,9 @@ HdSceneIndexBaseRefPtr HdArnoldNurbsApproximatingSceneIndexPlugin::_AppendSceneI
     const HdSceneIndexBaseRefPtr& inputSceneIndex, const HdContainerDataSourceHandle& inputArgs)
 {
     TF_UNUSED(inputArgs);
-    return HdsiNurbsApproximatingSceneIndex::New(inputSceneIndex);
+    auto nurbsApproximatingSceneIndex = HdsiNurbsApproximatingSceneIndex::New(inputSceneIndex);
+    nurbsApproximatingSceneIndex->SetDisplayName("Arnold: approximate nurbs");
+    return nurbsApproximatingSceneIndex;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

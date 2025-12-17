@@ -50,7 +50,6 @@ public:
 private:
     /// List of parameters to query from the Hydra Primitive.
     const HdArnoldRenderDelegate::NativeRprimParamList* _paramList = nullptr;
-    HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL}; ///< Visibility.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

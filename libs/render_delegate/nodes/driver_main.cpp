@@ -84,6 +84,10 @@ node_initialize
 {
     AiDriverInitialize(node, true);
     AiNodeSetLocalData(node, new DriverMainData());
+    const AtNode* render_options = AiRenderSessionGetOptions(render_session);
+    AiNodeAddDependency(node, render_options, str::region_min_x);
+    AiNodeAddDependency(node, render_options, str::region_min_y);
+
 }
 
 node_update
@@ -157,6 +161,7 @@ driver_process_bucket
     ids.clear();
     const void* colorData = nullptr;
     const void* positionData = nullptr;
+    const void* depthData = nullptr;
     // Apply an offset to the pixel coordinates based on the region_min,
     // since we don't own the render buffer, which just knows the output resolution
     const auto bucket_xo_start = bucket_xo - driverData->regionMinX;
@@ -167,12 +172,20 @@ driver_process_bucket
     };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
 
-        auto it = driverData->buffers.find(outputName);
+        AtString bufferName = AiOutputIteratorGetLayerName(iterator);
+        if (bufferName.empty())
+            bufferName = outputName;
+        
+        auto it = driverData->buffers.find(bufferName);
         if (it != driverData->buffers.end()) {
             it->second->WriteBucket(
             bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
         } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
             positionData = bucketData;
+        } else if (pixelType == AI_TYPE_FLOAT && checkOutputName(str::Z)) {
+#ifndef HYDRA_NORMALIZE_DEPTH
+            depthData = bucketData;
+#endif
         } else if (pixelType == AI_TYPE_INT && checkOutputName(str::hydraPrimId)) {
             if (driverData->idBuffer) {
                 ids.resize(pixelCount, -1);
@@ -185,7 +198,11 @@ driver_process_bucket
             colorData = bucketData;
         }
     }
-    if (positionData != nullptr && driverData->depthBuffer != nullptr) {
+    if (depthData != nullptr && driverData->depthBuffer != nullptr) {
+        const auto* in = static_cast<const float*>(depthData);
+        driverData->depthBuffer->WriteBucket(
+            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, in);
+    } else if (positionData != nullptr && driverData->depthBuffer != nullptr) {
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
         const auto* in = static_cast<const GfVec3f*>(positionData);

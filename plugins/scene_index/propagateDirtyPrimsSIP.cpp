@@ -1,6 +1,8 @@
 #include "propagateDirtyPrimsSIP.h"
+#ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/retainedDataSource.h>
 #include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
+#include "constant_strings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -62,7 +64,7 @@ void PropagateDirtyPrimsSceneIndex::_PrimsDirtied(
 
 void PropagateDirtyPrimsSceneIndex::_SystemMessage(const TfToken &messageType, const HdDataSourceBaseHandle &args)
 {
-    if (messageType == TfToken("ArnoldMarkAllRprimsDirty")) {
+    if (messageType == str::t_ArnoldMarkPrimsDirty) {
         // The type is defined in render_delegate.cpp, ideally we would like a more memory friendly type
         auto handle =
             HdRetainedTypedSampledDataSource<TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::Cast(args);
@@ -98,3 +100,4 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
+#endif // ENABLE_SCENE_INDEX

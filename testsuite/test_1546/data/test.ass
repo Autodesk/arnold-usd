@@ -17,6 +17,7 @@ options
  AA_seed 0
  xres 640
  yres 360
+ asset_searchpath "tex"
  texture_searchpath "tex"
  camera "/Camera"
  fps 30
@@ -58,7 +59,6 @@ usd
  filename "cube.usda"
  object_path ""
  frame 0
- debug off
 }
 
 skydome_light

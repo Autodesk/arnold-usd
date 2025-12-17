@@ -109,7 +109,7 @@ public:
 
         // Check prim type info
         const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-        if (primInfo) {
+        if (primInfo && primInfo.GetTypeName()) {
             // Force all closed implicit surfaces to be doubleSided.
             const TfToken &typeName = primInfo.GetTypeName()->GetTypedValue(0.0);
             if (typeName == TfToken("Cube") || typeName == TfToken("Cone") || typeName == TfToken("Cylinder") ||
@@ -180,10 +180,12 @@ HdArnoldImplicitSurfaceSceneIndexPlugin::_AppendSceneIndex(
     const HdSceneIndexBaseRefPtr &inputScene,
     const HdContainerDataSourceHandle &inputArgs)
 {
-#if PXR_VERSION <= 2505
-    return _FixImplicitSurfaceSidedNessSceneIndex::New(HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs));
-#else // Assuming the sidedness bug is fixed in 25.08
-    return HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs);
+    auto implicitSurfaceSceneIndex = HdsiImplicitSurfaceSceneIndex::New(inputScene, inputArgs);
+#if PXR_VERSION <= 2511
+    implicitSurfaceSceneIndex->SetDisplayName("Arnold: implicit surface scene index");
+    return _FixImplicitSurfaceSidedNessSceneIndex::New(implicitSurfaceSceneIndex);
+#else // Assuming the sidedness bug is fixed in 26.02
+    return implicitSurfaceSceneIndex;
 #endif    
 }
 

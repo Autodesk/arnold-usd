@@ -1,5 +1,5 @@
 #include <ai.h>
-
+#include <stdio.h>
 //#define LOG_FLAGS AI_LOG_ALL
 #define LOG_FLAGS AI_LOG_WARNINGS | AI_LOG_ERRORS
 

@@ -111,77 +111,7 @@ UsdAttribute _GetLightAttrConnections(const T& light, const UsdAttribute& attr, 
 #define GET_LIGHT_ATTR_CONNS(l, a) l.Get ## a ## Attr()
 #endif
 
-void _ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time)
-{
-#if PXR_VERSION >= 2111
-    UsdLuxLightAPI light(prim);
-#else
-    UsdLuxLight light(prim);
-#endif
-    
-    // This function is computing intensity, color, and eventually color
-    // temperature. Another solution could be to export separately these
-    // parameters, but it seems simpler to do this for now
 
-    VtValue colorValue;
-    GfVec3f color(1.f, 1.f, 1.f);
-    if (GET_LIGHT_ATTR(light, Color).Get(&colorValue, time.frame))
-        color = colorValue.Get<GfVec3f>();
-
-    VtValue intensityValue;
-    float intensity = 1.f;
-    if (GET_LIGHT_ATTR(light, Intensity).Get(&intensityValue, time.frame)) {
-        intensity = VtValueGetFloat(intensityValue);
-        AiNodeSetFlt(node, str::intensity, intensity);
-    }
-
-    VtValue exposureValue;
-    float exposure = 0.f;
-    if (GET_LIGHT_ATTR(light, Exposure).Get(&exposureValue, time.frame)) {
-        exposure = VtValueGetFloat(exposureValue);
-        AiNodeSetFlt(node, str::exposure, exposure);
-    }
-
-    VtValue enableTemperatureValue;
-    if (GET_LIGHT_ATTR(light, EnableColorTemperature).Get(&enableTemperatureValue, time.frame)) {
-        float colorTemp = 6500;
-        if (VtValueGetBool(enableTemperatureValue) &&
-            GET_LIGHT_ATTR(light, ColorTemperature).Get(&colorTemp, time.frame)) {
-            color = GfCompMult(color, UsdLuxBlackbodyTemperatureAsRgb(colorTemp));
-        }
-    }
-    AiNodeSetRGB(node, str::color, color[0], color[1], color[2]);
-
-    VtValue diffuseValue;
-    if (GET_LIGHT_ATTR(light, Diffuse).Get(&diffuseValue, time.frame)) {
-        AiNodeSetFlt(node, str::diffuse, VtValueGetFloat(diffuseValue));
-    }
-    VtValue specularValue;
-    if (GET_LIGHT_ATTR(light, Specular).Get(&specularValue, time.frame)) {
-        AiNodeSetFlt(node, str::specular, VtValueGetFloat(specularValue));
-    }
-
-    /*
-    This is preventing distant lights from working properly, so we should only
-    do it where it makes sense VtValue normalizeAttr.
-    if(light.GetNormalizeAttr().Get(&normalizeAttr, time.frame))
-       AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
-    */
-
-    UsdLuxShadowAPI shadowAPI(prim);
-    if (shadowAPI) {
-        VtValue shadowEnableValue;
-        if (GET_LIGHT_ATTR(shadowAPI, ShadowEnable).Get(&shadowEnableValue, time.frame)) {
-            AiNodeSetBool(node, str::cast_shadows, VtValueGetBool(shadowEnableValue));
-        }
-        VtValue shadowColorValue;
-        if (GET_LIGHT_ATTR(shadowAPI, ShadowColor).Get(&shadowColorValue, time.frame)) {
-            GfVec3f rgb = VtValueGetVec3f(shadowColorValue);
-            AiNodeSetRGB(node, str::shadow_color, rgb[0], rgb[1], rgb[2]);
-        }
-    }  
-
-}
 
 void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context)
 {
@@ -257,6 +187,15 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     if (!iesFile.empty()) {
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+        //Send iesNormalize and iesAngleScale to the node
+        VtValue iesNormalizeValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesNormalize).Get(&iesNormalizeValue, time.frame)) {
+            AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+        }
+        VtValue iesAngleScaleValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesAngleScale).Get(&iesAngleScaleValue, time.frame)) {
+            AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+        }
         return node;
     }
     VtValue coneAngleValue;
@@ -296,6 +235,91 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
 } // namespace
 
+
+void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time)
+{
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    
+    // This function is computing intensity, color, and eventually color
+    // temperature. Another solution could be to export separately these
+    // parameters, but it seems simpler to do this for now
+
+    VtValue colorValue;
+    GfVec3f color(1.f, 1.f, 1.f);
+    if (GET_LIGHT_ATTR(light, Color).Get(&colorValue, time.frame))
+        color = colorValue.Get<GfVec3f>();
+
+    VtValue intensityValue;
+    float intensity = 1.f;
+    if (GET_LIGHT_ATTR(light, Intensity).Get(&intensityValue, time.frame)) {
+        intensity = VtValueGetFloat(intensityValue);
+        AiNodeSetFlt(node, str::intensity, intensity);
+    }
+
+    VtValue exposureValue;
+    float exposure = 0.f;
+    if (GET_LIGHT_ATTR(light, Exposure).Get(&exposureValue, time.frame)) {
+        exposure = VtValueGetFloat(exposureValue);
+        AiNodeSetFlt(node, str::exposure, exposure);
+    }
+
+    VtValue enableTemperatureValue;
+    if (GET_LIGHT_ATTR(light, EnableColorTemperature).Get(&enableTemperatureValue, time.frame)) {
+        float colorTemp = 6500;
+        if (VtValueGetBool(enableTemperatureValue) &&
+            GET_LIGHT_ATTR(light, ColorTemperature).Get(&colorTemp, time.frame)) {
+            color = GfCompMult(color, UsdLuxBlackbodyTemperatureAsRgb(colorTemp));
+        }
+    }
+    AiNodeSetRGB(node, str::color, color[0], color[1], color[2]);
+
+    VtValue diffuseValue;
+    if (GET_LIGHT_ATTR(light, Diffuse).Get(&diffuseValue, time.frame)) {
+        AiNodeSetFlt(node, str::diffuse, VtValueGetFloat(diffuseValue));
+    }
+    VtValue specularValue;
+    if (GET_LIGHT_ATTR(light, Specular).Get(&specularValue, time.frame)) {
+        AiNodeSetFlt(node, str::specular, VtValueGetFloat(specularValue));
+    }
+
+    /*
+    This is preventing distant lights from working properly, so we should only
+    do it where it makes sense VtValue normalizeAttr.
+    if(light.GetNormalizeAttr().Get(&normalizeAttr, time.frame))
+       AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
+    */
+
+    UsdLuxShadowAPI shadowAPI(prim);
+    if (shadowAPI) {
+        VtValue shadowEnableValue;
+        if (GET_LIGHT_ATTR(shadowAPI, ShadowEnable).Get(&shadowEnableValue, time.frame)) {
+            AiNodeSetBool(node, str::cast_shadows, VtValueGetBool(shadowEnableValue));
+        }
+        VtValue shadowColorValue;
+        if (GET_LIGHT_ATTR(shadowAPI, ShadowColor).Get(&shadowColorValue, time.frame)) {
+            GfVec3f rgb = VtValueGetVec3f(shadowColorValue);
+            AiNodeSetRGB(node, str::shadow_color, rgb[0], rgb[1], rgb[2]);
+        }
+    }  
+
+}
+
+void ReadLightNormalize(const UsdPrim& prim, AtNode *node, const TimeSettings &time) {
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    VtValue normalize;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalize, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalize));
+    }
+}
+
 AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("distant_light", prim.GetPath().GetText());
@@ -322,7 +346,7 @@ AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderCont
         }
     }
 
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -344,7 +368,7 @@ AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     // TODO : portal
     const TimeSettings &time = context.GetTimeSettings();
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
 
     _ReadLightColorLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
@@ -401,7 +425,7 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
 
     VtValue radiusValue;
     if (GET_LIGHT_ATTR(light, Radius).Get(&radiusValue, time.frame)) {
@@ -435,7 +459,7 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     const TimeSettings &time = context.GetTimeSettings();
     UsdLuxSphereLight light(prim);
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
 
     bool treatAsPoint = false;
     VtValue treatAsPointValue;
@@ -474,7 +498,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     const TimeSettings &time = context.GetTimeSettings();
 
     UsdLuxRectLight light(prim);
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
 
     float width = 1.f;
     float height = 1.f;
@@ -518,7 +542,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeSetBool(image, str::sflip, true);
+            // usdlux_version sets texture mirroring to false when set to 25.05 or later
+            AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+            AiNodeSetBool(image, str::sflip,  (AiNodeGetInt(options, str::usdlux_version) == 0));
             AtRGB col = AiNodeGetRGB(node, str::color);
             AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
             AiNodeResetParameter(node, str::color);
@@ -540,7 +566,7 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
     const TimeSettings &time = context.GetTimeSettings();
     UsdLuxCylinderLight light(prim);
-    _ReadLightCommon(prim, node, time);
+    ReadLightCommon(prim, node, time);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -606,7 +632,7 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
             res = node;
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
 
-        _ReadLightCommon(prim, node, time);
+        ReadLightCommon(prim, node, time);
 
         VtValue normalizeValue;
         if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {

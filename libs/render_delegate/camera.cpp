@@ -106,6 +106,8 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
 
         const AtParamEntry* param = AiParamIteratorGetNext(paramIter);
         const AtString paramName = AiParamGetName(param);
+        if (paramName == str::motion_start || paramName == str::motion_end)
+            continue;
         
         TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
         const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);
@@ -243,7 +245,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             if (_camera == AiNodeGetPtr(options, str::subdiv_dicing_camera))
                 AiNodeSetPtr(options, str::subdiv_dicing_camera, newCamera);
 
-            AiNodeReplace(_camera, newCamera, false);
+            if (!_delegate->IsBatchContext())   
+                AiNodeReplace(_camera, newCamera, false);
             _delegate->DestroyArnoldNode(_camera);
         }
         
@@ -260,11 +263,11 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         param->Interrupt();
         const auto& projMatrix = GetProjectionMatrix();
 #endif
-        if (projection == HdCamera::Projection::Perspective) {
+        if (cameraType == str::persp_camera) {
             // TODO cyril: pixel aspect ratio is incorrect here, we should set the matrix instead of the fov ?
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
-        } else if (projection == HdCamera::Projection::Orthographic) {
+        } else if (cameraType == str::ortho_camera) {
             GfVec4f screenWindow(GetScreenWindowFromOrthoProjection(projMatrix));
             AiNodeSetVec2(_camera, str::screen_window_min, screenWindow[0], screenWindow[1]);
             AiNodeSetVec2(_camera, str::screen_window_max, screenWindow[2], screenWindow[3]);
@@ -283,7 +286,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
 
     if (*dirtyBits & HdCamera::DirtyParams) {
         param->Interrupt();
-        if (projection == HdCamera::Projection::Perspective) {
+        if (cameraType == str::persp_camera) {
             UpdatePerspectiveParams(sceneDelegate, renderParam, dirtyBits);
         } else {
             UpdateGenericParams(sceneDelegate, renderParam, dirtyBits);

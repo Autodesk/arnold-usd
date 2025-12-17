@@ -16,12 +16,10 @@ options
  yres 120
  pixel_aspect_ratio 1.33333325
  texture_per_file_stats on
- texture_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
  texture_automip off
  camera "/persp/perspShape"
  meters_per_unit 0.00999999978
  frame 1
- procedural_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/"
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
@@ -137,8 +135,6 @@ usd
  filename "scene.usda"
  object_path ""
  frame 1
- debug on
- threads 1
  declare dcc_name constant STRING
  dcc_name "arnold_7_instanceableShape"
 }

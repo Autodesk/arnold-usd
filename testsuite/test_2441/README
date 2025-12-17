@@ -1,0 +1,8 @@
+Ignore primitives motion start/end when rendering usd files
+
+See #2441
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 1003 ' }
+

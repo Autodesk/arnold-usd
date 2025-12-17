@@ -13,8 +13,6 @@ public:
     ProceduralReader() {};
     virtual ~ProceduralReader() {};
     virtual void SetFrame(float frame) = 0;
-    virtual void SetDebug(bool b) = 0;
-    virtual void SetThreadCount(unsigned int t) = 0;
     virtual void SetId(unsigned int id) = 0;
     virtual void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) = 0;
     virtual void SetConvertPrimitives(bool b) = 0;
@@ -33,6 +31,9 @@ public:
     void SetInteractive(bool b) {_interactive = b;}
     bool GetInteractive() const {return _interactive;}
 
+    void SetCommandLine(const std::string& cmd) {_commandLine = cmd;}
+    const std::string &GetCommandLine() const {return _commandLine;}
+
     void Read(const std::string &filename, 
         AtArray *overrides, const std::string &path = "");
 
@@ -43,4 +44,5 @@ protected:
     AtArray *_overrides = nullptr;
     long int _cacheId = 0;   // usdStage cacheID used with a StageCache
     bool _interactive = false; // interactive readers can update Arnold when the usdStage changes
+    std::string _commandLine; // the eventual command line used to render this file (e.g. kick)
 };

@@ -9,6 +9,8 @@ set(SRC
     implicitSurfaceSIP.cpp
     lightLinkingSIP.cpp
     nurbsApproximatingSIP.cpp
+    meshLightResolvingSIP.cpp
+    renderPassSIP.cpp
 )
 
 set(HDR
@@ -21,6 +23,7 @@ set(HDR
     propagateDirtyPrimsSIP.h
     implicitSurfaceSIP.h
     nurbsApproximatingSIP.h
+    meshLightResolvingSIP.h
 )
 
 # Add objects for the hydra procedural
@@ -33,7 +36,6 @@ endif()
 
 # If we want a sceneIndexArnold shared plugin
 if (NOT BUILD_WITH_USD_STATIC)
-
     add_library(sceneIndexArnold SHARED ${SRC})
 
     if (BUILD_HEADERS_AS_SOURCES)
@@ -50,6 +52,9 @@ if (NOT BUILD_WITH_USD_STATIC)
 
     target_link_libraries(sceneIndexArnold PRIVATE common)
     target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEXARNOLD_EXPORTS=1")
+    if (BUILD_SCENE_INDEX_PLUGIN)
+        target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
+    endif()
     # For the generated shape adapters to find headers here.
     target_include_directories(sceneIndexArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     

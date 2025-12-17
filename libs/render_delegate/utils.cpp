@@ -56,6 +56,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((arnoldMotionEnd, "arnold:motion_end"))
+    ((arnoldMotionStart, "arnold:motion_start"))
     ((arnoldVisibility, "arnold:visibility"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
@@ -261,8 +263,7 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
-        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
-        visibility->SetPrimvarFlag(visibilityValue, true);
+        visibility->SetPrimvarFlag(~visibilityValue, false);
         return true;
     }
     const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
@@ -296,6 +297,8 @@ bool ConvertPrimvarToBuiltinParameter(
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
     }
+    if (name == _tokens->arnoldMotionStart || name == _tokens->arnoldMotionEnd)
+        return true;
 
     // In addition to parameters like arnold:visibility:camera, etc...
     // we also want to support arnold:visibility as this is what the arnold-usd writer 
@@ -305,8 +308,7 @@ bool ConvertPrimvarToBuiltinParameter(
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
-        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
-        visibility->SetPrimvarFlag(visibilityValue, true);
+        visibility->SetPrimvarFlag(~visibilityValue, false);
         return true;
     }
 

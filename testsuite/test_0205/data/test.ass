@@ -15,12 +15,10 @@ options
  yres 120
  pixel_aspect_ratio 1.33333325
  texture_per_file_stats on
- texture_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
  texture_automip off
  camera "/persp/perspShape"
  meters_per_unit 0.00999999978
  frame 1
- procedural_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/"
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
@@ -96,7 +94,6 @@ usd
  0 0 0 1
  use_light_group off
  override_nodes off
- threads 1
  filename "scene.usda"
  object_path ""
  frame 0

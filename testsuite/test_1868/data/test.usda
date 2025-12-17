@@ -108,7 +108,6 @@ def Scope "Render"
         custom float arnold:global:texture_max_memory_MB = 4096
         custom int arnold:global:texture_max_open_files = 0
         custom bool arnold:global:texture_use_existing_tx = 1
-        custom int arnold:global:threads = 0
         uniform token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
         uniform float4 dataWindowNDC = (0, 0, 1, 1)
