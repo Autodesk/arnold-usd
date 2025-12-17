@@ -1,0 +1,7 @@
+Author arnold instance transforms properly with complex hierarchies
+
+Fixes #2501
+
+author: sebastien.ortega
+
+PARAMS: { 'resaved': 'usda' }
