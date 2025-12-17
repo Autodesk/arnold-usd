@@ -213,7 +213,7 @@ def Scope "materials"
             float inputs:blackbody_intensity = 1
             float inputs:blackbody_kelvin = 5000
             float inputs:density = 1
-            string inputs:density_channel = "density[1]"
+            string inputs:density_channel = "density"
             vector3f inputs:displacement = (0, 0, 0)
             float inputs:emission = 1
             string inputs:emission_channel = "heat"
@@ -252,7 +252,7 @@ def Scope "materials"
             float inputs:blackbody_intensity = 1
             float inputs:blackbody_kelvin = 5000
             float inputs:density = 1
-            string inputs:density_channel = "density[2]"
+            string inputs:density_channel = "density"
             vector3f inputs:displacement = (0, 0, 0)
             float inputs:emission = 1
             string inputs:emission_channel = "heat"

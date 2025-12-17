@@ -376,14 +376,10 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         const auto numFields = openvdb.second.size();
         auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
         for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            const int openvdb_index = openvdb.second[i].fieldIndex;
-            if (openvdb_index > 0) {
-                std::string fieldIndexName = openvdb.second[i].field.GetString();
-                fieldIndexName += std::string("[") + std::to_string(openvdb_index) + std::string("]");
-                AiArraySetStr(fields, i, AtString(fieldIndexName.c_str()));
-            } else {
-                AiArraySetStr(fields, i, AtString(openvdb.second[i].field.GetText()));
-            }
+            const int fieldIndex = openvdb.second[i].fieldIndex;
+            std::string fieldIndexName = openvdb.second[i].field.GetString();
+            fieldIndexName += std::string("[") + std::to_string(fieldIndex) + std::string("]");
+            AiArraySetStr(fields, i, AtString(fieldIndexName.c_str()));
         }
         AiNodeSetArray(volume, str::grids, fields);
     }

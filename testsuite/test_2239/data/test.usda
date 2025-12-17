@@ -26,6 +26,7 @@ def Xform "adsktest" (
     )
     {
         custom rel field:density = </adsktest/testdata/density>
+        rel material:binding = </mtl/material>
 
         def OpenVDBAsset "density" (
             kind = "component"
@@ -72,6 +73,48 @@ def Xform "adsktest" (
     }
 }
 
+def Scope "mtl"
+{
+    def Material "material"
+    {
+        token outputs:arnold:volume.connect = </mtl/material/standard_volume0.outputs:shader>
+
+        def Shader "standard_volume0"
+        {
+            uniform token info:id = "arnold:standard_volume"
+            float inputs:blackbody_contrast = 1
+            float inputs:blackbody_intensity = 1
+            float inputs:blackbody_kelvin = 5000
+            float inputs:density = 1
+            string inputs:density_channel = "voxel_fog_density"
+            vector3f inputs:displacement = (0, 0, 0)
+            float inputs:emission = 1
+            string inputs:emission_channel = "heat"
+            color3f inputs:emission_color = (1, 1, 1)
+            token inputs:emission_mode = "blackbody"
+            token inputs:emission_scaling = "none"
+            token inputs:interpolation = "trilinear"
+            float inputs:scatter = 1
+            float inputs:scatter_anisotropy = 0
+            color3f inputs:scatter_color = (0.5, 0.5, 0.5)
+            string inputs:scatter_color_channel = ""
+            float inputs:scatter_diffusion = 0
+            float inputs:scatter_diffusion_bias = 0.15
+            float inputs:scatter_diffusion_gain = 0.5
+            float inputs:scatter_diffusion_roughness = 0
+            float inputs:scatter_diffusion_roughness_bias = 0.15
+            float inputs:scatter_diffusion_roughness_gain = 0.5
+            float inputs:scatter_secondary_anisotropy = 0
+            float inputs:scatter_secondary_anisotropy_mix = 0
+            float inputs:temperature = 1
+            string inputs:temperature_channel = "temperature"
+            color3f inputs:transparent = (0.36787945, 0.36787945, 0.36787945)
+            string inputs:transparent_channel = ""
+            float inputs:transparent_depth = 1
+            token outputs:shader
+        }
+    }
+}
 
 def Scope "Render"
 {
