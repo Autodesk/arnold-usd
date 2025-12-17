@@ -130,6 +130,11 @@ std::vector<ParamDesc> cylinderParams = {
     {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
     {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
+std::vector<ParamDesc> meshLightParams = {
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
+
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
     HdArnoldRenderDelegate* renderDelegate, const std::vector<ParamDesc>& params)
@@ -393,6 +398,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         AiNodeSetPtr(light, str::mesh, (void*)mesh);
     }
 #endif
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, meshLightParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 

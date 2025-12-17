@@ -735,6 +735,25 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
             AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
         }
+
+        // Transfer IES filename from shaping API
+        UsdLuxShapingAPI shapingAPI(prim);
+        if (shapingAPI) {
+            VtValue iesFileValue;
+            if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+                std::string iesFile = VtValueGetString(iesFileValue);
+                if (!iesFile.empty())
+                    AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            }
+        }
+        // Send iesNormalize and iesAngleScale to the node
+        VtValue iesNormalizeValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesNormalize).Get(&iesNormalizeValue, time.frame)) 
+            AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+        VtValue iesAngleScaleValue;
+        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesAngleScale).Get(&iesAngleScaleValue, time.frame)) 
+            AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+
         // Special case, the attribute "color" can be linked to some shader
         _ReadLightColorLinks(prim, node, context);
 
