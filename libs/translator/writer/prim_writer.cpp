@@ -1239,9 +1239,17 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
 
     std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
     std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
+    std::string materialName;    
+    UsdShadeMaterial mat;
 
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
-    std::string materialName;
+    // Find if there is an existing material binding to this direct primitive
+    // i.e. without taking into account parent primitives #2501
+    UsdRelationship matRel = UsdShadeMaterialBindingAPI(prim).GetDirectBindingRel();
+    SdfPathVector matTargets;
+    matRel.GetTargets(&matTargets);
+    if (!matTargets.empty()) {
+        mat = UsdShadeMaterial(writer.GetUsdStage()->GetPrimAtPath(matTargets[0]));
+    }
     if (mat) {
         materialName = mat.GetPath().GetString();
     } else {
