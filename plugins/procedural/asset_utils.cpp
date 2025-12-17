@@ -7,8 +7,8 @@
 // Asset API was added in Arnold 7.4.5.0
 #if ARNOLD_VERSION_NUM >= 70405
 
-#include <filesystem>
 #include <pxr/pxr.h>
+#include <pxr/base/tf/pathUtils.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/sdf/attributeSpec.h>
 #include <pxr/usd/sdf/layer.h>
@@ -20,6 +20,9 @@
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdUtils/dependencies.h>
+#include <algorithm>
+#include <sstream>
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -28,10 +31,38 @@ PXR_NAMESPACE_OPEN_SCOPE
  */
 inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::string& absPath)
 {
-    std::filesystem::path rootLayerPath = stage->GetRootLayer()->GetRealPath();
-    std::filesystem::path rootDir = rootLayerPath.parent_path();
-    std::filesystem::path relative = std::filesystem::relative(std::filesystem::path(absPath), rootDir);
-    return relative.generic_string(); // always forward-slashes
+    std::string rootLayerPath = stage->GetRootLayer()->GetRealPath();
+    std::string rootDir = TfGetPathName(rootLayerPath);
+
+    std::string relative;
+    // This is a basic implementation replacing std::filesystem::relative().
+    // We assume that the paths are normalized absolute paths (no '.' or '..')
+    // and just cut the root folder.
+    {
+        // normalize the paths
+        std::string absPathNorm = TfNormPath(absPath);
+        std::string rootDirNorm = TfNormPath(rootDir);
+#ifdef WIN32
+        // Windows is not case-sensitive, therefore we convert paths to lower case
+        // before comparing them as strings
+        std::transform(absPathNorm.begin(), absPathNorm.end(), absPathNorm.begin(), ::tolower);
+        std::transform(rootDirNorm.begin(), rootDirNorm.end(), rootDirNorm.begin(), ::tolower);
+#endif
+        // add trailing '/' to root dir
+        if (rootDirNorm.back() != '/')
+            rootDirNorm += "/";
+
+        // check if our path is under the root folder
+        if (absPathNorm.find(rootDirNorm) == 0)
+        {
+            // make the path relative to the root folder
+            relative = absPath.substr(rootDir.length());
+            // always use forward-slashes in the returned relative path
+            std::replace(relative.begin(), relative.end(), '\\', '/');
+        }
+    }
+
+    return relative;
 }
 
 /**
@@ -54,7 +85,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string resolvedPath = resolver.Resolve(anchoredPath);
     // convert a relative reference relative to the main scene
     std::string finalRefPath = ref;
-    if (!resolvedPath.empty() && std::filesystem::path(ref).is_relative())
+    if (!resolvedPath.empty() && TfIsRelativePath(ref))
     {
         std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
         // convert only if the file is located under the root folder
