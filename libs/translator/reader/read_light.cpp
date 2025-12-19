@@ -230,11 +230,13 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
 }
 
+} // namespace
+
 // Read cone angle, softness, focus, and focus tint
-void _ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettings& time)
+void ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettings& time, bool checkShaping)
 {
     UsdLuxShapingAPI shapingAPI(prim);
-    if (!shapingAPI)
+    if (!shapingAPI && checkShaping)
         return;
 
     VtValue coneAngleValue;
@@ -266,8 +268,6 @@ void _ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettin
         AiNodeSetRGB(node, str::shaping_focus_tint, rgb[0], rgb[1], rgb[2]);
     }
 }
-
-} // namespace
 
 
 void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time)
@@ -472,7 +472,7 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     }
 
     // Apply shaping parameters
-    _ReadLightShapingParams(prim, node, time);
+    ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -517,7 +517,7 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     // Apply shaping parameters for point_light
     if (AiNodeIs(node, str::point_light)) {
-        _ReadLightShapingParams(prim, node, time);
+        ReadLightShapingParams(prim, node, time);
     }
 
     ReadMatrix(prim, node, time, context);
@@ -570,7 +570,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     }
 
     // Apply shaping parameters
-    _ReadLightShapingParams(prim, node, time);
+    ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -634,7 +634,7 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
     }
 
     // Apply shaping parameters
-    _ReadLightShapingParams(prim, node, time);
+    ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -686,6 +686,10 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
             AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
         }
+
+        // Apply shaping parameters
+        ReadLightShapingParams(prim, node, time);
+
         // Special case, the attribute "color" can be linked to some shader
         _ReadLightColorLinks(prim, node, context);
 

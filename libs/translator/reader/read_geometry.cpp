@@ -193,6 +193,7 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
             ReadLightCommon(prim, meshLightNode, time);
             ReadLightNormalize(prim, meshLightNode, time);
+            ReadLightShapingParams(prim, meshLightNode, time, false);
             ReadMatrix(prim, meshLightNode, time, context);
         }
 #endif

@@ -131,6 +131,12 @@ std::vector<ParamDesc> cylinderParams = {
     {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
     {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
 
+std::vector<ParamDesc> meshParams = {
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
+
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
     HdArnoldRenderDelegate* renderDelegate, const std::vector<ParamDesc>& params)
@@ -393,6 +399,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         AiNodeSetPtr(light, str::mesh, (void*)mesh);
     }
 #endif
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, meshParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
