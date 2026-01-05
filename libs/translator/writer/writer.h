@@ -212,7 +212,15 @@ public:
     static const SdfPath &GetRenderScope();
     static const SdfPath &GetRenderProductsScope();
     static const SdfPath &GetRenderVarsScope();
-    
+
+    void SetAppendFile(bool b )
+    {
+        _appendFile = b;
+    }
+    bool GetAppendFile() const
+    {
+        return _appendFile;
+    }
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
@@ -236,4 +244,5 @@ private:
     std::vector<float> _nearestFrames; // based on the _authoredFrames list, we store the 1 or 2 nearest frames
     std::string _defaultPrim;          // usd files have a defaultPrim that can be used for file references
     std::unordered_set<AtNode*> _requiredShaders;
+    bool _appendFile = false;
 };

@@ -1359,6 +1359,13 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
             unsigned char* shidxs = (unsigned char*)AiArrayMap(shidxsArray);
 
             unsigned int numSubsets = AiMax(numShaders, numDisp);
+            if (writer.GetAppendFile()) {
+                // If we are in append mode, we want to check if the subsets already exist, in which case 
+                // we don't want to create them again
+                std::vector<UsdGeomSubset> prevSubsets = UsdGeomSubset::GetGeomSubsets(geom, _tokens->face);
+                if (prevSubsets.size() >= numSubsets)
+                   return; 
+            }
             for (unsigned int i = 0; i < numSubsets; ++i) {
                 AtNode* shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
                 AtNode* displacement = (i < numDisp) ? (AtNode*)AiArrayGetPtr(displacements, i) : nullptr;
