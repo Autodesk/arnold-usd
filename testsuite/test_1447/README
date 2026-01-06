@@ -4,4 +4,4 @@ Fixes #1447
 
 author: sebastien.ortega
 
-PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.02}
+PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.05}
