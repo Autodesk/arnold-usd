@@ -411,7 +411,7 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         std::string resolvedPath = dep.resolvedPath;
         // if could not resolve the path, then use the scene reference
-        // these are potentally paths that can be resolved by Arnold, like UDIM textures
+        // potentially these are paths that can be resolved by Arnold, like UDIM textures
         if (resolvedPath.empty())
             resolvedPath = dep.authoredPath;
 
