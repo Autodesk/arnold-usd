@@ -218,22 +218,19 @@ inline void CollectDependenciesFromLayer(
         }
         
         // collect references
-        const auto& refList = prim->GetReferenceList();
+        const auto refList = prim->GetReferenceList();
         SdfReferenceVector refs;
         {
+            const auto prependedItems = refList.GetPrependedItems();
+            const auto appendedItems = refList.GetAppendedItems();
+            const auto addedItems = refList.GetAddedItems();
+            const auto explicitItems = refList.GetExplicitItems();
+
             // combine all authored list-op opinions
-            refs.insert(refs.end(),
-                refList.GetPrependedItems().begin(),
-                refList.GetPrependedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAppendedItems().begin(),
-                refList.GetAppendedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAddedItems().begin(),
-                refList.GetAddedItems().end());
-            refs.insert(refs.end(),
-                refList.GetExplicitItems().begin(),
-                refList.GetExplicitItems().end());
+            refs.insert(refs.end(), prependedItems.begin(), prependedItems.end());
+            refs.insert(refs.end(), appendedItems.begin(), appendedItems.end());
+            refs.insert(refs.end(), addedItems.begin(), addedItems.end());
+            refs.insert(refs.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfReference& ref : refs)
         {
@@ -243,22 +240,18 @@ inline void CollectDependenciesFromLayer(
         }
 
         // collect payloads
-        const auto& payloadList = prim->GetPayloadList();
+        const auto payloadList = prim->GetPayloadList();
         SdfPayloadVector payloads;
         {
+            const auto prependedItems = payloadList.GetPrependedItems();
+            const auto appendedItems = payloadList.GetAppendedItems();
+            const auto addedItems = payloadList.GetAddedItems();
+            const auto explicitItems = payloadList.GetExplicitItems();
             // combine all authored list-op opinions
-            payloads.insert(payloads.end(),
-                payloadList.GetPrependedItems().begin(),
-                payloadList.GetPrependedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAppendedItems().begin(),
-                payloadList.GetAppendedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAddedItems().begin(),
-                payloadList.GetAddedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetExplicitItems().begin(),
-                payloadList.GetExplicitItems().end());
+            payloads.insert(payloads.end(), prependedItems.begin(), prependedItems.end());
+            payloads.insert(payloads.end(), appendedItems.begin(), appendedItems.end());
+            payloads.insert(payloads.end(), addedItems.begin(), addedItems.end());
+            payloads.insert(payloads.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfPayload& p : payloads)
         {
