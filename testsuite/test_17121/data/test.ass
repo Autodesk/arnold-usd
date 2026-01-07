@@ -1,0 +1,158 @@
+
+options
+{
+ drivers 3 1 NODE
+  "beauty_out"
+  "beauty_tiff_out"
+  "utils_out"
+ AA_samples 3
+ xres 320
+ yres 240
+}
+
+driver_tiff
+{
+ name beauty_out
+ color_space linear
+ filename "beauty.tif"
+ render_outputs 3 1 NODE
+    "beauty_aov"
+    "specular_aov"
+    "diffuse_aov"
+}
+
+driver_tiff
+{
+ name utils_out
+ color_space linear
+ filename "utils.tif"
+ render_outputs 2 1 NODE
+    "depth_aov"
+    "normal_aov"
+}
+
+driver_tiff
+{
+ name beauty_tiff_out
+ color_space linear
+ filename "testrender.tif"
+ render_outputs 2 1 NODE
+    "beauty_aov"
+    "specular_aov"
+}
+
+render_output
+{
+ name "beauty_aov"
+ aov_name "RGBA"
+ type "rgba"
+ filter my_filter
+ camera "/root/world/cam/camera"
+}
+
+render_output
+{
+ name "specular_aov"
+ aov_name "specular"
+ type "rgba"
+ filter my_filter
+ camera "/root/world/cam/camera"
+}
+
+render_output
+{
+ name "diffuse_aov"
+ aov_name "diffuse"
+ type "rgba"
+ filter my_filter
+ camera "/root/world/cam/camera"
+}
+
+render_output
+{
+ name "depth_aov"
+ aov_name "Z"
+ type "float"
+ filter my_closest_filter
+ camera "/root/world/cam/camera"
+}
+
+render_output
+{
+ name "normal_aov"
+ aov_name "N"
+ type "vector"
+ filter my_closest_filter
+ camera "/root/world/cam/camera"
+}
+
+gaussian_filter
+{
+ name my_filter
+}
+
+closest_filter
+{
+ name my_closest_filter
+}
+
+persp_camera
+{
+ name /root/world/cam/camera
+position 1.04445243 1.40402699 1.88784933
+look_at 0 0 0
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ fov 70
+}
+
+polymesh
+{
+ name /root/world/geo/primitive
+ shader "/root/world/geo/primitive:arnoldSurfaceShader"
+ nsides 288 1 b85UINT
+B!$v;Z0$$$$*!%<_l4$$$$`!$v;Z0$$$$*
+ vidxs 1104 1 b85UINT
+F$$$0*$$$</$$$H4$$$T9$$$`>$$$lC$$$xH$$%/M$$%;R$$%GW$$%S\$$%_a$$%kf$$%wk$$&.p$$&:u$$&G%$$&S*$$&_/$$&k4$$&w9$$'.>$$':C$$'F0$%c]]$PI94$Si-I$*ju6$*nNG$UT)s$Xss3$/ueu$0$?1$Z^o]$^)cr$5+V_$5//p$_i`G$c4T\$:6GI$:9uZ$dtQ1$h?EF$?A83$?DfD$j*Ap$mJ60$DL(r$DOW.$o52Z$rU&o$IVn\$IZGm$t?xD$Na_-$%cQo$Ne8W%$Ji.%'j]C$SlP0$Sp)A%)UYm%,uN-$Xw@o$Y%o+%.`JW%2+>l$^-1Y$^0_j%3k;A%76/V$c7wC$c;PT%8v,+%<@u@$hBh-$hFA>%>+qj%AKf*$mMXl$mQ2(%C6bT%FVVi$rXIV$r[wg%HAS>$wc:'$Ne,i$wfhQ%MLD(%Pl8=%'n+*%'qY;%RW4g%Uw)'%,xpi%-'J%%Wb%Q%[,nf%2.aS%22:d%\lk;%`7_P%79R=%7=+N%aw\%%eBP:%<DC'%<Gq8%g-Ld%jMA$%AO3f%ARaw%l8=N%oX1c%FZ$P%F]Ra%qC.8%Kdiv$wf\c%KhCK%vMsw&$mh7%Po[$%Ps45&&Xda&)xXv%V%Kc%V)$t&+cUK&/.I`%[0<M%[3j^&0nF5&49:J%`;-7%`>[H&6$6t&9D+4%eErv%eIL2&;/'^&>Nps%jPc`%jT<q&@9mH&CYa]%o[TJ%o_-[&ED^2%tfDp%Kh7]%tisE&JONq&MoC1&$q5s&$td/&OZ?[&S%3p&*'&]&**Tn&Te0E&X0$Z&/1lG&/5EX&Yov/&]:jD&4<]1&4@6B&_%fn&bE[.&9GMp&9K',&d0WX&gPKm&>R>Z&>Ulk&i;HB&l[<W&C]/D&C`]U&nF9,&Hgtj%tigW&HkN?&sQ)k&vps+&Mrem&Mv?)&x[oU''&cj&S(VW&S,/h'(f`?',1TT&X3GA&X6uR'-qQ)'1<E>&]>8+&]Af<'3'Ah'6G6(&bI(j&bLW&'822R';R&g&gSnT&gWGe'=<x<'@\lQ&l^_>&lb8O'BGi&&qiOd&HkBQ&qm)9'GRYe'JrN%&vt@g&vwnx'L]JO'P(>d''*1Q''-_b'Qh;9'U3/N',4w;',8PL'Vs+x'Z=u8'1?h%'1CA6'\(qb'_Hew'6JXd'6N1u'a3bL'dSVa';UIN';Xw_'f>S6'i^GK'@`:8'@chI'kICu'Ek*^&qlrK'EnY3'pT4_'st(t'Jupa'K$Ir'u_%I($)n^'P+aK'P/:\(%ik3()4_H'U6R5'U:+F(*t[r(.?P2'ZABt'ZDq0(0*L\(3J@q'_L3^'_Oao(55=F(8U1['dW$H'dZRY(:@.0(=_wE'iaj2'ieCC(?Jso'nlZX'EnME'np4-(DUdY(GuXn'swK['t&$l(I`UC(M+IX($-<E($0jV(NkF-(R6:B()8-/();[@(Sv6l(WA+,(.Brn(.FL*(Y,'V(\Kpk(3McX(3Q<i(^6m@(aVaU(8XTB(8\-S(cA^*(faR?(=cE,(=fs=(hLNi(Bn5R'np(?(Bqd'(mW?S(pw3h(H$&U(H'Tf(rb0=(v-$R(M.l?(M2EP(wlv')&7j<(R9])(R=6:)'wff)+B[&(WDMh(WH'$)--WP)0MKe(\O>R(\Rlc)28H:)5X<O(aZ/<(a]]M)7C9$):c-9(fdu&(fhN7)<N)c(koeL(BqX9(mW(%(o>?9(q%VM(rama(tI/u(v0G4(wl^H)$Su\)&;7p)'wO/))^fC)+F(W)--?k).iW*)0Pn>)280R)3tGf)5[_%)7Bv9)9*8M):fOa)<Mfu)>5)4(ks2q
+ uvidxs 1104 1 b85UINT
+F$%`G<$*jPg$.96@$1\dj$5+>?$8Nli$;rF>$?@th$BdN=$F3'g$IVV<$M%/f$PH^;$Sl7e$W:f:$Z^?d$^,n9$aPGc$dsv8$hBOb$kf)7$o4Wa$rX16$v&_`$'NB>$wc]Y%'g:s$,R+^$,Y'%%)UYW%,rOm$6gb/$6n9?%.`JD%2(df$A(CU$A.KY%3k;1%74$_$K>%&$KC]s%8v+s%<?9X$US[L$UXp8%>+q`%AJNQ$_i<r$_n-R%C6bM%FUcJ$j)sC$j.?l%HAS:%K`xC$t?Ti%$N6i%MLP+%RSCL%'n++%'qe@%T>L&%W^47%,xpj%-'V*%YI<e%\i$v%2.aT%22Fi%^T-O%asj`%79R>%7=7S%c^s9%g)[J%<DC(%<H(=%hicx%l4L4%AO3g%ARn'%mtTb%q?<s%FZ$Q%F]^f%s*EL%vJ-]%Kdj;%O7(x%x5B:&(<5[%RVr:%RZWO&*'>5&-G&F%Wac$%WeH9&/2.t&2Ql0%\lSc%\p8x&4<t^&7\\o%awDM%b&)b&9GeH&<gMY%g-57%g0oL&>RV2&Ar>C%l8%v%l;`6&C]Fq&G(/-%qBk`%qFPu&Hh7[&L2tl%vM\J&$tp2&Ms4I&S%'j&(?dI&(CI^&Te0D&X/mU&-JU3&-N:H&Yov.&]:^?&2UEr&2Y+2&_%fm&bEO)&7`6\&7cpq&d0WW&gP?h&<k'F&<na[&i;HA&l[0R&Aum0&B$RE&nF9+&qev<&G+]o&G/C/&sQ)j&vpg&&L6NY&O]bA&x\&X'(bo$&S(VX&S,;m'*MwS'-m_d&X3GB&X7,W'/Xh='2xPN&]>8,&]ArA'4cY''8.A8&bI(k&bLc+'9nIf'=91w&gSnU&gWSj'?$:P'BCwa&l^_?&lbDT'D/+:'GNhK&qiP)&qm5>'I9q$'LYY5&vt@h'%FTP'NDmg'SKa3'(fHg'(j.''U6ib'XVQs'-q9Q'-tsf'ZAZL']aB]'3'*;'3*dP'_LK6'bl3G'81p%'85U:'dW;u'gw$1'=<`d'=@F$'ib,_'m,ip'BGQN'BK6c'nlrI'r7ZZ'GRB8'GV'M'swc3'wBKD'L]2w'P/F_($-_v()4SB'SO:v'SRu6(*t[q(.?D-'XZ+`'X]eu(0*L[(3J4l']dqJ']hV_(55=E(8U%V'bob4'bsGI(:@./(=_k@'h%Rs'h)83(?Jsn(Bj\*'m0C]'m4(r(DUdX(GuLi'r;4G'r>n\(I`UB(M+=S'wF%1(%m8n(NkR0(SrEQ()8-0();gE(U]N+(Y(6<(.Bro(.FX/(Zh>j(^3'&(3McY(3QHn(_s/T(c=le(8XTC(8\9X(e(u>(hH]O(=cE-(=g*B(j3f((mSN9(Bn5l(Bqp,(o>Vg(r^>x(H$&V(H'`k(tIGQ(wi/b(M.l@(PV+()$TD?))[7`(Sut?(T$YT)+F@:).f(K(Y+e)(Y/J>)0Q1$)3pn5(^6Uh(^:;()5[vc)9&^t(cAFR(cE+g):fgM)>1O^(hL7<(hOqQ)?qX7)C<@H(mW(&(mZb;)E'Hv)HG12(rame(reS%)J29`)MQvq(wl^O)&>r7)O=6N)TD)o))^fN))bKc)V/2I)YNoZ).iW8).m<M)[9x3)^Y`D)3tGw)3x-7)`Dhr)cdQ.)9*8a)9-rv)eOY\)hoAm)>5)K)>8c`)jZJF)n%2W)C?o5)CCTJ)oe;0)s/xA)HJ_t)HNE4)tp+o)x:i+)MUP^)O=+')R`5D)TGX])V.or)Wk22)YRIG)[9`\)\uwq)^]:1)`DQF)b+h[)ch*p)eOB0)g6YE)hrpZ)jZ2o)lAJ/)n(aD)odxY)qL:n)s3R.)toiC)vW+X)x>Bm
+ vlist 266 1 b85VECTOR
+zaRT=dzzaQZ37a7b1/`qqJ?aQZ37a794ca**,YaQZ37a4H&ra/rx5aQZ37a/rx5a4H&raQZ37a**,Ya794caQZ37`qqJ?a7b1/aQZ37za794caQZ377f+nia4H&raQZ377s9Q.a/rx5aQZ378$-G_a**,YaQZ378(WKG`qqJ?aQZ378+HY8zaQZ378+qUY7f+niaQZ378+HY87s9Q.aQZ378(WKG8$-G_aQZ378$-G_8(WKGaQZ377s9Q.8+HY8aQZ377f+ni8+qUYaQZ37z8+HY8aQZ37`qqJ?8(WKGaQZ37a**,Y8$-G_aQZ37a/rx57s9Q.aQZ37a4H&r7f+niaQZ37a794czaNq4waDq99a**,YaNq4waCw.ba794caNq4waA90Ma<q.<aNq4wa<q.<aA90MaNq4wa794caCw.baNq4wa**,YaDq99aNq4wzaCw.baNq4w7s9Q.aA90MaNq4w8+HY8a<q.<aNq4w81+Rfa794caNq4w85HTwa**,YaNq4w881S7zaNq4w89+]c7s9Q.aNq4w881S78+HY8aNq4w85HTw81+RfaNq4w81+Rf85HTwaNq4w8+HY8881S7aNq4w7s9Q.89+]caNq4wz881S7aNq4wa**,Y85HTwaNq4wa794c81+RfaNq4wa<q.<8+HY8aNq4waA90M7s9Q.aNq4waCw.bzaJT2faJT2fa/rx5aJT2faIq7.a<q.;aJT2faGw46aDq99aJT2faDq99aGw46aJT2fa<q.;aIq7.aJT2fa/rx5aJT2faJT2fzaIq7.aJT2f8$-G_aGw46aJT2f81+ReaDq99aJT2f89+]ca<q.;aJT2f8<1X`a/rx5aJT2f8>+[XzaJT2f8>cW;8$-G_aJT2f8>+[X81+ReaJT2f8<1X`89+]caJT2f89+]c8<1X`aJT2f81+Re8>+[XaJT2f8$-G_8>cW;aJT2fz8>+[XaJT2fa/rx58<1X`aJT2fa<q.;89+]caJT2faDq9981+ReaJT2faGw468$-G_aJT2faIq7.zaDq98aNq4xa4H&raDq98aN,]OaA90MaDq98aKbf$aGw46aDq98aGw46aKbf$aDq98aA90MaN,]OaDq98a4H&raNq4xaDq98zaN,]OaDq988(WKGaKbf$aDq9885HTvaGw46aDq988<1X`aA90LaDq988?r5Na4H&raDq988B<-$zaDq988C+YM8(WKGaDq988B<-$85HTwaDq988?r5N8<1X`aDq988<1X`8?r5NaDq9885HTw8B<-$aDq988(WKG8C+YMaDq98z8B<-$aDq98a4H&r8?r5NaDq98aA90M8<1X`aDq98aGw4685HTwaDq98aKbf$8(WKGaDq98aN,]Oza7b10aQZ37a794ca7b10aPbcmaCw.aa7b10aN,]OaIq7.a7b10aIq7.aN,]Oa7b10aCw.aaPbcma7b10a794caQZ37a7b10zaPbcma7b108+HY8aN,]Oa7b10881S6aIq7.a7b108>+[XaCw.aa7b108B<-$a794ca7b108Dr3Bza7b108EiWa8+HY8a7b108Dr3B881S6a7b108B<-$8>+[Xa7b108>+[X8B<-$a7b10881S68Dr3Ba7b108+HY88EiWaa7b10z8Dr3Ba7b10a794c8B<-$a7b10aCw.a8>+[Xa7b10aIq7.881S6a7b10aN,]O8+HY8a7b10aPbcmzXoC,daRT=da7b1/XoC,daQZ37aDq99XoC,daNq4waJT2fXoC,daJT2faNq4wXoC,daDq99aQZ37XoC,da7b1/aRT=dXoC,dzaQZ37XoC,d8+qUYaNq4wXoC,d89+]caJT2fXoC,d8>cW;aDq99XoC,d8C+YLa7b1/XoC,d8EiWazXoC,dy8+qUYXoC,d8EiWa89+]cXoC,d8C+YL8>cW;XoC,d8>cW;8C+YLXoC,d89+]c8EiWaXoC,d8+qUYyXoC,dz8EiWaXoC,da7b1/8C+YLXoC,daDq998>cW;XoC,daJT2f89+]cXoC,daNq4w8+qUYXoC,daQZ37z8+qUWaQZ37a794c8+qUWaPbcnaCw.a8+qUWaN,]OaIq7.8+qUWaIq7.aN,]O8+qUWaCw.aaPbcn8+qUWa794caQZ378+qUWzaPbcn8+qUW8+HY8aN,]O8+qUW881S6aIq7.8+qUW8>+[XaCw.a8+qUW8B<-$a794c8+qUW8Dr3Cz8+qUW8EiWa8+HY88+qUW8Dr3C881S68+qUW8B<-$8>+[X8+qUW8>+[X8B<-$8+qUW881S68Dr3C8+qUW8+HY88EiWa8+qUWz8Dr3C8+qUWa794c8B<-$8+qUWaCw.a8>+[X8+qUWaIq7.881S68+qUWaN,]O8+HY88+qUWaPbcnz89+]daNq4wa4H&q89+]daN,]NaA90L89+]daKbf$aGw4589+]daGw45aKbf$89+]daA90LaN,]N89+]da4H&qaNq4w89+]dzaN,]N89+]d8(WKFaKbf$89+]d85HTvaGw4589+]d8<1X_aA90L89+]d8?r5Na4H&q89+]d8B<,xz89+]d8C+YL8(WKF89+]d8B<,x85HTv89+]d8?r5N8<1X_89+]d8<1X_8?r5N89+]d85HTv8B<,x89+]d8(WKF8C+YL89+]dz8B<,x89+]da4H&q8?r5N89+]daA90L8<1X_89+]daGw4585HTv89+]daKbf$8(WKF89+]daN,]Nz8>cW;aJT2fa/rx58>cW;aIq7.a<q.;8>cW;aGw46aDq998>cW;aDq99aGw468>cW;a<q.;aIq7.8>cW;a/rx5aJT2f8>cW;zaIq7.8>cW;8$-G_aGw468>cW;81+ReaDq998>cW;89+]ca<q.;8>cW;8<1X`a/rx58>cW;8>+[Xz8>cW;8>cW;8$-G_8>cW;8>+[X81+Re8>cW;8<1X`89+]c8>cW;89+]c8<1X`8>cW;81+Re8>+[X8>cW;8$-G_8>cW;8>cW;z8>+[X8>cW;a/rx58<1X`8>cW;a<q.;89+]c8>cW;aDq9981+Re8>cW;aGw468$-G_8>cW;aIq7.z8C+YLaDq9:a**,Z8C+YLaCw.ca794d8C+YLaA90Na<q.<8C+YLa<q.<aA90N8C+YLa794daCw.c8C+YLa**,ZaDq9:8C+YLzaCw.c8C+YL7s9Q/aA90N8C+YL8+HY9a<q.<8C+YL81+Rfa794d8C+YL85HTxa**,Z8C+YL881S8z8C+YL89+]d7s9Q/8C+YL881S88+HY98C+YL85HTx81+Rf8C+YL81+Rf85HTx8C+YL8+HY9881S88C+YL7s9Q/89+]d8C+YLz881S88C+YLa**,Z85HTx8C+YLa794d81+Rf8C+YLa<q.<8+HY98C+YLaA90N7s9Q/8C+YLaCw.cz8EiWaa7b1-`qqJ=8EiWaa794_a**,W8EiWaa4H&na/rx28EiWaa/rx2a4H&n8EiWaa**,Wa794_8EiWa`qqJ=a7b1-8EiWaza794_8EiWa7f+nga4H&n8EiWa7s9Q,a/rx28EiWa8$-G\a**,W8EiWa8(WKC`qqJ=8EiWa8+HY4z8EiWa8+qUW7f+ng8EiWa8+HY47s9Q,8EiWa8(WKC8$-G\8EiWa8$-G\8(WKC8EiWa7s9Q,8+HY48EiWa7f+ng8+qUW8EiWaz8+HY48EiWa`qqJ=8(WKC8EiWaa**,W8$-G\8EiWaa/rx27s9Q,8EiWaa4H&n7f+ng8EiWaa794_zy/q5Ud
+ uvlist 323 1 b85VECTOR2
+7\$M47i\Qc7NAHfzz!7i\Qc$$$$'7e-P7z7reTb7i\Qc7n6S:z7w?V97i\Qc7u(*xz8&nWa7i\Qc8$W,Mz8+HY87i\Qc8)1-wz8-`/M7i\Qc8,TDBz8/wZc7i\Qc8.koXz82:0x7i\Qc81.Enz84Q\87i\Qc83Eq-z86i2N7i\Qc85]GCz89+]c7i\Qc87trYz8:7Hn7i\Qc89\(iz8;C3x7i\Qc8:ghsz8<Nt.7i\Qc8;sT(z8=Z_97i\Qc8=*?4z8>fJC7i\Qc8>6*>z8?r5N7i\Qc8?AjHz8A(uY7i\Qc8@MUTz8B4`c7i\Qc8AY@^z8C@Kn7i\Qc8Be+hz8DL7$7i\Qc8Cpktz8EWw.7i\Qc8E'W)zy7i\Qc8F3B3z7\$M47w?V9z7w?V97i\Qc7w?V97reTb!7w?V9$$$$'8&nWa7w?V98+HY87w?V98-`/M7w?V98/wZc7w?V982:0x7w?V984Q\87w?V986i2N7w?V989+]c7w?V98:7Hn7w?V98;C3x7w?V98<Nt.7w?V98=Z_97w?V98>fJC7w?V98?r5N7w?V98A(uY7w?V98B4`c7w?V98C@Kn7w?V98DL7$7w?V98EWw.7w?V9y7w?V97\$M48+HY8z8+HY87i\Qc8+HY87reTb8+HY87w?V98+HY88&nWa!8+HY8$$$$'8-`/M8+HY88/wZc8+HY882:0x8+HY884Q\88+HY886i2N8+HY889+]c8+HY88:7Hn8+HY88;C3x8+HY88<Nt.8+HY88=Z_98+HY88>fJC8+HY88?r5N8+HY88A(uY8+HY88B4`c8+HY88C@Kn8+HY88DL7$8+HY88EWw.8+HY8y8+HY87\$M48/wZcz8/wZc7i\Qc8/wZc7reTb8/wZc7w?V98/wZc8&nWa8/wZc8+HY88/wZc8-`/M!8/wZc$$$$'82:0x8/wZc84Q\88/wZc86i2N8/wZc89+]c8/wZc8:7Hn8/wZc8;C3x8/wZc8<Nt.8/wZc8=Z_98/wZc8>fJC8/wZc8?r5N8/wZc8A(uY8/wZc8B4`c8/wZc8C@Kn8/wZc8DL7$8/wZc8EWw.8/wZcy8/wZc7\$M484Q\8z84Q\87i\Qc84Q\87reTb84Q\87w?V984Q\88&nWa84Q\88+HY884Q\88-`/M84Q\88/wZc84Q\882:0x!84Q\8$$$$'86i2N84Q\889+]c84Q\88:7Hn84Q\88;C3x84Q\88<Nt.84Q\88=Z_984Q\88>fJC84Q\88?r5N84Q\88A(uY84Q\88B4`c84Q\88C@Kn84Q\88DL7$84Q\88EWw.84Q\8y84Q\87\$M489+]cz89+]c7i\Qc89+]c7reTb89+]c7w?V989+]c8&nWa89+]c8+HY889+]c8-`/M89+]c8/wZc89+]c82:0x89+]c84Q\889+]c86i2N!89+]c$$$$'8:7Hn89+]c8;C3x89+]c8<Nt.89+]c8=Z_989+]c8>fJC89+]c8?r5N89+]c8A(uY89+]c8B4`c89+]c8C@Kn89+]c8DL7$89+]c8EWw.89+]cy89+]c7\$M48;C3xz8;C3x7i\Qc8;C3x7reTb8;C3x7w?V98;C3x8&nWa8;C3x8+HY88;C3x8-`/M8;C3x8/wZc8;C3x82:0x8;C3x84Q\88;C3x86i2N8;C3x89+]c8;C3x8:7Hn!8;C3x$$$$'8<Nt.8;C3x8=Z_98;C3x8>fJC8;C3x8?r5N8;C3x8A(uY8;C3x8B4`c8;C3x8C@Kn8;C3x8DL7$8;C3x8EWw.8;C3xy8;C3x7\$M48=Z_9z8=Z_97i\Qc8=Z_97reTb8=Z_97w?V98=Z_98&nWa8=Z_98+HY88=Z_98-`/M8=Z_98/wZc8=Z_982:0x8=Z_984Q\88=Z_986i2N8=Z_989+]c8=Z_98:7Hn8=Z_98;C3x8=Z_98<Nt.!8=Z_9$$$$'8>fJC8=Z_98?r5N8=Z_98A(uY8=Z_98B4`c8=Z_98C@Kn8=Z_98DL7$8=Z_98EWw.8=Z_9y8=Z_97\$M48?r5Nz8?r5N7i\Qc8?r5N7reTb8?r5N7w?V98?r5N8&nWa8?r5N8+HY88?r5N8-`/M8?r5N8/wZc8?r5N82:0x8?r5N84Q\88?r5N86i2N8?r5N89+]c8?r5N8:7Hn8?r5N8;C3x8?r5N8<Nt.8?r5N8=Z_98?r5N8>fJC!8?r5N$$$$'8A(uY8?r5N8B4`c8?r5N8C@Kn8?r5N8DL7$8?r5N8EWw.8?r5Ny8?r5N7\$M48B4`cz8B4`c7i\Qc8B4`c7reTb8B4`c7w?V98B4`c8&nWa8B4`c8+HY88B4`c8-`/M8B4`c8/wZc8B4`c82:0x8B4`c84Q\88B4`c86i2N8B4`c89+]c8B4`c8:7Hn8B4`c8;C3x8B4`c8<Nt.8B4`c8=Z_98B4`c8>fJC8B4`c8?r5N8B4`c8A(uY8B4`c8B4`c8B4`c8C@Kn8B4`c8DL7$8B4`c8EWw.8B4`cy8B4`c7\$M48DL7$z8DL7$7i\Qc8DL7$7reTb8DL7$7w?V98DL7$8&nWa8DL7$8+HY88DL7$8-`/M8DL7$8/wZc8DL7$82:0x8DL7$84Q\88DL7$86i2N8DL7$89+]c8DL7$8:7Hn8DL7$8;C3x8DL7$8<Nt.8DL7$8=Z_98DL7$8>fJC8DL7$8?r5N8DL7$8A(uY8DL7$8B4`c8DL7$8C@Kn!8DL7$$$$$'8EWw.8DL7$y8DL7$7NAHfy7e-P7y7n6S:y7u(*xy8$W,My8)1-wy8,TDBy8.koXy81.Eny83Eq-y85]GCy87trYy89\(iy8:ghsy8;sT(y8=*?4y8>6*>y8?AjHy8@MUTy8AY@^y8Be+hy8Cpkty8E'W)y8F3B3y
+ subdiv_type "catclark"
+ subdiv_iterations 1
+ smoothing off
+}
+
+skydome_light
+{
+ name /root/world/lgt/gaffer/physSkydomeLight:arnoldLightShader
+ color /root/world/lgt/gaffer/physSkydomeLight:arnoldSurfaceShader 
+ camera 0
+ samples 2
+}
+
+physical_sky
+{
+ name /root/world/lgt/gaffer/physSkydomeLight:arnoldSurfaceShader
+}
+
+checkerboard
+{
+ name checker2
+ color1 0 0 0
+ color2 0.561068714 0.561068714 0.561068714
+ u_frequency 10
+ v_frequency 10
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+standard_surface
+{
+ name /root/world/geo/primitive:arnoldSurfaceShader
+}

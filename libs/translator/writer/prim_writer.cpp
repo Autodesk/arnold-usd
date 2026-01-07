@@ -1160,18 +1160,14 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     }
     
     AtArray* array = AiNodeGetArray(node, AtString("matrix"));
-    if (array == nullptr)
-        return;
-
-    unsigned int numKeys = AiArrayGetNumKeys(array);
-
-    const AtMatrix* matrices = (const AtMatrix*)AiArrayMapConst(array);
-    if (matrices == nullptr)
+    unsigned int numKeys = array ? AiArrayGetNumKeys(array) : 1;
+    const AtMatrix* matrices = array ? (const AtMatrix*)AiArrayMapConst(array) : nullptr;
+    if (matrices == nullptr && !applyInvParentMtx)
         return;
 
     bool hasMatrix = applyInvParentMtx;
 
-    if (!hasMatrix) {
+    if (matrices && !hasMatrix) {
         for (unsigned int i = 0; i < numKeys; ++i) {
             if (!AiM4IsIdentity(matrices[i])) {
                 hasMatrix = true;
@@ -1208,7 +1204,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
-        AtMatrix mtx = matrices[k];
+        AtMatrix mtx = matrices ? matrices[k] : AiM4Identity();
         if (applyInvParentMtx)
             mtx = AiM4Mult(mtx, invParentMtx);
         for (int i = 0; i < 4; ++i) {
@@ -1243,9 +1239,17 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
 
     std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
     std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
+    std::string materialName;    
+    UsdShadeMaterial mat;
 
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
-    std::string materialName;
+    // Find if there is an existing material binding to this direct primitive
+    // i.e. without taking into account parent primitives #2501
+    UsdRelationship matRel = UsdShadeMaterialBindingAPI(prim).GetDirectBindingRel();
+    SdfPathVector matTargets;
+    matRel.GetTargets(&matTargets);
+    if (!matTargets.empty()) {
+        mat = UsdShadeMaterial(writer.GetUsdStage()->GetPrimAtPath(matTargets[0]));
+    }
     if (mat) {
         materialName = mat.GetPath().GetString();
     } else {
