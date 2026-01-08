@@ -19,6 +19,7 @@ set_target_properties(${BUNDLE_NAME} PROPERTIES PREFIX "")
 target_sources(${BUNDLE_NAME} PRIVATE 
 	${CMAKE_CURRENT_LIST_DIR}/../render_delegate/renderer_plugin.cpp
 	${CMAKE_CURRENT_LIST_DIR}/../procedural/main.cpp
+	${CMAKE_CURRENT_LIST_DIR}/../procedural/asset_utils.cpp
 )
 target_compile_definitions(${BUNDLE_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
 if (${BUILD_PROC_SCENE_FORMAT})

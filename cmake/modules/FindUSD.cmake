@@ -95,7 +95,7 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
     # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
     # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
     # For maya usd, we need maya and mayausd as they are provided separately
-    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}) # TODO change since now the version is added to USD -> USD_2411
+    set(PXR_USD_LOCATION ${USD_LOCATION}) # TODO change since now the version is added to USD -> USD_2411
     find_package(pxr PATHS ${PXR_USD_LOCATION} ${MAYAUSD_LOCATION})
     if (pxr_FOUND)
         set(USD_LOCATION ${PXR_USD_LOCATION})
