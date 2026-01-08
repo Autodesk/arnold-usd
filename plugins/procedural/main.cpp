@@ -209,7 +209,7 @@ procedural_init
     } 
     // We load a usd file, with eventual serialized overrides
     const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
-    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Asset));
     applyProceduralSearchPath(filename, nullptr);
     data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
     
@@ -306,7 +306,7 @@ procedural_viewport
     int cache_id = AiNodeGetInt(node, AtString("cache_id"));
 
     const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
-    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Asset));
     AtArray *overrides = AiNodeGetArray(node, AtString("overrides"));
 
     // We support empty filenames if overrides are being set #552
