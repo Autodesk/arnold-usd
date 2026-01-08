@@ -409,6 +409,7 @@ extern "C"
         // Create an Arnold-USD writer, that can write an Arnold univers to a UsdStage
         UsdArnoldWriter writer;
         writer.SetUsdStage(stage); 
+        writer.SetAppendFile(true);
 
         if (params) {
             // eventually check the input param map in case we have an entry for "frame"
@@ -551,6 +552,7 @@ scene_write
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter *writer = new UsdArnoldWriter();
+    writer->SetAppendFile(appendFile);
     writer->SetUsdStage(stage); // give it the output stage
 
     // Check if a mask has been set through the params map

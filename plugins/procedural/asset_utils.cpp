@@ -7,8 +7,8 @@
 // Asset API was added in Arnold 7.4.5.0
 #if ARNOLD_VERSION_NUM >= 70405
 
-#include <filesystem>
 #include <pxr/pxr.h>
+#include <pxr/base/tf/pathUtils.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/sdf/attributeSpec.h>
 #include <pxr/usd/sdf/layer.h>
@@ -20,6 +20,9 @@
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdUtils/dependencies.h>
+#include <algorithm>
+#include <sstream>
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -28,10 +31,38 @@ PXR_NAMESPACE_OPEN_SCOPE
  */
 inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::string& absPath)
 {
-    std::filesystem::path rootLayerPath = stage->GetRootLayer()->GetRealPath();
-    std::filesystem::path rootDir = rootLayerPath.parent_path();
-    std::filesystem::path relative = std::filesystem::relative(std::filesystem::path(absPath), rootDir);
-    return relative.generic_string(); // always forward-slashes
+    std::string rootLayerPath = stage->GetRootLayer()->GetRealPath();
+    std::string rootDir = TfGetPathName(rootLayerPath);
+
+    std::string relative;
+    // This is a basic implementation replacing std::filesystem::relative().
+    // We assume that the paths are normalized absolute paths (no '.' or '..')
+    // and just cut the root folder.
+    {
+        // normalize the paths
+        std::string absPathNorm = TfNormPath(absPath);
+        std::string rootDirNorm = TfNormPath(rootDir);
+#ifdef WIN32
+        // Windows is not case-sensitive, therefore we convert paths to lower case
+        // before comparing them as strings
+        std::transform(absPathNorm.begin(), absPathNorm.end(), absPathNorm.begin(), ::tolower);
+        std::transform(rootDirNorm.begin(), rootDirNorm.end(), rootDirNorm.begin(), ::tolower);
+#endif
+        // add trailing '/' to root dir
+        if (rootDirNorm.back() != '/')
+            rootDirNorm += "/";
+
+        // check if our path is under the root folder
+        if (absPathNorm.find(rootDirNorm) == 0)
+        {
+            // make the path relative to the root folder
+            relative = absPath.substr(rootDir.length());
+            // always use forward-slashes in the returned relative path
+            std::replace(relative.begin(), relative.end(), '\\', '/');
+        }
+    }
+
+    return relative;
 }
 
 /**
@@ -54,7 +85,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string resolvedPath = resolver.Resolve(anchoredPath);
     // convert a relative reference relative to the main scene
     std::string finalRefPath = ref;
-    if (!resolvedPath.empty() && std::filesystem::path(ref).is_relative())
+    if (!resolvedPath.empty() && TfIsRelativePath(ref))
     {
         std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
         // convert only if the file is located under the root folder
@@ -187,22 +218,19 @@ inline void CollectDependenciesFromLayer(
         }
         
         // collect references
-        const auto& refList = prim->GetReferenceList();
+        const auto refList = prim->GetReferenceList();
         SdfReferenceVector refs;
         {
+            const auto prependedItems = refList.GetPrependedItems();
+            const auto appendedItems = refList.GetAppendedItems();
+            const auto addedItems = refList.GetAddedItems();
+            const auto explicitItems = refList.GetExplicitItems();
+
             // combine all authored list-op opinions
-            refs.insert(refs.end(),
-                refList.GetPrependedItems().begin(),
-                refList.GetPrependedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAppendedItems().begin(),
-                refList.GetAppendedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAddedItems().begin(),
-                refList.GetAddedItems().end());
-            refs.insert(refs.end(),
-                refList.GetExplicitItems().begin(),
-                refList.GetExplicitItems().end());
+            refs.insert(refs.end(), prependedItems.begin(), prependedItems.end());
+            refs.insert(refs.end(), appendedItems.begin(), appendedItems.end());
+            refs.insert(refs.end(), addedItems.begin(), addedItems.end());
+            refs.insert(refs.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfReference& ref : refs)
         {
@@ -212,22 +240,18 @@ inline void CollectDependenciesFromLayer(
         }
 
         // collect payloads
-        const auto& payloadList = prim->GetPayloadList();
+        const auto payloadList = prim->GetPayloadList();
         SdfPayloadVector payloads;
         {
+            const auto prependedItems = payloadList.GetPrependedItems();
+            const auto appendedItems = payloadList.GetAppendedItems();
+            const auto addedItems = payloadList.GetAddedItems();
+            const auto explicitItems = payloadList.GetExplicitItems();
             // combine all authored list-op opinions
-            payloads.insert(payloads.end(),
-                payloadList.GetPrependedItems().begin(),
-                payloadList.GetPrependedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAppendedItems().begin(),
-                payloadList.GetAppendedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAddedItems().begin(),
-                payloadList.GetAddedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetExplicitItems().begin(),
-                payloadList.GetExplicitItems().end());
+            payloads.insert(payloads.end(), prependedItems.begin(), prependedItems.end());
+            payloads.insert(payloads.end(), appendedItems.begin(), appendedItems.end());
+            payloads.insert(payloads.end(), addedItems.begin(), addedItems.end());
+            payloads.insert(payloads.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfPayload& p : payloads)
         {
@@ -262,122 +286,6 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 
     return dependencies;
 }
-
-/**
- * Helper function to append value to a search path string.
- */
-inline void AppendArnoldSearchPath(AtNode* options, const AtString& param, const std::string value)
-{
-    if (value.empty())
-        return;
-
-    AtString currentSearchPath = AiNodeGetStr(options, param);
-    std::string newSearchPath;
-    if (!currentSearchPath.empty())
-        newSearchPath = std::string(currentSearchPath.c_str()) + ";" + value;
-    else
-        newSearchPath = value;
-
-    AiNodeSetStr(options, param, AtString(newSearchPath.c_str()));
-}
-
-/**
- * Translates Arnold search paths defined in a USD scene
- * to an Arnold scene.
- */
-inline void TranslateSearchPaths(UsdStageRefPtr stage, AtUniverse* universe)
-{
-    if (universe == nullptr)
-        return;
-
-    AtNode* options = AiUniverseGetOptions(universe);
-    if (options == nullptr)
-        return;
-
-    AtString asset_searchpath_str("asset_searchpath");
-    AtString texture_searchpath_str("texture_searchpath");
-    AtString procedural_searchpath_str("procedural_searchpath");
-
-    for (const UsdPrim& prim : stage->Traverse())
-    {
-        if (prim.IsA<UsdRenderSettings>())
-        {
-            // asset search path
-            UsdAttribute assetSearchPathAttr = prim.GetAttribute(TfToken("arnold:asset_searchpath"));
-            std::string assetSearchPath;
-            if (assetSearchPathAttr && assetSearchPathAttr.Get(&assetSearchPath))
-                AppendArnoldSearchPath(options, asset_searchpath_str, assetSearchPath);
-            // texture search path
-            UsdAttribute textureSearchPathAttr = prim.GetAttribute(TfToken("arnold:texture_searchpath"));
-            std::string textureSearchPath;
-            if (textureSearchPathAttr && textureSearchPathAttr.Get(&textureSearchPath))
-                AppendArnoldSearchPath(options, texture_searchpath_str, textureSearchPath);
-            // procedural search path
-            UsdAttribute proceduralSearchPathAttr = prim.GetAttribute(TfToken("arnold:procedural_searchpath"));
-            std::string proceduralSearchPath;
-            if (proceduralSearchPathAttr && proceduralSearchPathAttr.Get(&proceduralSearchPath))
-                AppendArnoldSearchPath(options, procedural_searchpath_str, proceduralSearchPath);
-        }
-    }
-}
-
-/**
- * A helper to resolve paths defined in a USD scene with Arnold.
- *
- * The USD scene can define paths for Arnold nodes, like textures
- * in image nodes. These are not resolved by USD, but translated directly 
- * to the Arnold scene and resolved by Arnold when rendering the scene.
- */
-class ArnoldPathResolver
-{
-public:
-    ArnoldPathResolver() = default;
-
-    void Initialize(UsdStageRefPtr stage)
-    {
-        if (!stage)
-            return;
-
-        if (!AiArnoldIsActive())
-        {
-            AiBegin();
-            m_ownArnoldSession = true;
-        }
-
-        m_universe = AiUniverse();
-        if (m_universe == nullptr)
-        {
-            AiMsgError("[usd] Failed to create Arnold universe");
-            return;
-        }
-    
-        // find search paths in the USD scene
-        TranslateSearchPaths(stage, m_universe);
-    }
-
-    ~ArnoldPathResolver()
-    {
-        if (m_universe)
-            AiUniverseDestroy(m_universe);
-        if (m_ownArnoldSession)
-            AiEnd();
-    }
-
-    std::string resolve(const std::string& path, AtFileType fileType)
-    {
-        if (path.empty())
-            return std::string();
-
-        const AtString& resolvedPathStr = AiResolveFilePath(path.c_str(), fileType);
-        if (!resolvedPathStr.empty())
-            return resolvedPathStr.c_str();
-        return std::string();
-    }
-
-private:
-    bool m_ownArnoldSession = false;
-    AtUniverse* m_universe = nullptr;
-};
 
 /**
  * Helper function to convert an std::string to AtString.
@@ -473,29 +381,8 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
         return false;
     }
 
-    // create an Arnold path resolver
-    // The USD scene can define paths for Arnold nodes, like textures
-    // in image nodes. These are not resolved by USD, but translated directly 
-    // to the Arnold scene and resolved by Arnold when rendering the scene.
-    // We need to resolve these paths via the Arnold API.
-    ArnoldPathResolver arnoldPathResolver;
-    if (!isProcedural)
-        arnoldPathResolver.Initialize(stage);
-
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
-
-    // manage unresolved dependencies
-    // these are potentally paths that can be resolved wih Arnold
-    for (USDDependency& dep : dependencies)
-    {
-        if (dep.authoredPath.empty())
-            continue;
-
-        // resolve the path with Arnold
-        if (dep.resolvedPath.empty())
-            dep.resolvedPath = arnoldPathResolver.resolve(dep.authoredPath, GetArnoldFileTypeFromDependency(dep));
-    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)
@@ -517,6 +404,7 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         std::string resolvedPath = dep.resolvedPath;
         // if could not resolve the path, then use the scene reference
+        // potentially these are paths that can be resolved by Arnold, like UDIM textures
         if (resolvedPath.empty())
             resolvedPath = dep.authoredPath;
 
