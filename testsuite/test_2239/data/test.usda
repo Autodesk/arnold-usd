@@ -29,7 +29,7 @@ def Xform "adsktest" (
         rel material:binding = </mtl/material>
 
         def OpenVDBAsset "density" (
-            kind = "component"
+            apiSchemas = ["MaterialBindingAPI"]
         )
         {
             int fieldIndex = 0
