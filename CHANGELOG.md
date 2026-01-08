@@ -1,7 +1,14 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.4.1] (Unreleased)
+## [7.4.4.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2509](https://github.com/Autodesk/arnold-usd/issues/2509) - Fix crash in Solaris when changing the rendered LOP interactively
+
+
+## [7.4.4.1] 2025-12-18
 
 ### Bug Fixes
 
