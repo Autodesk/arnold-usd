@@ -288,122 +288,6 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 }
 
 /**
- * Helper function to append value to a search path string.
- */
-inline void AppendArnoldSearchPath(AtNode* options, const AtString& param, const std::string value)
-{
-    if (value.empty())
-        return;
-
-    AtString currentSearchPath = AiNodeGetStr(options, param);
-    std::string newSearchPath;
-    if (!currentSearchPath.empty())
-        newSearchPath = std::string(currentSearchPath.c_str()) + ";" + value;
-    else
-        newSearchPath = value;
-
-    AiNodeSetStr(options, param, AtString(newSearchPath.c_str()));
-}
-
-/**
- * Translates Arnold search paths defined in a USD scene
- * to an Arnold scene.
- */
-inline void TranslateSearchPaths(UsdStageRefPtr stage, AtUniverse* universe)
-{
-    if (universe == nullptr)
-        return;
-
-    AtNode* options = AiUniverseGetOptions(universe);
-    if (options == nullptr)
-        return;
-
-    AtString asset_searchpath_str("asset_searchpath");
-    AtString texture_searchpath_str("texture_searchpath");
-    AtString procedural_searchpath_str("procedural_searchpath");
-
-    for (const UsdPrim& prim : stage->Traverse())
-    {
-        if (prim.IsA<UsdRenderSettings>())
-        {
-            // asset search path
-            UsdAttribute assetSearchPathAttr = prim.GetAttribute(TfToken("arnold:asset_searchpath"));
-            std::string assetSearchPath;
-            if (assetSearchPathAttr && assetSearchPathAttr.Get(&assetSearchPath))
-                AppendArnoldSearchPath(options, asset_searchpath_str, assetSearchPath);
-            // texture search path
-            UsdAttribute textureSearchPathAttr = prim.GetAttribute(TfToken("arnold:texture_searchpath"));
-            std::string textureSearchPath;
-            if (textureSearchPathAttr && textureSearchPathAttr.Get(&textureSearchPath))
-                AppendArnoldSearchPath(options, texture_searchpath_str, textureSearchPath);
-            // procedural search path
-            UsdAttribute proceduralSearchPathAttr = prim.GetAttribute(TfToken("arnold:procedural_searchpath"));
-            std::string proceduralSearchPath;
-            if (proceduralSearchPathAttr && proceduralSearchPathAttr.Get(&proceduralSearchPath))
-                AppendArnoldSearchPath(options, procedural_searchpath_str, proceduralSearchPath);
-        }
-    }
-}
-
-/**
- * A helper to resolve paths defined in a USD scene with Arnold.
- *
- * The USD scene can define paths for Arnold nodes, like textures
- * in image nodes. These are not resolved by USD, but translated directly 
- * to the Arnold scene and resolved by Arnold when rendering the scene.
- */
-class ArnoldPathResolver
-{
-public:
-    ArnoldPathResolver() = default;
-
-    void Initialize(UsdStageRefPtr stage)
-    {
-        if (!stage)
-            return;
-
-        if (!AiArnoldIsActive())
-        {
-            AiBegin();
-            m_ownArnoldSession = true;
-        }
-
-        m_universe = AiUniverse();
-        if (m_universe == nullptr)
-        {
-            AiMsgError("[usd] Failed to create Arnold universe");
-            return;
-        }
-    
-        // find search paths in the USD scene
-        TranslateSearchPaths(stage, m_universe);
-    }
-
-    ~ArnoldPathResolver()
-    {
-        if (m_universe)
-            AiUniverseDestroy(m_universe);
-        if (m_ownArnoldSession)
-            AiEnd();
-    }
-
-    std::string resolve(const std::string& path, AtFileType fileType)
-    {
-        if (path.empty())
-            return std::string();
-
-        const AtString& resolvedPathStr = AiResolveFilePath(path.c_str(), fileType);
-        if (!resolvedPathStr.empty())
-            return resolvedPathStr.c_str();
-        return std::string();
-    }
-
-private:
-    bool m_ownArnoldSession = false;
-    AtUniverse* m_universe = nullptr;
-};
-
-/**
  * Helper function to convert an std::string to AtString.
  */
 inline AtString StdToAtString(const std::string& str)
@@ -497,29 +381,8 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
         return false;
     }
 
-    // create an Arnold path resolver
-    // The USD scene can define paths for Arnold nodes, like textures
-    // in image nodes. These are not resolved by USD, but translated directly 
-    // to the Arnold scene and resolved by Arnold when rendering the scene.
-    // We need to resolve these paths via the Arnold API.
-    ArnoldPathResolver arnoldPathResolver;
-    if (!isProcedural)
-        arnoldPathResolver.Initialize(stage);
-
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
-
-    // manage unresolved dependencies
-    // these are potentally paths that can be resolved wih Arnold
-    for (USDDependency& dep : dependencies)
-    {
-        if (dep.authoredPath.empty())
-            continue;
-
-        // resolve the path with Arnold
-        if (dep.resolvedPath.empty())
-            dep.resolvedPath = arnoldPathResolver.resolve(dep.authoredPath, GetArnoldFileTypeFromDependency(dep));
-    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)
@@ -541,6 +404,7 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         std::string resolvedPath = dep.resolvedPath;
         // if could not resolve the path, then use the scene reference
+        // potentially these are paths that can be resolved by Arnold, like UDIM textures
         if (resolvedPath.empty())
             resolvedPath = dep.authoredPath;
 
