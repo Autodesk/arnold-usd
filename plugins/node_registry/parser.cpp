@@ -78,6 +78,8 @@ namespace {
 // from a token, and it doesn't support all the parameter types arnold does,
 // like the 4 component color. Besides this, we also guarantee that the default
 // value will match the SdfType, as the SdfType comes from the default value.
+// But since 25.08, GetTypeAsSdfType is not virtual anymore we can't override it and this class becomes redundant
+#if PXR_VERSION < 2508
 class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
@@ -87,8 +89,6 @@ public:
           _typeName(typeName)
     {
     }
-
-#if PXR_VERSION < 2508
 
 #if PXR_VERSION >= 2505
     SdrSdfTypeIndicator
@@ -112,16 +112,50 @@ public:
 #if PXR_VERSION >= 2111
     const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
 #endif
-#endif // PXR_VERSION < 2508
 private:
     SdfValueTypeName _typeName;
 };
+#endif // PXR_VERSION < 2508
+
 } // namespace
 
 NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
 NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 
+#if PXR_VERSION >= 2508
+typedef std::unordered_map<SdfValueTypeName, TfToken, SdfValueTypeNameHash> SdfTypeToTokenMap;
+TfToken _GetSdrTypeFromSdfValueTypeName(const SdfValueTypeName& typeName)
+{
+    static const SdfTypeToTokenMap sdfTypeToSdrType = {
+        {SdfValueTypeNames->Int, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->String, SdrPropertyTypes->String},
+        {SdfValueTypeNames->Float, SdrPropertyTypes->Float},
+        {SdfValueTypeNames->Color3f, SdrPropertyTypes->Color},
+        {SdfValueTypeNames->Color4f, SdrPropertyTypes->Color4},
+        {SdfValueTypeNames->Point3f, SdrPropertyTypes->Point},
+        {SdfValueTypeNames->Normal3f, SdrPropertyTypes->Normal},
+        {SdfValueTypeNames->Vector3f, SdrPropertyTypes->Vector},
+        {SdfValueTypeNames->Matrix4d, SdrPropertyTypes->Matrix},
+        {SdfValueTypeNames->IntArray, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->StringArray, SdrPropertyTypes->String},
+        {SdfValueTypeNames->FloatArray, SdrPropertyTypes->Float},
+        {SdfValueTypeNames->Color3fArray, SdrPropertyTypes->Color},
+        {SdfValueTypeNames->Color4fArray, SdrPropertyTypes->Color4},
+        {SdfValueTypeNames->Point3fArray, SdrPropertyTypes->Point},
+        {SdfValueTypeNames->Normal3fArray, SdrPropertyTypes->Normal},
+        {SdfValueTypeNames->Vector3fArray, SdrPropertyTypes->Vector},
+        {SdfValueTypeNames->Matrix4dArray, SdrPropertyTypes->Matrix}
+    };
+
+    const auto it = sdfTypeToSdrType.find(typeName);
+    if (it != sdfTypeToSdrType.end()) {
+        return it->second;
+    }
+    // If we didn't find the type, we return the typeName token, as before
+    return typeName.GetAsToken();
+}
+#endif
 
 void _ReadShaderAttribute(const UsdAttribute &attr, ShaderPropertyUniquePtrVec &properties, const std::string &folder)
 {
@@ -206,18 +240,30 @@ void _ReadShaderAttribute(const UsdAttribute &attr, ShaderPropertyUniquePtrVec &
     // VtValue at all, so that we don't get errors about invalid types.
     if (!isAsset)
         attr.Get(&v);
-        
+#if PXR_VERSION < 2508
     properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
         isOutput ? attr.GetBaseName() : attr.GetName(), // name
-        typeName,           // typeName
-        typeToken,          // typeToken
-        v,                  // defaultValue
-        isOutput,           // isOutput
-        0,                  // arraySize
-        metadata,           // metadata
-        hints,              // hints
-        options             // options
+        typeName,                                       // typeName
+        typeToken,                                      // typeToken
+        v,                                              // defaultValue
+        isOutput,                                       // isOutput
+        0,                                              // arraySize
+        metadata,                                       // metadata
+        hints,                                          // hints
+        options                                         // options
     }));
+#else
+    properties.push_back(SdrShaderPropertyUniquePtr(new SdrShaderProperty(
+        isOutput ? attr.GetBaseName() : attr.GetName(), // name
+        _GetSdrTypeFromSdfValueTypeName(typeName),      // typeToken
+        v,                                              // defaultValue
+        isOutput,                                       // isOutput
+        0,                                              // arraySize / should that be the dimension of the type ? 
+        metadata,                                       // metadata
+        hints,                                          // hints
+        options                                         // options
+        )));
+#endif
 }
 
 ShaderNodeUniquePtr NdrArnoldParserPlugin::PARSE_FUNC(const ShaderNodeDiscoveryResult& discoveryResult)
