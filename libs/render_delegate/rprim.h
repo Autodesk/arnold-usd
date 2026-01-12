@@ -156,7 +156,13 @@ public:
         
         if (checkSidedness && HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
             param.Interrupt();
-            const auto doubleSided = sceneDelegate->GetDoubleSided(id);
+            bool doubleSided = sceneDelegate->GetDoubleSided(id);
+#if ARNOLD_VERSION_NUM >= 70500
+            // For arnold 7.5.0 and up, the option's attribute usd_override_double_sided
+            // tells us if we should consider doubleSided or ignore it (#2099)
+            if (AiNodeGetBool(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::usd_override_double_sided))
+                doubleSided = true;
+#endif
             _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
             AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
         }

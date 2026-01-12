@@ -522,6 +522,7 @@ ASTR(usd);
 ASTR(usd_legacy_distant_light_normalize);
 ASTR(usdlux_version);
 ASTR(usd_legacy_translation);
+ASTR(usd_override_double_sided);
 ASTR(useMetadata);
 ASTR(useSpecularWorkflow);
 ASTR(use_light_group);

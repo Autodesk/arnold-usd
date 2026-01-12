@@ -18,6 +18,7 @@ def Xform "root" (
         int[] faceVertexCounts = [4, 4]
         int[] faceVertexIndices = [0, 1, 3, 2, 4, 5, 7, 6]
         uniform token orientation = "leftHanded"
+        uniform bool doubleSided = 0
         point3f[] points = [(-5, 0, -5), (5, 0, -5), (-5, 0, 5), (5, 0, 5), (-5, 5, -5), (5, 5, -5), (-5, 5, 5), (5, 5, 5)] (
             interpolation = "vertex"
         )

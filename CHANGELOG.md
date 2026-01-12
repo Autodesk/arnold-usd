@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.0.0] (Unreleased)
+
+### Features
+
+- [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
+
 ## [7.4.5.0] (Unreleased)
 
 ### Features
