@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2394](https://github.com/Autodesk/arnold-usd/issues/2394) - Support VDB fieldIndex
 - [usd#2504](https://github.com/Autodesk/arnold-usd/issues/2504) - Ensure geom subsets don't get appended to usd in animated exports
 - [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
 - [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths

@@ -1,0 +1,7 @@
+Support vdb fieldIndex
+
+See #2315
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'resaved':'ass'}

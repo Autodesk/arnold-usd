@@ -1776,7 +1776,14 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             }
             TfToken vdbGrid;
             if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid, time.frame)) {
-                grids.push_back(vdbGrid);
+                int fieldIndex = 0;
+                if (vdbAsset.GetFieldIndexAttr().Get(&fieldIndex, time.frame)) {
+                    std::string vdbIndexGrid = vdbGrid.GetString();
+                    vdbIndexGrid += std::string("[") + std::to_string(fieldIndex) + std::string("]");
+                    grids.push_back(vdbIndexGrid);
+                } else {
+                    grids.push_back(vdbGrid);
+                }
             }
         }
     }
