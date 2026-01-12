@@ -1,0 +1,284 @@
+#usda 1.0
+(
+    defaultPrim = "sopcreate1"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "sopcreate1"
+{
+    matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Volume "volume_2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(3.45, -0.55, -0.55), (4.55, 0.55, 0.55)]
+        append rel field:density = </sopcreate1/volume_2/density>
+        rel material:binding = </materials/arnold_materialbuilder0>
+        matrix4d xformOp:transform:transform2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:transform2"]
+
+        def OpenVDBAsset "density"
+        {
+            float3[] extent = [(3.45, -0.55, -0.55), (4.55, 0.55, 0.55)]
+            token fieldClass = "fogVolume"
+            token fieldDataType = "float"
+            int fieldIndex = 0
+            token fieldName = "density"
+            asset filePath = @./grids.vdb@
+            int[] primvars:index = [2] (
+                interpolation = "uniform"
+            )
+            int[] primvars:index:indices = None
+            point3f[] primvars:P = [(4, 0, 0)] (
+                interpolation = "uniform"
+            )
+            int[] primvars:P:indices = None
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Volume "volume_1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(1.45, -0.55, -0.55), (2.55, 0.55, 0.55)]
+        append rel field:density = </sopcreate1/volume_1/density>
+        rel material:binding = </materials/arnold_materialbuilder1>
+        matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 1, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:transform1"]
+
+        def OpenVDBAsset "density"
+        {
+            float3[] extent = [(1.45, -0.55, -0.55), (2.55, 0.55, 0.55)]
+            token fieldClass = "fogVolume"
+            token fieldDataType = "float"
+            int fieldIndex = 1
+            token fieldName = "density"
+            asset filePath = @./grids.vdb@
+            int[] primvars:index = [1] (
+                interpolation = "uniform"
+            )
+            int[] primvars:index:indices = None
+            point3f[] primvars:P = [(2, 0, 0)] (
+                interpolation = "uniform"
+            )
+            int[] primvars:P:indices = None
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Volume "volume_0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-0.55, -0.55, -0.55), (0.55, 0.55, 0.55)]
+        append rel field:density = </sopcreate1/volume_0/density>
+        rel material:binding = </materials/arnold_materialbuilder2>
+
+        def OpenVDBAsset "density"
+        {
+            float3[] extent = [(-0.55, -0.55, -0.55), (0.55, 0.55, 0.55)]
+            token fieldClass = "fogVolume"
+            token fieldDataType = "float"
+            int fieldIndex = 2
+            token fieldName = "density"
+            asset filePath = @./grids.vdb@
+            int[] primvars:index = [0] (
+                interpolation = "uniform"
+            )
+            int[] primvars:index:indices = None
+            point3f[] primvars:P = [(0, 0, 0)] (
+                interpolation = "uniform"
+            )
+            int[] primvars:P:indices = None
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI", "HoudiniCameraPlateAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.1755076870015978, 4.7086078125939994e-9, 0.9844780606003107, 0), (0.7669426430277299, 0.6269807179997194, -0.1367265942024313, 0), (-0.6172487619339461, 0.7790347740996908, 0.11003993199949968, 0), (-18.933657316771548, 26.537955342556597, 5.086392584242971, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        custom rel filters = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel light:filters = None
+        rel portals = None
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    def Material "arnold_materialbuilder0"
+    {
+        token outputs:arnold:volume.connect = </materials/arnold_materialbuilder0/standard_volume0.outputs:shader>
+
+        def Shader "standard_volume0"
+        {
+            uniform token info:id = "arnold:standard_volume"
+            float inputs:blackbody_contrast = 1
+            float inputs:blackbody_intensity = 1
+            float inputs:blackbody_kelvin = 5000
+            float inputs:density = 1
+            string inputs:density_channel = "density"
+            vector3f inputs:displacement = (0, 0, 0)
+            float inputs:emission = 1
+            string inputs:emission_channel = "heat"
+            color3f inputs:emission_color = (1, 1, 1)
+            token inputs:emission_mode = "blackbody"
+            token inputs:emission_scaling = "none"
+            token inputs:interpolation = "trilinear"
+            float inputs:scatter = 1
+            float inputs:scatter_anisotropy = 0
+            color3f inputs:scatter_color = (0.5, 0.5, 0.5)
+            string inputs:scatter_color_channel = ""
+            float inputs:scatter_diffusion = 0
+            float inputs:scatter_diffusion_bias = 0.15
+            float inputs:scatter_diffusion_gain = 0.5
+            float inputs:scatter_diffusion_roughness = 0
+            float inputs:scatter_diffusion_roughness_bias = 0.15
+            float inputs:scatter_diffusion_roughness_gain = 0.5
+            float inputs:scatter_secondary_anisotropy = 0
+            float inputs:scatter_secondary_anisotropy_mix = 0
+            float inputs:temperature = 1
+            string inputs:temperature_channel = "temperature"
+            color3f inputs:transparent = (0.36787945, 0.36787945, 0.36787945)
+            string inputs:transparent_channel = ""
+            float inputs:transparent_depth = 1
+            token outputs:shader
+        }
+    }
+    def Material "arnold_materialbuilder1"
+    {
+        token outputs:arnold:volume.connect = </materials/arnold_materialbuilder1/standard_volume1.outputs:shader>
+
+        def Shader "standard_volume1"
+        {
+            uniform token info:id = "arnold:standard_volume"
+            float inputs:blackbody_contrast = 1
+            float inputs:blackbody_intensity = 1
+            float inputs:blackbody_kelvin = 5000
+            float inputs:density = 1
+            string inputs:density_channel = "density"
+            vector3f inputs:displacement = (0, 0, 0)
+            float inputs:emission = 1
+            string inputs:emission_channel = "heat"
+            color3f inputs:emission_color = (1, 1, 1)
+            token inputs:emission_mode = "blackbody"
+            token inputs:emission_scaling = "none"
+            token inputs:interpolation = "trilinear"
+            float inputs:scatter = 1
+            float inputs:scatter_anisotropy = 0
+            color3f inputs:scatter_color = (0.5, 0.5, 0.5)
+            string inputs:scatter_color_channel = ""
+            float inputs:scatter_diffusion = 0
+            float inputs:scatter_diffusion_bias = 0.15
+            float inputs:scatter_diffusion_gain = 0.5
+            float inputs:scatter_diffusion_roughness = 0
+            float inputs:scatter_diffusion_roughness_bias = 0.15
+            float inputs:scatter_diffusion_roughness_gain = 0.5
+            float inputs:scatter_secondary_anisotropy = 0
+            float inputs:scatter_secondary_anisotropy_mix = 0
+            float inputs:temperature = 1
+            string inputs:temperature_channel = "temperature"
+            color3f inputs:transparent = (0.36787945, 0.36787945, 0.36787945)
+            string inputs:transparent_channel = ""
+            float inputs:transparent_depth = 1
+            token outputs:shader
+        }
+    }
+    def Material "arnold_materialbuilder2"
+    {
+        token outputs:arnold:volume.connect = </materials/arnold_materialbuilder2/standard_volume2.outputs:shader>
+
+        def Shader "standard_volume2"
+        {
+            uniform token info:id = "arnold:standard_volume"
+            float inputs:blackbody_contrast = 1
+            float inputs:blackbody_intensity = 1
+            float inputs:blackbody_kelvin = 5000
+            float inputs:density = 1
+            string inputs:density_channel = "density"
+            vector3f inputs:displacement = (0, 0, 0)
+            float inputs:emission = 1
+            string inputs:emission_channel = "heat"
+            color3f inputs:emission_color = (1, 1, 1)
+            token inputs:emission_mode = "blackbody"
+            token inputs:emission_scaling = "none"
+            token inputs:interpolation = "trilinear"
+            float inputs:scatter = 1
+            float inputs:scatter_anisotropy = 0
+            color3f inputs:scatter_color = (0.5, 0.5, 0.5)
+            string inputs:scatter_color_channel = ""
+            float inputs:scatter_diffusion = 0
+            float inputs:scatter_diffusion_bias = 0.15
+            float inputs:scatter_diffusion_gain = 0.5
+            float inputs:scatter_diffusion_roughness = 0
+            float inputs:scatter_diffusion_roughness_bias = 0.15
+            float inputs:scatter_diffusion_roughness_gain = 0.5
+            float inputs:scatter_secondary_anisotropy = 0
+            float inputs:scatter_secondary_anisotropy_mix = 0
+            float inputs:temperature = 1
+            string inputs:temperature_channel = "temperature"
+            color3f inputs:transparent = (0.36787945, 0.36787945, 0.36787945)
+            string inputs:transparent_channel = ""
+            float inputs:transparent_depth = 1
+            token outputs:shader
+        }
+    }
+}
+
