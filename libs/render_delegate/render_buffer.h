@@ -96,6 +96,7 @@ public:
     /// @param converged True if the render buffer is converged, false otherwise.
     void SetConverged(bool converged) { _converged = converged; }
 
+    bool IsEmpty() const {return _buffer.empty();}
     HDARNOLD_API
     void WriteBucket(
         unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
