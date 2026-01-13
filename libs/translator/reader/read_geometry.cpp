@@ -160,6 +160,13 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
 
 static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame) 
 {
+#if ARNOLD_VERSION_NUM >= 70500
+    // For arnold 7.5.0 and up, the option's attribute usd_override_double_sided
+    // tells us if we should consider doubleSided or ignore it (#2099)
+    if (AiNodeGetBool(AiUniverseGetOptions(AiNodeGetUniverse(node)), str::usd_override_double_sided))
+        return;
+#endif
+
     VtValue value;
     if (geom.GetDoubleSidedAttr().Get(&value, frame) && VtValueGetBool(value))
         AiNodeSetByte(node, str::sidedness, AI_RAY_ALL);
