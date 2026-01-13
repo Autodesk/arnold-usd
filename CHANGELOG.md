@@ -15,7 +15,14 @@
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
 
-## [7.4.4.1] (Unreleased)
+## [7.4.4.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2509](https://github.com/Autodesk/arnold-usd/issues/2509) - Fix crash in Solaris when changing the rendered LOP interactively
+
+
+## [7.4.4.1] 2025-12-18
 
 ### Bug Fixes
 
