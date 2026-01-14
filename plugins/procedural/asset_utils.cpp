@@ -300,6 +300,15 @@ inline AtString StdToAtString(const std::string& str)
  */
 inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
 {
+    // Set Procedural type for an Arnold Procedural scene file.
+    // This tells Arnold to collect assets from this scene file.
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
+    {
+       SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
+       if (prim && prim->GetTypeName().GetString() == "ArnoldProcedural")
+          return AtFileType::Procedural;
+    }
+
     // We consider dependencies defined by prim attributes as 'Asset' type,
     // thus they can be resolved using the Arnold asset search path.
     //
