@@ -836,6 +836,7 @@ private:
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
+    bool _forceIgnoreMotionBlur = false;
 
     std::unordered_map<std::string, AtNode *> _nodeNames;
 

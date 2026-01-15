@@ -755,7 +755,17 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (key == _tokens->instantaneousShutter) {
-        _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
+        // If the arnold-specific attribute "ignore_motion_blur" is set, it should take 
+        // precedence over the usd builtin instantaneousShutter
+        _CheckForBoolValue(value, [&](const bool b) { 
+            if (!_forceIgnoreMotionBlur)
+                AiNodeSetBool(_options, str::ignore_motion_blur, b); 
+        });
+    } else if (key == str::t_ignore_motion_blur) {
+        _CheckForBoolValue(value, [&](const bool b) { 
+            AiNodeSetBool(_options, str::ignore_motion_blur, b); 
+            _forceIgnoreMotionBlur = true; 
+        });
     } else if (key == str::t_houdiniFps) {
         _CheckForFloatValue(value, [&](const float f) { _fps = f; });
     } else if (key == str::t_background) {
