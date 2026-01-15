@@ -76,12 +76,15 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
     list(APPEND CMAKE_FRAMEWORK_PATH ${MAYA_LOCATION}/Contents/Frameworks)
     # TODO Windows and Linux
     # Looking for the python shipped with Mayas
-    find_package(Python COMPONENTS Development Interpreter REQUIRED)
-    if (NOT Python_FOUND)
+    message(STATUS "Using hint: Python3_INCLUDE_DIR: ${Python3_INCLUDE_DIR}")
+    message(STATUS "Using hint: Python3_LIBRARY: ${Python3_LIBRARY}")
+    message(STATUS "Using hint: Python3_EXECUTABLE: ${Python3_EXECUTABLE}")
+    find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
+    if (NOT Python3_FOUND)
         message(WARNING "Python for maya not found")
     else()
         # Setting PYTHON_LIBRARIES for the pxrTargets shipped with mayausd
-        set(PYTHON_LIBRARIES ${Python_LIBRARIES})
+        set(PYTHON_LIBRARIES ${Python3_LIBRARIES})
         set(USD_HAS_PYTHON true)
 
         # TODO check linux and windows
@@ -91,7 +94,7 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
             DOC "USD Gen Schema executable"
         )
     endif()
-
+    message(STATUS "Using maya PYTHON include dirs: ${Python3_INCLUDE_DIRS}")
     # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
     # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
     # For maya usd, we need maya and mayausd as they are provided separately
