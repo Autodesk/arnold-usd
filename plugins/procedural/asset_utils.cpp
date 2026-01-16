@@ -26,6 +26,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
+
 /**
  * Converts an absolute path to a path relative to the scene file.
  */
@@ -72,31 +74,42 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     const SdfPath& primPath, const SdfPath& attribute,
     std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
     const SdfLayerHandle& layer, ArResolver& resolver, 
-    std::unordered_set<std::string>& seenReferences)
+    SeenReferenceMap& seenReferences)
 {
     if (ref.empty())
         return;
 
-    if (seenReferences.find(ref) != seenReferences.end())
-        return;
+    std::string anchoredPath;
+    std::string resolvedPath;
 
-    // resolve the reference to an absolute path
-    std::string anchoredPath = SdfComputeAssetPathRelativeToLayer(layer, ref);
-    std::string resolvedPath = resolver.Resolve(anchoredPath);
-    // convert a relative reference relative to the main scene
-    std::string finalRefPath = ref;
-    if (!resolvedPath.empty() && TfIsRelativePath(ref))
+    // the reference was already processed, use the reolved paths
+    if (seenReferences.find(ref) != seenReferences.end())
     {
-        std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
-        // convert only if the file is located under the root folder
-        if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
-            finalRefPath = relativeToRoot;
+        auto refPaths = seenReferences[ref];
+        anchoredPath = refPaths.first;
+        resolvedPath = refPaths.second;
+    }
+    else
+    {
+        // resolve the reference to an absolute path
+        std::string relRef = SdfComputeAssetPathRelativeToLayer(layer, ref);
+        resolvedPath = resolver.Resolve(relRef);
+        // convert a relative reference relative to the main scene
+        anchoredPath = ref;
+        if (!resolvedPath.empty() && TfIsRelativePath(ref))
+        {
+            std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
+            // convert only if the file is located under the root folder
+            if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
+                anchoredPath = relativeToRoot;
+        }
+
+        seenReferences[ref] = std::make_pair(anchoredPath, resolvedPath);
     }
 
     // create a dependency
-    dependencies.push_back(USDDependency(type, finalRefPath, 
+    dependencies.push_back(USDDependency(type, anchoredPath,
         resolvedPath, layer, primPath, attribute));
-    seenReferences.insert(ref);
 }
 
 /**
@@ -131,7 +144,7 @@ inline void CollectDependenciesFromLayer(
     UsdStageRefPtr stage,
     const SdfLayerHandle& layer,
     std::vector<USDDependency>& dependencies,
-    std::unordered_set<std::string>& seenReferences,
+    SeenReferenceMap& seenReferences,
     ArResolver& resolver)
 {
     if (!layer)
@@ -274,7 +287,7 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
     std::vector<USDDependency> dependencies;
 
     ArResolver& resolver = ArGetResolver();
-    std::unordered_set<std::string> seenReferences;
+    SeenReferenceMap seenReferences;
 
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
@@ -360,6 +373,46 @@ inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
 }
 
 /**
+ * Helper function to check if the given prim
+ * is and Arnold image shader.
+ */
+inline bool IsArnoldImageShader(const SdfPrimSpecHandle& prim)
+{
+    if (!prim)
+        return false;
+    if (prim->GetTypeName().GetString() != "Shader")
+        return false;
+
+    SdfAttributeSpecHandle idAttr = prim->GetAttributes().get(TfToken("info:id"));
+    if (!idAttr || !idAttr->GetDefaultValue().IsHolding<TfToken>())
+        return false;
+
+    const TfToken& idToken = idAttr->GetDefaultValue().Get<TfToken>();
+    return idToken == TfToken("arnold:image");
+}
+
+/**
+ * Helper function to define if an asset needs to be ignored,
+ * if the file is missing. Typically Arnold image nodes
+ * define this flag, called 'ignore_missing_textures'.
+ */
+inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
+{
+    // Arnold image shader
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "inputs:filename" && dep.layer)
+    {
+        SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
+        if (IsArnoldImageShader(prim))
+        {
+            SdfAttributeSpecHandle ignoreMissingAttr = prim->GetAttributes().get(TfToken("inputs:ignore_missing_textures"));
+            return ignoreMissingAttr && ignoreMissingAttr->GetDefaultValue().Get<bool>();
+        }
+    }
+
+    return false;
+}
+
+/**
  * Returns all assets found in the given USD scene.
  * 
  * The function collects all dependencies 
@@ -410,6 +463,7 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         // add the dependency to the asset list
         AtAsset* asset = AiAsset(resolvedPath.c_str(), GetArnoldFileTypeFromDependency(dep));
+        AiAssetSetIgnoreMissing(asset, GetIgnoreMissingFromDependency(dep));
         AiAssetAddReference(asset, StdToAtString(dep.authoredPath),
             StdToAtString(GetNodeNameFromDependency(dep)),
             StdToAtString(GetNodeParameterFromDependency(dep)));
