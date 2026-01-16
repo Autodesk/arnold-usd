@@ -363,31 +363,6 @@ procedural_viewport
 }
 #endif
 
-// procedural_get_assets function was added in Arnold 7.4.5.0
-#if ARNOLD_VERSION_NUM >= 70405
-// static AtArray* ProceduralGetAssets(const AtNode* node, const AtParamValueMap* params)
-procedural_get_assets
-{
-    const std::string origFilename(AiNodeGetStr(node, AtString("filename")));
-    std::string filename(AiResolveFilePath(origFilename.c_str(), AtFileType::Asset));
-
-    // collect assets from the procedural scene file
-    std::vector<AtAsset*> assets;
-    bool isProcedural = true;
-    CollectSceneAssets(filename, assets, isProcedural);
-
-    // convert our list to an Arnold array
-    // the ownership of the array and the assets is delegated to the caller
-    AtArray* assetArray = AiArrayAllocate(assets.size(), 1, AI_TYPE_POINTER);
-    void* assetArrayData = AiArrayMap(assetArray);
-    void* assetData = assets.data();
-    if (assetArrayData && assetData)
-       memcpy(assetArrayData, assetData, assets.size() * sizeof(void*));
-
-    return assetArray;
-}
-#endif
-
 #if defined(_DARWIN) || defined(_LINUX)
 std::string USDLibraryPath()
 {
@@ -604,8 +579,7 @@ scene_get_assets
 {
     // collect assets from the scene
     std::vector<AtAsset*> assets;
-    bool isProcedural = false;
-    CollectSceneAssets(filename, assets, isProcedural);
+    CollectSceneAssets(filename, assets);
 
     if (assets.empty())
         return nullptr;
