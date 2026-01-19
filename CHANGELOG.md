@@ -26,6 +26,7 @@
 ### Bug Fixes
 
 - [usd#2509](https://github.com/Autodesk/arnold-usd/issues/2509) - Fix crash in Solaris when changing the rendered LOP interactively
+- [usd#2514](https://github.com/Autodesk/arnold-usd/issues/2514) - Fix random inconsistencies between instantaneousShutter and ignore_motion_blur in hydra 
 
 
 ## [7.4.4.1] 2025-12-18
