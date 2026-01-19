@@ -840,6 +840,7 @@ private:
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
+    bool _forceIgnoreMotionBlur = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
     // We store a list of functions that must be run once all the prims are synced and have filled the 
