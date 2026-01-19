@@ -29,6 +29,80 @@ PXR_NAMESPACE_OPEN_SCOPE
 typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
 
 /**
+ * A wrapper over the AiBegin/AiEnd calls to follow the RAII technique,
+ * and close the session when the object goes out of scope.
+ * Also makes sure we open the session only if needed.
+ */
+class ArnoldSession
+{
+public:
+    ArnoldSession()
+    {
+        if (!AiArnoldIsActive())
+        {
+            AiBegin();
+            m_ownArnoldSession = true;
+        }
+    }
+
+    ~ArnoldSession()
+    {
+        if (m_ownArnoldSession)
+            AiEnd();
+    }
+
+private:
+    bool m_ownArnoldSession = false;
+};
+
+/**
+ * Helper function to check if the given prim
+ * is a specific Arnold shader.
+ */
+inline bool IsArnoldShader(const SdfPrimSpecHandle& prim, const TfToken& shaderType)
+{
+    if (!prim)
+        return false;
+    if (shaderType.IsEmpty())
+        return false;
+    if (prim->GetTypeName().GetString() != "Shader")
+        return false;
+
+    SdfAttributeSpecHandle idAttr = prim->GetAttributes().get(TfToken("info:id"));
+    if (!idAttr || !idAttr->GetDefaultValue().IsHolding<TfToken>())
+        return false;
+
+    const TfToken& idToken = idAttr->GetDefaultValue().Get<TfToken>();
+    return idToken == TfToken(std::string("arnold:") + shaderType.GetString());
+}
+
+/**
+ * Returns true if the given Arnold node parameter is a 'path' type parameter.
+ */
+inline bool IsArnoldPathParameter(const AtNodeEntry* nentry, const AtParamEntry* pentry)
+{
+    if (nentry == nullptr || pentry == nullptr)
+        return false;
+
+    // must be a string
+    if (AiParamGetType(pentry) != AI_TYPE_STRING)
+        return false;
+
+    // path type parameters define the `path = "file"` metadata
+    AtString pathMetaData;
+    if (AiMetaDataGetStr(nentry, AiParamGetName(pentry), AtString("path"), &pathMetaData) &&
+        pathMetaData == AtString("file"))
+        return true;
+
+    // OSL shaders define the `widget = "filename"` metadata
+    AtString widget;
+    if (AiMetaDataGetStr(nentry, AiParamGetName(pentry), AtString("widget"), &widget) && widget == AtString("filename"))
+        return true;
+
+    return false;
+}
+
+/**
  * Converts an absolute path to a path relative to the scene file.
  */
 inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::string& absPath)
@@ -110,6 +184,74 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     // create a dependency
     dependencies.push_back(USDDependency(type, anchoredPath,
         resolvedPath, layer, primPath, attribute));
+}
+
+/**
+ * Returns all dependencies of an Arnold OSL shader node.
+ * 
+ * To be able to tell if an OSL shader parameter refers to a file,
+ * we need to load the OSL code into an Arnold shader
+ * and check the meta data of the node parameters.
+ */
+inline void CollectOslShaderDependencies(
+    UsdStageRefPtr stage,
+    const SdfLayerHandle& layer,
+    const SdfPrimSpecHandle& prim,
+    std::vector<USDDependency>& dependencies,
+    SeenReferenceMap& seenReferences,
+    ArResolver& resolver)
+{
+    // read the osl shader code
+    SdfAttributeSpecHandle codeAttr = prim->GetAttributes().get(TfToken("inputs:code"));
+    if (!codeAttr || !codeAttr->GetDefaultValue().IsHolding<std::string>())
+        return;
+
+    const std::string& code = codeAttr->GetDefaultValue().Get<std::string>();
+    if (code.empty())
+        return;
+
+    // load the OSL shader in an Arnold universe
+    AtUniverse* universe = AiUniverse();
+    if (universe == nullptr)
+    {
+        AiMsgError("[usd] Failed to create Arnold universe");
+        return;
+    }
+    AtNode* osl = AiNode(universe, AtString("osl"), AtString("osl_tmp"));
+    if (osl == nullptr)
+    {
+        AiMsgError("[usd] Failed to create Arnold sl shader node");
+        AiUniverseDestroy(universe);
+        return;
+    }
+    AiNodeSetStr(osl, AtString("code"), AtString(code.c_str()));
+
+    // find path type parameters
+    const AtNodeEntry* nentry = AiNodeGetNodeEntry(osl);
+    AtParamIterator* piter = AiNodeEntryGetParamIterator(nentry);
+    while (!AiParamIteratorFinished(piter))
+    {
+        const AtParamEntry* pentry = AiParamIteratorGetNext(piter);
+        if (IsArnoldPathParameter(nentry, pentry))
+        {
+            // read the parameter value from the USD prim
+            SdfAttributeSpecHandle pathAttr = prim->GetAttributes().get(TfToken(std::string("inputs:") + AiParamGetName(pentry).c_str()));
+            if (!pathAttr || !pathAttr->GetDefaultValue().IsHolding<std::string>())
+                continue;
+
+            const std::string& value = pathAttr->GetDefaultValue().Get<std::string>();
+            if (value.empty())
+                continue;
+
+            AddDependency(value, USDDependency::Type::Attribute,
+                          prim->GetPath(), pathAttr->GetPath(),
+                          dependencies, stage, layer, resolver, seenReferences);
+        }
+    }
+    AiParamIteratorDestroy(piter);
+
+    // cleanup
+    AiUniverseDestroy(universe);
 }
 
 /**
@@ -229,6 +371,10 @@ inline void CollectDependenciesFromLayer(
                 }
             }
         }
+
+        // collect dependencies from Arnold OSL shader
+        if (IsArnoldShader(prim, TfToken("osl")))
+            CollectOslShaderDependencies(stage, layer, prim, dependencies, seenReferences, resolver);
         
         // collect references
         const auto refList = prim->GetReferenceList();
@@ -382,25 +528,6 @@ inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
 }
 
 /**
- * Helper function to check if the given prim
- * is and Arnold image shader.
- */
-inline bool IsArnoldImageShader(const SdfPrimSpecHandle& prim)
-{
-    if (!prim)
-        return false;
-    if (prim->GetTypeName().GetString() != "Shader")
-        return false;
-
-    SdfAttributeSpecHandle idAttr = prim->GetAttributes().get(TfToken("info:id"));
-    if (!idAttr || !idAttr->GetDefaultValue().IsHolding<TfToken>())
-        return false;
-
-    const TfToken& idToken = idAttr->GetDefaultValue().Get<TfToken>();
-    return idToken == TfToken("arnold:image");
-}
-
-/**
  * Helper function to define if an asset needs to be ignored,
  * if the file is missing. Typically Arnold image nodes
  * define this flag, called 'ignore_missing_textures'.
@@ -411,7 +538,7 @@ inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
     if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "inputs:filename" && dep.layer)
     {
         SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
-        if (IsArnoldImageShader(prim))
+        if (IsArnoldShader(prim, TfToken("image")))
         {
             SdfAttributeSpecHandle ignoreMissingAttr = prim->GetAttributes().get(TfToken("inputs:ignore_missing_textures"));
             return ignoreMissingAttr && ignoreMissingAttr->GetDefaultValue().Get<bool>();
@@ -437,6 +564,10 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
         AiMsgError("Failed to open stage: %s", filename.c_str());
         return false;
     }
+
+    // NOTE We need an open Arnold session to be able
+    // to collect assets from OSL shaders.
+    ArnoldSession arnoldSession;
 
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
