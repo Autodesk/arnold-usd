@@ -364,13 +364,8 @@ inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
  * 
  * The function collects all dependencies 
  * and converts them to Arnold assets.
- * 
- * It can be called from a scene format plugin or 
- * from a procedural plugin, shown by the isProcedural
- * argument. Resolving Arnold paths is different based on
- * where the function is used,
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets, bool isProcedural)
+bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets)
 {
     // open the scene file
     UsdStageRefPtr stage = UsdStage::Open(filename);
