@@ -112,9 +112,6 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
         set(CMAKE_OSX_ARCHITECTURES x86_64;arm64)
 
         set(USD_MONOLITHIC_BUILD OFF)
-        if (LINUX)
-            set(BUILD_DISABLE_CXX11_ABI ON)
-        endif()
 
         # Variable for running usdGenSchema
         # USD_LIBRARY_DIR is needed by the schema script
@@ -260,9 +257,6 @@ if (HOUDINI_LOCATION)
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
             endif()
-        endif()
-        if (LINUX)
-            set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
         
         check_compositor()
