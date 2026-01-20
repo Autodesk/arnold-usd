@@ -1,10 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.0.0] (Unreleased)
+
+### Features
+
+- [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
+
 ## [7.4.5.0] (Unreleased)
 
 ### Features
 
+- [usd#2394](https://github.com/Autodesk/arnold-usd/issues/2394) - Support VDB fieldIndex
+- [usd#2504](https://github.com/Autodesk/arnold-usd/issues/2504) - Ensure geom subsets don't get appended to usd in animated exports
 - [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
 - [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths
 - [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
@@ -13,7 +21,15 @@
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
 
-## [7.4.4.1] (Unreleased)
+## [7.4.4.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2509](https://github.com/Autodesk/arnold-usd/issues/2509) - Fix crash in Solaris when changing the rendered LOP interactively
+- [usd#2514](https://github.com/Autodesk/arnold-usd/issues/2514) - Fix random inconsistencies between instantaneousShutter and ignore_motion_blur in hydra 
+
+
+## [7.4.4.1] 2025-12-18
 
 ### Bug Fixes
 

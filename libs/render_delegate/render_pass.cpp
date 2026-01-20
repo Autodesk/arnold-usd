@@ -489,8 +489,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
-            if (renderBuffer != nullptr) {
-                if (allocate)
+            if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
+                
+                if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
 
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, zeroData.data());

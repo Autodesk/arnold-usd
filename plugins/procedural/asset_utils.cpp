@@ -26,6 +26,82 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
+
+/**
+ * A wrapper over the AiBegin/AiEnd calls to follow the RAII technique,
+ * and close the session when the object goes out of scope.
+ * Also makes sure we open the session only if needed.
+ */
+class ArnoldSession
+{
+public:
+    ArnoldSession()
+    {
+        if (!AiArnoldIsActive())
+        {
+            AiBegin();
+            m_ownArnoldSession = true;
+        }
+    }
+
+    ~ArnoldSession()
+    {
+        if (m_ownArnoldSession)
+            AiEnd();
+    }
+
+private:
+    bool m_ownArnoldSession = false;
+};
+
+/**
+ * Helper function to check if the given prim
+ * is a specific Arnold shader.
+ */
+inline bool IsArnoldShader(const SdfPrimSpecHandle& prim, const TfToken& shaderType)
+{
+    if (!prim)
+        return false;
+    if (shaderType.IsEmpty())
+        return false;
+    if (prim->GetTypeName().GetString() != "Shader")
+        return false;
+
+    SdfAttributeSpecHandle idAttr = prim->GetAttributes().get(TfToken("info:id"));
+    if (!idAttr || !idAttr->GetDefaultValue().IsHolding<TfToken>())
+        return false;
+
+    const TfToken& idToken = idAttr->GetDefaultValue().Get<TfToken>();
+    return idToken == TfToken(std::string("arnold:") + shaderType.GetString());
+}
+
+/**
+ * Returns true if the given Arnold node parameter is a 'path' type parameter.
+ */
+inline bool IsArnoldPathParameter(const AtNodeEntry* nentry, const AtParamEntry* pentry)
+{
+    if (nentry == nullptr || pentry == nullptr)
+        return false;
+
+    // must be a string
+    if (AiParamGetType(pentry) != AI_TYPE_STRING)
+        return false;
+
+    // path type parameters define the `path = "file"` metadata
+    AtString pathMetaData;
+    if (AiMetaDataGetStr(nentry, AiParamGetName(pentry), AtString("path"), &pathMetaData) &&
+        pathMetaData == AtString("file"))
+        return true;
+
+    // OSL shaders define the `widget = "filename"` metadata
+    AtString widget;
+    if (AiMetaDataGetStr(nentry, AiParamGetName(pentry), AtString("widget"), &widget) && widget == AtString("filename"))
+        return true;
+
+    return false;
+}
+
 /**
  * Converts an absolute path to a path relative to the scene file.
  */
@@ -72,31 +148,110 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     const SdfPath& primPath, const SdfPath& attribute,
     std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
     const SdfLayerHandle& layer, ArResolver& resolver, 
-    std::unordered_set<std::string>& seenReferences)
+    SeenReferenceMap& seenReferences)
 {
     if (ref.empty())
         return;
 
-    if (seenReferences.find(ref) != seenReferences.end())
-        return;
+    std::string anchoredPath;
+    std::string resolvedPath;
 
-    // resolve the reference to an absolute path
-    std::string anchoredPath = SdfComputeAssetPathRelativeToLayer(layer, ref);
-    std::string resolvedPath = resolver.Resolve(anchoredPath);
-    // convert a relative reference relative to the main scene
-    std::string finalRefPath = ref;
-    if (!resolvedPath.empty() && TfIsRelativePath(ref))
+    // the reference was already processed, use the reolved paths
+    if (seenReferences.find(ref) != seenReferences.end())
     {
-        std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
-        // convert only if the file is located under the root folder
-        if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
-            finalRefPath = relativeToRoot;
+        auto refPaths = seenReferences[ref];
+        anchoredPath = refPaths.first;
+        resolvedPath = refPaths.second;
+    }
+    else
+    {
+        // resolve the reference to an absolute path
+        std::string relRef = SdfComputeAssetPathRelativeToLayer(layer, ref);
+        resolvedPath = resolver.Resolve(relRef);
+        // convert a relative reference relative to the main scene
+        anchoredPath = ref;
+        if (!resolvedPath.empty() && TfIsRelativePath(ref))
+        {
+            std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
+            // convert only if the file is located under the root folder
+            if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
+                anchoredPath = relativeToRoot;
+        }
+
+        seenReferences[ref] = std::make_pair(anchoredPath, resolvedPath);
     }
 
     // create a dependency
-    dependencies.push_back(USDDependency(type, finalRefPath, 
+    dependencies.push_back(USDDependency(type, anchoredPath,
         resolvedPath, layer, primPath, attribute));
-    seenReferences.insert(ref);
+}
+
+/**
+ * Returns all dependencies of an Arnold OSL shader node.
+ * 
+ * To be able to tell if an OSL shader parameter refers to a file,
+ * we need to load the OSL code into an Arnold shader
+ * and check the meta data of the node parameters.
+ */
+inline void CollectOslShaderDependencies(
+    UsdStageRefPtr stage,
+    const SdfLayerHandle& layer,
+    const SdfPrimSpecHandle& prim,
+    std::vector<USDDependency>& dependencies,
+    SeenReferenceMap& seenReferences,
+    ArResolver& resolver)
+{
+    // read the osl shader code
+    SdfAttributeSpecHandle codeAttr = prim->GetAttributes().get(TfToken("inputs:code"));
+    if (!codeAttr || !codeAttr->GetDefaultValue().IsHolding<std::string>())
+        return;
+
+    const std::string& code = codeAttr->GetDefaultValue().Get<std::string>();
+    if (code.empty())
+        return;
+
+    // load the OSL shader in an Arnold universe
+    AtUniverse* universe = AiUniverse();
+    if (universe == nullptr)
+    {
+        AiMsgError("[usd] Failed to create Arnold universe");
+        return;
+    }
+    AtNode* osl = AiNode(universe, AtString("osl"), AtString("osl_tmp"));
+    if (osl == nullptr)
+    {
+        AiMsgError("[usd] Failed to create Arnold sl shader node");
+        AiUniverseDestroy(universe);
+        return;
+    }
+    AiNodeSetStr(osl, AtString("code"), AtString(code.c_str()));
+
+    // find path type parameters
+    const AtNodeEntry* nentry = AiNodeGetNodeEntry(osl);
+    AtParamIterator* piter = AiNodeEntryGetParamIterator(nentry);
+    while (!AiParamIteratorFinished(piter))
+    {
+        const AtParamEntry* pentry = AiParamIteratorGetNext(piter);
+        if (IsArnoldPathParameter(nentry, pentry))
+        {
+            // read the parameter value from the USD prim
+            SdfAttributeSpecHandle pathAttr = prim->GetAttributes().get(TfToken(std::string("inputs:") + AiParamGetName(pentry).c_str()));
+            if (!pathAttr || !pathAttr->GetDefaultValue().IsHolding<std::string>())
+                continue;
+
+            const std::string& value = pathAttr->GetDefaultValue().Get<std::string>();
+            if (value.empty())
+                continue;
+
+            AddDependency(value, USDDependency::Type::Attribute,
+                          prim->GetPath(), pathAttr->GetPath(),
+                          dependencies, stage, layer, resolver, seenReferences);
+        }
+    }
+    AiParamIteratorDestroy(piter);
+
+    // cleanup
+    AiUniverseDestroy(universe);
 }
 
 /**
@@ -131,7 +286,7 @@ inline void CollectDependenciesFromLayer(
     UsdStageRefPtr stage,
     const SdfLayerHandle& layer,
     std::vector<USDDependency>& dependencies,
-    std::unordered_set<std::string>& seenReferences,
+    SeenReferenceMap& seenReferences,
     ArResolver& resolver)
 {
     if (!layer)
@@ -216,24 +371,25 @@ inline void CollectDependenciesFromLayer(
                 }
             }
         }
+
+        // collect dependencies from Arnold OSL shader
+        if (IsArnoldShader(prim, TfToken("osl")))
+            CollectOslShaderDependencies(stage, layer, prim, dependencies, seenReferences, resolver);
         
         // collect references
-        const auto& refList = prim->GetReferenceList();
+        const auto refList = prim->GetReferenceList();
         SdfReferenceVector refs;
         {
+            const auto prependedItems = refList.GetPrependedItems();
+            const auto appendedItems = refList.GetAppendedItems();
+            const auto addedItems = refList.GetAddedItems();
+            const auto explicitItems = refList.GetExplicitItems();
+
             // combine all authored list-op opinions
-            refs.insert(refs.end(),
-                refList.GetPrependedItems().begin(),
-                refList.GetPrependedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAppendedItems().begin(),
-                refList.GetAppendedItems().end());
-            refs.insert(refs.end(),
-                refList.GetAddedItems().begin(),
-                refList.GetAddedItems().end());
-            refs.insert(refs.end(),
-                refList.GetExplicitItems().begin(),
-                refList.GetExplicitItems().end());
+            refs.insert(refs.end(), prependedItems.begin(), prependedItems.end());
+            refs.insert(refs.end(), appendedItems.begin(), appendedItems.end());
+            refs.insert(refs.end(), addedItems.begin(), addedItems.end());
+            refs.insert(refs.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfReference& ref : refs)
         {
@@ -243,22 +399,18 @@ inline void CollectDependenciesFromLayer(
         }
 
         // collect payloads
-        const auto& payloadList = prim->GetPayloadList();
+        const auto payloadList = prim->GetPayloadList();
         SdfPayloadVector payloads;
         {
+            const auto prependedItems = payloadList.GetPrependedItems();
+            const auto appendedItems = payloadList.GetAppendedItems();
+            const auto addedItems = payloadList.GetAddedItems();
+            const auto explicitItems = payloadList.GetExplicitItems();
             // combine all authored list-op opinions
-            payloads.insert(payloads.end(),
-                payloadList.GetPrependedItems().begin(),
-                payloadList.GetPrependedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAppendedItems().begin(),
-                payloadList.GetAppendedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetAddedItems().begin(),
-                payloadList.GetAddedItems().end());
-            payloads.insert(payloads.end(),
-                payloadList.GetExplicitItems().begin(),
-                payloadList.GetExplicitItems().end());
+            payloads.insert(payloads.end(), prependedItems.begin(), prependedItems.end());
+            payloads.insert(payloads.end(), appendedItems.begin(), appendedItems.end());
+            payloads.insert(payloads.end(), addedItems.begin(), addedItems.end());
+            payloads.insert(payloads.end(), explicitItems.begin(), explicitItems.end());
         }
         for (const SdfPayload& p : payloads)
         {
@@ -281,7 +433,7 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
     std::vector<USDDependency> dependencies;
 
     ArResolver& resolver = ArGetResolver();
-    std::unordered_set<std::string> seenReferences;
+    SeenReferenceMap seenReferences;
 
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
@@ -293,122 +445,6 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 
     return dependencies;
 }
-
-/**
- * Helper function to append value to a search path string.
- */
-inline void AppendArnoldSearchPath(AtNode* options, const AtString& param, const std::string value)
-{
-    if (value.empty())
-        return;
-
-    AtString currentSearchPath = AiNodeGetStr(options, param);
-    std::string newSearchPath;
-    if (!currentSearchPath.empty())
-        newSearchPath = std::string(currentSearchPath.c_str()) + ";" + value;
-    else
-        newSearchPath = value;
-
-    AiNodeSetStr(options, param, AtString(newSearchPath.c_str()));
-}
-
-/**
- * Translates Arnold search paths defined in a USD scene
- * to an Arnold scene.
- */
-inline void TranslateSearchPaths(UsdStageRefPtr stage, AtUniverse* universe)
-{
-    if (universe == nullptr)
-        return;
-
-    AtNode* options = AiUniverseGetOptions(universe);
-    if (options == nullptr)
-        return;
-
-    AtString asset_searchpath_str("asset_searchpath");
-    AtString texture_searchpath_str("texture_searchpath");
-    AtString procedural_searchpath_str("procedural_searchpath");
-
-    for (const UsdPrim& prim : stage->Traverse())
-    {
-        if (prim.IsA<UsdRenderSettings>())
-        {
-            // asset search path
-            UsdAttribute assetSearchPathAttr = prim.GetAttribute(TfToken("arnold:asset_searchpath"));
-            std::string assetSearchPath;
-            if (assetSearchPathAttr && assetSearchPathAttr.Get(&assetSearchPath))
-                AppendArnoldSearchPath(options, asset_searchpath_str, assetSearchPath);
-            // texture search path
-            UsdAttribute textureSearchPathAttr = prim.GetAttribute(TfToken("arnold:texture_searchpath"));
-            std::string textureSearchPath;
-            if (textureSearchPathAttr && textureSearchPathAttr.Get(&textureSearchPath))
-                AppendArnoldSearchPath(options, texture_searchpath_str, textureSearchPath);
-            // procedural search path
-            UsdAttribute proceduralSearchPathAttr = prim.GetAttribute(TfToken("arnold:procedural_searchpath"));
-            std::string proceduralSearchPath;
-            if (proceduralSearchPathAttr && proceduralSearchPathAttr.Get(&proceduralSearchPath))
-                AppendArnoldSearchPath(options, procedural_searchpath_str, proceduralSearchPath);
-        }
-    }
-}
-
-/**
- * A helper to resolve paths defined in a USD scene with Arnold.
- *
- * The USD scene can define paths for Arnold nodes, like textures
- * in image nodes. These are not resolved by USD, but translated directly 
- * to the Arnold scene and resolved by Arnold when rendering the scene.
- */
-class ArnoldPathResolver
-{
-public:
-    ArnoldPathResolver() = default;
-
-    void Initialize(UsdStageRefPtr stage)
-    {
-        if (!stage)
-            return;
-
-        if (!AiArnoldIsActive())
-        {
-            AiBegin();
-            m_ownArnoldSession = true;
-        }
-
-        m_universe = AiUniverse();
-        if (m_universe == nullptr)
-        {
-            AiMsgError("[usd] Failed to create Arnold universe");
-            return;
-        }
-    
-        // find search paths in the USD scene
-        TranslateSearchPaths(stage, m_universe);
-    }
-
-    ~ArnoldPathResolver()
-    {
-        if (m_universe)
-            AiUniverseDestroy(m_universe);
-        if (m_ownArnoldSession)
-            AiEnd();
-    }
-
-    std::string resolve(const std::string& path, AtFileType fileType)
-    {
-        if (path.empty())
-            return std::string();
-
-        const AtString& resolvedPathStr = AiResolveFilePath(path.c_str(), fileType);
-        if (!resolvedPathStr.empty())
-            return resolvedPathStr.c_str();
-        return std::string();
-    }
-
-private:
-    bool m_ownArnoldSession = false;
-    AtUniverse* m_universe = nullptr;
-};
 
 /**
  * Helper function to convert an std::string to AtString.
@@ -423,6 +459,15 @@ inline AtString StdToAtString(const std::string& str)
  */
 inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
 {
+    // Set Procedural type for an Arnold Procedural scene file.
+    // This tells Arnold to collect assets from this scene file.
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
+    {
+       SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
+       if (prim && prim->GetTypeName().GetString() == "ArnoldProcedural")
+          return AtFileType::Procedural;
+    }
+
     // We consider dependencies defined by prim attributes as 'Asset' type,
     // thus they can be resolved using the Arnold asset search path.
     //
@@ -483,17 +528,33 @@ inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
 }
 
 /**
+ * Helper function to define if an asset needs to be ignored,
+ * if the file is missing. Typically Arnold image nodes
+ * define this flag, called 'ignore_missing_textures'.
+ */
+inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
+{
+    // Arnold image shader
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "inputs:filename" && dep.layer)
+    {
+        SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
+        if (IsArnoldShader(prim, TfToken("image")))
+        {
+            SdfAttributeSpecHandle ignoreMissingAttr = prim->GetAttributes().get(TfToken("inputs:ignore_missing_textures"));
+            return ignoreMissingAttr && ignoreMissingAttr->GetDefaultValue().Get<bool>();
+        }
+    }
+
+    return false;
+}
+
+/**
  * Returns all assets found in the given USD scene.
  * 
  * The function collects all dependencies 
  * and converts them to Arnold assets.
- * 
- * It can be called from a scene format plugin or 
- * from a procedural plugin, shown by the isProcedural
- * argument. Resolving Arnold paths is different based on
- * where the function is used,
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets, bool isProcedural)
+bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets)
 {
     // open the scene file
     UsdStageRefPtr stage = UsdStage::Open(filename);
@@ -504,29 +565,12 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
         return false;
     }
 
-    // create an Arnold path resolver
-    // The USD scene can define paths for Arnold nodes, like textures
-    // in image nodes. These are not resolved by USD, but translated directly 
-    // to the Arnold scene and resolved by Arnold when rendering the scene.
-    // We need to resolve these paths via the Arnold API.
-    ArnoldPathResolver arnoldPathResolver;
-    if (!isProcedural)
-        arnoldPathResolver.Initialize(stage);
+    // NOTE We need an open Arnold session to be able
+    // to collect assets from OSL shaders.
+    ArnoldSession arnoldSession;
 
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
-
-    // manage unresolved dependencies
-    // these are potentally paths that can be resolved wih Arnold
-    for (USDDependency& dep : dependencies)
-    {
-        if (dep.authoredPath.empty())
-            continue;
-
-        // resolve the path with Arnold
-        if (dep.resolvedPath.empty())
-            dep.resolvedPath = arnoldPathResolver.resolve(dep.authoredPath, GetArnoldFileTypeFromDependency(dep));
-    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)
@@ -548,11 +592,13 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
         std::string resolvedPath = dep.resolvedPath;
         // if could not resolve the path, then use the scene reference
+        // potentially these are paths that can be resolved by Arnold, like UDIM textures
         if (resolvedPath.empty())
             resolvedPath = dep.authoredPath;
 
         // add the dependency to the asset list
         AtAsset* asset = AiAsset(resolvedPath.c_str(), GetArnoldFileTypeFromDependency(dep));
+        AiAssetSetIgnoreMissing(asset, GetIgnoreMissingFromDependency(dep));
         AiAssetAddReference(asset, StdToAtString(dep.authoredPath),
             StdToAtString(GetNodeNameFromDependency(dep)),
             StdToAtString(GetNodeParameterFromDependency(dep)));
