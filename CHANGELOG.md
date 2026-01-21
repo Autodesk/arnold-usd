@@ -6,6 +6,7 @@
 ### Features
 
 - [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
+- [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) -  Add a new bundle plugin containing the procedural and all usd plugins.
 
 ## [7.4.5.0] (Unreleased)
 
