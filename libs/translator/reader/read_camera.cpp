@@ -67,6 +67,11 @@ AtNode* UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     AtNode *node = context.CreateArnoldNode(camType.c_str(), prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
+    // In arnold, parent matrices are not applied properly to cameras.
+    // We fake this by applying the parent procedural matrix here        
+    ArnoldUsdApplyParentMatrix(node, context.GetReader()->GetProceduralParent());
+    
+
 
     if (persp) {
         // GfCamera has the utility functions to get the field of view,
