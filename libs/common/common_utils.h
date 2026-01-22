@@ -85,4 +85,6 @@ void ArnoldUsdCheckForSdfPathVectorValue(const VtValue& value, F&& f)
 ARCH_HIDDEN
 int ArnoldUsdGetLogVerbosityFromFlags(int flags);
 
+void ArnoldUsdApplyParentMatrix(AtNode *child, const AtNode *parent);
+
 PXR_NAMESPACE_CLOSE_SCOPE

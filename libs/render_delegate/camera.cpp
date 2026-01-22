@@ -20,6 +20,7 @@
 #include <pxr/base/gf/range1f.h>
 #include "node_graph.h"
 #include <constant_strings.h>
+#include <common_utils.h>
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -284,30 +285,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         HdArnoldSetTransform(_camera, sceneDelegate, GetId(), renderParam->GetShutterRange());
         // In arnold, parent matrices are not applied properly to cameras.
         // We fake this by applying the parent procedural matrix here
-        const AtNode *parent = _delegate->GetProceduralParent();
-        if (parent) {
-            AtArray *cameraMatrices = AiNodeGetArray(_camera, str::matrix);
-            unsigned int cameraMatricesNumKeys = cameraMatrices  ? AiArrayGetNumKeys(cameraMatrices) : 0;
-            if (cameraMatricesNumKeys > 0) {
-                while (parent) {
-                    const AtArray *parentMatrices = AiNodeGetArray(parent, str::matrix);
-                    unsigned int parentMatrixNumKeys = parentMatrices && AiArrayGetNumElements(parentMatrices) > 0 ?
-                        AiArrayGetNumKeys(parentMatrices) : 0;
-                    if (parentMatrixNumKeys > 0) {
-                        
-                        for (int i = 0; i < cameraMatricesNumKeys; ++i) {
-                            AtMatrix m = AiArrayGetMtx(cameraMatrices, i);
-                            float t = (float)i / AiMax(float(cameraMatricesNumKeys - 1), 1.f);
-                            m = AiM4Mult(m, AiArrayInterpolateMtx(parentMatrices, t, 0));
-                            AiArraySetMtx(cameraMatrices, i, m);
-                        }
-                    }
-                    parent = AiNodeGetParent(parent);
-                }
-                AiNodeSetArray(_camera, str::matrix, cameraMatrices);
-
-            }            
-        }
+        ArnoldUsdApplyParentMatrix(_camera, _delegate->GetProceduralParent());
+            
     }
 
     if (*dirtyBits & HdCamera::DirtyParams) {
