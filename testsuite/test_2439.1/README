@@ -1,0 +1,6 @@
+Add cone effect on cylinder light
+ARNOLD-16949
+
+author: Libby O'Meara
+
+PARAMS: { 'scene': 'cylinder.usda', 'kick_params': '-frame 27'  }
