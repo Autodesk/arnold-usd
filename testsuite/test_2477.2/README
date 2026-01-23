@@ -1,0 +1,7 @@
+USDLux: Add photometric capabilities to quad light
+
+ARNOLD-17102
+
+Author: Libby O'Meara
+
+PARAMS: {'scene': 'test.usda', 'kick_params': ' -frame 59'}
