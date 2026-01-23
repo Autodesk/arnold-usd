@@ -18,6 +18,7 @@ set(SRC
     render_delegate.cpp
     render_param.cpp
     render_pass.cpp
+    render_settings.cpp
     shape.cpp
 	shared_arrays.cpp
     utils.cpp
@@ -45,6 +46,7 @@ set(HDR
     render_delegate.h
     render_param.h
     render_pass.h
+    render_settings.h
     shape.h
     utils.h
     volume.h

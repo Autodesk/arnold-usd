@@ -65,6 +65,7 @@
 #include "procedural_custom.h"
 #include "render_buffer.h"
 #include "render_pass.h"
+#include "render_settings.h"
 #include "volume.h"
 #include <cctype>
 
@@ -268,14 +269,15 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
-#if PXR_VERSION >= 2208
-    if (!ownsUniverse) {
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-        return r;
-    } else
-#endif
+    // TODO : make sure we still need to check we own the universe, it's commented for testing at the moment
+// #if PXR_VERSION >= 2208
+//     if (!ownsUniverse) {
+//         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+//         return r;
+//     } else
+// #endif
     {
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
         return r;
     }
 }
@@ -1313,11 +1315,13 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
-    // Silently ignore render settings primitives, at the moment they're treated
-    // through a different code path
-#if PXR_VERSION >= 2208
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
+
+#if PXR_VERSION >= 2308
+    // Only support render settings when we don't own the universe (procedural context).
+    // When we own the universe (batch context), settings come through SetRenderSettings.
+    if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
+        return new HdArnoldRenderSettings(bprimId);
+    }
 #endif
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
