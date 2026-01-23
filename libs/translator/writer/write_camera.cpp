@@ -104,5 +104,20 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("shutter_end");
 
     _WriteMatrix(cam, node, writer);
+
+    AtArray* matrices = AiNodeGetArray(node, AtString("matrix"));
+    unsigned int numKeys = matrices ? AiArrayGetNumKeys(matrices) : 1;
+    bool hasMatrix = false;
+    for (unsigned int i = 0; i < numKeys; ++i) {
+        if (!AiM4IsIdentity(AiArrayGetMtx(matrices, i))) {
+            hasMatrix = true;
+            break;
+        }
+    }
+    if (hasMatrix) {
+        _exportedAttrs.insert("look_at");
+        _exportedAttrs.insert("up");
+        _exportedAttrs.insert("position");
+    }
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
