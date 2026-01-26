@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "common_utils.h"
+#include "constant_strings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -61,6 +62,33 @@ int ArnoldUsdGetLogVerbosityFromFlags(int flags)
         return 2;
     }
     return 1;
+}
+
+void ArnoldUsdApplyParentMatrix(AtNode *node, const AtNode *parent)
+{
+    if (parent == nullptr || node == nullptr)
+        return;
+    AtArray *matrices = AiNodeGetArray(node, str::matrix);
+    unsigned int matrixNumKeys = matrices  ? AiArrayGetNumKeys(matrices) : 0;
+    if (matrixNumKeys == 0)
+        return;
+
+    while (parent) {
+        const AtArray *parentMatrices = AiNodeGetArray(parent, str::matrix);
+        unsigned int parentMatrixNumKeys = parentMatrices && AiArrayGetNumElements(parentMatrices) > 0 ?
+            AiArrayGetNumKeys(parentMatrices) : 0;
+        if (parentMatrixNumKeys > 0) {
+            
+            for (int i = 0; i < matrixNumKeys; ++i) {
+                AtMatrix m = AiArrayGetMtx(matrices, i);
+                float t = (float)i / AiMax(float(matrixNumKeys - 1), 1.f);
+                m = AiM4Mult(m, AiArrayInterpolateMtx(parentMatrices, t, 0));
+                AiArraySetMtx(matrices, i, m);
+            }
+        }
+        parent = AiNodeGetParent(parent);
+    }
+    AiNodeSetArray(node, str::matrix, matrices);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

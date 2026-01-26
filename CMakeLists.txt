@@ -51,6 +51,10 @@ if (NOT BUILD_WITH_USD_STATIC)
         install(FILES plugInfo.json
             DESTINATION "${PREFIX_PLUGINS}")
     endif ()
+    if (BUILD_BUNDLE)
+        install(FILES plugInfo.json
+            DESTINATION "${PREFIX_BUNDLE}")
+    endif()
 endif()
 
 install(FILES LICENSE.md DESTINATION .)

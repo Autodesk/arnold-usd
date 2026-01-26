@@ -35,46 +35,49 @@ if (BUILD_SCENE_INDEX_PLUGIN)
     target_compile_definitions(usdImagingArnoldObjects PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 
+
+if (BUILD_USD_IMAGING_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
 # If we want a usdImagingArnold shared plugin
-if (NOT BUILD_WITH_USD_STATIC)
+    if (NOT BUILD_WITH_USD_STATIC)
 
-    add_library(usdImagingArnold SHARED ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+        add_library(usdImagingArnold SHARED ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 
-    if (BUILD_HEADERS_AS_SOURCES)
-        target_sources(usdImagingArnold PRIVATE ${HDR})
-    endif ()
+        if (BUILD_HEADERS_AS_SOURCES)
+            target_sources(usdImagingArnold PRIVATE ${HDR})
+        endif ()
 
-    set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
-    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-        list(APPEND USDIMAGING_LIBS hdsi)
+        set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
+        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+            list(APPEND USDIMAGING_LIBS hdsi)
+        endif()
+
+        if (${USD_VERSION} VERSION_LESS "0.25.05")
+            list(APPEND USDIMAGING_LIBS ndr)
+        endif()
+        add_common_dependencies(
+            TARGET_NAME usdImagingArnold
+            USD_DEPENDENCIES ${USDIMAGING_LIBS})
+
+        target_link_libraries(usdImagingArnold PRIVATE common)
+        target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+        if (BUILD_SCENE_INDEX_PLUGIN)
+            target_compile_definitions(usdImagingArnold PUBLIC ENABLE_SCENE_INDEX=1)
+        endif()
+        # For the generated shape adapters to find headers here.
+        target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+        
+        install(TARGETS usdImagingArnold
+            DESTINATION "${PREFIX_PLUGINS}")
+        set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
+        install_usdimaging_arnold_pluginfo(
+                ../usdImagingArnold
+                "${PLUGINFO}"
+                ${PREFIX_PLUGINS})
+
+        # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
+        generate_plug_info_for_testsuite(TARGET_NAME usdImagingArnold TARGET_PLUGINFO "${PLUGINFO}")
+
     endif()
-
-    if (${USD_VERSION} VERSION_LESS "0.25.05")
-        list(APPEND USDIMAGING_LIBS ndr)
-    endif()
-    add_common_dependencies(
-        TARGET_NAME usdImagingArnold
-        USD_DEPENDENCIES ${USDIMAGING_LIBS})
-
-    target_link_libraries(usdImagingArnold PRIVATE common)
-    target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
-    if (BUILD_SCENE_INDEX_PLUGIN)
-        target_compile_definitions(usdImagingArnold PUBLIC ENABLE_SCENE_INDEX=1)
-    endif()
-    # For the generated shape adapters to find headers here.
-    target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-    
-    install(TARGETS usdImagingArnold
-        DESTINATION "${PREFIX_PLUGINS}")
-    set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
-    install_usdimaging_arnold_pluginfo(
-            ../usdImagingArnold
-            "${PLUGINFO}"
-            ${PREFIX_PLUGINS})
-
-    # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
-    generate_plug_info_for_testsuite(TARGET_NAME usdImagingArnold TARGET_PLUGINFO "${PLUGINFO}")
-
 endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR} shape_adapters.cpp.in)
