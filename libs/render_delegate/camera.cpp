@@ -20,6 +20,7 @@
 #include <pxr/base/gf/range1f.h>
 #include "node_graph.h"
 #include <constant_strings.h>
+#include <common_utils.h>
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -282,6 +283,10 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         param->Interrupt();
         HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
         HdArnoldSetTransform(_camera, sceneDelegate, GetId(), renderParam->GetShutterRange());
+        // In arnold, parent matrices are not applied properly to cameras.
+        // We fake this by applying the parent procedural matrix here
+        ArnoldUsdApplyParentMatrix(_camera, _delegate->GetProceduralParent());
+            
     }
 
     if (*dirtyBits & HdCamera::DirtyParams) {

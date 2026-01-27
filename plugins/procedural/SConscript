@@ -24,7 +24,7 @@ Import('env')
 local_env = env.Clone()
 
 src_proc_dir  = os.path.join(local_env['ROOT_DIR'], 'plugins', 'procedural')
-source_files = [os.path.join('main.cpp')]
+source_files = [os.path.join('main.cpp'), os.path.join('asset_utils.cpp')]
 src_reader_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'reader')
 src_writer_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'writer')
 

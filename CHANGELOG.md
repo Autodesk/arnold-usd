@@ -1,10 +1,21 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.0.0] (Unreleased)
+
+### Features
+
+- [usd#2519](https://github.com/Autodesk/arnold-usd/issues/2519) - Fix transform of cameras under procedurals
+- [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
+- [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) -  Add a new bundle plugin containing the procedural and all usd plugins.
+
 ## [7.4.5.0] (Unreleased)
 
 ### Features
 
+- [usd#2394](https://github.com/Autodesk/arnold-usd/issues/2394) - Support VDB fieldIndex
+- [usd#2504](https://github.com/Autodesk/arnold-usd/issues/2504) - Ensure geom subsets don't get appended to usd in animated exports
+- [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
 - [usd#2492](https://github.com/Autodesk/arnold-usd/issues/2492) - Fix path resolving issue for ocio config with absolute paths
 - [usd#2459](https://github.com/Autodesk/arnold-usd/issues/2459) - Use lightweight instancing for geometries in the render delegate
 - [usd#2469](https://github.com/Autodesk/arnold-usd/issues/2469) - Authored primvars should not have elementSize set to the array size
@@ -12,10 +23,19 @@
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
 
-## [7.4.4.1] (Unreleased)
+## [7.4.4.2] (Unreleased)
 
 ### Bug Fixes
 
+- [usd#2509](https://github.com/Autodesk/arnold-usd/issues/2509) - Fix crash in Solaris when changing the rendered LOP interactively
+- [usd#2514](https://github.com/Autodesk/arnold-usd/issues/2514) - Fix random inconsistencies between instantaneousShutter and ignore_motion_blur in hydra 
+
+
+## [7.4.4.1] 2025-12-18
+
+### Bug Fixes
+
+- [usd#2501](https://github.com/Autodesk/arnold-usd/issues/2501) - Fix incorrect transforms and materials when authoring usd files with meshes parented under instances
 - [usd#2467](https://github.com/Autodesk/arnold-usd/issues/2467) - Hidden primitives turned visible in IPR do not always show up in the render
 - [usd#2486](https://github.com/Autodesk/arnold-usd/issues/2486) - Fix a crash in the scene index happening when the typename is not yet defined
 - [usd#2472](https://github.com/Autodesk/arnold-usd/issues/2472) - Fix regression in default value of texture_auto_generate_tx in the render delegate plugin

@@ -36,6 +36,7 @@
 #include <pxr/usd/usd/stageCache.h>
 #include <pxr/usd/usdUtils/stageCache.h>
 #include "writer.h"
+#include "asset_utils.h"
 
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
@@ -208,7 +209,11 @@ procedural_init
     } 
     // We load a usd file, with eventual serialized overrides
     const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
+#if ARNOLD_VERSION_NUM >= 70405
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Asset));
+#else
     std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
+#endif
     applyProceduralSearchPath(filename, nullptr);
     data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
     
@@ -305,7 +310,11 @@ procedural_viewport
     int cache_id = AiNodeGetInt(node, AtString("cache_id"));
 
     const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
+#if ARNOLD_VERSION_NUM >= 70405
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Asset));
+#else
     std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
+#endif
     AtArray *overrides = AiNodeGetArray(node, AtString("overrides"));
 
     // We support empty filenames if overrides are being set #552
@@ -383,6 +392,7 @@ extern "C"
         // Create an Arnold-USD writer, that can write an Arnold univers to a UsdStage
         UsdArnoldWriter writer;
         writer.SetUsdStage(stage); 
+        writer.SetAppendFile(true);
 
         if (params) {
             // eventually check the input param map in case we have an entry for "frame"
@@ -525,6 +535,7 @@ scene_write
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter *writer = new UsdArnoldWriter();
+    writer->SetAppendFile(appendFile);
     writer->SetUsdStage(stage); // give it the output stage
 
     // Check if a mask has been set through the params map
@@ -560,6 +571,30 @@ scene_write
     delete writer;
     return true;
 }
+
+// scene_get_assets function was added in Arnold 7.4.5.0
+#if ARNOLD_VERSION_NUM >= 70405
+// static AtArray* SceneGetAssets(const char* filename, const AtParamValueMap* params)
+scene_get_assets
+{
+    // collect assets from the scene
+    std::vector<AtAsset*> assets;
+    CollectSceneAssets(filename, assets);
+
+    if (assets.empty())
+        return nullptr;
+
+    // convert our list to an Arnold array
+    // the ownership of the array and the assets is delegated to the caller
+    AtArray* assetArray = AiArrayAllocate(assets.size(), 1, AI_TYPE_POINTER);
+    void* assetArrayData = AiArrayMap(assetArray);
+    void* assetData = assets.data();
+    if (assetArrayData && assetData)
+       memcpy(assetArrayData, assetData, assets.size() * sizeof(void*));
+
+    return assetArray;
+}
+#endif
 
 scene_format_loader
 {

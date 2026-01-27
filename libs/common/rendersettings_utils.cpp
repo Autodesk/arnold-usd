@@ -19,8 +19,6 @@
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usdGeom/camera.h>
 
-#include <iostream> // TODO remove  
-
 #include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE

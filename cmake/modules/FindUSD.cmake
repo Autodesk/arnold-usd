@@ -76,12 +76,15 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
     list(APPEND CMAKE_FRAMEWORK_PATH ${MAYA_LOCATION}/Contents/Frameworks)
     # TODO Windows and Linux
     # Looking for the python shipped with Mayas
-    find_package(Python COMPONENTS Development Interpreter REQUIRED)
-    if (NOT Python_FOUND)
+    message(STATUS "Using hint: Python3_INCLUDE_DIR: ${Python3_INCLUDE_DIR}")
+    message(STATUS "Using hint: Python3_LIBRARY: ${Python3_LIBRARY}")
+    message(STATUS "Using hint: Python3_EXECUTABLE: ${Python3_EXECUTABLE}")
+    find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
+    if (NOT Python3_FOUND)
         message(WARNING "Python for maya not found")
     else()
         # Setting PYTHON_LIBRARIES for the pxrTargets shipped with mayausd
-        set(PYTHON_LIBRARIES ${Python_LIBRARIES})
+        set(PYTHON_LIBRARIES ${Python3_LIBRARIES})
         set(USD_HAS_PYTHON true)
 
         # TODO check linux and windows
@@ -91,31 +94,29 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
             DOC "USD Gen Schema executable"
         )
     endif()
-
+    message(STATUS "Using maya PYTHON include dirs: ${Python3_INCLUDE_DIRS}")
     # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
     # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
     # For maya usd, we need maya and mayausd as they are provided separately
-    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}/mayausd/USD)
-    find_package(pxr PATHS ${PXR_USD_LOCATION})
+    set(PXR_USD_LOCATION ${USD_LOCATION}) # TODO change since now the version is added to USD -> USD_2411
+    find_package(pxr PATHS ${PXR_USD_LOCATION} ${MAYAUSD_LOCATION})
     if (pxr_FOUND)
         set(USD_LOCATION ${PXR_USD_LOCATION})
-        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}/mayausd/USD")
+        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}")
 
         # Set USD_VERSION
         find_usd_version(${PXR_INCLUDE_DIRS}) 
         message(STATUS "USD version ${USD_VERSION}")
 
         # The mayausd libraries are only x86_64 on osx for the moment
-        set(CMAKE_OSX_ARCHITECTURES x86_64)
+        set(CMAKE_OSX_ARCHITECTURES x86_64;arm64)
 
         set(USD_MONOLITHIC_BUILD OFF)
-        if (LINUX)
-            set(BUILD_DISABLE_CXX11_ABI ON)
-        endif()
 
         # Variable for running usdGenSchema
         # USD_LIBRARY_DIR is needed by the schema script
         set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+        set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
             PATHS "${PXR_USD_LOCATION}/bin"
@@ -123,6 +124,8 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
 
         unset(PXR_USD_LOCATION)
         return()
+    else()
+        message(WARNING "pxrConfig.cmake was not found in ${PXR_USD_LOCATION} or ${MAYAUSD_LOCATION}")
     endif()
     unset(PXR_USD_LOCATION)
 else()
@@ -254,9 +257,6 @@ if (HOUDINI_LOCATION)
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
             endif()
-        endif()
-        if (LINUX)
-            set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
         
         check_compositor()

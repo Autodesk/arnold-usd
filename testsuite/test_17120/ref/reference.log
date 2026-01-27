@@ -1,0 +1,43 @@
+Executing D:\arnold\arnold-usd\testsuite_results\test_17120\test
+00:00:00    73MB         | log started Mon Jan  5 12:33:52 2026
+00:00:00    73MB         | Arnold 7.4.5.0 [bdeb0cee] windows x86_64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.8.2.57 clmhub-3.1.1.43 rlm-17.0.1 optix-8.0.0 2025/12/15 17:14:10
+00:00:00    73MB         | running on ADSKEM00ZH29, pid=35060
+00:00:00    73MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
+00:00:00    73MB         |  NVIDIA driver version 581.80
+00:00:00    73MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (5276MB available) (NVLink:0)
+00:00:00    73MB         |  Windows 10 (version 10.0, build 26100)
+00:00:00    73MB         |  soft limit for open files changed from 512 to 2048
+00:00:00    73MB         |  
+00:00:00    73MB         | Installing system handler with mask 255
+00:00:00   118MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.25.5_arnold-7.4.5.0\plugins\procedural ...
+00:00:00   127MB         |  usd_proc.dll: usd uses Arnold 7.4.5.0
+00:00:00   127MB         | loaded 1 plugins from 1 lib(s) in 0:00.03
+00:00:00   127MB         | loading plugins from D:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   127MB         |  alembic_proc.dll: alembic uses Arnold 7.4.5.0
+00:00:00   127MB         |  skipping already loaded plugin: D:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   127MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   129MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   132MB         | [metadata] loading metadata file: scene.ass
+00:00:00   132MB         | [ass] loading scene.ass ...
+00:00:00   133MB         | [ass] read 115535 bytes, 15 nodes in 0:00.00
+Exporting frame 0
+00:00:00   163MB         | [usd] Saved scene as test_resaved.usda
+Done exporting00:00:00   167MB WARNING | USD arnold attribute shaders not recognized in skydome_light for /Lights/Arnold_Sky
+RENDER
+        RLM DEBUG for all products
+
+        In license file: C:\arnold\license\arnold_04d9c8c1a45e_20260306.lic: 
+        Product: arnold, ISV: solidangle, Uncounted
+
+        1 product instances found
+
+00:00:01   307MB         |  
+00:00:01   307MB         | releasing resources
+00:00:01   206MB         |   
+00:00:01   206MB         |  releasing resources
+00:00:01   194MB         |   unloading 2 plugins
+00:00:01   194MB         |    closing usd_proc.dll ...
+00:00:01   194MB         |    closing alembic_proc.dll ...
+00:00:01   194MB         |   unloading plugins done
+00:00:01   194MB         |  Arnold shutdown
+00:00:01   180MB         |  Installing system handler with mask 0

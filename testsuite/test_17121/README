@@ -1,0 +1,7 @@
+Render output nodes
+
+Fixes ARNOLD-17121
+
+author: sebastien.ortega
+
+PARAMS: { 'resaved': 'usda' , 'kick_params':'-o dummy.tif'}

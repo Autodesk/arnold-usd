@@ -1,295 +1,265 @@
-00:00:00    89MB         | log started Wed May 17 21:04:33 2023
-00:00:00    89MB         | Arnold 7.2.2.0 [16d4b1c9] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/05/03 17:26:56
-00:00:00    89MB         | running on REMS4QL1726, pid=24344
-00:00:00    89MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
-00:00:00   102MB         |  NVIDIA driver version 522.06 (Optix 60804)
-00:00:00   102MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (6201MB available) (NVLink:0)
-00:00:00   102MB         |  Windows 10 (version 10.0, build 19044)
-00:00:00   102MB         |  soft limit for open files is set at 2048
-00:00:00   102MB         |  
-00:00:00   113MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   113MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.22.11_arnold-7.2.2.0\procedural ...
-00:00:00   119MB         |  usd_proc.dll: usd uses Arnold 7.2.2.0
-00:00:00   119MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
-00:00:00   119MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
-00:00:00   119MB         |  alembic_proc.dll: alembic uses Arnold 7.2.2.0
-00:00:00   119MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.2.2.0
-00:00:00   119MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.2.2.0
-00:00:00   119MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.2.2.0
-00:00:00   119MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
-00:00:00   119MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
-00:00:00   120MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   124MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
-00:00:00   124MB         | loading plugins from . ...
-00:00:00   124MB         | no plugins loaded
-00:00:00   124MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
-00:00:00   173MB         | [kick] applying 2 attr value overrides
-00:00:00   173MB         | 
-00:00:00   173MB         | authorizing with license manager: network ...
-00:00:00   174MB WARNING | rendering with watermarks because of failed authorization:
-00:00:00   174MB         |  [clm.v1] license server was not set (51)
-00:00:00   174MB         |  environment variables:
-00:00:00   174MB         |         ARNOLD_LICENSE_ORDER   = (not set)
-00:00:00   174MB         |         ARNOLD_LICENSE_MANAGER = (not set)
-00:00:00   174MB         |  [rlm]  solidangle_LICENSE     = (not set)
-00:00:00   174MB         |  [rlm]  RLM_LICENSE            = (not set)
-00:00:00   174MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
-00:00:00   174MB         |  [clm]  LM_LICENSE_FILE        = (not set)
-00:00:00   174MB         | 
-00:00:00   174MB         | [color_manager] using color manager of type "color_manager_ocio"
-00:00:00   175MB         | [color_manager_ocio] using config file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   175MB         | [color_manager] rendering color space is "ACEScg"
-00:00:00   228MB         |  
-00:00:00   228MB         | there are 1 light and 24 objects:
-00:00:00   228MB         |       1 persp_camera
-00:00:00   228MB         |       1 skydome_light
-00:00:00   228MB         |       2 utility
-00:00:00   228MB         |       1 standard_surface
-00:00:00   228MB         |       1 user_data_rgb
-00:00:00   228MB         |       1 driver_tiff
-00:00:00   228MB         |       2 box_filter
-00:00:00   228MB         |       1 gaussian_filter
-00:00:00   228MB         |       5 polymesh
-00:00:00   228MB         |       4 ginstance
-00:00:00   228MB         |       2 list_aggregate
-00:00:00   228MB         |       6 instancer
-00:00:00   228MB         |       2 color_manager_ocio
-00:00:00   228MB         |       8 usd
-00:00:00   228MB         |  
-00:00:00   228MB         | rendering image at 160 x 120, 5 AA samples
-00:00:00   228MB         |   AA samples max    <disabled>
-00:00:00   228MB         |   AA sample clamp   <disabled>
-00:00:00   228MB         |   diffuse           samples  2 / depth  1
-00:00:00   228MB         |   specular          samples  2 / depth  1
-00:00:00   228MB         |   transmission      samples  2 / depth  2
-00:00:00   228MB         |   volume indirect   <disabled by depth>
-00:00:00   228MB         |   total                          depth 10
-00:00:00   228MB         |   bssrdf            samples  2
-00:00:00   228MB         |   light             <using per light samples>
-00:00:00   228MB         |   transparency      depth 10
-00:00:00   228MB         | initializing 34 nodes
-00:00:00   228MB         |  [instancer] /root/references/geo/root/rock_scatter: creating 1000 instances
-00:00:00   233MB         |  [proc] /root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
-00:00:00   233MB WARNING |  /root/references/geo/root/rock_scatter_instance_1: parameter "opaque" is deprecated
-00:00:00   233MB WARNING |  /root/references/geo/root/rock_scatter_instance_2: parameter "opaque" is deprecated
-00:00:00   233MB WARNING |  /root/references/geo/root/rock_scatter_instance_3: parameter "opaque" is deprecated
-00:00:00   233MB WARNING |  /root/references/geo/root/rock_scatter_instance_4: parameter "opaque" is deprecated
-00:00:00   233MB WARNING |  /root/references/geo/root/rock_scatter_instance_5: parameter "opaque" is deprecated
-00:00:00   233MB         |  [proc] /root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   233MB         |  [instancer] /root/instances/geo/root/rock_scatter: creating 1000 instances
-00:00:00   236MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
-00:00:00   236MB         |  [proc] /root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   236MB         |  [instancer] /root/pointinstance_reference/instancer: processing per instance parameter 'instance_P'
-00:00:00   236MB         |  [instancer] /root/pointinstance_reference/instancer: creating 1 instance
-00:00:00   238MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo: loaded 6 nodes (4 objects, 2 shaders)
-00:00:00   238MB         |  [proc] /root/pointinstance_reference/instancer: loaded 1 nodes (1 objects, 0 shaders)
-00:00:00   238MB         |  [instancer] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: creating 1000 instances
-00:00:00   241MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
-00:00:00   242MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   242MB         |  [instancer] /root/pointinstance_instance/instancer: processing per instance parameter 'instance_P'
-00:00:00   242MB         |  [instancer] /root/pointinstance_instance/instancer: creating 1 instance
-00:00:00   243MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo: loaded 4 nodes (4 objects, 0 shaders)
-00:00:00   243MB         |  [proc] /root/pointinstance_instance/instancer: loaded 1 nodes (1 objects, 0 shaders)
-00:00:00   243MB         |  [instancer] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: creating 1000 instances
-00:00:00   250MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
-00:00:00   251MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   251MB         |  [instancer] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: creating 1000 instances
-00:00:00   263MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
-00:00:00   263MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   263MB         |  [instancer] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: creating 1000 instances
-00:00:00   264MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
-00:00:00   265MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
-00:00:00   267MB         |  [proc] /__Prototype_1: loaded 3 nodes (1 objects, 2 shaders)
-00:00:00   268MB         |  [proc] /__Prototype_2: loaded 3 nodes (1 objects, 2 shaders)
-00:00:00   268MB         |  creating root object list ...
-00:00:00   268MB         |  the following procedurals were initialized serially:
-00:00:00   268MB         |     instancer (8 instances)
-00:00:00   268MB         | node initialization done in 0:00.11 (multithreaded)
-00:00:00   268MB         | updating 6065 nodes
-00:00:00   268MB         |  /dome: skydome_light using 1 sample, 2 volume samples
-00:00:00   268MB         |  scene bounds: (-308.413727 -41.1264801 -309.263763) -> (2440.95288 528.937988 309.624512)
-00:00:00   268MB         | node update done in 0:00.01 (multithreaded)
-00:00:00   268MB         | [aov] parsing 1 output statements ...
-00:00:00   268MB         | [aov] registered driver: "kick_driver" (driver_tiff)
-00:00:00   268MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_filter" (gaussian_filter)
-00:00:00   268MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
-00:00:00   269MB         | starting 64 bucket workers of size 16x16 ...
-00:00:00   279MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 7 prims, 1 key
-00:00:00   302MB         |    0% done - 348 rays/pixel
-00:00:00   315MB         |    5% done - 73 rays/pixel
-00:00:00   316MB         |  [accel] procedural bvh4 done - 0:00.01 (wall time) - 4 prims, 1 key
-00:00:00   316MB         |   10% done - 55 rays/pixel
-00:00:00   316MB         |  [accel] procedural bvh4 done - 0:00.01 (wall time) - 4 prims, 1 key
-00:00:00   317MB         |   15% done - 22 rays/pixel
-00:00:00   320MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 3720 prims, 1 key
-00:00:00   320MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 3720 prims, 1 key
-00:00:00   320MB         |   20% done - 102 rays/pixel
-00:00:00   320MB         |   25% done - 14 rays/pixel
-00:00:00   318MB         |   30% done - 15 rays/pixel
-00:00:00   318MB         |   35% done - 6 rays/pixel
-00:00:00   317MB         |   40% done - 4 rays/pixel
-00:00:00   317MB         |  [accel] procedural bvh4_motion done - 0:00.01 - 1000 prims, 2 keys
-00:00:00   318MB         |  [accel] procedural bvh4_motion done - 0:00.01 - 1000 prims, 2 keys
-00:00:00   318MB         |   45% done - 9 rays/pixel
-00:00:00   320MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 24242 prims, 1 key
-00:00:00   320MB         |   50% done - 4 rays/pixel
-00:00:00   320MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 3720 prims, 1 key
-00:00:00   320MB         |   55% done - 4 rays/pixel
-00:00:00   318MB         |   60% done - 2 rays/pixel
-00:00:00   315MB         |  [accel] procedural bvh4_motion done - 0:00.01 - 1000 prims, 2 keys
-00:00:00   315MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
-00:00:00   315MB         |  [accel] procedural bvh4_motion done - 0:00.01 - 1000 prims, 2 keys
-00:00:00   319MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
-00:00:00   321MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
-00:00:00   327MB         |   65% done - 197 rays/pixel
-00:00:00   329MB         |   70% done - 58 rays/pixel
-00:00:00   330MB         |   75% done - 36 rays/pixel
-00:00:00   331MB         |   80% done - 45 rays/pixel
-00:00:00   335MB         |   85% done - 120 rays/pixel
-00:00:00   336MB         |   90% done - 29 rays/pixel
-00:00:00   336MB         |   95% done - 18 rays/pixel
-00:00:00   337MB         |  100% done - 15 rays/pixel
-00:00:00   337MB         | render done in 0:00.097
-00:00:00   337MB         | [driver_tiff] writing file `testrender.tif'
-00:00:00   336MB         | render done
-00:00:00   337MB         |  
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | scene creation time          0:00.46    machine utilization (6.88%) 
-00:00:00   337MB         |  unaccounted                 0:00.45 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | frame time                   0:00.30    machine utilization (36.43%) 
-00:00:00   337MB         |  node init                   0:00.13 
-00:00:00   337MB         |  driver init/close           0:00.01 
-00:00:00   337MB         |  rendering                   0:00.09 
-00:00:00   337MB         |   accel building             0:00.01 
-00:00:00   337MB         |   pixel rendering            0:00.07 
-00:00:00   337MB         |  unaccounted                 0:00.05 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | top session self-times by category 
-00:00:00   337MB         |  PostInitializeProcs                                                0:00.01 ( 9.83%) 
-00:00:00   337MB         |  thread blocked                                                     0:00.01 ( 9.49%) 
-00:00:00   337MB         |  PreInitializeProcs                                                 0:00.01 ( 9.36%) 
-00:00:00   337MB         |  UpdateNodes                                                        0:00.01 ( 9.01%) 
-00:00:00   337MB         |  TraceCameraRay                                                     0:00.01 ( 8.50%) 
-00:00:00   337MB         |  InitializeNodes                                                    0:00.01 ( 7.85%) 
-00:00:00   337MB         |  sampleNextBatch                                                    0:00.00 ( 5.49%) 
-00:00:00   337MB         |  BVH_motion::intersect                                              0:00.00 ( 4.75%) 
-00:00:00   337MB         |   /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter     0:00.00 ( 1.65%) 
-00:00:00   337MB         |   /root/references/geo/root/rock_scatter                            0:00.00 ( 1.18%) 
-00:00:00   337MB         |   /root/instances/geo/root/rock_scatter                             0:00.00 ( 1.14%) 
-00:00:00   337MB         |   /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter     0:00.00 ( 0.78%) 
-00:00:00   337MB         |  RenderBucket                                                       0:00.00 ( 4.47%) 
-00:00:00   337MB         |  BVH::intersect                                                     0:00.00 ( 4.26%) 
-00:00:00   337MB         |   root                                                              0:00.00 ( 1.30%) 
-00:00:00   337MB         |   /__Prototype_2/mesh_0                                             0:00.00 ( 1.03%) 
-00:00:00   337MB         |  polymesh::intersect                                                0:00.00 ( 3.80%) 
-00:00:00   337MB         |   /__Prototype_2/mesh_0                                             0:00.00 ( 1.23%) 
-00:00:00   337MB         |   /__Prototype_1/mesh_0                                             0:00.00 ( 1.18%) 
-00:00:00   337MB         |  accumulateBucketSamples                                            0:00.00 ( 3.34%) 
-00:00:00   337MB         |  BVH::build                                                         0:00.00 ( 2.89%) 
-00:00:00   337MB         |  surface closure                                                    0:00.00 ( 2.48%) 
-00:00:00   337MB         |   _default_arnold_shader                                            0:00.00 ( 2.08%) 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | top session self-times by node 
-00:00:00   337MB         |  PostInitializeProcs                                                0:00.01 ( 9.83%) 
-00:00:00   337MB         |  PreInitializeProcs                                                 0:00.01 ( 9.36%) 
-00:00:00   337MB         |  UpdateNodes                                                        0:00.01 ( 9.01%) 
-00:00:00   337MB         |  TraceCameraRay                                                     0:00.01 ( 8.50%) 
-00:00:00   337MB         |  InitializeNodes                                                    0:00.01 ( 7.85%) 
-00:00:00   337MB         |  sampleNextBatch                                                    0:00.00 ( 5.49%) 
-00:00:00   337MB         |  RenderBucket                                                       0:00.00 ( 4.47%) 
-00:00:00   337MB         |  polymesh:/__Prototype_2/mesh_0                                     0:00.00 ( 4.24%) 
-00:00:00   337MB         |   thread blocked                                                    0:00.00 ( 1.52%) 
-00:00:00   337MB         |   polymesh::intersect                                               0:00.00 ( 1.23%) 
-00:00:00   337MB         |   BVH::intersect                                                    0:00.00 ( 1.03%) 
-00:00:00   337MB         |  standard_surface:_default_arnold_shader                            0:00.00 ( 4.18%) 
-00:00:00   337MB         |   surface closure                                                   0:00.00 ( 2.08%) 
-00:00:00   337MB         |  polymesh:/root/references/geo/root/rock_scatter/Prototypes/root/rock_01/mesh_0     0:00.00 ( 3.85%) 
-00:00:00   337MB         |   thread blocked                                                    0:00.00 ( 3.36%) 
-00:00:00   337MB         |  accumulateBucketSamples                                            0:00.00 ( 3.34%) 
-00:00:00   337MB         |  usd:                                                               0:00.00 ( 2.23%) 
-00:00:00   337MB         |   BVH::intersect                                                    0:00.00 ( 0.55%) 
-00:00:00   337MB         |  polymesh:/labels/mesh_0                                            0:00.00 ( 2.23%) 
-00:00:00   337MB         |   BVH::build                                                        0:00.00 ( 1.69%) 
-00:00:00   337MB         |  polymesh:/root/references/geo/root/mountain_01/mesh_0              0:00.00 ( 2.16%) 
-00:00:00   337MB         |   thread blocked                                                    0:00.00 ( 1.07%) 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | peak CPU memory used      338.35MB 
-00:00:00   337MB         |  at startup               102.22MB 
-00:00:00   337MB         |  plugins                    0.02MB 
-00:00:00   337MB         |  AOV samples                7.75MB 
-00:00:00   337MB         |  output buffers             0.33MB 
-00:00:00   337MB         |  framebuffers               0.31MB 
-00:00:00   337MB         |  node overhead              3.62MB 
-00:00:00   337MB         |  instance overhead          2.38MB 
-00:00:00   337MB         |  message passing            0.13MB 
-00:00:00   337MB         |  memory pools              66.02MB 
-00:00:00   337MB         |  geometry                   0.87MB 
-00:00:00   337MB         |   polymesh                  0.82MB 
-00:00:00   337MB         |  accel structs              1.55MB 
-00:00:00   337MB         |  strings                   24.50MB 
-00:00:00   337MB         |  profiler                   0.08MB 
-00:00:00   337MB         |  unaccounted              128.57MB 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
-00:00:00   337MB         |  camera                   540080 (  28.13,    1.00) ( 63.76%) (     0.07) (       1)
-00:00:00   337MB         |  shadow                   162501 (   8.46,    0.30) ( 19.18%) (     0.31) (       1)
-00:00:00   337MB         |  diffuse_reflect           75168 (   3.91,    0.14) (  8.87%) (     0.28) (       1)
-00:00:00   337MB         |  specular_reflect          69276 (   3.61,    0.13) (  8.18%) (     0.31) (       1)
-00:00:00   337MB         |  total                    847025 (  44.12,    1.57) (100.00%) (     0.15) (       1)
-00:00:00   337MB         | by ray depth:              0     1     2
-00:00:00   337MB         |  total                   79.9% 19.0%  1.1% 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | shader calls                     (  /pixel,  /sample) (% total)
-00:00:00   337MB         |  primary                  162848 (    8.48,     0.30) (100.00%)
-00:00:00   337MB         |  total                    162848 (    8.48,     0.30) (100.00%)
-00:00:00   337MB         | by ray depth:              0     1     2
-00:00:00   337MB         |  total                   48.1% 47.5%  4.4% 
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
-00:00:00   337MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
-00:00:00   337MB         |  procs                        18 ( 77.8%) (     6011) (      0.05,       0.05)
-00:00:00   337MB         |  polymeshes                   12 ( 58.3%) (        0) (      0.73,       0.82)
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | geometric elements               (      min) (       avg.) (      max)
-00:00:00   337MB         |  objects (top level)           1 (        1) (        1.0) (        1)
-00:00:00   337MB         |  objects (procs)            6018 (        1) (      334.3) (     1000)
-00:00:00   337MB         |  polygons                  40382 (      180) (     3365.2) (    24242)
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
-00:00:00   337MB         |  polymeshes                36242 (      180) (     5177.4) (    24242) (     1.01) (100.00%)
-00:00:00   337MB         |  unique triangles          36242 
-00:00:00   337MB         |  visible triangles        759522 
-00:00:00   337MB         |  CPU memory use             0.75MB 
-00:00:00   337MB         |   vertices                  0.35MB 
-00:00:00   337MB         |   vertex indices            0.18MB 
-00:00:00   337MB         |   packed normals            0.11MB 
-00:00:00   337MB         |   normal indices            0.05MB 
-00:00:00   337MB         |   uniform indices           0.06MB 
-00:00:00   337MB         |  largest polymeshes by triangle count 
-00:00:00   337MB         |      24242 tris -- /labels/mesh_0
-00:00:00   337MB         |       3820 tris -- /__Prototype_2/mesh_0
-00:00:00   337MB         |       3820 tris -- /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/mountain_01/mesh_0
-00:00:00   337MB         |       3820 tris -- /root/references/geo/root/mountain_01/mesh_0
-00:00:00   337MB         |        180 tris -- /__Prototype_1/mesh_0
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | acceleration structures:         (% total)
-00:00:00   337MB         |  list                          8 ( 36.36%)
-00:00:00   337MB         |  bvh                          10 ( 45.45%)
-00:00:00   337MB         |  bvh motion (2 keys)           4 ( 18.18%)
-00:00:00   337MB         |  total                        22 (100.00%)
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   337MB         | number of warnings, warning type:
-00:00:00   337MB         |  6011:  %s: parameter "%s" is deprecated
-00:00:00   337MB         |     1:  rendering with watermarks because of failed authorization:
-00:00:00   337MB         | -----------------------------------------------------------------------------------
-00:00:00   336MB         |  
-00:00:00   336MB         | releasing resources
-00:00:00   218MB         |   
-00:00:00   218MB         |  releasing resources
-00:00:00   205MB         |   unloading 3 plugins
-00:00:00   205MB         |    closing usd_proc.dll ...
-00:00:00   205MB         |    closing alembic_proc.dll ...
-00:00:00   205MB         |    closing cryptomatte.dll ...
-00:00:00   205MB         |   unloading plugins done
-00:00:00   205MB         |  Arnold shutdown
+Executing kick test.usda -dw -r 160 120 -bs 16 -sm lambert -sl -o D:\arnold\arnold-usd\testsuite_results\test_0237\testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   191MB         | log started Mon Jan 12 11:42:16 2026
+00:00:00   191MB         | Arnold 7.5.0.0 [4e563ecc] windows x86_64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-10.0.1.66 clmhub-3.3.0.15 rlm-17.0.1 optix-8.0.0 2026/01/12 10:17:20
+00:00:00   191MB         | running on ADSKEM00ZH29, pid=42300
+00:00:00   191MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
+00:00:00   205MB         |  NVIDIA driver version 581.80
+00:00:00   205MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (5452MB available) (NVLink:0)
+00:00:00   205MB         |  Windows 10 (version 10.0, build 26100)
+00:00:00   205MB         |  soft limit for open files is set at 2048
+00:00:00   205MB         |  
+00:00:00   205MB         | Installing system handler with mask 255
+00:00:00   216MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.25.5_arnold-7.5.0.0\plugins\procedural ...
+00:00:00   223MB         |  usd_proc.dll: usd uses Arnold 7.5.0.0
+00:00:00   224MB         | loaded 1 plugins from 1 lib(s) in 0:00.02
+00:00:00   224MB         | loading plugins from D:\arnold\core\install\bin\..\plugins ...
+00:00:00   224MB         |  alembic_proc.dll: alembic uses Arnold 7.4.5.0
+00:00:00   224MB         |  skipping already loaded plugin: D:\arnold\core\install\bin\..\plugins\usd_proc.dll ...
+00:00:00   224MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   228MB         | [kick] command: kick test.usda -dw -r 160 120 -bs 16 -sm lambert -sl -o D:\arnold\arnold-usd\testsuite_results\test_0237\testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   228MB         | loading plugins from . ...
+00:00:00   228MB         | no plugins loaded
+00:00:00   228MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   262MB WARNING | A node named "/root/instances/geo/root/rock_scatter/Prototypes/root/rock_01" already exists: this newly added usd node will be renamed to an empty string
+00:00:00   264MB WARNING | A node named "/root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter/Prototypes/root/rock_01" already exists: this newly added usd node will be renamed to an empty string
+00:00:00   266MB         | [kick] applying 2 attr value overrides
+00:00:00   266MB         | 
+00:00:00   266MB WARNING | rendering with watermarks because the skip_license_check option was enabled
+00:00:00   266MB         | 
+00:00:00   267MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   268MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
+00:00:00   268MB         | [color_manager] rendering color space is "ACEScg"
+00:00:01   321MB         |  
+00:00:01   321MB         | there are 1 light and 24 objects:
+00:00:01   321MB         |       1 render_output
+00:00:01   321MB         |       1 persp_camera
+00:00:01   321MB         |       1 skydome_light
+00:00:01   321MB         |       2 utility
+00:00:01   321MB         |       1 standard_surface
+00:00:01   321MB         |       1 user_data_rgb
+00:00:01   321MB         |       1 driver_tiff
+00:00:01   321MB         |       2 box_filter
+00:00:01   321MB         |       1 gaussian_filter
+00:00:01   321MB         |       5 polymesh
+00:00:01   321MB         |       4 ginstance
+00:00:01   321MB         |       2 list_aggregate
+00:00:01   321MB         |       6 instancer
+00:00:01   321MB         |       2 color_manager_ocio
+00:00:01   321MB         |       8 usd
+00:00:01   321MB         |  
+00:00:01   321MB         | rendering image at 160 x 120, 5 AA samples
+00:00:01   321MB         |   AA samples max    <disabled>
+00:00:01   321MB         |   AA sample clamp   <disabled>
+00:00:01   321MB         |   diffuse           samples  2 / depth  1
+00:00:01   321MB         |   specular          samples  2 / depth  1
+00:00:01   321MB         |   transmission      samples  2 / depth  8
+00:00:01   321MB         |   volume indirect   <disabled by depth>
+00:00:01   321MB         |   total                          depth 10
+00:00:01   321MB         |   bssrdf            samples  2
+00:00:01   321MB         |   light             <using per light samples>
+00:00:01   321MB         |   transparency      depth 10
+00:00:01   321MB         | full scene initialize (35 nodes)
+00:00:01   322MB         |  [instancer] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: creating 1000 instances
+00:00:01   323MB         |  [instancer] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: creating 1000 instances
+00:00:01   324MB         |  [proc] /__Prototype_1: loaded 3 nodes (1 objects, 2 shaders)
+00:00:01   326MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:01   326MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
+00:00:01   326MB         |  [instancer] /root/references/geo/root/rock_scatter: creating 1000 instances
+00:00:01   327MB         |  [proc] /root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:01   327MB         |  [proc] /__Prototype_3: loaded 3 nodes (1 objects, 2 shaders)
+00:00:01   327MB         |  [proc] /root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
+00:00:01   327MB         |  [instancer] /root/instances/geo/root/rock_scatter: creating 1000 instances
+00:00:01   327MB WARNING |  A node named "/root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter/Prototypes/root/rock_01" already exists: this newly added ginstance node will be renamed to an empty string
+00:00:01   327MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
+00:00:01   327MB WARNING |  A node named "/root/instances/geo/root/rock_scatter/Prototypes/root/rock_01" already exists: this newly added ginstance node will be renamed to an empty string
+00:00:01   327MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
+00:00:01   327MB         |  [instancer] /root/pointinstance_reference/instancer: processing per instance parameter 'instance_P'
+00:00:01   327MB         |  [instancer] /root/pointinstance_reference/instancer: creating 1 instance
+00:00:01   327MB         |  [proc] /root/pointinstance_reference/instancer: loaded 1 nodes (1 objects, 0 shaders)
+00:00:01   329MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo: loaded 6 nodes (4 objects, 2 shaders)
+00:00:01   329MB         |  [instancer] /root/pointinstance_instance/instancer: processing per instance parameter 'instance_P'
+00:00:01   329MB         |  [instancer] /root/pointinstance_instance/instancer: creating 1 instance
+00:00:01   329MB         |  [proc] /root/pointinstance_instance/instancer: loaded 1 nodes (1 objects, 0 shaders)
+00:00:01   329MB WARNING |  A node named "/root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter/Prototypes/root/rock_01" already exists: this newly added usd node will be renamed to an empty string
+00:00:01   329MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo: loaded 4 nodes (4 objects, 0 shaders)
+00:00:02   330MB         |  [proc] /root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:08   330MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:08   344MB         |  [instancer] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: creating 1000 instances
+00:00:08   350MB         |  [instancer] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: creating 1000 instances
+00:00:08   352MB         |  [proc] /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:08   352MB         |  [proc] : loaded 1 nodes (1 objects, 0 shaders)
+00:00:08   353MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter: loaded 1000 nodes (1000 objects, 0 shaders)
+00:00:08   353MB         |  [proc] /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter/Prototypes/root/rock_01: loaded 3 nodes (1 objects, 2 shaders)
+00:00:08   355MB         |  creating root object list ...
+00:00:08   355MB         | full scene initialize done in 0:07.23 (multithreaded)
+00:00:08   355MB         | fast scene update (6065 of 6066 nodes)
+00:00:08   355MB         |  /dome: skydome_light using 1 sample, 2 volume samples
+00:00:08   356MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
+00:00:08   356MB         |  procedural instancing optimization done in 0:00.00 (0 object promoted)
+00:00:08   356MB         |  scene bounds: (-308.413727 -41.1264801 -309.263763) -> (2440.95288 528.937988 309.624512)
+00:00:08   356MB         | fast scene update done in 0:00.01 (multithreaded)
+00:00:08   356MB         | [light_sampler] Group 0: Total number of lights 1, sampled lights 0, fixed lights 1
+00:00:08   356MB         | [light_sampler] Group 0: Took 0.005000 ms to build the tree
+00:00:08   356MB         | [aov] parsing 1 drivers ...
+00:00:08   356MB         | [aov] parsing 1 render_outputs for driver: kick_driver
+00:00:08   356MB         | [aov] registered driver: "kick_driver" (driver_tiff)
+00:00:08   356MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_filter" (gaussian_filter)
+00:00:08   356MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:08   357MB         | starting 48 bucket workers of size 16x16 ...
+00:00:08   380MB         |  [accel] procedural bvh4_motion done - 0:00.00 - 4 prims, 2 keys
+00:00:08   380MB         |  [accel] procedural bvh4 done - 0:00.00 (wall time) - 4 prims, 1 key
+00:00:08   388MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 3720 prims, 1 key
+00:00:08   390MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 7 prims, 1 key
+00:00:08   386MB         |  [accel] procedural bvh4_motion done - 0:00.00 - 1000 prims, 2 keys
+00:00:08   386MB         |  [accel] procedural bvh4_motion done - 0:00.00 - 1000 prims, 2 keys
+00:00:08   384MB         |  [accel] procedural bvh4_motion done - 0:00.00 - 1000 prims, 2 keys
+00:00:08   389MB         |    1% done - 28 rays/pixel
+00:00:08   388MB         |    5% done - 29 rays/pixel
+00:00:08   386MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
+00:00:08   387MB         |   10% done - 29 rays/pixel
+00:00:08   388MB         |   15% done - 31 rays/pixel
+00:00:08   388MB         |   20% done - 29 rays/pixel
+00:00:08   388MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 3720 prims, 1 key
+00:00:08   389MB         |   25% done - 47 rays/pixel
+00:00:08   387MB         |  [accel] procedural bvh4_motion done - 0:00.00 - 1000 prims, 2 keys
+00:00:08   387MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 24242 prims, 1 key
+00:00:08   386MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
+00:00:08   383MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 180 prims, 1 key
+00:00:08   383MB         |   30% done - 63 rays/pixel
+00:00:08   384MB         |   35% done - 24 rays/pixel
+00:00:08   384MB         |   40% done - 10 rays/pixel
+00:00:08   384MB         |   45% done - 29 rays/pixel
+00:00:08   381MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 3720 prims, 1 key
+00:00:08   383MB         |   50% done - 33 rays/pixel
+00:00:08   388MB         |   55% done - 29 rays/pixel
+00:00:08   390MB         |   60% done - 25 rays/pixel
+00:00:08   393MB         |   65% done - 68 rays/pixel
+00:00:08   394MB         |   70% done - 35 rays/pixel
+00:00:08   396MB         |   75% done - 72 rays/pixel
+00:00:08   399MB         |   80% done - 125 rays/pixel
+00:00:08   401MB         |   85% done - 53 rays/pixel
+00:00:08   402MB         |   90% done - 65 rays/pixel
+00:00:08   404MB         |   95% done - 61 rays/pixel
+00:00:08   404MB         |  100% done - 33 rays/pixel
+00:00:08   404MB         | render done in 0:00.102
+00:00:08   404MB         | [driver_tiff] writing file `D:\arnold\arnold-usd\testsuite_results\test_0237\testrender.tif'
+00:00:08   405MB         | render done
+00:00:08   405MB         |  
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | frame time                   0:08.27    machine utilization (0.74%) 
+00:00:08   405MB         |  scene creation time         0:00.83 
+00:00:08   405MB         |   unaccounted                0:00.83 
+00:00:08   405MB         |  node init                   0:07.24 
+00:00:08   405MB         |  driver init/close           0:00.01 
+00:00:08   405MB         |  rendering                   0:00.10 
+00:00:08   405MB         |   accel building             0:00.01 
+00:00:08   405MB         |   pixel rendering            0:00.08 
+00:00:08   405MB         |  unaccounted                 0:00.06 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | top frame self-times by category 
+00:00:08   405MB         |  AiNode                                                             0:00.19 (40.25%) 
+00:00:08   405MB         |  sceneInitialize                                                    0:00.14 (29.85%) 
+00:00:08   405MB         |  RenderBucket                                                       0:00.03 ( 6.36%) 
+00:00:08   405MB         |  node_init                                                          0:00.02 ( 5.68%) 
+00:00:08   405MB         |   /__Prototype_3                                                    0:00.01 ( 3.46%) 
+00:00:08   405MB         |   /root/instances/geo/root/rock_scatter                             0:00.00 ( 0.88%) 
+00:00:08   405MB         |   /root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter     0:00.00 ( 0.54%) 
+00:00:08   405MB         |  BVH::build                                                         0:00.01 ( 2.25%) 
+00:00:08   405MB         |  AiSceneLoad                                                        0:00.01 ( 2.19%) 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | top frame self-times by node 
+00:00:08   405MB         |  instancer:/root/pointinstance_instance/instancer/Prototypes/root/instances/geo/root/rock_scatter     0:00.16 (34.39%) 
+00:00:08   405MB         |   AiNode                                                            0:00.16 (33.32%) 
+00:00:08   405MB         |   node_init                                                         0:00.00 ( 0.54%) 
+00:00:08   405MB         |  sceneInitialize                                                    0:00.14 (29.85%) 
+00:00:08   405MB         |  instancer:/root/instances/geo/root/rock_scatter                    0:00.04 ( 8.47%) 
+00:00:08   405MB         |   AiNode                                                            0:00.03 ( 6.32%) 
+00:00:08   405MB         |   node_init                                                         0:00.00 ( 0.88%) 
+00:00:08   405MB         |   proc::intersect                                                   0:00.00 ( 0.79%) 
+00:00:08   405MB         |  RenderBucket                                                       0:00.03 ( 6.36%) 
+00:00:08   405MB         |  usd:/__Prototype_3                                                 0:00.01 ( 3.79%) 
+00:00:08   405MB         |   node_init                                                         0:00.01 ( 3.46%) 
+00:00:08   405MB         |  AiSceneLoad                                                        0:00.01 ( 2.19%) 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | peak CPU memory used      405.85MB 
+00:00:08   405MB         |  at startup                83.34MB 
+00:00:08   405MB         |  AOV samples                0.47MB 
+00:00:08   405MB         |  output buffers             0.25MB 
+00:00:08   405MB         |  framebuffers               0.31MB 
+00:00:08   405MB         |  node overhead              3.72MB 
+00:00:08   405MB         |  instance overhead          2.39MB 
+00:00:08   405MB         |  message passing            0.09MB 
+00:00:08   405MB         |  memory pools              48.39MB 
+00:00:08   405MB         |  geometry                   0.87MB 
+00:00:08   405MB         |   top level                 0.00MB 
+00:00:08   405MB         |   polymesh                  0.82MB 
+00:00:08   405MB         |    vertices                 0.35MB 
+00:00:08   405MB         |    vertex indices           0.18MB 
+00:00:08   405MB         |    packed normals           0.11MB 
+00:00:08   405MB         |    normal indices           0.05MB 
+00:00:08   405MB         |    uniform indices          0.06MB 
+00:00:08   405MB         |  accel structs              1.55MB 
+00:00:08   405MB         |  strings                   24.50MB 
+00:00:08   405MB         |  profiler                   0.02MB 
+00:00:08   405MB         |  backtrace handler        122.18MB 
+00:00:08   405MB         |  unaccounted              117.77MB 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:08   405MB         |  camera                   540080 (  28.13,    1.00) ( 63.77%) (     0.07) (       1)
+00:00:08   405MB         |  shadow                   162509 (   8.46,    0.30) ( 19.19%) (     0.30) (       1)
+00:00:08   405MB         |  diffuse_reflect           75243 (   3.92,    0.14) (  8.88%) (     0.28) (       1)
+00:00:08   405MB         |  specular_reflect          69105 (   3.60,    0.13) (  8.16%) (     0.31) (       1)
+00:00:08   405MB         |  total                    846937 (  44.11,    1.57) (100.00%) (     0.15) (       1)
+00:00:08   405MB         | by ray depth:              0     1     2
+00:00:08   405MB         |  total                   79.9% 19.0%  1.1% 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:08   405MB         |  primary                  162838 (    8.48,     0.30) (100.00%)
+00:00:08   405MB         |  total                    162838 (    8.48,     0.30) (100.00%)
+00:00:08   405MB         | by ray depth:              0     1     2
+00:00:08   405MB         |  total                   48.1% 47.5%  4.4% 
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:08   405MB         |  top level                     1 (100.0%) (        0) (      0.00,       0.00)
+00:00:08   405MB         |  procs                        18 ( 77.8%) (     6011) (      0.05,       0.05)
+00:00:08   405MB         |  polymeshes                   12 ( 58.3%) (        0) (      0.73,       0.82)
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:08   405MB         |  objects (top level)           7 (        7) (        7.0) (        7)
+00:00:08   405MB         |  objects (procs)            6018 (        1) (      334.3) (     1000)
+00:00:08   405MB         |  polygons                  40382 (      180) (     3365.2) (    24242)
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:08   405MB         |  polymeshes                36242 (      180) (     5177.4) (    24242) (     1.01) (100.00%)
+00:00:08   405MB         |  unique triangles          36242 
+00:00:08   405MB         |  visible triangles        759522 
+00:00:08   405MB         |  largest polymeshes by triangle count 
+00:00:08   405MB         |      24242 tris -- /labels/mesh_0
+00:00:08   405MB         |       3820 tris -- /root/references/geo/root/mountain_01/mesh_0
+00:00:08   405MB         |       3820 tris -- /__Prototype_1/mesh_0
+00:00:08   405MB         |       3820 tris -- /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/mountain_01/mesh_0
+00:00:08   405MB         |        180 tris -- /root/pointinstance_reference/instancer/Prototypes/root/references/geo/root/rock_scatter/Prototypes/root/rock_01/mesh_0
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | acceleration structures:         (% total)
+00:00:08   405MB         |  list                          8 ( 36.36%)
+00:00:08   405MB         |  bvh                           9 ( 40.91%)
+00:00:08   405MB         |  bvh motion (2 keys)           5 ( 22.73%)
+00:00:08   405MB         |  total                        22 (100.00%)
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | number of warnings, warning type:
+00:00:08   405MB         |     5:  A node named "%s" already exists: this newly added %s node will be renamed to an empty string
+00:00:08   405MB         |     1:  rendering with watermarks because the skip_license_check option was enabled
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         | performance warnings:
+00:00:08   405MB WARNING |  Rendering CPU utilization was only 0%. Your render may be bound by a single threaded process or I/O.
+00:00:08   405MB         | -----------------------------------------------------------------------------------
+00:00:08   405MB         |  
+00:00:08   405MB         | releasing resources
+00:00:08   302MB         |   
+00:00:08   302MB         |  releasing resources
+00:00:08   290MB         |   unloading 2 plugins
+00:00:08   290MB         |    closing usd_proc.dll ...
+00:00:08   290MB         |    closing alembic_proc.dll ...
+00:00:08   290MB         |   unloading plugins done
+00:00:08   290MB         |  Arnold shutdown
+00:00:08   276MB         |  Installing system handler with mask 0

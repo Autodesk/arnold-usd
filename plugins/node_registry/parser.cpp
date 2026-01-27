@@ -78,6 +78,9 @@ namespace {
 // from a token, and it doesn't support all the parameter types arnold does,
 // like the 4 component color. Besides this, we also guarantee that the default
 // value will match the SdfType, as the SdfType comes from the default value.
+// But since 25.08, GetTypeAsSdfType is not virtual anymore we can't override it and the following class becomes redundant.
+// However the SdfType can be stored in th metadata SdrPropertyMetadata->SdrUsdDefinitionType
+#if PXR_VERSION < 2508
 class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
@@ -87,8 +90,6 @@ public:
           _typeName(typeName)
     {
     }
-
-#if PXR_VERSION < 2508
 
 #if PXR_VERSION >= 2505
     SdrSdfTypeIndicator
@@ -112,16 +113,67 @@ public:
 #if PXR_VERSION >= 2111
     const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
 #endif
-#endif // PXR_VERSION < 2508
 private:
     SdfValueTypeName _typeName;
 };
+#endif // PXR_VERSION < 2508
+
 } // namespace
 
 NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
 NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 
+#if PXR_VERSION >= 2508
+// _GetSdrTypeFromSdfValueTypeName converts SdfType to SdrType. We need this function
+// to correctly initialize SdrShaderProperty which expect an SdrType as an argument.
+// Previous versions were initializing SdrShaderProperty with the SdfType which could lead to issues in DCCs.
+//
+// We allow to use the previous behaviour by changing USE_LEGACY_SDRTYPE to 1, the SdrProperty types will map to types
+// like color3f instead of color, token instead of terminal, etc. 
+#define USE_LEGACY_SDRTYPE 0
+
+typedef std::unordered_map<SdfValueTypeName, TfToken, SdfValueTypeNameHash> SdfTypeToTokenMap;
+TfToken _GetSdrTypeFromSdfValueTypeName(const SdfValueTypeName& typeName)
+{
+#if USE_LEGACY_SDRTYPE
+    // we return the typeName token, as before
+    return typeName.GetAsToken();
+#else
+    static const SdfTypeToTokenMap sdfTypeToSdrType = {
+        {SdfValueTypeNames->Bool, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->Int, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->String, SdrPropertyTypes->String},
+        {SdfValueTypeNames->Float, SdrPropertyTypes->Float},
+        {SdfValueTypeNames->Color3f, SdrPropertyTypes->Color},
+        {SdfValueTypeNames->Color4f, SdrPropertyTypes->Color4},
+        {SdfValueTypeNames->Point3f, SdrPropertyTypes->Point},
+        {SdfValueTypeNames->Normal3f, SdrPropertyTypes->Normal},
+        {SdfValueTypeNames->Vector3f, SdrPropertyTypes->Vector},
+        {SdfValueTypeNames->Matrix4d, SdrPropertyTypes->Matrix},
+        {SdfValueTypeNames->BoolArray, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->IntArray, SdrPropertyTypes->Int},
+        {SdfValueTypeNames->StringArray, SdrPropertyTypes->String},
+        {SdfValueTypeNames->FloatArray, SdrPropertyTypes->Float},
+        {SdfValueTypeNames->Color3fArray, SdrPropertyTypes->Color},
+        {SdfValueTypeNames->Color4fArray, SdrPropertyTypes->Color4},
+        {SdfValueTypeNames->Point3fArray, SdrPropertyTypes->Point},
+        {SdfValueTypeNames->Normal3fArray, SdrPropertyTypes->Normal},
+        {SdfValueTypeNames->Vector3fArray, SdrPropertyTypes->Vector},
+        {SdfValueTypeNames->Matrix4dArray, SdrPropertyTypes->Matrix},
+        // Token types with arnold are converted to Terminals
+        {SdfValueTypeNames->Token, SdrPropertyTypes->Terminal}
+    };
+
+    const auto it = sdfTypeToSdrType.find(typeName);
+    if (it != sdfTypeToSdrType.end()) {
+        return it->second;
+    }
+    // If we didn't find the type, we return the typeName token, as before
+    return typeName.GetAsToken();
+#endif // USE_LEGACY_SDRTYPE
+}
+#endif
 
 void _ReadShaderAttribute(const UsdAttribute &attr, ShaderPropertyUniquePtrVec &properties, const std::string &folder)
 {
@@ -206,18 +258,46 @@ void _ReadShaderAttribute(const UsdAttribute &attr, ShaderPropertyUniquePtrVec &
     // VtValue at all, so that we don't get errors about invalid types.
     if (!isAsset)
         attr.Get(&v);
-        
+#if PXR_VERSION < 2508
     properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
         isOutput ? attr.GetBaseName() : attr.GetName(), // name
-        typeName,           // typeName
-        typeToken,          // typeToken
-        v,                  // defaultValue
-        isOutput,           // isOutput
-        0,                  // arraySize
-        metadata,           // metadata
-        hints,              // hints
-        options             // options
+        typeName,                                       // typeName
+        typeToken,                                      // typeToken
+        v,                                              // defaultValue
+        isOutput,                                       // isOutput
+        0,                                              // arraySize
+        metadata,                                       // metadata
+        hints,                                          // hints
+        options                                         // options
     }));
+#else
+    if (isAsset) {
+        // We need to specifically set this type as asset. (The value doesn't really matter as long as the metadata is present)
+        metadata.insert({SdrPropertyMetadata->IsAssetIdentifier, TfToken("True")});
+    } else {
+        metadata.insert({SdrPropertyMetadata->SdrUsdDefinitionType, typeName.GetAsToken()});
+    }
+#if USE_LEGACY_SDRTYPE
+    if (typeName == SdfValueTypeNames->Token) {
+        typeToken = SdfValueTypeNames->Token.GetAsToken();
+    }
+    if (isAsset) {
+        typeToken = SdfValueTypeNames->Asset.GetAsToken();
+    }
+#else
+    typeToken = _GetSdrTypeFromSdfValueTypeName(typeName);
+#endif
+    properties.push_back(SdrShaderPropertyUniquePtr(new SdrShaderProperty(
+        isOutput ? attr.GetBaseName() : attr.GetName(), // name
+        typeToken,                                      // typeToken
+        v,                                              // defaultValue
+        isOutput,                                       // isOutput
+        0,                                              // arraySize / should that be the dimension of the type ? 
+        metadata,                                       // metadata
+        hints,                                          // hints
+        options                                         // options
+        )));
+#endif
 }
 
 ShaderNodeUniquePtr NdrArnoldParserPlugin::PARSE_FUNC(const ShaderNodeDiscoveryResult& discoveryResult)
@@ -357,5 +437,7 @@ const ShaderTokenVec& NdrArnoldParserPlugin::GetDiscoveryTypes() const
 }
 
 const TfToken& NdrArnoldParserPlugin::GetSourceType() const { return _tokens->arnold; }
+
+#undef USE_LEGACY_SDRTYPE
 
 PXR_NAMESPACE_CLOSE_SCOPE

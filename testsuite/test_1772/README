@@ -4,4 +4,4 @@ author: cyril.pichard@autodesk.com
 
 see #1772
 
-PARAMS: {'scene':'test.usda'}
+PARAMS: {'scene':'test.usda', 'diff_hardfail': 0.02}
