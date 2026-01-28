@@ -5,23 +5,16 @@ set(HDARNOLD_PLUGINFO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/render_delegate/plugInfo.j
 set(USDIMAGINGARNOLD_PLUGINFO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/usd_imaging/plugInfo.json.in)
 set(SCENEINDEXARNOLD_PLUGINFO_SRC ${CMAKE_CURRENT_SOURCE_DIR}/scene_index/plugInfo.json.in)
 
-if (BUILD_NDR_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    add_subdirectory(node_registry)
-endif ()
 
-if (BUILD_USD_IMAGING_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    add_subdirectory(usd_imaging)
-endif ()
-
-if (BUILD_SCENE_INDEX_PLUGIN)
-    add_subdirectory(scene_index)
-endif ()
-
-if (BUILD_RENDER_DELEGATE OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    add_subdirectory(render_delegate)
-endif ()
+add_subdirectory(node_registry)
+add_subdirectory(usd_imaging)
+add_subdirectory(scene_index)
+add_subdirectory(render_delegate)
 
 if (BUILD_PROCEDURAL)
     add_subdirectory(procedural)
 endif ()
 
+if (BUILD_BUNDLE)
+    add_subdirectory(bundle)
+endif()

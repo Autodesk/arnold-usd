@@ -66,10 +66,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
 
-# We need to install the plugInfos for the included usd plugins.
-install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
-		DESTINATION "${PREFIX_PROCEDURAL}")
 if (BUILD_WITH_USD_STATIC)
+    # We need to install the plugInfos for the included usd plugins coming with the static usd lib.
+    install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
+            DESTINATION "${PREFIX_PROCEDURAL}")
 
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
         # Install the ndr arnold pluginfo

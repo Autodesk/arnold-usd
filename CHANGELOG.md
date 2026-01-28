@@ -5,13 +5,15 @@
 
 ### Features
 
-- [usd#2521](https://github.com/Autodesk/arnold-usd/issues/2521) - Remove spurious warnings with cameras matrices
+- [usd#2519](https://github.com/Autodesk/arnold-usd/issues/2519) - Fix transform of cameras under procedurals
 - [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
+- [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) -  Add a new bundle plugin containing the procedural and all usd plugins.
 
 ## [7.4.5.0] (Unreleased)
 
 ### Features
 
+- [usd#2521](https://github.com/Autodesk/arnold-usd/issues/2521) - Remove spurious warnings with cameras matrices
 - [usd#2394](https://github.com/Autodesk/arnold-usd/issues/2394) - Support VDB fieldIndex
 - [usd#2504](https://github.com/Autodesk/arnold-usd/issues/2504) - Ensure geom subsets don't get appended to usd in animated exports
 - [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
