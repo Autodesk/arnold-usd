@@ -227,6 +227,13 @@ void HdArnoldInstancer::ComputeShapeInstancesTransforms(
     if (!AiNodeLookUpUserParameter(prototypeNode, str::instance_matrix)) {
         AiNodeDeclare(prototypeNode, str::instance_matrix, "constant ARRAY MATRIX");
     }
+    // Temporary workaround to handle IPR updates of the instance_matrix.
+    // If we force setting the matrix attribute of the prototype geo, arnold will
+    // properly rebuild the scene locations.
+    AtArray *mtx = AiArrayCopy(AiNodeGetArray(prototypeNode, str::matrix));
+    AiNodeResetParameter(prototypeNode, str::matrix);
+    AiNodeSetArray(prototypeNode, str::matrix, mtx);
+
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
