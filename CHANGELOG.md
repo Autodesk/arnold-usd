@@ -13,6 +13,7 @@
 
 ### Features
 
+- [usd#2521](https://github.com/Autodesk/arnold-usd/issues/2521) - Remove spurious warnings with cameras matrices
 - [usd#2394](https://github.com/Autodesk/arnold-usd/issues/2394) - Support VDB fieldIndex
 - [usd#2504](https://github.com/Autodesk/arnold-usd/issues/2504) - Ensure geom subsets don't get appended to usd in animated exports
 - [usd#2496](https://github.com/Autodesk/arnold-usd/issues/2496) - Support arnold render output nodes when writing usd files
