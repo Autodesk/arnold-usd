@@ -438,7 +438,109 @@ void ChooseRenderSettings(UsdStageRefPtr _stage, std::string &_renderSettings, T
 
 }
 
+void SetArnoldDefaultOptions(AtUniverse *universe)
+{
+    // Set default attribute values so that they match the defaults in arnold plugins,
+    // as well as the render delegate's #1525
+    AtNode *options = AiUniverseGetOptions(universe);
+    AiNodeSetInt(options, str::AA_samples, 3);
+    AiNodeSetInt(options, str::GI_diffuse_depth, 1);
+    AiNodeSetInt(options, str::GI_specular_depth, 1);
+    AiNodeSetInt(options, str::GI_transmission_depth, 8);
+}
 
+void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolution)
+{
+    if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
+        // Need to invert the window range in the Y axis
+        GfVec4f adjustedWindow = windowNDC;
+        float minY = 1. - adjustedWindow[3];
+        float maxY = 1. - adjustedWindow[1];
+        adjustedWindow[1] = minY;
+        adjustedWindow[3] = maxY;
+
+        // Ensure the user isn't setting invalid ranges
+        if (adjustedWindow[0] > adjustedWindow[2])
+            std::swap(adjustedWindow[0], adjustedWindow[2]);
+        if (adjustedWindow[1] > adjustedWindow[3])
+            std::swap(adjustedWindow[1], adjustedWindow[3]);
+        
+        AiNodeSetInt(options, str::region_min_x, int(adjustedWindow[0] * resolution[0]));
+        AiNodeSetInt(options, str::region_min_y, int(adjustedWindow[1] * resolution[1]));
+        AiNodeSetInt(options, str::region_max_x, int(adjustedWindow[2] * resolution[0]) - 1);
+        AiNodeSetInt(options, str::region_max_y, int(adjustedWindow[3] * resolution[1]) - 1);
+    }
+}
+
+AtNode* GetOrCreateColorManager(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 
+                                 const TimeSettings &time, AtNode *options)
+{
+    AtNode* colorManager = nullptr;
+    const char *ocio_path = std::getenv("OCIO");
+    if (ocio_path) {
+        colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
+        AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+    }
+    else if (UsdAttribute colorManagerEntryAttr = renderSettingsPrim.GetAttribute(_tokens->colorManagerEntry)) {
+        VtValue colorManagerEntryValue;
+        // if color_manager:node_entry is found, we want to create a color manager node of that given type
+        if (colorManagerEntryAttr.Get(&colorManagerEntryValue, time.frame)) {
+            std::string colorManagerEntry = VtValueGetString(colorManagerEntryValue);
+            colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
+        }
+    }
+
+    if (colorManager == nullptr) {
+        // use the default color manager
+        colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
+    }
+    return colorManager;
+}
+
+void SetupColorManagerColorSpaces(AtNode *colorManager, const UsdPrim &renderSettingsPrim, 
+                                   ArnoldAPIAdapter &context, const TimeSettings &time)
+{
+    if (!colorManager) {
+        return;
+    }
+
+    // First we check the UsdRenderSettings builtin attribute renderingColorSpace, which can
+    // define the attribute color_space_linear
+#if PXR_VERSION >= 2211
+    UsdRenderSettings renderSettings(renderSettingsPrim);
+    if (renderSettings) {
+        VtValue renderingSpaceValue;
+        UsdAttribute renderingSpaceAttr = renderSettings.GetRenderingColorSpaceAttr();
+        if (renderingSpaceAttr.HasAuthoredValue() && renderingSpaceAttr.Get(&renderingSpaceValue, time.frame)) {
+            std::string renderingSpace = VtValueGetString(renderingSpaceValue);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(renderingSpace.c_str()));
+        }
+    }
+#endif
+
+    // Check for attributes "arnold:global:color_space_linear" and "arnold:global:color_space_narrow"
+    // and set them in the color manager node
+    if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
+        VtValue colorSpaceLinearValue;
+        if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
+        }
+    }
+    if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
+        VtValue colorSpaceNarrowValue;
+        if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
+            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+        }
+    }
+    // Finally, loop over all the attributes namespaced with arnold:color_manager and set them in the 
+    // color manager node
+    ReadArnoldParameters(renderSettingsPrim, context, colorManager, time, "arnold:color_manager");
+}
 
 AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 
     ProceduralReader *reader, const TimeSettings &time, AtUniverse *universe, SdfPath& cameraPath) {
@@ -466,42 +568,17 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         resolution[0] = AiNodeGetInt(options, str::xres);
         resolution[1] = AiNodeGetInt(options, str::yres);
     }
-    // Set default attribute values so that they match the defaults in arnold plugins, 
-    // as well as the render delegate's #1525
-    AiNodeSetInt(options, str::AA_samples, 3);
-    AiNodeSetInt(options, str::GI_diffuse_depth, 1);
-    AiNodeSetInt(options, str::GI_specular_depth, 1);
-    AiNodeSetInt(options, str::GI_transmission_depth, 8);
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
     GfVec4f windowNDC;
     if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
-        if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
-            // Need to invert the window range in the Y axis
-            float minY = 1. - windowNDC[3];
-            float maxY = 1. - windowNDC[1];
-            windowNDC[1] = minY;
-            windowNDC[3] = maxY;
-
-            // Ensure the user isn't setting invalid ranges
-            if (windowNDC[0] > windowNDC[2])
-                std::swap(windowNDC[0], windowNDC[2]);
-            if (windowNDC[1] > windowNDC[3])
-                std::swap(windowNDC[1], windowNDC[3]);
-            
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * resolution[0]));
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * resolution[1]));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * resolution[0]) - 1);
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * resolution[1]) - 1);
-        }
+        SetRegion(options, windowNDC, resolution);
     }    
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
+    // GetInstantaneousShutterAttr is deprecated, we should use disableMotionBlur on the render product
     if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue, time.frame) && 
             VtValueGetBool(instantShutterValue)) {
         AiNodeSetBool(options, str::ignore_motion_blur, true);
@@ -804,63 +881,15 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->globalOperator), "operator", context, time);
 
     // Setup color manager
-    AtNode* colorManager = nullptr;
-    const char *ocio_path = std::getenv("OCIO");
-    if (ocio_path) {
-        colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
-        AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
-    }
-    else if (UsdAttribute colorManagerEntryAttr = renderSettingsPrim.GetAttribute(_tokens->colorManagerEntry)) {
-        VtValue colorManagerEntryValue;
-        // if color_manager:node_entry is found, we want to create a color manager node of that given type
-        if (colorManagerEntryAttr.Get(&colorManagerEntryValue, time.frame)) {
-            std::string colorManagerEntry = VtValueGetString(colorManagerEntryValue);
-            colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
-        }
-    }
-    const std::string &commandLine = reader->GetCommandLine();
-    if (colorManager == nullptr) {
-        // use the default color manager
-        colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
-    }
+    AtNode* colorManager = GetOrCreateColorManager(renderSettingsPrim, context, time, options);
     if (colorManager) {
         // Set the color manager node in the options
         AiNodeSetPtr(options, str::color_manager, colorManager);
-
-        // Now set the color manager attributes :
-        // First we check the UsdRenderSettings builtin attribute renderingColorSpace, which can
-        // define the attribute color_space_linear
-#if PXR_VERSION >= 2211
-        VtValue renderingSpaceValue;
-        UsdAttribute renderingSpaceAttr = renderSettings.GetRenderingColorSpaceAttr();
-        if (renderingSpaceAttr.HasAuthoredValue() && renderingSpaceAttr.Get(&renderingSpaceValue, time.frame)) {
-            std::string renderingSpace = VtValueGetString(renderingSpaceValue);
-            AiNodeSetStr(colorManager, str::color_space_linear, AtString(renderingSpace.c_str()));
-        }
-#endif
-
-        // Check for attributes "arnold:global:color_space_linear" and "arnold:global:color_space_narrow"
-        // and set them in the color manager node
-        if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
-            VtValue colorSpaceLinearValue;
-            if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-                std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
-                AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
-            }
-        }
-        if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
-            VtValue colorSpaceNarrowValue;
-            if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-                std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
-                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
-            }
-        }
-        // Finally, loop over all the attributes namespaced with arnold:color_manager and set them in the 
-        // color manager node
-        ReadArnoldParameters(renderSettingsPrim, context, colorManager, time, "arnold:color_manager");
+        // Set color space attributes on the color manager
+        SetupColorManagerColorSpaces(colorManager, renderSettingsPrim, context, time);
     }
 
-
+    const std::string &commandLine = reader->GetCommandLine();
     // log file
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;

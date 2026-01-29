@@ -146,6 +146,7 @@ def Scope "Render"
     {
         custom int arnold:global:AA_samples = 1
         custom int arnold:global:AA_seed
+        int arnold:global:AA_seed = 224
         int arnold:global:AA_seed.timeSamples = {
             224: 224,
         }

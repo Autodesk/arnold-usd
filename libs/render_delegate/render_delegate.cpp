@@ -1582,6 +1582,31 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
+/// Checks for and processes pending changes in the render scene.
+///
+/// This function serves as the main update hub for the Arnold render delegate, processing
+/// various types of deferred changes and dependency updates between render frames. It is
+/// typically called by the render loop to determine if scene updates are needed.
+///
+/// The function performs the following operations in order:
+/// 1. Executes all deferred function calls that were queued during scene updates
+/// 2. Checks for global state changes (light linking, mesh lights, shutter, FPS)
+/// 3. Marks affected primitives as dirty when global state changes occur
+/// 4. Processes dependency removal queue to handle deleted or changed connections
+/// 5. Processes dependency tracking queue to update source-target relationships
+/// 6. Processes dependency dirty queue to propagate changes through the dependency graph
+/// 7. Processes render tag changes to update visibility states
+/// 8. Processes pending node connections
+///
+/// @param renderIndex The render index containing all scene primitives
+/// @param cameraId The path to the render camera, used when shutter changes require camera updates
+/// @param shutter The current shutter interval (open/close times) for motion blur
+///
+/// @return true if any changes were detected or processed, false if the scene is unchanged
+///
+/// @note This function modifies the change tracker state and may mark primitives as dirty
+/// @note In Hydra 2 with scene index emulation, uses a custom system message approach to propagate
+///       dirty bits instead of the standard MarkAllRprimsDirty which doesn't work correctly
 bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
     if (!_deferredFunctionCalls.empty()) {

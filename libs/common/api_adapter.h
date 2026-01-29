@@ -62,6 +62,14 @@ public:
     }
     const std::vector<Connection>& GetConnections() const {return _connections;}
     void ClearConnections() {_connections.clear();}
+    // Could use SdfPath and AtString
+    void AddConnectionPathAlias(const std::string &usdPath, const std::string &arnoldPath) {
+        auto it = _connectionPathsAliases.find(usdPath);
+        if (it ==_connectionPathsAliases.end()) {
+            _connectionPathsAliases[usdPath] = arnoldPath;
+        }
+    }
+
     virtual bool ProcessConnection(const Connection& connection)
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
@@ -79,8 +87,17 @@ public:
                 AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
         } else {
             AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, connection.type);
+            if (target == nullptr){
+                // Let's look in the name aliases
+                auto it = _connectionPathsAliases.find(connection.target);
+                if (it!=_connectionPathsAliases.end()) {
+                    target = LookupTargetNode(it->second.c_str(), connection.sourceNode, connection.type);
+                }
+            }
             if (target == nullptr)
                 return false;// node is missing, we don't process the connection
+            
+
             if (connection.type == ArnoldAPIAdapter::CONNECTION_PTR) {
                 if (connection.sourceAttr.back() == ']' ) {
                     std::stringstream ss(connection.sourceAttr);
@@ -196,6 +213,8 @@ protected:
     AtMutex _oslCodeCacheMutex;
     std::unordered_map<std::string, AtString> _oslCodeCache;
 #endif
+
+std::unordered_map<std::string, std::string> _connectionPathsAliases;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

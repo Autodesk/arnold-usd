@@ -22,7 +22,7 @@
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/camera.h>
-
+#include <pxr/usd/usdRender/tokens.h>
 #include "render_delegate.h"
 #include "render_pass.h"
 
@@ -294,9 +294,23 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         }
 
         ChooseRenderSettings(stage, _renderSettings, _time);
+// TODO HERE WE COULD CHECK IF WE WANT TO USE HYDRA2
         if (!_renderSettings.empty()) {
+            // Sets the default parameters on the Arnold option node (AA_samples, GI_diffuse_depth, ...)
+            SetArnoldDefaultOptions(_universe);
+#if USE_HYDRA2_RENDERSETTINGS
+            // We want to use the RenderSetting hydra prim only if we use the scene index system
+            if (_useSceneIndex) {
+                // TODO set metadata only if it it not already set
+                stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, _renderSettings);
+            } else {
+                UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
+                ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
+            }
+#else
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
             ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
+#endif
         }
     } 
 

@@ -57,37 +57,6 @@ public:
     HDARNOLD_API
     ~HdArnoldRenderSettings() override;
 
-    /// Determines if this render settings prim should drive render pass execution.
-    ///
-    /// Returns whether the prim can be used to drive render pass execution.
-    /// If false is returned, the render pass uses a combination of the
-    /// legacy render settings map and render pass state to drive execution.
-    ///
-    /// @param interactive Whether the render delegate is in interactive mode.
-    /// @param renderPassHasAovBindings Whether the render pass has AOV bindings.
-    /// @return True if this prim should drive the render pass.
-    HDARNOLD_API
-    bool DriveRenderPass(bool interactive, bool renderPassHasAovBindings) const;
-
-    /// Updates Arnold state and executes rendering.
-    ///
-    /// Called during render pass execution.
-    /// Updates necessary Arnold state (camera, render options, outputs) and
-    /// invokes AiRender().
-    ///
-    /// NOTE: Current support is limited to "batch" (i.e., non-interactive)
-    ///       rendering.
-    ///
-    /// @param renderIndex The render index.
-    /// @param interactive Whether the render is interactive.
-    /// @param param The Arnold render param.
-    /// @return True if rendering completed successfully.
-    HDARNOLD_API
-    bool UpdateAndRender(
-        const HdRenderIndex* renderIndex,
-        bool interactive,
-        HdArnoldRenderParam* param);
-
     /// Hydra 2.0 virtual API: Finalize.
     ///
     /// Called when the prim is removed from the scene.
@@ -127,14 +96,36 @@ private:
         HdSceneDelegate* sceneDelegate,
         HdArnoldRenderParam* param);
 
-    /// Processes render products and configures Arnold outputs.
+    /// Updates render products by creating Arnold drivers and configuring outputs.
     ///
+    /// @param sceneDelegate The scene delegate.
     /// @param param The Arnold render param.
-    void _ProcessRenderProducts(HdArnoldRenderParam* param);
+    void _UpdateRenderProducts(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param);
+
+    /// Updates the shutter interval on the Arnold options and render param.
+    ///
+    /// @param sceneDelegate The scene delegate.
+    /// @param param The Arnold render param.
+    void _UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param);
+
+    /// Updates the rendering color space (color manager) on the Arnold options.
+    ///
+    /// @param sceneDelegate The scene delegate.
+    /// @param param The Arnold render param.
+    void _UpdateRenderingColorSpace(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param);
+
+    /// Generates and applies Arnold options from the render settings to the Arnold universe.
+    ///
+    /// @param sceneDelegate The scene delegate.
+    void _UpdateArnoldOptions(HdSceneDelegate* sceneDelegate);
+
+    /// Reads USD render settings and applies them to Arnold options.
+    ///
+    /// @param sceneDelegate The scene delegate.
+    void _ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate);
+
 
 private:
-    /// Arnold options derived from the render settings prim.
-    VtDictionary _arnoldOptions;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

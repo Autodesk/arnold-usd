@@ -36,54 +36,47 @@
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/imaging/hdsi/renderSettingsFilteringSceneIndex.h>
 
+#include <pxr/usd/usdRender/tokens.h>
 #include <pxr/usdImaging/usdImaging/renderSettingsAdapter.h>
+#include <pxr/usdImaging/usdImaging/usdRenderSettingsSchema.h>
 
+#include <iostream>
+#include <string>
+#include "../common/rendersettings_utils.h"
 #include "camera.h"
+#include "debugger.h"
 #include "render_delegate.h"
 #include "render_param.h"
 #include "utils.h"
 
-#include <string>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Debug codes for render settings
-TF_DEBUG_CODES(
-    HDARNOLD_RENDER_SETTINGS
-);
+TF_DEBUG_CODES(HDARNOLD_RENDER_SETTINGS);
 
 TF_REGISTRY_FUNCTION(TfDebug)
 {
-    TF_DEBUG_ENVIRONMENT_SYMBOL(HDARNOLD_RENDER_SETTINGS,
-        "Debug logging for Arnold render settings prim.");
+    TF_DEBUG_ENVIRONMENT_SYMBOL(HDARNOLD_RENDER_SETTINGS, "Debug logging for Arnold render settings prim.");
 }
 
 // Environment variable to control whether render settings prim drives the
 // render pass. This allows comparison between legacy AOV bindings and
 // render settings prim-driven rendering.
 TF_DEFINE_ENV_SETTING(
-    HDARNOLD_RENDER_SETTINGS_DRIVE_RENDER_PASS,
-    false,
+    HDARNOLD_RENDER_SETTINGS_DRIVE_RENDER_PASS, false,
     "Drive the render pass using the first RenderProduct on the render "
     "settings prim when the render pass has AOV bindings.");
 
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-    // Render terminal connections (integrators, filters, etc.)
-    ((arnoldIntegrator, "arnold:integrator"))
-    ((arnoldImagers, "arnold:imagers"))
-    // Legacy terminal connections (for backward compatibility)
-    ((outputsArnoldIntegrator, "outputs:arnold:integrator"))
-    ((outputsArnoldImagers, "outputs:arnold:imagers"))
-);
+     // Data types
+    (color3f));
 
 #if PXR_VERSION <= 2308
 TF_DEFINE_PRIVATE_TOKENS(
     _legacyTokens,
-    ((fallbackPath, "/Render/__HdsiRenderSettingsFilteringSceneIndex__FallbackSettings"))
-    ((renderScope, "/Render"))
-    (shutterInterval)
-);
+    ((fallbackPath,
+      "/Render/__HdsiRenderSettingsFilteringSceneIndex__FallbackSettings"))((renderScope, "/Render"))(shutterInterval));
 #endif
 
 namespace {
@@ -95,139 +88,75 @@ namespace {
 ///
 /// @param propertyName The property name from the render settings.
 /// @return The Arnold option name.
-std::string
-_GetArnoldOptionName(std::string const& propertyName)
+std::string _GetArnoldOptionName(std::string const& propertyName)
 {
+    if (TfStringStartsWith(propertyName, "arnold:global:")) {
+        return propertyName.substr(14); // strlen("arnold:global:")
+    }
+
     // Strip "arnold:" prefix if present
     if (TfStringStartsWith(propertyName, "arnold:")) {
         return propertyName.substr(7); // strlen("arnold:")
     }
 
-    TF_WARN("Could not translate settings property %s to Arnold option name.",
-            propertyName.c_str());
-    return propertyName;
+    TF_WARN("Could not translate settings property %s to Arnold option name.", propertyName.c_str());
+    return "";
 }
 
 /// Generates a dictionary of Arnold options from render settings.
 ///
 /// @param settings The render settings dictionary.
 /// @return A dictionary of Arnold options.
-VtDictionary
-_GenerateArnoldOptions(VtDictionary const& settings)
+VtDictionary _GenerateArnoldOptions(VtDictionary const& settings)
 {
     VtDictionary options;
-
     for (auto const& pair : settings) {
         const std::string& name = pair.first;
         const TfToken tokenName(name);
 
-        // Skip render terminal connections
-        if (tokenName == _tokens->arnoldIntegrator ||
-            tokenName == _tokens->arnoldImagers ||
-            // Legacy terminal connections
-            tokenName == _tokens->outputsArnoldIntegrator ||
-            tokenName == _tokens->outputsArnoldImagers) {
-            continue;
-        }
-
         const std::string arnoldName = _GetArnoldOptionName(name);
-        options[arnoldName] = pair.second;
+        std::cout << "OPTION: " << arnoldName << std::endl;
+        if (!arnoldName.empty()) {
+            options[arnoldName] = pair.second;
+        }
     }
 
     return options;
 }
 
-/// Helper function to multiply and round a float vector by an integer vector.
-///
-/// @param a The float vector.
-/// @param b The integer vector.
-/// @return The result as an integer vector.
-GfVec2i
-_MultiplyAndRound(const GfVec2f& a, const GfVec2i& b)
+} // end anonymous namespace
+
+// ----------------------------------------------------------------------------
+
+HdArnoldRenderSettings::HdArnoldRenderSettings(SdfPath const& id) : HdRenderSettings(id) {}
+
+HdArnoldRenderSettings::~HdArnoldRenderSettings() = default;
+
+
+void HdArnoldRenderSettings::Finalize(HdRenderParam* renderParam)
 {
-    return GfVec2i(std::roundf(a[0] * b[0]),
-                   std::roundf(a[1] * b[1]));
+    // HdArnoldRenderParam* param =
+    //     static_cast<HdArnoldRenderParam*>(renderParam);
+
+    // Clean up any resources associated with this render settings prim
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Finalizing render settings prim %s\n", GetId().GetText());
+
+    // TODO: Clean up Arnold-specific resources if needed
 }
 
-/// Checks if there's a non-fallback render settings prim in the scene.
-///
-/// @param si The scene index.
-/// @return True if a non-fallback render settings prim exists.
-bool
-_HasNonFallbackRenderSettingsPrim(const HdSceneIndexBaseRefPtr& si)
+void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate)
 {
-    if (!si) {
-        return false;
+    // Generate Arnold options from the namespaced settings
+    const VtDictionary& namespacedSettings = GetNamespacedSettings();
+    const VtDictionary arnoldOptions = _GenerateArnoldOptions(namespacedSettings);
+
+    if (arnoldOptions.empty()) {
+        return;
     }
 
-#if PXR_VERSION >= 2311
-    const SdfPath& renderScope =
-        HdsiRenderSettingsFilteringSceneIndex::GetRenderScope();
-    const SdfPath& fallbackPrimPath =
-        HdsiRenderSettingsFilteringSceneIndex::GetFallbackPrimPath();
-#else
-    const SdfPath& renderScope = SdfPath(_legacyTokens->renderScope);
-    const SdfPath& fallbackPrimPath = SdfPath(_legacyTokens->fallbackPath);
-#endif
-
-    for (const SdfPath& path : HdSceneIndexPrimView(si, renderScope)) {
-        if (path != fallbackPrimPath &&
-            si->GetPrim(path).primType == HdPrimTypeTokens->renderSettings) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/// Resolves the shutter interval from the render product and camera.
-///
-/// @param product The render product.
-/// @param camera The camera.
-/// @return The shutter interval.
-GfVec2f
-_ResolveShutterInterval(
-    HdRenderSettings::RenderProduct const& product,
-    const HdCamera* camera)
-{
-    if (product.disableMotionBlur) {
-        return GfVec2f(0.0f);
-    }
-
-    // Default 180-degree shutter
-    GfVec2f shutter(0.0f, 0.5f);
-    
-    if (camera) {
-        shutter[0] = camera->GetShutterOpen();
-        shutter[1] = camera->GetShutterClose();
-    }
-
-    return shutter;
-}
-
-/// Sets Arnold options and executes rendering.
-///
-/// @param camera The camera to render from.
-/// @param arnoldOptions The Arnold options.
-/// @param shutter The shutter interval.
-/// @param interactive Whether this is an interactive render.
-/// @param param The Arnold render param.
-/// @return True if rendering succeeded.
-bool
-_SetOptionsAndRender(
-    const HdCamera* camera,
-    VtDictionary const& arnoldOptions,
-    GfVec2f const& shutter,
-    bool interactive,
-    HdArnoldRenderParam* param,
-    HdArnoldRenderDelegate* renderDelegate)
-{
-    if (!camera) {
-        TF_CODING_ERROR("Invalid camera provided for rendering.\n");
-        return false;
-    }
-
-    // Apply Arnold options
-    AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
+    HdArnoldRenderDelegate* renderDelegate =
+        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
+    AtNode* options = renderDelegate->GetOptions();
 
     // Set Arnold options from the render settings
     for (auto const& pair : arnoldOptions) {
@@ -235,274 +164,582 @@ _SetOptionsAndRender(
         const VtValue& value = pair.second;
 
         // Convert VtValue to Arnold parameter
-        const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(
-            AiNodeGetNodeEntry(options), AtString(name.c_str()));
-        
+        const AtParamEntry* paramEntry =
+            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), AtString(name.c_str()));
+
         if (!paramEntry) {
             TF_WARN("Unknown Arnold option: %s", name.c_str());
             continue;
         }
-
+        // NOTE: the handling of the atmosphere, background, shader_override, aov_shaders and operator are all managed
+        // in the HdArnoldSetParameter. The connections are resolved later on using an alias system
         HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
     }
 
-    // Set shutter interval
-    AiNodeSetFlt(options, AtString("shutter_start"), shutter[0]);
-    AiNodeSetFlt(options, AtString("shutter_end"), shutter[1]);
-
-    // Rendering is handled by the render param through AiRenderBegin/AiRenderEnd
-    // For batch rendering, we would call param->UpdateRender() which internally
-    // manages the Arnold render session.
-    
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Arnold options configured for rendering (interactive=%d)\n", interactive);
-
-    // In the UpdateAndRender context, the actual render execution would be
-    // managed externally by the render pass. Here we just configure the options.
-    // The render will be executed by subsequent calls to param->UpdateRender().
-
-    return true;
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu Arnold options from render settings\n", arnoldOptions.size());
 }
 
-} // end anonymous namespace
-
-// ----------------------------------------------------------------------------
-
-HdArnoldRenderSettings::HdArnoldRenderSettings(SdfPath const& id)
-    : HdRenderSettings(id)
+void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
-}
+    if (GetShutterInterval().IsHolding<GfVec2d>()) {
+        // Set the shutter interval on the render delegate
+        const GfVec2d shutterInterval = GetShutterInterval().UncheckedGet<GfVec2d>();
+        // The shutter is stored in
+        //  * ArnoldRenderParams
+        //  * ArnoldHydraReader when used with (kick)
+        //  * Arnold universe
+        //  * this render settings
 
-HdArnoldRenderSettings::~HdArnoldRenderSettings() = default;
+        // First update the render params with the new shutter interval
+        param->UpdateShutter(GfVec2f(shutterInterval[0], shutterInterval[1]));
 
-bool
-HdArnoldRenderSettings::DriveRenderPass(
-    bool interactive,
-    bool renderPassHasAovBindings) const
-{
-    // Scenarios where we use the render settings prim to drive render pass:
-    // 1. In batch rendering (e.g., usdrecord) when explicitly enabled via
-    //    HDARNOLD_RENDER_SETTINGS_DRIVE_RENDER_PASS environment variable.
-    // 2. When the render task does not have AOV bindings.
-    //
-    // Interactive viewport rendering currently relies on AOV bindings from
-    // the task and is not yet supported via render settings prim.
+        // The next call to _Execute will replace param->_shutter with the value of the universe
+        // We also update Arnold directly
+        HdArnoldRenderDelegate* renderDelegate =
+            static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
 
-    static const bool driveRenderPassWithAovBindings =
-        TfGetEnvSetting(HDARNOLD_RENDER_SETTINGS_DRIVE_RENDER_PASS);
+        if (renderDelegate) {
+            AtNode* options = renderDelegate->GetOptions();
+            if (options) {
+                AiNodeSetFlt(options, AtString("shutter_start"), static_cast<float>(shutterInterval[0]));
+                AiNodeSetFlt(options, AtString("shutter_end"), static_cast<float>(shutterInterval[1]));
 
-    const bool result =
-        IsValid() &&
-        (driveRenderPassWithAovBindings || !renderPassHasAovBindings) &&
-        !interactive;
-
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "DriveRenderPass = %d\n"
-        " - HDARNOLD_RENDER_SETTINGS_DRIVE_RENDER_PASS = %d\n"
-        " - valid = %d\n"
-        " - interactive = %d\n"
-        " - renderPassHasAovBindings = %d\n",
-        result, driveRenderPassWithAovBindings, IsValid(), 
-        interactive, renderPassHasAovBindings);
-
-    return result;
-}
-
-bool
-HdArnoldRenderSettings::UpdateAndRender(
-    const HdRenderIndex* renderIndex,
-    bool interactive,
-    HdArnoldRenderParam* param)
-{
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "UpdateAndRender called for render settings prim %s\n",
-        GetId().GetText());
-
-    if (!IsValid()) {
-        TF_CODING_ERROR(
-            "Render settings prim %s does not have valid render products.\n",
-            GetId().GetText());
-        return false;
-    }
-
-    if (interactive) {
-        TF_CODING_ERROR(
-            "Support for driving interactive renders using a render settings "
-            "prim is not yet available.\n");
-        return false;
-    }
-
-    bool success = true;
-
-    // Get the render delegate
-    HdArnoldRenderDelegate* renderDelegate = 
-        static_cast<HdArnoldRenderDelegate*>(renderIndex->GetRenderDelegate());
-
-    const size_t numProducts = GetRenderProducts().size();
-
-    // Process each render product
-    for (size_t prodIdx = 0; prodIdx < numProducts; prodIdx++) {
-        auto const& product = GetRenderProducts().at(prodIdx);
-
-        if (product.renderVars.empty()) {
-            TF_WARN("Skipping empty render product %s\n",
-                    product.name.GetText());
-            continue;
-        }
-
-        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-            "Processing render product %s\n", product.name.GetText());
-
-        // Get the camera
-        const HdCamera* camera = nullptr;
-        if (!product.cameraPath.IsEmpty()) {
-            camera = dynamic_cast<const HdCamera*>(
-                renderIndex->GetSprim(HdPrimTypeTokens->camera, 
-                                     product.cameraPath));
-        }
-
-        if (!camera) {
-            TF_WARN("Invalid camera path for render product %s: %s\n",
-                    product.name.GetText(), 
-                    product.cameraPath.GetText());
-            continue;
-        }
-
-        // Resolve shutter interval
-        const GfVec2f shutter = _ResolveShutterInterval(product, camera);
-
-        // Configure outputs based on render vars
-        _ProcessRenderProducts(param);
-
-        // Set options and render
-        const bool result = _SetOptionsAndRender(
-            camera,
-            _arnoldOptions,
-            shutter,
-            interactive,
-            param,
-            renderDelegate);
-
-        if (TfDebug::IsEnabled(HDARNOLD_RENDER_SETTINGS)) {
-            if (result) {
-                TfDebug::Helper().Msg(
-                    "Rendered product %s successfully\n", 
-                    product.name.GetText());
-            } else {
-                TfDebug::Helper().Msg(
-                    "Failed to render product %s\n", 
-                    product.name.GetText());
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Set shutter interval to [%f, %f]\n", shutterInterval[0], shutterInterval[1]);
             }
         }
-
-        success = success && result;
     }
-
-    return success;
 }
 
-void
-HdArnoldRenderSettings::Finalize(HdRenderParam* renderParam)
+void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
-    // HdArnoldRenderParam* param = 
-    //     static_cast<HdArnoldRenderParam*>(renderParam);
+#if PXR_VERSION >= 2211
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating rendering color space for %s\n", GetId().GetText());
 
-    // Clean up any resources associated with this render settings prim
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Finalizing render settings prim %s\n", GetId().GetText());
+    HdArnoldRenderDelegate* renderDelegate =
+        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
 
-    // TODO: Clean up Arnold-specific resources if needed
-}
-
-void
-HdArnoldRenderSettings::_Sync(
-    HdSceneDelegate* sceneDelegate,
-    HdRenderParam* renderParam,
-    const HdDirtyBits* dirtyBits)
-{
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Syncing render settings prim %s (dirty bits = %x)\n",
-        GetId().GetText(), *dirtyBits);
-
-    HdArnoldRenderParam* param = 
-        static_cast<HdArnoldRenderParam*>(renderParam);
-
-    const VtDictionary& namespacedSettings = GetNamespacedSettings();
-
-    HdSceneIndexBaseRefPtr terminalSi =
-        sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-
-    // Only process if we have a non-fallback render settings prim
-    if (!_HasNonFallbackRenderSettingsPrim(terminalSi)) {
-        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-            "No non-fallback render settings prim found, skipping sync\n");
+    if (!renderDelegate) {
         return;
     }
 
-    // Generate Arnold options from the namespaced settings
-    _arnoldOptions = _GenerateArnoldOptions(namespacedSettings);
+    AtNode* options = renderDelegate->GetOptions();
+    if (!options) {
+        return;
+    }
 
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Generated %zu Arnold options from render settings\n",
-        _arnoldOptions.size());
+    // Get the render settings prim from the terminal scene index
+    HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+    if (!terminalSi) {
+        return;
+    }
+
+    HdSceneIndexPrim prim = terminalSi->GetPrim(GetId());
+    if (!prim.dataSource) {
+        return;
+    }
+
+    // Get USD rendering color space from the data source
+    UsdImagingUsdRenderSettingsSchema usdRss = UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
+
+    // Setup color manager - check for OCIO environment variable first
+    AtNode* colorManager = nullptr;
+    const char* ocio_path = std::getenv("OCIO");
+    if (ocio_path) {
+        colorManager = renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
+        if (colorManager) {
+            AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+        }
+    }
+
+    // If no OCIO environment variable, use the default color manager
+    if (colorManager == nullptr) {
+        colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
+    }
+
+    if (colorManager) {
+        // Set the color manager node in the options
+        AiNodeSetPtr(options, str::color_manager, colorManager);
+
+        // Set rendering color space from USD if available
+        HdTokenDataSourceHandle renderingColorSpaceHandle = usdRss.GetRenderingColorSpace();
+        if (renderingColorSpaceHandle) {
+            TfToken renderingColorSpace = renderingColorSpaceHandle->GetTypedValue(0.0f);
+            if (!renderingColorSpace.IsEmpty()) {
+                AiNodeSetStr(colorManager, str::color_space_linear, AtString(renderingColorSpace.GetText()));
+
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Set rendering color space to: %s\n", renderingColorSpace.GetText());
+            }
+        }
+
+        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updated color manager: %s\n", AiNodeGetName(colorManager));
+    }
+#endif
+}
+
+void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate)
+{
+    HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+    if (terminalSi) {
+        HdSceneIndexPrim prim = terminalSi->GetPrim(GetId());
+        if (prim) {
+            HdArnoldRenderDelegate* renderDelegate =
+                static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
+            UsdImagingUsdRenderSettingsSchema usdRss =
+                UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
+            AtNode* options = renderDelegate->GetOptions();
+
+            HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio();
+            if (parHandle) {
+                AiNodeSetFlt(options, str::pixel_aspect_ratio, parHandle->GetTypedValue(0));
+            }
+
+            HdVec2iDataSourceHandle resHandle = usdRss.GetResolution();
+            if (resHandle) {
+                GfVec2i res = resHandle->GetTypedValue(0);
+                AiNodeSetInt(options, str::xres, res[0]);
+                AiNodeSetInt(options, str::yres, res[1]);
+            }
+
+            HdVec4fDataSourceHandle dwndcHandle = usdRss.GetDataWindowNDC();
+            if (dwndcHandle) {
+                GfVec2i resolution;
+                resolution[0] = AiNodeGetInt(options, str::xres);
+                resolution[1] = AiNodeGetInt(options, str::yres);
+                SetRegion(options, dwndcHandle->GetTypedValue(0), resolution);
+            }
+
+            // NOTE: Unfortunatelly we don't have access to instantaneousShutter which is deprecated but is
+            // used in some of the tests. We use GetDisableMotionBlur which is the replacement for instantaneousShutter
+            HdBoolDataSourceHandle mbHandle = usdRss.GetDisableMotionBlur();
+            if (mbHandle) {
+                AiNodeSetBool(options, str::ignore_motion_blur, mbHandle->GetTypedValue(0));
+            }
+        }
+    }
+}
+
+void HdArnoldRenderSettings::_Sync(
+    HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
+{
+    if (std::getenv("TOTO") != nullptr)
+        WaitForDebugger();
+
+    if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
+        return;
+std::cout << "ENVIROANNDAPSDLKASKJDSFKSJDHFKJ" << std::endl;
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+        .Msg("Syncing render settings prim %s (dirty bits = %x)\n", GetId().GetText(), *dirtyBits);
+
+    HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+
+    // Test if this render setting is the one chosen
+    SdfPath renderSettingPrimPath;
+
+    const bool hasActiveRsp = HdUtils::HasActiveRenderSettingsPrim(terminalSi, &renderSettingPrimPath);
+    if (!hasActiveRsp || renderSettingPrimPath != GetId()) {
+        // TODO Set dirty bits clean and exit
+        // TODO we should also check we are in a procedural children,
+        // in that case we don't want to use those render settings
+        return;
+    }
+    HdArnoldRenderDelegate* renderDelegate =
+        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
+    if (renderDelegate->GetProceduralParent())
+        return;
+
+    // TODO when do we need to read them ? just only once ?
+    // What happens when the resolution is changed in the render settings ?
+    _ReadUsdRenderSettings(sceneDelegate);
+
+    // TODO
+    // DirtyActive                 TODO
+    // DirtyRenderProducts          WIP
+    // DirtyIncludedPurposes       TODO
+    // DirtyMaterialBindingPurposes TODO
+    // DirtyRenderingColorSpace     TODO
+    // DirtyShutterInterval         WIP
+    // DirtyFrameNumber            TODO
+
+    if (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+        // Generate and apply Arnold options from the render settings
+        _UpdateArnoldOptions(sceneDelegate);
+    }
+
+    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
+#if PXR_VERSION >= 2311
+    if (*dirtyBits & HdRenderSettings::DirtyShutterInterval || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+        _UpdateShutterInterval(sceneDelegate, param);
+    }
+#endif
+
+    if (*dirtyBits & DirtyRenderProducts) {
+        // TODO implement _UpdateRenderProduct
+        _UpdateRenderProducts(sceneDelegate, param);
+    }
+
+    if (*dirtyBits & DirtyRenderingColorSpace) {
+        _UpdateRenderingColorSpace(sceneDelegate, param);
+    }
+
+    // HdArnoldRenderDelegate* renderDelegate =
+    //       static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
+
+    // Only process if we have a non-fallback render settings prim
+    // if (!_HasNonFallbackRenderSettingsPrim(terminalSi)) {
+    //     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
+    //         "No non-fallback render settings prim found, skipping sync\n");
+    //     return;
+    // }
+
+    // TODO: some of the render settings are currently stored in the render delegate and the
+    // render param, we need to update those as well if we want to keep the RenderPass::_Execute function
+    // Running correctly
 
     // Process render terminals (integrators, imagers, etc.)
     _ProcessRenderTerminals(sceneDelegate, param);
 }
 
 #if PXR_VERSION <= 2308
-bool
-HdArnoldRenderSettings::IsValid() const
+bool HdArnoldRenderSettings::IsValid() const
 {
     // A render settings prim is valid if it has at least one render product
     // with at least one render var
     const RenderProducts& products = GetRenderProducts();
-    
+
     for (const auto& product : products) {
         if (!product.renderVars.empty()) {
             return true;
         }
     }
-    
+
     return false;
 }
 #endif
 
-void
-HdArnoldRenderSettings::_ProcessRenderTerminals(
-    HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParam* param)
+void HdArnoldRenderSettings::_ProcessRenderTerminals(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
     // Process render terminal connections such as integrators and imagers
     // These are typically connected as relationships on the render settings prim
 
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Processing render terminals for %s\n", GetId().GetText());
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Processing render terminals for %s\n", GetId().GetText());
 
     // TODO: Implement processing of arnold:integrator connection
     // TODO: Implement processing of arnold:imagers connection
 }
 
-void
-HdArnoldRenderSettings::_ProcessRenderProducts(HdArnoldRenderParam* param)
+void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
-    // Process render products and configure Arnold outputs (drivers)
-    
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-        "Processing render products for %s\n", GetId().GetText());
+    // TODO : the filter is not mapped correctly
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating render products for %s\n", GetId().GetText());
 
     const RenderProducts& products = GetRenderProducts();
+    if (products.empty()) {
+        return;
+    }
 
+    HdArnoldRenderDelegate* renderDelegate =
+        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
+    AtNode* options = renderDelegate->GetOptions();
+
+    std::vector<std::string> outputs;
+    std::vector<std::string> lpes;
+    std::vector<AtNode*> aovShaders;
+    std::set<AtNode*> beautyDrivers;
+
+    // Process each render product
     for (const auto& product : products) {
-        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-            "  Product: %s (%zu render vars)\n",
-            product.name.GetText(),
-            product.renderVars.size());
+        if (product.renderVars.empty()) {
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Skipping empty render product %s\n", product.name.GetText());
+            continue;
+        }
 
-        // TODO: Configure Arnold outputs/drivers based on render vars
-        // TODO: Set resolution from product.resolution
-        // TODO: Set pixel aspect ratio from product.pixelAspectRatio
-        // TODO: Set data window from product.dataWindowNDC
+        // Create driver node
+        std::string driverType = "driver_exr"; // Default driver type
+        std::string driverName = product.name.GetString();
+        std::string filename = driverName;
+
+        // Check for extension to determine driver type
+        std::string extension = TfGetExtension(filename);
+        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+        if (extension == "tif") {
+            driverType = "driver_tiff";
+        } else if (extension == "jpg" || extension == "jpeg") {
+            driverType = "driver_jpeg";
+        } else if (extension == "png") {
+            driverType = "driver_png";
+        } else if (extension.empty()) {
+            filename += ".exr";
+        }
+
+        AtNode* driver = renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
+
+        if (!driver) {
+            TF_WARN("Failed to create driver for render product %s\n", driverName.c_str());
+            continue;
+        }
+
+        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+        const char* driverNodeName = AiNodeGetName(driver);
+
+        // Set driver parameters from product's arnold-namespaced settings
+        const VtDictionary& productSettings = product.namespacedSettings;
+        for (const auto& pair : productSettings) {
+            const std::string& settingName = pair.first;
+
+            // Only process arnold-prefixed settings
+            if (!TfStringStartsWith(settingName, "arnold:")) {
+                continue;
+            }
+
+            // Extract parameter name by stripping "arnold:" or "arnold:driverType:" prefix
+            std::string paramName;
+            const std::string driverPrefix = "arnold:" + driverType + ":";
+            if (TfStringStartsWith(settingName, driverPrefix)) {
+                paramName = settingName.substr(driverPrefix.size());
+            } else if (TfStringStartsWith(settingName, "arnold:")) {
+                paramName = settingName.substr(7); // strlen("arnold:")
+            } else {
+                continue;
+            }
+
+            // Skip input parameter as it's handled separately (for imager connections)
+            if (paramName == "input") {
+                continue;
+            }
+
+            // Look up the parameter in the driver's node entry
+            const AtParamEntry* paramEntry =
+                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), AtString(paramName.c_str()));
+
+            if (!paramEntry) {
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Unknown driver parameter: %s for driver %s\n", paramName.c_str(), driverNodeName);
+                continue;
+            }
+
+            // Set the parameter value using HdArnoldSetParameter
+            HdArnoldSetParameter(driver, paramEntry, pair.second, renderDelegate);
+
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                .Msg("Set driver parameter %s on %s\n", paramName.c_str(), driverNodeName);
+        }
+        
+        // If the driver was renamed using arnold:name, we want to use its new name
+        driverNodeName = AiNodeGetName(driver);
+        
+        // Track AOV names to detect duplicates
+        std::unordered_set<std::string> aovNames;
+        std::unordered_set<std::string> duplicatedAovs;
+        std::vector<std::string> layerNames;
+        std::vector<std::string> aovNamesList;
+        size_t prevOutputsCount = outputs.size();
+        bool useLayerName = false;
+        std::vector<bool> isHalfList;
+        bool isDriverExr = AiNodeIs(driver, str::driver_exr);
+
+        // Process render vars for this product
+        for (const auto& renderVar : product.renderVars) {
+            // Create filter (default to box_filter)
+            std::string varName = renderVar.varPath.GetName();
+            std::string filterName = varName + "_filter";
+            std::string filterType = "box_filter";
+
+            // Check if arnold:filter is specified in the render var settings
+            const VtDictionary& renderVarSettings = renderVar.namespacedSettings;
+            auto filterIt = renderVarSettings.find("arnold:filter");
+            if (filterIt != renderVarSettings.end()) {
+                const VtValue& filterValue = filterIt->second;
+                if (filterValue.IsHolding<std::string>()) {
+                    filterType = filterValue.UncheckedGet<std::string>();
+                } else if (filterValue.IsHolding<TfToken>()) {
+                    filterType = filterValue.UncheckedGet<TfToken>().GetString();
+                }
+            }
+
+            AtNode* filter =
+                renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+
+            if (!filter) {
+                TF_WARN("Failed to create filter for render var %s\n", varName.c_str());
+                continue;
+            }
+
+            const char* filterNodeName = AiNodeGetName(filter);
+
+            // Set filter parameters from render var's arnold-namespaced settings
+            for (const auto& pair : renderVarSettings) {
+                const std::string& settingName = pair.first;
+
+                // Only process arnold-prefixed settings
+                if (!TfStringStartsWith(settingName, "arnold:")) {
+                    continue;
+                }
+
+                // Skip arnold:filter since it's used to determine filter type, not as a parameter
+                if (settingName == "arnold:filter") {
+                    continue;
+                }
+
+                // Extract parameter name by stripping "arnold:" or "arnold:filterType:" prefix
+                std::string paramName;
+                const std::string filterPrefix = "arnold:" + filterType + ":";
+                if (TfStringStartsWith(settingName, filterPrefix)) {
+                    paramName = settingName.substr(filterPrefix.size());
+                } else if (TfStringStartsWith(settingName, "arnold:")) {
+                    paramName = settingName.substr(7); // strlen("arnold:")
+                } else {
+                    continue;
+                }
+
+                // Look up the parameter in the filter's node entry
+                const AtParamEntry* paramEntry =
+                    AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), AtString(paramName.c_str()));
+
+                if (!paramEntry) {
+                    TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                        .Msg("Unknown filter parameter: %s for filter %s\n", paramName.c_str(), filterNodeName);
+                    continue;
+                }
+
+                // Set the parameter value using HdArnoldSetParameter
+                HdArnoldSetParameter(filter, paramEntry, pair.second, renderDelegate);
+
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Set filter parameter %s on %s\n", paramName.c_str(), filterNodeName);
+            }
+            // The filter might have been renamed.
+            filterNodeName = AiNodeGetName(filter);
+            // Get data type
+            TfToken dataType = renderVar.dataType;
+            if (dataType.IsEmpty()) {
+                dataType = _tokens->color3f; // default
+            }
+
+            const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(dataType);
+
+            // Get source name and type
+            std::string sourceName = renderVar.sourceName;
+            if (sourceName.empty() || sourceName == "color") {
+                sourceName = "RGBA";
+            }
+
+            TfToken sourceType = renderVar.sourceType;
+            std::string aovName = sourceName;
+            std::string layerName = varName;
+            bool hasLayerName = !layerName.empty() && layerName != sourceName;
+
+            // Handle different source types
+            if (sourceType == UsdRenderTokens->lpe) {
+                // Light Path Expression
+                aovName = layerName;
+                lpes.push_back(aovName + " " + sourceName);
+            } else if (sourceType == UsdRenderTokens->primvar) {
+                // Primvar AOV - requires aov_write and user_data shaders
+                std::string aovShaderName = varName + "_shader";
+                AtNode* aovShader =
+                    renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
+
+                if (aovShader) {
+                    AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
+
+                    std::string userDataName = varName + "_user_data";
+                    AtNode* userData =
+                        renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(userDataName.c_str()));
+
+                    if (userData) {
+                        AiNodeLink(userData, "aov_input", aovShader);
+                        AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
+                        aovShaders.push_back(aovShader);
+                    }
+                }
+            }
+
+            // Check for duplicates
+            bool isDuplicatedAov = (hasLayerName && aovName != layerName);
+            if (aovNames.find(sourceName) == aovNames.end()) {
+                aovNames.insert(sourceName);
+            } else {
+                isDuplicatedAov = true;
+            }
+
+            if (isDuplicatedAov) {
+                useLayerName = true;
+                duplicatedAovs.insert(sourceName);
+            }
+
+            // Build output string
+            std::string output = aovName + " " + arnoldTypes.outputString + " " + filterNodeName + " " + driverNodeName;
+
+            // Track beauty drivers
+            if (aovName == "RGBA") {
+                beautyDrivers.insert(driver);
+            }
+
+            outputs.push_back(output);
+            layerNames.push_back(layerName);
+            aovNamesList.push_back(sourceName);
+            isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
+        }
+
+        // Add layer names for duplicated AOVs
+        if (useLayerName) {
+            for (size_t j = 0; j < layerNames.size(); ++j) {
+                if (duplicatedAovs.find(aovNamesList[j]) != duplicatedAovs.end()) {
+                    outputs[j + prevOutputsCount] += " " + layerNames[j];
+                }
+            }
+        }
+
+        // Set half precision for exr drivers
+        if (!isHalfList.empty() && isDriverExr) {
+            bool allHalf = true;
+            for (size_t j = 0; j < isHalfList.size(); ++j) {
+                if (isHalfList[j]) {
+                    outputs[j + prevOutputsCount] += " HALF";
+                } else {
+                    allHalf = false;
+                }
+            }
+            if (allHalf) {
+                AiNodeSetBool(driver, AtString("half_precision"), true);
+            }
+        }
+    }
+
+    // Set outputs array on options
+    if (!outputs.empty()) {
+        AtArray* outputsArray = AiArrayAllocate(outputs.size(), 1, AI_TYPE_STRING);
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            AiArraySetStr(outputsArray, i, AtString(outputs[i].c_str()));
+        }
+        AiNodeSetArray(options, str::outputs, outputsArray);
+
+        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu outputs on options\n", outputs.size());
+    }
+
+    // Set light path expressions
+    if (!lpes.empty()) {
+        AtArray* lpesArray = AiArrayAllocate(lpes.size(), 1, AI_TYPE_STRING);
+        for (size_t i = 0; i < lpes.size(); ++i) {
+            AiArraySetStr(lpesArray, i, AtString(lpes[i].c_str()));
+        }
+        AiNodeSetArray(options, str::light_path_expressions, lpesArray);
+
+        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu light path expressions\n", lpes.size());
+    }
+
+    // Set aov_shaders
+    if (!aovShaders.empty()) {
+        AtArray* aovShadersArray = AiArrayAllocate(aovShaders.size(), 1, AI_TYPE_NODE);
+        for (size_t i = 0; i < aovShaders.size(); ++i) {
+            AiArraySetPtr(aovShadersArray, i, (void*)aovShaders[i]);
+        }
+        AiNodeSetArray(options, str::aov_shaders, aovShadersArray);
+
+        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu aov_shaders\n", aovShaders.size());
     }
 }
 
