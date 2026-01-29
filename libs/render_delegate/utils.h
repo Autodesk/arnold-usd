@@ -402,16 +402,7 @@ void HdArnoldSetConstantPrimvar(
 /// @param value Value of the primvar.
 HDARNOLD_API
 void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
-    HdArnoldRenderDelegate *renderDelegate);
-/// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
-///
-/// @param node Pointer to an Arnold Node.
-/// @param id Path to the Primitive.
-/// @param delegate Pointer to the Scene Delegate.
-/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
-HDARNOLD_API
-void HdArnoldSetUniformPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
+    const VtIntArray* indices, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -420,16 +411,8 @@ void HdArnoldSetUniformPrimvar(
 /// @param value Value of the primvar.
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
-    HdArnoldRenderDelegate *renderDelegate);
-/// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
-///
-/// @param node Pointer to an Arnold Node.
-/// @param id Path to the Primitive.
-/// @param sceneDelegate Pointer to the Scene Delegate.
-/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
-HDARNOLD_API
-void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
+    const VtIntArray* indices, HdArnoldRenderDelegate *renderDelegate);
+
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies.
