@@ -115,7 +115,6 @@ VtDictionary _GenerateArnoldOptions(VtDictionary const& settings)
         const TfToken tokenName(name);
 
         const std::string arnoldName = _GetArnoldOptionName(name);
-        std::cout << "OPTION: " << arnoldName << std::endl;
         if (!arnoldName.empty()) {
             options[arnoldName] = pair.second;
         }
@@ -173,6 +172,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
         }
         // NOTE: the handling of the atmosphere, background, shader_override, aov_shaders and operator are all managed
         // in the HdArnoldSetParameter. The connections are resolved later on using an alias system
+        // Except when atmosphere and background are connected to "sub outputs" outputs:environment outputs:background. Still to fix
         HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
     }
 
@@ -321,7 +321,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
             UsdImagingUsdRenderSettingsSchema usdRss =
                 UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
             AtNode* options = renderDelegate->GetOptions();
-
+            if (!options) return;
             HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio();
             if (parHandle) {
                 AiNodeSetFlt(options, str::pixel_aspect_ratio, parHandle->GetTypedValue(0));
@@ -348,6 +348,13 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
             if (mbHandle) {
                 AiNodeSetBool(options, str::ignore_motion_blur, mbHandle->GetTypedValue(0));
             }
+
+            HdPathDataSourceHandle camHandle = usdRss.GetCamera();
+            if (camHandle) {
+                VtValue cameraPathValue(camHandle->GetTypedValue(0).GetString());
+                const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::camera);
+                HdArnoldSetParameter(options, paramEntry, cameraPathValue, renderDelegate);
+            }
         }
     }
 }
@@ -360,7 +367,7 @@ void HdArnoldRenderSettings::_Sync(
 
     if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
         return;
-std::cout << "ENVIROANNDAPSDLKASKJDSFKSJDHFKJ" << std::endl;
+
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
         .Msg("Syncing render settings prim %s (dirty bits = %x)\n", GetId().GetText(), *dirtyBits);
 
@@ -386,13 +393,10 @@ std::cout << "ENVIROANNDAPSDLKASKJDSFKSJDHFKJ" << std::endl;
     _ReadUsdRenderSettings(sceneDelegate);
 
     // TODO
-    // DirtyActive                 TODO
-    // DirtyRenderProducts          WIP
-    // DirtyIncludedPurposes       TODO
-    // DirtyMaterialBindingPurposes TODO
-    // DirtyRenderingColorSpace     TODO
-    // DirtyShutterInterval         WIP
-    // DirtyFrameNumber            TODO
+    // DirtyActive
+    // DirtyIncludedPurposes
+    // DirtyMaterialBindingPurposes
+    // DirtyFrameNumber
 
     if (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         // Generate and apply Arnold options from the render settings
@@ -532,7 +536,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         const char* driverNodeName = AiNodeGetName(driver);
 
         // Set driver parameters from product's arnold-namespaced settings
-
         const std::string driverPrefix = "arnold:" + driverType + ":";
         
         for (const auto& pair : productSettings) {
