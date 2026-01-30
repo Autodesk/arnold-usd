@@ -419,22 +419,6 @@ void HdArnoldRenderSettings::_Sync(
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
 
-    // HdArnoldRenderDelegate* renderDelegate =
-    //       static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-
-    // Only process if we have a non-fallback render settings prim
-    // if (!_HasNonFallbackRenderSettingsPrim(terminalSi)) {
-    //     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
-    //         "No non-fallback render settings prim found, skipping sync\n");
-    //     return;
-    // }
-
-    // TODO: some of the render settings are currently stored in the render delegate and the
-    // render param, we need to update those as well if we want to keep the RenderPass::_Execute function
-    // Running correctly
-
-    // Process render terminals (integrators, imagers, etc.)
-    _ProcessRenderTerminals(sceneDelegate, param);
 }
 
 #if PXR_VERSION <= 2308
@@ -449,21 +433,9 @@ bool HdArnoldRenderSettings::IsValid() const
             return true;
         }
     }
-
     return false;
 }
 #endif
-
-void HdArnoldRenderSettings::_ProcessRenderTerminals(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
-{
-    // Process render terminal connections such as integrators and imagers
-    // These are typically connected as relationships on the render settings prim
-
-    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Processing render terminals for %s\n", GetId().GetText());
-
-    // TODO: Implement processing of arnold:integrator connection
-    // TODO: Implement processing of arnold:imagers connection
-}
 
 void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
@@ -488,7 +460,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     for (const auto& product : products) {
         if (product.renderVars.empty()) {
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Empty render product %s\n", product.name.GetText());
-            // continue;
         }
 
         // Create driver node
@@ -607,8 +578,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
             }
 
-            AtNode* filter =
-                renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+            AtNode* filter = AiNodeLookUpByName(AiNodeGetUniverse(options), AtString(filterName.c_str()));
+            if (!filter) {
+                filter = renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+            }
 
             if (!filter) {
                 TF_WARN("Failed to create filter for render var %s\n", varName.c_str());
@@ -625,13 +598,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 if (!TfStringStartsWith(settingName, "arnold:")) {
                     continue;
                 }
-
-                // TODO also process
-                //                custom string driver:parameters:aov:channel_prefix = ""
-                // custom int driver:parameters:aov:clearValue = 0
-                // custom token driver:parameters:aov:format = "color4f"
-                // custom bool driver:parameters:aov:multiSampled = 0
-                // custom string driver:parameters:aov:name = "RGBA"
 
                 // Skip arnold:filter since it's used to determine filter type, not as a parameter
                 if (settingName == "arnold:filter") {
@@ -729,6 +695,18 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
             }
 
+            // Optional per-AOV camera
+            std::string cameraName;
+            auto cameraIt = renderVarSettings.find("arnold:camera");
+            if (cameraIt != renderVarSettings.end()) {
+                const VtValue& cameraValue = cameraIt->second;
+                if (cameraValue.IsHolding<std::string>()) {
+                    cameraName = cameraValue.UncheckedGet<std::string>();
+                } else if (cameraValue.IsHolding<TfToken>()) {
+                    cameraName = cameraValue.UncheckedGet<TfToken>().GetString();
+                }
+            }
+
             // Handle different source types
             if (sourceType == UsdRenderTokens->lpe) {
                 // Light Path Expression
@@ -769,7 +747,11 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
 
             // Build output string
-            std::string output = aovName + " " + arnoldTypes.outputString + " " + filterNodeName + " " + driverNodeName;
+            std::string output;
+            if (!cameraName.empty()) {
+                output = cameraName + " ";
+            }
+            output += aovName + " " + arnoldTypes.outputString + " " + filterNodeName + " " + driverNodeName;
 
             // Track beauty drivers
             if (aovName == "RGBA") {

@@ -86,14 +86,6 @@ protected:
         const HdDirtyBits* dirtyBits) override;
 
 private:
-    /// Processes render terminal connections (integrators, filters, etc.).
-    ///
-    /// @param sceneDelegate The scene delegate.
-    /// @param param The Arnold render param.
-    void _ProcessRenderTerminals(
-        HdSceneDelegate* sceneDelegate,
-        HdArnoldRenderParam* param);
-
     /// Updates render products by creating Arnold drivers and configuring outputs.
     ///
     /// @param sceneDelegate The scene delegate.
