@@ -273,6 +273,38 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
             }
         }
 
+        // Set color manager parameters from arnold:color_manager prefixed settings
+        const VtDictionary& namespacedSettings = GetNamespacedSettings();
+        const std::string colorManagerPrefix = "arnold:color_manager:";
+        
+        for (const auto& pair : namespacedSettings) {
+            const std::string& settingName = pair.first;
+            
+            // Only process arnold:color_manager: prefixed settings
+            if (!TfStringStartsWith(settingName, colorManagerPrefix)) {
+                continue;
+            }
+            
+            // Extract parameter name by stripping the prefix
+            std::string paramName = settingName.substr(colorManagerPrefix.size());
+            
+            // Look up the parameter in the color manager's node entry
+            const AtParamEntry* paramEntry =
+                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), AtString(paramName.c_str()));
+            
+            if (!paramEntry) {
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Unknown color manager parameter: %s\n", paramName.c_str());
+                continue;
+            }
+            
+            // Set the parameter value using HdArnoldSetParameter
+            HdArnoldSetParameter(colorManager, paramEntry, pair.second, renderDelegate);
+            
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                .Msg("Set color manager parameter %s on %s\n", paramName.c_str(), AiNodeGetName(colorManager));
+        }
+
         TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updated color manager: %s\n", AiNodeGetName(colorManager));
     }
 #endif
@@ -451,14 +483,14 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     // Process each render product
     for (const auto& product : products) {
         if (product.renderVars.empty()) {
-            TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Skipping empty render product %s\n", product.name.GetText());
-            continue;
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Empty render product %s\n", product.name.GetText());
+            // continue;
         }
 
         // Create driver node
         std::string driverType = "driver_exr"; // Default driver type
-        std::string driverName = product.name.GetString();
-        std::string filename = driverName;
+        std::string driverName = product.productPath.GetString();
+        std::string filename = product.name.GetString(); // == productName
 
         // Check for extension to determine driver type
         std::string extension = TfGetExtension(filename);
@@ -470,8 +502,23 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             driverType = "driver_jpeg";
         } else if (extension == "png") {
             driverType = "driver_png";
-        } else if (extension.empty()) {
+        } else if (filename.size() && extension.empty()) {
             filename += ".exr";
+        }
+        if (product.type == TfToken("deep")) {
+            driverType = "driver_deepexr";
+        }
+
+        // Find arnold:driver override 
+        const VtDictionary& productSettings = product.namespacedSettings;
+        auto driverTypeIt = productSettings.find("arnold:driver");
+        if (driverTypeIt != productSettings.end()) {
+            const VtValue& driverTypeValue = driverTypeIt->second;
+            if (driverTypeValue.IsHolding<std::string>()) {
+                driverType = driverTypeValue.UncheckedGet<std::string>();
+            } else if (driverTypeValue.IsHolding<TfToken>()) {
+                driverType = driverTypeValue.UncheckedGet<TfToken>().GetString();
+            }
         }
 
         AtNode* driver = renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
@@ -485,7 +532,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         const char* driverNodeName = AiNodeGetName(driver);
 
         // Set driver parameters from product's arnold-namespaced settings
-        const VtDictionary& productSettings = product.namespacedSettings;
+
         const std::string driverPrefix = "arnold:" + driverType + ":";
         
         for (const auto& pair : productSettings) {
@@ -506,6 +553,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 continue;
             }
 
+            if (paramName == "driver")
+                continue;
             // Look up the parameter in the driver's node entry
             const AtParamEntry* paramEntry =
                 AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), AtString(paramName.c_str()));
@@ -574,6 +623,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                     continue;
                 }
 
+                // TODO also process
+                //                custom string driver:parameters:aov:channel_prefix = ""
+                // custom int driver:parameters:aov:clearValue = 0
+                // custom token driver:parameters:aov:format = "color4f"
+                // custom bool driver:parameters:aov:multiSampled = 0
+                // custom string driver:parameters:aov:name = "RGBA"
+
                 // Skip arnold:filter since it's used to determine filter type, not as a parameter
                 if (settingName == "arnold:filter") {
                     continue;
@@ -584,12 +640,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 const std::string filterPrefix = "arnold:" + filterType + ":";
                 if (TfStringStartsWith(settingName, filterPrefix)) {
                     paramName = settingName.substr(filterPrefix.size());
+                } else if (TfStringStartsWith(settingName, "arnold:globals:")) {
+                    paramName = settingName.substr(15); // strlen("arnold:globals:")
                 } else if (TfStringStartsWith(settingName, "arnold:")) {
                     paramName = settingName.substr(7); // strlen("arnold:")
                 } else {
                     continue;
                 }
-
                 // Look up the parameter in the filter's node entry
                 const AtParamEntry* paramEntry =
                     AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), AtString(paramName.c_str()));
@@ -612,6 +669,29 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             TfToken dataType = renderVar.dataType;
             if (dataType.IsEmpty()) {
                 dataType = _tokens->color3f; // default
+            }
+
+            // Override with the driver:parameters:aov:format
+            auto aovDriverFormatIt = renderVarSettings.find("driver:parameters:aov:format");
+            if (aovDriverFormatIt != renderVarSettings.end()) {
+                const VtValue& aovDriverFormatValue = aovDriverFormatIt->second;
+                if (aovDriverFormatValue.IsHolding<TfToken>()) {
+                    dataType = aovDriverFormatValue.UncheckedGet<TfToken>();
+                } else if (aovDriverFormatValue.IsHolding<std::string>()) {
+                    dataType = TfToken(aovDriverFormatValue.UncheckedGet<std::string>());
+                }
+            }
+
+            // If the attribute arnold:format is present, it overrides the dataType attr
+            // (this is needed for cryptomatte in Hydra #1164)
+            auto arnoldFormatIt = renderVarSettings.find("arnold:format");
+            if (arnoldFormatIt != renderVarSettings.end()) {
+                const VtValue& arnoldFormatValue = arnoldFormatIt->second;
+                if (arnoldFormatValue.IsHolding<TfToken>()) {
+                    dataType = arnoldFormatValue.UncheckedGet<TfToken>();
+                } else if (arnoldFormatValue.IsHolding<std::string>()) {
+                    dataType = TfToken(arnoldFormatValue.UncheckedGet<std::string>());
+                }
             }
 
             const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(dataType);
@@ -744,17 +824,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         AiNodeSetArray(options, str::light_path_expressions, lpesArray);
 
         TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu light path expressions\n", lpes.size());
-    }
-
-    // Set aov_shaders
-    if (!aovShaders.empty()) {
-        AtArray* aovShadersArray = AiArrayAllocate(aovShaders.size(), 1, AI_TYPE_NODE);
-        for (size_t i = 0; i < aovShaders.size(); ++i) {
-            AiArraySetPtr(aovShadersArray, i, (void*)aovShaders[i]);
-        }
-        AiNodeSetArray(options, str::aov_shaders, aovShadersArray);
-
-        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu aov_shaders\n", aovShaders.size());
     }
 }
 

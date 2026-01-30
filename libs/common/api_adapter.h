@@ -50,6 +50,21 @@ public:
     }
     virtual void AddNodeName(const std::string &name, AtNode *node) = 0;
     virtual AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) = 0;
+
+    // Similar to LookupTargetNode with a search for aliased target
+    inline AtNode *LookupTargetNodeWithAlias(const char *targetName, const AtNode *source, ConnectionType c)
+    {
+        AtNode *target = LookupTargetNode(targetName, source, c);
+        if (target == nullptr) {
+            // Let's look if targetName has one or several alias, meaning the path might have been converted to several arnold nodes
+            auto it = _connectionPathsAliases.find(targetName);
+            if (it != _connectionPathsAliases.end()) {
+                target = LookupTargetNode(it->second.c_str(), source, c);
+            }
+        }
+        return target;
+    }
+
     virtual const AtString& GetPxrMtlxPath() = 0;
 
     virtual void ProcessConnections()
@@ -63,10 +78,13 @@ public:
     const std::vector<Connection>& GetConnections() const {return _connections;}
     void ClearConnections() {_connections.clear();}
     // Could use SdfPath and AtString
-    void AddConnectionPathAlias(const std::string &usdPath, const std::string &arnoldPath) {
+    void AddConnectionPathAlias(const std::string &usdPath, const std::string &arnoldPath)
+    {
         auto it = _connectionPathsAliases.find(usdPath);
-        if (it ==_connectionPathsAliases.end()) {
+        if (it == _connectionPathsAliases.end()) {
             _connectionPathsAliases[usdPath] = arnoldPath;
+        } else {
+            _connectionPathsAliases[usdPath] = _connectionPathsAliases[usdPath] + " " + arnoldPath;
         }
     }
 
@@ -74,26 +92,26 @@ public:
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
             std::vector<AtNode *> vecNodes;
-            std::stringstream ss(connection.target);
-            std::string token;
-            while (std::getline(ss, token, ' ')) {
-                AtNode *target = LookupTargetNode(token.c_str(), connection.sourceNode, connection.type);
-                if (target == nullptr)
-                    return false; // node is missing, we don't process the connection                
-                vecNodes.push_back(target);
+            std::vector<std::string> targetPaths = TfStringTokenize(connection.target);
+            for (const auto &targetPath : targetPaths) {
+                if (_connectionPathsAliases.find(targetPath) != _connectionPathsAliases.end()) {
+                    for (const std::string &aliasPath : TfStringTokenize(_connectionPathsAliases[targetPath])) {
+                        AtNode *target = LookupTargetNode(aliasPath.c_str(), connection.sourceNode, connection.type);
+                        if (target)
+                            vecNodes.push_back(target);
+                    }
+                } else {
+                    AtNode *target = LookupTargetNode(targetPath.c_str(), connection.sourceNode, connection.type);
+                    if (target)
+                        vecNodes.push_back(target);
+                }
             }
+            // TODO: should we add the new elements to the array or should we replace ?
             AiNodeSetArray(
                 connection.sourceNode, AtString(connection.sourceAttr.c_str()),
                 AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
         } else {
-            AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, connection.type);
-            if (target == nullptr){
-                // Let's look in the name aliases
-                auto it = _connectionPathsAliases.find(connection.target);
-                if (it!=_connectionPathsAliases.end()) {
-                    target = LookupTargetNode(it->second.c_str(), connection.sourceNode, connection.type);
-                }
-            }
+            AtNode *target = LookupTargetNodeWithAlias(connection.target.c_str(), connection.sourceNode, connection.type);
             if (target == nullptr)
                 return false;// node is missing, we don't process the connection
             
@@ -135,7 +153,7 @@ public:
 
                 if (isNodeAttr) {
                     // If we're trying to link a node attribute, we should just set its pointer
-                    AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR);
+                    AtNode *target = LookupTargetNodeWithAlias(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR);
                     AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
                 } else if (target == nullptr) {
                     AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
