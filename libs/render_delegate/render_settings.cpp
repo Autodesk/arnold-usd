@@ -486,6 +486,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
         // Set driver parameters from product's arnold-namespaced settings
         const VtDictionary& productSettings = product.namespacedSettings;
+        const std::string driverPrefix = "arnold:" + driverType + ":";
+        
         for (const auto& pair : productSettings) {
             const std::string& settingName = pair.first;
 
@@ -496,17 +498,11 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
             // Extract parameter name by stripping "arnold:" or "arnold:driverType:" prefix
             std::string paramName;
-            const std::string driverPrefix = "arnold:" + driverType + ":";
             if (TfStringStartsWith(settingName, driverPrefix)) {
                 paramName = settingName.substr(driverPrefix.size());
             } else if (TfStringStartsWith(settingName, "arnold:")) {
                 paramName = settingName.substr(7); // strlen("arnold:")
             } else {
-                continue;
-            }
-
-            // Skip input parameter as it's handled separately (for imager connections)
-            if (paramName == "input") {
                 continue;
             }
 
@@ -543,8 +539,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         // Process render vars for this product
         for (const auto& renderVar : product.renderVars) {
             // Create filter (default to box_filter)
-            std::string varName = renderVar.varPath.GetName();
-            std::string filterName = varName + "_filter";
+            std::string varName = renderVar.varPath.GetString();
+            std::string filterName = varName + "/filter";
             std::string filterType = "box_filter";
 
             // Check if arnold:filter is specified in the render var settings
@@ -628,8 +624,27 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
             TfToken sourceType = renderVar.sourceType;
             std::string aovName = sourceName;
-            std::string layerName = varName;
-            bool hasLayerName = !layerName.empty() && layerName != sourceName;
+            std::string layerName = renderVar.varPath.GetName();
+            bool hasLayerName = false;
+
+            // Read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
+            auto aovNameIt = renderVarSettings.find("driver:parameters:aov:name");
+            if (aovNameIt != renderVarSettings.end()) {
+                const VtValue& aovNameValue = aovNameIt->second;
+                if (aovNameValue.IsHolding<std::string>()) {
+                    std::string aovNameValueStr = aovNameValue.UncheckedGet<std::string>();
+                    if (!aovNameValueStr.empty()) {
+                        layerName = aovNameValueStr;
+                        hasLayerName = true;
+                    }
+                } else if (aovNameValue.IsHolding<TfToken>()) {
+                    std::string aovNameValueStr = aovNameValue.UncheckedGet<TfToken>().GetString();
+                    if (!aovNameValueStr.empty()) {
+                        layerName = aovNameValueStr;
+                        hasLayerName = true;
+                    }
+                }
+            }
 
             // Handle different source types
             if (sourceType == UsdRenderTokens->lpe) {

@@ -65,13 +65,11 @@ public:
     HDARNOLD_API
     void Finalize(HdRenderParam* renderParam) override;
 
-#if PXR_VERSION <= 2308
     /// Returns whether the render settings prim is valid.
     ///
     /// @return True if valid.
     HDARNOLD_API
     bool IsValid() const;
-#endif
 
 protected:
     /// Hydra 2.0 virtual API: Sync.
@@ -124,8 +122,6 @@ private:
     /// @param sceneDelegate The scene delegate.
     void _ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate);
 
-
-private:
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
