@@ -209,7 +209,7 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
 void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value, 
     HdArnoldRenderDelegate *renderDelegate)
 {
-    if (value.IsEmpty())
+    if (value.IsEmpty() || pentry == nullptr)
         return;
 
     const AtString paramName = AiParamGetName(pentry);
