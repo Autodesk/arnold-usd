@@ -388,59 +388,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     _ClearRenderBuffers();
 }
 
-/// Executes the render pass with the current scene state.
-///
-/// This is the main entry point for rendering, called by Hydra to execute the render pass.
-/// It performs comprehensive scene setup, configuration, and render management across multiple
-/// systems including cameras, AOVs, outputs, and render buffers.
-///
-/// The function orchestrates the following operations:
-/// 1. **Camera Management**: Configures the render camera (either from Hydra or render pass-owned),
-///    updates projection/view matrices, handles orthographic vs perspective cameras, and computes
-///    field of view and screen windows.
-///
-/// 2. **Resolution & Framing**: Processes viewport framing, handles resolution changes from render
-///    settings or display windows, manages data windows and regions, and applies pixel aspect ratio.
-///
-/// 3. **Window NDC (Normalized Device Coordinates)**: Applies custom render regions when windowNDC
-///    is specified, adjusts Arnold's region_min/max and xres/yres to match the requested window,
-///    and handles coordinate transformations between Hydra and Arnold conventions.
-///
-/// 4. **Shader Setup**: Configures background, atmosphere, shader override, AOV shaders, and imager
-///    shaders by querying the render delegate and applying them to Arnold's options and drivers.
-///
-/// 5. **AOV (Arbitrary Output Variable) Configuration**: Processes Hydra's AOV bindings to create
-///    Arnold outputs, handles special cases for color/depth/primId, configures custom AOVs with
-///    appropriate filters and data types, and sets up primvar and LPE (Light Path Expression) AOVs.
-///
-/// 6. **Render Buffer Management**: Allocates and clears render buffers when resolution changes,
-///    maps Hydra render buffers to Arnold drivers, and handles buffer format conversions.
-///
-/// 7. **Custom Products (Batch Rendering)**: Processes delegate render products for batch contexts,
-///    creates custom Arnold drivers (EXR, deep EXR, etc.) with product-specific settings, configures
-///    multiple outputs per product, and handles cryptomatte and deep rendering configurations.
-///
-/// 8. **Filter Configuration**: Creates and applies Arnold filters (box, closest, custom) per AOV,
-///    handles filter-specific parameters from AOV settings.
-///
-/// 9. **Render State Management**: Checks for pending scene changes via HasPendingChanges, triggers
-///    render interrupts when configuration changes occur, updates render convergence status, and
-///    manages the render loop state machine.
-///
-/// The function ensures that any changes to camera, resolution, AOVs, or scene configuration
-/// properly interrupt and restart the render as needed, maintaining consistency between Hydra's
-/// state and Arnold's rendering pipeline.
-///
-/// @param renderPassState Shared pointer to Hydra's render pass state containing camera, viewport,
-///                        framing information, and AOV bindings
-/// @param renderTags Vector of tokens indicating which render tags should be visible (e.g., geometry,
-///                   proxy, render, guide). Used to filter scene primitives.
-///
-/// @note This function may interrupt the current render if configuration changes are detected
-/// @note For batch contexts, custom products override standard Hydra AOV outputs
-/// @note The function handles both interactive and batch rendering modes with different behaviors
-/// @note Window NDC processing allows rendering subregions of the full frame
-/// @note Cryptomatte AOVs receive special handling for metadata propagation
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     _renderDelegate->SetRenderTags(renderTags);
