@@ -549,6 +549,22 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         // If the driver was renamed using arnold:name, we want to use its new name
         driverNodeName = AiNodeGetName(driver);
         
+        // Set imager on the driver if arnold:global:imager is specified in the render settings
+        const VtDictionary& namespacedSettings = GetNamespacedSettings();
+        auto imagerIt = namespacedSettings.find("arnold:global:imager");
+        if (imagerIt != namespacedSettings.end()) {
+            const VtValue& imagerValue = imagerIt->second;
+            const AtParamEntry* paramEntry =
+                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::input);
+            
+            if (paramEntry) {
+                HdArnoldSetParameter(driver, paramEntry, imagerValue, renderDelegate);
+                
+                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                    .Msg("Set imager on driver %s\n", driverNodeName);
+            }
+        }
+        
         // Track AOV names to detect duplicates
         std::unordered_set<std::string> aovNames;
         std::unordered_set<std::string> duplicatedAovs;

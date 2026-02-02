@@ -477,7 +477,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             terminalNode = arnoldNode;
             // We create an alias mapping the usd Material path to the arnold shader path, this helps solving
             // unresolved connections when we process them
-            _renderDelegate->GetAPIAdapter().AddConnectionPathAlias(id.GetString(), AiNodeGetName(arnoldNode));
+            _renderDelegate->GetAPIAdapter().AddConnectionPathAlias(id.GetString(), terminalType, AiNodeGetName(arnoldNode));
         }
 
     }
