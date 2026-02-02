@@ -102,8 +102,7 @@ public:
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
             std::vector<AtNode *> vecNodes;
-            std::vector<std::string> targetPaths = TfStringTokenize(connection.target);
-            for (const auto &targetPath : targetPaths) {
+            for (const auto &targetPath : TfStringTokenize(connection.target)) {
                 _LookupTargetNodeArrayWithAlias(vecNodes, targetPath.c_str(), connection.sourceNode, connection.type, connection.sourceAttr);
             }
             AiNodeSetArray(
