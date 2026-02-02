@@ -18,6 +18,7 @@
 /// @file render_settings.cpp
 ///
 /// Hydra 2.0 Render Settings Prim for Arnold.
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 
 #include "render_settings.h"
 
@@ -831,3 +832,4 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXR_VERSION >= 2308
+#endif // ENABLE_HYDRA2_RENDERSETTINGS

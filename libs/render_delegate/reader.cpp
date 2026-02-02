@@ -298,7 +298,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         if (!_renderSettings.empty()) {
             // Sets the default parameters on the Arnold option node (AA_samples, GI_diffuse_depth, ...)
             SetArnoldDefaultOptions(_universe);
-#if USE_HYDRA2_RENDERSETTINGS
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
             // We want to use the RenderSetting hydra prim only if we use the scene index system
             if (_useSceneIndex) {
                 // TODO set metadata only if it it not already set

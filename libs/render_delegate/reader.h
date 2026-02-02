@@ -22,7 +22,6 @@
 #include "pxr/imaging/hd/retainedDataSource.h"
 #include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
 #include "pxr/imaging/hd/materialBindingsSchema.h"
-#define USE_HYDRA2_RENDERSETTINGS 1
 
 #endif
 #include "timesettings.h"

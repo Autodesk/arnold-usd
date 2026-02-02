@@ -269,15 +269,19 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
-    // TODO : make sure we still need to check we own the universe, it's commented for testing at the moment
-// #if PXR_VERSION >= 2208
-//     if (!ownsUniverse) {
-//         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-//         return r;
-//     } else
-// #endif
-    {
+
+#if PXR_VERSION >= 2208
+    if (!ownsUniverse) {
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    } else
+#endif
+    {
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+#else
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+#endif
         return r;
     }
 }
@@ -1319,10 +1323,15 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2308
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
         return new HdArnoldRenderSettings(bprimId);
     }
-#endif
+#else
+    if (typeId == HdPrimTypeTokens->renderSettings)
+        return nullptr;
+#endif // ENABLE_HYDRA2_RENDERSETTINGS
+#endif // PXR_VERSION >= 2308
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
