@@ -8,6 +8,7 @@
 - [usd#2519](https://github.com/Autodesk/arnold-usd/issues/2519) - Fix transform of cameras under procedurals
 - [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
 - [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) -  Add a new bundle plugin containing the procedural and all usd plugins.
+- [usd#2542](https://github.com/Autodesk/arnold-usd/issues/2542) - Remove dependency on usdSkelImaging in the scene index.
 
 ## [7.4.5.0] (Unreleased)
 
