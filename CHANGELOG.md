@@ -10,8 +10,9 @@
 - [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
 - [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) - Add a new bundle plugin containing the procedural and all usd plugins.
 - [usd#2526](https://github.com/Autodesk/arnold-usd/issues/2526) - Update the arnold frame value when changing frame in solaris
+- [usd#2542](https://github.com/Autodesk/arnold-usd/issues/2542) - Remove dependency on usdSkelImaging in the scene index.
 
-### Bug Fixes 
+### Bug Fixes
 
 - [usd#2530](https://github.com/Autodesk/arnold-usd/issues/2530) -  Support uniform and vertex-interpolated primvars that are indexed
 - [usd#2532](https://github.com/Autodesk/arnold-usd/issues/2532) -  Fix crashes in IPR with ArnoldGinstance primitives

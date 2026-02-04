@@ -77,7 +77,7 @@ def render_delegate(env, sources):
     if env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
-        usd_libs += ['hdsi','ts','usdSkelImaging']
+        usd_libs += ['hdsi','ts',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 
@@ -149,7 +149,6 @@ def scene_index_plugin(env, sources):
         'hd',
         'hdsi',
         'usdSkel',
-        'usdSkelImaging',
         'usd',
         'usdGeom',
         'usdImaging',
