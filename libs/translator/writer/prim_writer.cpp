@@ -604,7 +604,7 @@ void UsdArnoldPrimWriter::_SanitizePrimName(std::string &name)
 
         if (c == '|')
             c = '/';
-        else if (c == '@' || c == '.' || c == ':' || c == '-')
+        else if (c == '@' || c == '.' || c == ':' || c == '-' || c == '*')
             c = '_';
 
         if (i == 0 && c != '/')

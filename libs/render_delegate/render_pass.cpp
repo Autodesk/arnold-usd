@@ -384,7 +384,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
             }
         }
     }
-
     _ClearRenderBuffers();
 }
 
@@ -1140,6 +1139,26 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
 
 void HdArnoldRenderPass::_ClearRenderBuffers()
 {
+#if ARNOLD_VERSION_NUM >= 70405
+    
+    if (_mainDriver)
+        AiNodeResetParameter(_mainDriver, str::render_outputs);
+    AiNodeResetParameter(_renderDelegate->GetOptions(), str::drivers);
+    // With Arnold 7.4.5.0 and up, arnold converts the options outputs strings as render_output nodes.
+    // Here we are destroying the filters & drivers, but we also have to destroy the render_outputs
+    // in order to avoid possible crashes during interactive updates. This can go away when we directly
+    // create render outputs here
+    if (!_renderDelegate->GetProceduralParent()) {
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_renderDelegate->GetUniverse(), AI_NODE_RENDER_OUTPUT);
+        while (!AiNodeIteratorFinished(nodeIter))
+        {
+           AtNode *node = AiNodeIteratorGetNext(nodeIter);
+           AiNodeDestroy(node);
+        }
+        AiNodeIteratorDestroy(nodeIter);
+    }
+#endif
+
 
     for (auto& buffer : _renderBuffers) {
         if (buffer.second.filter != nullptr) {
