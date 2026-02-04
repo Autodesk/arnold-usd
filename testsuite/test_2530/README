@@ -1,0 +1,7 @@
+Support indexed uniform and vertex interpolated primvars
+
+Fixes #2530
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
