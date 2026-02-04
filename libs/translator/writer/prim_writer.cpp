@@ -620,7 +620,7 @@ void UsdArnoldPrimWriter::_SanitizePrimName(std::string &name)
 }
 // Ensure a connected node is properly translated, handle the output attributes,
 // and return its name
-static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* target, int outComp = -1)
+static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* target, int outParam = -1, int outComp = -1)
 {
     // First, ensure the primitive was written to usd
     writer.WritePrimitive(target);
@@ -633,17 +633,34 @@ static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* targ
     if (!targetPrim)
         return std::string();
 
+    const AtNodeEntry* nentry = AiNodeGetNodeEntry(target);
+    const AtParamEntry *outPentry = nullptr;
+    std::string outParamName;
+    if (outParam >= 0) {
+        // If we have an explicit output parameter name, we want to get its name and type.
+        outPentry = AiNodeEntryGetOutput(nentry, outParam);
+        outParamName = std::string(AiParamGetName(outPentry).c_str());
+        static std::string s_oslPrefix("param_");
+        // For OSL shaders, we want to remove the "param_" prefix from the arnold attribute as it's 
+        // not expected to be in the usd shaders. Thus when we convert back from usd to arnold it's added back
+        if (AiNodeIs(target, str::osl) && outParamName.length() > s_oslPrefix.length() && outParamName.substr(0, s_oslPrefix.length()) == s_oslPrefix) {
+            outParamName = outParamName.substr(s_oslPrefix.length());
+        }
+        outParamName = std::string("outputs:") + outParamName;
+    }
     // check the output type of this node
-    int targetEntryType = AiNodeEntryGetOutputType(AiNodeGetNodeEntry(target));
+    int targetEntryType = outPentry ? AiParamGetType(outPentry) : AiNodeEntryGetOutputType(nentry);
+    const TfToken outputName = outPentry ? TfToken(outParamName.c_str()) : _tokens->outputsOut;
+    
     if (outComp < 0) { // Connection on the full node output
         SdfValueTypeName type;
         const auto outputIterType = UsdArnoldPrimWriter::GetParamConversion(targetEntryType);
         if (outputIterType) {
             // Create the output attribute on the node, of the corresponding type
             // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
-            UsdAttribute attr = targetPrim.CreateAttribute(_tokens->outputsOut, outputIterType->type, false);
+            UsdAttribute attr = targetPrim.CreateAttribute(outputName, outputIterType->type, false);
             // the connection will point at this output attribute
-            targetName += ".outputs:out";
+            targetName += std::string(".") + outputName.GetString();
         }
     } else { // connection on an output component (r, g, b, etc...)
         std::string compList;
@@ -667,9 +684,14 @@ static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* targ
         if (outComp < (int)compList.length()) {
             // Let's create the output attribute for this component.
             // As of now, these components are always float
-            std::string outName = std::string("outputs:") + std::string(1, compList[outComp]);
+            std::string outName;
+            if (outPentry)
+                outName = outputName.GetString() + std::string(":") + std::string(1, compList[outComp]);
+            else
+                outName = std::string("outputs:") + std::string(1, compList[outComp]);
             UsdAttribute attr = targetPrim.CreateAttribute(TfToken(outName), SdfValueTypeNames->Float, false);
-            targetName += std::string(".") + outName;
+            targetName += std::string(".");
+            targetName += outName;
         }
     }
     return targetName;
@@ -905,10 +927,11 @@ static inline bool convertArnoldAttribute(
                 indexStr = std::to_string(i);
                 paramElemName = paramName + std::string("[") + indexStr + std::string("]");
                 int outComp = -1;
-                AtNode* arrayLink = AiNodeGetLink(node, paramElemName.c_str(), &outComp);
+                int outParam = -1;
+                AtNode* arrayLink = AiNodeGetLinkOutput(node, paramElemName.c_str(), outParam, outComp);
                 if (arrayLink == nullptr)
                     continue;
-                std::string targetName = GetConnectedNode(writer, arrayLink, outComp);
+                std::string targetName = GetConnectedNode(writer, arrayLink, outParam, outComp);
 
                 paramElemName = attrWriter.GetAttr().GetName().GetText();
                 paramElemName += std::string(":i") + indexStr;
@@ -929,10 +952,11 @@ static inline bool convertArnoldAttribute(
 
         if (isLinked) {
             int outComp = -1;
-            AtNode* target = AiNodeGetLink(node, AtString(paramName), &outComp);
+            int outParam = -1;
+            AtNode* target = AiNodeGetLinkOutput(node, AtString(paramName), outParam, outComp);
             // Get the link on the arnold node
-            if (target) {
-                std::string targetName = GetConnectedNode(writer, target, outComp);
+            if (target) {            
+                std::string targetName = GetConnectedNode(writer, target, outParam, outComp);
                 // Process the connection
                 if (!targetName.empty())
                     attrWriter.AddConnection(SdfPath(targetName));
@@ -1018,9 +1042,9 @@ static inline bool convertArnoldAttribute(
                     
                     // check if this channel is linked and connect the corresponding adapter attr.
                     // Note that we can call AiNodeGetLink with e.g. attr.r, attr.x, etc...
-                    AtNode* channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);
+                    AtNode* channelTarget = AiNodeGetLinkOutput(node, channelName.c_str(), outParam, outComp);
                     if (channelTarget) {
-                        std::string channelTargetName = GetConnectedNode(writer, channelTarget, outComp);
+                        std::string channelTargetName = GetConnectedNode(writer, channelTarget, outParam, outComp);
                         if (!channelTargetName.empty())
                             attributes[i].AddConnection(SdfPath(channelTargetName));
                     }
