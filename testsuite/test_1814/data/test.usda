@@ -194,9 +194,10 @@ over "world"
         }
     }
 }
+
 def Xform "persp"
 {
-def Camera "perspShape"
+    def Camera "perspShape"
     {
         float2 clippingRange = (0.1, 10000)
         float focusDistance = 1
@@ -224,17 +225,17 @@ def Camera "perspShape"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
+
 def Scope "Render"
 {
     def RenderSettings "rendersettings"
     {
-        custom int arnold:global:AA_seed
+        custom int arnold:global:AA_seed = 1020
         int arnold:global:AA_seed.timeSamples = {
             1020: 1020,
         }
         token aspectRatioConformPolicy = "expandAperture"
         prepend rel camera = </persp/perspShape>
-        
         float4 dataWindowNDC = (0, 0, 1, 1)
         token[] includedPurposes = ["default"]
         bool instantaneousShutter = 1

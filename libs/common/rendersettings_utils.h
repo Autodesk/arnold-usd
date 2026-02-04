@@ -32,5 +32,13 @@ void ChooseRenderSettings(UsdStageRefPtr stage, std::string &renderSettingsPath,
 AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, ProceduralReader *reader, const TimeSettings &time, AtUniverse *universe, SdfPath& camera);
 void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time);
 void ComputeUsdLuxVersion(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time, const AtUniverse *universe);
+void SetArnoldDefaultOptions(AtUniverse *universe);
+void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolution);
+
+// Color manager helper functions
+AtNode* GetOrCreateColorManager(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 
+                                 const TimeSettings &time, AtNode *options);
+void SetupColorManagerColorSpaces(AtNode *colorManager, const UsdPrim &renderSettingsPrim, 
+                                   ArnoldAPIAdapter &context, const TimeSettings &time);
 
 PXR_NAMESPACE_CLOSE_SCOPE
