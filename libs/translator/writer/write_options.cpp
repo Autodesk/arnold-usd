@@ -421,6 +421,7 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                     output.camera = (AtNode*)AiNodeGetPtr(renderOutputNode, str::camera);
                     output.aovName = AiNodeGetStr(renderOutputNode, str::aov_name).c_str();
                     output.aovType = AiNodeGetStr(renderOutputNode, str::type).c_str();
+                    std::transform(output.aovType.begin(), output.aovType.end(), output.aovType.begin(), [](unsigned char c) { return toupper(c); });
                     output.layerName = AiNodeGetStr(renderOutputNode, str::layer_name).c_str();
                     output.halfPrecision = AiNodeGetBool(renderOutputNode, str::half_precision);
                     outputs.push_back(output);

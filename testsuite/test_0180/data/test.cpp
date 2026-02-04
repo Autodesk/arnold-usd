@@ -12,14 +12,17 @@ int main(int argc, char **argv)
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
     AiSceneLoad(nullptr, "scene.usda", nullptr);
-    AiSceneWrite(nullptr, "scene.ass", nullptr, nullptr);
+    AtParamValueMap* params = AiParamValueMap();
+    AiParamValueMapSetBool(params, AtString("convert_string_outputs"), false);
+    AiSceneWrite(nullptr, "scene.ass", params);
     AiEnd();
     AiBegin();
-    AiSceneLoad(nullptr, "scene.ass", nullptr);
+    AiSceneLoad(nullptr, "scene.ass", params);
+    AiParamValueMapDestroy(params);
+    
     AtNode *options = AiUniverseGetOptions(nullptr);
     AtArray *array = AiNodeGetArray(options, AtString("outputs"));
     bool success = false;
-    
     static const AtString elem1("RGBA RGBA /Render/Products/Vars/rendervar1/filter /Render/Products/renderproduct1 beauty");
     static const AtString elem2("RGBA RGBA /Render/Products/Vars/rendervar2/filter /Render/Products/renderproduct1 beauty_filtered");
     if (AiArrayGetNumElements(array) == 2)
@@ -34,9 +37,10 @@ int main(int argc, char **argv)
             AiMsgError("Wrong outputs : %s, %s", val1.c_str(), val2.c_str());
         }
     }
-    if (success)
+
+    if (success){
         AiRender(nullptr);
+    }
     AiEnd();
-    
     return (success) ? 0 : 1;
 }
