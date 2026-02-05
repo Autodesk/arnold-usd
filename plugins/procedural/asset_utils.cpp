@@ -187,6 +187,36 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
 }
 
 /**
+ * Helper function to read the value of a prim attribute
+ * and add it as a file dependency. Handles time samples.
+ */
+template <typename T>
+inline void CollectAttrDependencies(
+    const SdfAttributeSpecHandle& attr,
+    const SdfLayerHandle& layer,
+    const std::function<void(const T&)>& process_func)
+{
+    // collect attribute value
+    VtValue defaultVal = attr->GetDefaultValue();
+    if (defaultVal.IsHolding<T>())
+    {
+        T value = defaultVal.UncheckedGet<T>();
+        process_func(value);
+    }
+        
+    // collect time samples
+    std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
+    for (double t : timeSamples)
+    {
+        T value_t;
+        if (layer->QueryTimeSample(attr->GetPath(), t, &value_t))
+        {
+            process_func(value_t);
+        }
+    }
+}
+
+/**
  * Returns all dependencies of an Arnold OSL shader node.
  * 
  * To be able to tell if an OSL shader parameter refers to a file,
@@ -239,13 +269,12 @@ inline void CollectOslShaderDependencies(
             if (!pathAttr || !pathAttr->GetDefaultValue().IsHolding<std::string>())
                 continue;
 
-            const std::string& value = pathAttr->GetDefaultValue().Get<std::string>();
-            if (value.empty())
-                continue;
-
-            AddDependency(value, USDDependency::Type::Attribute,
-                          prim->GetPath(), pathAttr->GetPath(),
-                          dependencies, stage, layer, resolver, seenReferences);
+            CollectAttrDependencies<std::string>(pathAttr, layer,
+                [&](const std::string& val) {
+                    AddDependency(val, USDDependency::Type::Attribute, 
+                        prim->GetPath(), pathAttr->GetPath(),
+                        dependencies, stage, layer, resolver, seenReferences);
+                });
         }
     }
     AiParamIteratorDestroy(piter);
@@ -313,62 +342,38 @@ inline void CollectDependenciesFromLayer(
             // asset type attribute
             if (attr->GetTypeName() == SdfValueTypeNames->Asset)
             {
-                // collect attribute value
-                VtValue defaultVal = attr->GetDefaultValue();
-                if (defaultVal.IsHolding<SdfAssetPath>())
-                {
-                    SdfAssetPath val = defaultVal.UncheckedGet<SdfAssetPath>();
-                    AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
-                        prim->GetPath(), attr->GetPath(),
-                        dependencies, stage, layer, resolver, seenReferences);
-                }
-
-                // collect time samples
-                std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
-                for (double t : timeSamples)
-                {
-                    SdfAssetPath val_t;
-                    if (layer->QueryTimeSample(attr->GetPath(), t, &val_t))
-                    {
-                        AddDependency(val_t.GetAssetPath(), USDDependency::Type::Attribute,
+                CollectAttrDependencies<SdfAssetPath>(attr, layer,
+                    [&](const SdfAssetPath& val) {
+                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
                             prim->GetPath(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
-                    }
-                }
+                    });
             }
 
             // asset array type attribute
             else if (attr->GetTypeName() == SdfValueTypeNames->AssetArray)
             {
-                // collect attribute value
-                VtValue defaultVal = attr->GetDefaultValue();
-                if (defaultVal.IsHolding<VtArray<SdfAssetPath>>())
-                {
-                    VtArray<SdfAssetPath> arr = defaultVal.UncheckedGet<VtArray<SdfAssetPath>>();
-
-                    for (SdfAssetPath val : arr)
-                    {
-                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
-                            prim->GetPath(), attr->GetPath(),
-                            dependencies, stage, layer, resolver, seenReferences);
-                    }
-                }
-
-                // collect time samples
-                std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
-                for (double t : timeSamples)
-                {
-                    VtArray<SdfAssetPath> arr_t;
-                    if (layer->QueryTimeSample(attr->GetPath(), t, &arr_t))
-                    {
-                        for (SdfAssetPath val : arr_t)
+                CollectAttrDependencies<VtArray<SdfAssetPath>>(attr, layer,
+                    [&](const VtArray<SdfAssetPath>& arr) {
+                        for (SdfAssetPath val : arr)
                         {
                             AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
                                 prim->GetPath(), attr->GetPath(),
                                 dependencies, stage, layer, resolver, seenReferences);
                         }
-                    }
-                }
+                    });
+            }
+
+            // NOTE filename in ArnoldUsd is a string type not an asset type
+            // therefore it needs special care
+            if (attrName == "arnold:filename" && prim->GetTypeName().GetString() == "ArnoldUsd")
+            {
+                CollectAttrDependencies<std::string>(attr, layer,
+                    [&](const std::string& val) {
+                        AddDependency(val, USDDependency::Type::Attribute, 
+                            prim->GetPath(), attr->GetPath(),
+                            dependencies, stage, layer, resolver, seenReferences);
+                    });
             }
         }
 
@@ -464,7 +469,7 @@ inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
     if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
     {
        SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
-       if (prim && prim->GetTypeName().GetString() == "ArnoldProcedural")
+       if (prim && (prim->GetTypeName() == TfToken("ArnoldProcedural") || prim->GetTypeName() == TfToken("ArnoldUsd")))
           return AtFileType::Procedural;
     }
 
