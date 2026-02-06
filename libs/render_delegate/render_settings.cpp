@@ -45,7 +45,7 @@
 #include <string>
 #include "../common/rendersettings_utils.h"
 #include "camera.h"
-#include "debugger.h"
+
 #include "render_delegate.h"
 #include "render_param.h"
 #include "utils.h"
@@ -363,9 +363,6 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
 void HdArnoldRenderSettings::_Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
 {
-    if (std::getenv("TOTO") != nullptr)
-        WaitForDebugger();
-
     if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
         return;
 
