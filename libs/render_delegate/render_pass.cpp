@@ -711,6 +711,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _usingFallbackBuffers || updateAovs || updateImagers) {
         _usingFallbackBuffers = false;
         renderParam->Interrupt();
+        if (_mainDriver)
+            AiNodeResetParameter(_mainDriver, str::render_outputs);
+
         _ClearRenderBuffers();
         _renderDelegate->ClearCryptomatteDrivers();
         AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
@@ -1141,8 +1144,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
 {
 #if ARNOLD_VERSION_NUM >= 70405
     
-    if (_mainDriver)
-        AiNodeResetParameter(_mainDriver, str::render_outputs);
     AiNodeResetParameter(_renderDelegate->GetOptions(), str::drivers);
     // With Arnold 7.4.5.0 and up, arnold converts the options outputs strings as render_output nodes.
     // Here we are destroying the filters & drivers, but we also have to destroy the render_outputs
