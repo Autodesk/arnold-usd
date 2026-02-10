@@ -681,6 +681,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _renderParam->Restart();
     }
 
+    if (_key == str::t_houdiniCopTextureChanged) {
+        printf("Houdini COP texture change detected, restarting render to update textures.\n");
+        AiMsgWarning("Houdini COP texture change detected, restarting render to update textures.");
+        // COP textures need updating
+        // TODO do this properly, restarting the whole render is wasteful
+        //_renderParam->Restart();
+    }
+
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
@@ -1006,6 +1014,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
 
 void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue& value)
 {
+    printf("Render setting changed: %s\n", key.GetText());
     _renderParam->Interrupt();
     _SetRenderSetting(key, value);
 }
