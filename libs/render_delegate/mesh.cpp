@@ -213,7 +213,7 @@ void HdArnoldMesh::Sync(
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
     HdArnoldSampledPrimvarType _pointsSample;
-    const bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
+    bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     // We need to set the deform keys first if it is specified
