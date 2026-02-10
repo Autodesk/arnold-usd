@@ -73,6 +73,12 @@ public:
     HDARNOLD_API
     bool IsValid() const;
 
+    HDARNOLD_API
+    const SdfPath & GetHydraCameraPath() const { return _hydraCameraPath; }
+
+HDARNOLD_API
+    const GfVec2f & GetHydraCameraShutter() const { return _hydraCameraShutter;} 
+
 protected:
     /// Hydra 2.0 virtual API: Sync.
     ///
@@ -116,6 +122,9 @@ private:
     /// @param sceneDelegate The scene delegate.
     void _ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate);
 
+private:
+    SdfPath _hydraCameraPath;
+    GfVec2f _hydraCameraShutter = GfVec2f(0.f, 0.f);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

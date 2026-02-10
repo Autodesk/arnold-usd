@@ -130,18 +130,23 @@ VtDictionary _GenerateArnoldOptions(VtDictionary const& settings)
 
 HdArnoldRenderSettings::HdArnoldRenderSettings(SdfPath const& id) : HdRenderSettings(id) {}
 
-HdArnoldRenderSettings::~HdArnoldRenderSettings() = default;
-
+HdArnoldRenderSettings::~HdArnoldRenderSettings()
+{ 
+    // We might want to reset the camera on the render delegate
+    // renderDelegate->SetHydraRenderSettingsPath(SdfPath()); 
+};
 
 void HdArnoldRenderSettings::Finalize(HdRenderParam* renderParam)
 {
-    // HdArnoldRenderParam* param =
-    //     static_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
 
     // Clean up any resources associated with this render settings prim
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Finalizing render settings prim %s\n", GetId().GetText());
 
-    // TODO: Clean up Arnold-specific resources if needed
+    // If this was the active render settings prim, clear it
+    if (param->GetHydraRenderSettingsPrimPath() == GetId()) {
+        param->SetHydraRenderSettingsPrimPath(SdfPath());
+    }
 }
 
 void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate)
@@ -190,9 +195,10 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
         //  * ArnoldHydraReader when used with (kick)
         //  * Arnold universe
         //  * this render settings
-
+        _hydraCameraShutter = GfVec2f(shutterInterval[0], shutterInterval[1]);
+    
         // First update the render params with the new shutter interval
-        param->UpdateShutter(GfVec2f(shutterInterval[0], shutterInterval[1]));
+        param->UpdateShutter(_hydraCameraShutter);
 
         // The next call to _Execute will replace param->_shutter with the value of the universe
         // We also update Arnold directly
@@ -349,12 +355,16 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
             if (mbHandle) {
                 AiNodeSetBool(options, str::ignore_motion_blur, mbHandle->GetTypedValue(0));
             }
+            // TODO we might want to reset
 
             HdPathDataSourceHandle camHandle = usdRss.GetCamera();
             if (camHandle) {
-                VtValue cameraPathValue(camHandle->GetTypedValue(0).GetString());
+                _hydraCameraPath = SdfPath(camHandle->GetTypedValue(0));
                 const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::camera);
-                HdArnoldSetParameter(options, paramEntry, cameraPathValue, renderDelegate);
+                HdArnoldSetParameter(options, paramEntry, VtValue(_hydraCameraPath.GetString()), renderDelegate);
+            } else {
+                // Should we reset the camera ? In batch mode it's not necessary but we might want to do it in interactive mode
+                _hydraCameraPath = SdfPath();
             }
         }
     }
@@ -386,6 +396,10 @@ void HdArnoldRenderSettings::_Sync(
     if (renderDelegate->GetProceduralParent())
         return;
 
+    // We register this render setting as the one to use for the render.
+    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
+    param->SetHydraRenderSettingsPrimPath(GetId());
+
     // TODO when do we need to read them ? just only once ?
     // What happens when the resolution is changed in the render settings ?
     _ReadUsdRenderSettings(sceneDelegate);
@@ -401,7 +415,6 @@ void HdArnoldRenderSettings::_Sync(
         _UpdateArnoldOptions(sceneDelegate);
     }
 
-    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
 #if PXR_VERSION >= 2311
     if (*dirtyBits & HdRenderSettings::DirtyShutterInterval || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         _UpdateShutterInterval(sceneDelegate, param);

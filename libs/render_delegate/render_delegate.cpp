@@ -69,6 +69,10 @@
 #include "volume.h"
 #include <cctype>
 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#include <render_settings.h>
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -1094,6 +1098,15 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         ret.emplace_back(std::move(desc));
     }
     return ret;
+}
+
+// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
+bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    return true; 
+#else
+    return false;
+#endif
 }
 
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const

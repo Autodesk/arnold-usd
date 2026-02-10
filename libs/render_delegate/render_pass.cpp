@@ -47,6 +47,9 @@
 #include "nodes/nodes.h"
 #include "utils.h"
 #include "rendersettings_utils.h"
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#include "render_settings.h"
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -388,10 +391,43 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     _ClearRenderBuffers();
 }
 
+void _SetAovBindingsAsConverged(const HdRenderPassAovBindingVector& aovBindings, const HdRenderIndex* const renderIndex)
+{
+
+}
+
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
+    HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+    if (_renderDelegate->IsUsingHydraRenderSettings()) {
+        // If we are using the hydra render settings, we let the render settings prim handle the conversion.
+        // We need to provide a camera pas
+        const HdArnoldRenderSettings* renderSettings = _GetHydraRenderSettingsPrim();
+        if (renderSettings) {
+            bool hasPendingChanges = _renderDelegate->HasPendingChanges(
+                GetRenderIndex(), renderSettings->GetHydraCameraPath(), renderSettings->GetHydraCameraShutter());
+
+            // If we still have pending Hydra changes, we don't want to start / update the render just yet,
+            // as we'll receive shortly another sync. In particular in the case of batch renders, this prevents
+            // from rendering the final scene #2154
+            const auto renderStatus =
+                hasPendingChanges ? HdArnoldRenderParam::Status::Converging : renderParam->UpdateRender();
+            _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
+            for (const HdRenderPassAovBinding& aovBinding : renderPassState->GetAovBindings()) {
+                // Assuming we created the render buffers, we want to mark them converged if the render has finished.
+                // This is the way to communicate to the render delegate user that the render is done.
+                // TODO When batch rendering we could potentially avoid to allocate those buffers ? since they won't be used
+                HdArnoldRenderBuffer* renderBuffer = static_cast<HdArnoldRenderBuffer*>(
+                    GetRenderIndex()->GetBprim(HdPrimTypeTokens->renderBuffer, aovBinding.renderBufferId));
+                if (renderBuffer)
+                    renderBuffer->SetConverged(_isConverged);
+            }
+            return;
+        }
+        // We couldn't use the render settings, we fall back to the original code
+    }
+
     _renderDelegate->SetRenderTags(renderTags);
-    auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
 
     AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
     bool isOrtho = false;
@@ -483,17 +519,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
     auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage, bool allocate, int w, int h) {
-
         static std::vector<uint8_t> zeroData;
         zeroData.resize(w * h * 4);
-
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
-                
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
-
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, zeroData.data());
             }
         }
@@ -1154,5 +1186,20 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
     }
     decltype(_renderBuffers){}.swap(_renderBuffers);
 }
+
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#if PXR_VERSION >= 2308
+HdArnoldRenderSettings*
+HdArnoldRenderPass::_GetHydraRenderSettingsPrim() const
+{
+    HdArnoldRenderParam* renderParam =
+        static_cast<HdArnoldRenderParam*>(
+            static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->GetRenderParam());
+    return dynamic_cast<HdArnoldRenderSettings*>(
+        GetRenderIndex()->GetBprim(HdPrimTypeTokens->renderSettings,
+        renderParam->GetHydraRenderSettingsPrimPath()));
+}
+#endif
+#endif
 
 PXR_NAMESPACE_CLOSE_SCOPE
