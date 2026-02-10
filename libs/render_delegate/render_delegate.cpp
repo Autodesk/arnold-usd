@@ -687,6 +687,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
 
     // When husk/houdini changes frame, they set the new frame number via the render settings.
     if (_key == str::t_houdiniFrame) {
+        if (_value.IsHolding<double>()) {
+            const float frame = static_cast<float>(_value.UncheckedGet<double>());
+            AiNodeSetFlt(_options, str::frame, frame);
+        }
+
         // We want to restart a new render in that case.
         _renderParam->Restart();
     }
@@ -800,7 +805,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _forceIgnoreMotionBlur = true; 
         });
     } else if (key == str::t_houdiniFps) {
-        _CheckForFloatValue(value, [&](const float f) { _fps = f; });
+        _CheckForFloatValue(value, [&](const float f) {
+            _fps = f;
+            AiNodeSetFlt(_options, str::fps, _fps);
+        });
     } else if (key == str::t_background) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
     } else if (key == str::t_atmosphere) {

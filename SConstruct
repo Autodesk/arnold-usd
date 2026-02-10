@@ -63,7 +63,7 @@ vars = Variables('custom.py')
 vars.AddVariables(
     PathVariable('BUILD_DIR', 'Directory where temporary build files are placed by scons', 'build', PathVariable.PathIsDirCreate),
     PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
-    EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
+    EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'dev', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'warn-only', allowed_values=('strict', 'warn-only', 'none')),
     StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
@@ -427,6 +427,11 @@ if env['_COMPILER'] in ['gcc', 'clang']:
         env.Append(CCFLAGS = Split('-g'))
         env.Append(LINKFLAGS = Split('-g'))
         env.Append(CCFLAGS = Split('-O0'))
+    
+    # Release build with debug symbols
+    if env['MODE'] == 'dev':
+        env.Append(CCFLAGS = Split('-O2 -g'))
+        env.Append(LINKFLAGS = Split('-g'))
 
     # Linux profiling
     if system.os == 'linux' and env['MODE'] == 'profile':
@@ -435,7 +440,7 @@ if env['_COMPILER'] in ['gcc', 'clang']:
 
 # msvc settings
 elif env['_COMPILER'] == 'msvc':
-    cxx_standard = env['CXX_STANDARD'];
+    cxx_standard = env['CXX_STANDARD']
     if cxx_standard != '11':
         env.Append(CCFLAGS=Split('/std:c++{}'.format(cxx_standard)))
     env.Append(CCFLAGS=Split('/EHsc'))
@@ -455,9 +460,15 @@ elif env['_COMPILER'] == 'msvc':
         env.Append(CPPDEFINES=Split('NDEBUG'))
     elif env['MODE'] == 'profile':
         env.Append(CCFLAGS=Split('/Ob2 /MD /Zi'))
-    else:  # debug mode
+    elif env['MODE'] == 'debug':
         env.Append(CCFLAGS=Split('/Od /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
+    elif env['MODE'] == 'dev':
+        # Release build with debug symbols
+        env.Append(CCFLAGS = Split('/O2 /Zi /MD /FS'))
+        env.Append(CPPDEFINES=env.Split('NDEBUG'))
+        env.Append(LINKFLAGS=Split('/DEBUG'))
+        env.Append(LINKFLAGS=env.Split("/INCREMENTAL:NO"))
 
     if env['WARN_LEVEL'] == 'strict':
         env.Append(CCFLAGS=Split('/WX'))

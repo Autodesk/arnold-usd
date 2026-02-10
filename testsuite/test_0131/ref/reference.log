@@ -1,856 +1,854 @@
 Executing kick test.ass -dw -r 160 120 -bs 16 -sm lambert -sl -o D:\arnold\arnold-usd\testsuite_results\test_0131\testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
-00:00:00   191MB         | log started Mon Jan 12 11:42:16 2026
-00:00:00   191MB         | Arnold 7.5.0.0 [4e563ecc] windows x86_64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-10.0.1.66 clmhub-3.3.0.15 rlm-17.0.1 optix-8.0.0 2026/01/12 10:17:20
-00:00:00   191MB         | running on ADSKEM00ZH29, pid=5396
-00:00:00   191MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
-00:00:00   205MB         |  NVIDIA driver version 581.80
-00:00:00   205MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (5452MB available) (NVLink:0)
-00:00:00   205MB         |  Windows 10 (version 10.0, build 26100)
-00:00:00   205MB         |  soft limit for open files is set at 2048
-00:00:00   205MB         |  
-00:00:00   205MB         | Installing system handler with mask 255
-00:00:00   216MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.25.5_arnold-7.5.0.0\plugins\procedural ...
-00:00:00   224MB         |  usd_proc.dll: usd uses Arnold 7.5.0.0
-00:00:00   224MB         | loaded 1 plugins from 1 lib(s) in 0:00.02
-00:00:00   224MB         | loading plugins from D:\arnold\core\install\bin\..\plugins ...
-00:00:00   224MB         |  alembic_proc.dll: alembic uses Arnold 7.4.5.0
-00:00:00   224MB         |  skipping already loaded plugin: D:\arnold\core\install\bin\..\plugins\usd_proc.dll ...
-00:00:00   224MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
-00:00:00   227MB         | [kick] command: kick test.ass -dw -r 160 120 -bs 16 -sm lambert -sl -o D:\arnold\arnold-usd\testsuite_results\test_0131\testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
-00:00:00   227MB         | loading plugins from . ...
-00:00:00   227MB         | no plugins loaded
-00:00:00   227MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
-00:00:00   230MB         | [metadata] loading metadata file: test.ass
-00:00:00   231MB         | [ass] loading test.ass ...
-00:00:00   231MB         | [ass] read 1861 bytes, 8 nodes in 0:00.03
-00:00:00   231MB         | [kick] applying 2 attr value overrides
-00:00:00   231MB         | 
-00:00:00   231MB WARNING | rendering with watermarks because the skip_license_check option was enabled
-00:00:00   231MB         | 
-00:00:00   231MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
-00:00:00   233MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
-00:00:00   233MB         | [color_manager] rendering color space is "ACEScg"
-00:00:00   288MB         |  
-00:00:00   288MB         | there are 1 light and 2 objects:
-00:00:00   288MB         |       1 persp_camera
-00:00:00   288MB         |       1 skydome_light
-00:00:00   288MB         |       3 utility
-00:00:00   288MB         |       1 standard_surface
-00:00:00   288MB         |       1 driver_tiff
-00:00:00   288MB         |       2 box_filter
-00:00:00   288MB         |       1 gaussian_filter
-00:00:00   288MB         |       2 list_aggregate
-00:00:00   288MB         |       2 color_manager_ocio
-00:00:00   288MB         |       1 usd
-00:00:00   288MB         |  
-00:00:00   288MB         | rendering image at 160 x 120, 3 AA samples
-00:00:00   288MB         |   AA samples max    <disabled>
-00:00:00   288MB         |   AA sample clamp   <disabled>
-00:00:00   288MB         |   diffuse           samples  2 / depth  1
-00:00:00   288MB         |   specular          samples  2 / depth  1
-00:00:00   288MB         |   transmission      samples  2 / depth  8
-00:00:00   288MB         |   volume indirect   <disabled by depth>
-00:00:00   288MB         |   total                          depth 10
-00:00:00   288MB         |   bssrdf            samples  2
-00:00:00   288MB         |   light             <using per light samples>
-00:00:00   288MB         |   transparency      depth 10
-00:00:00   288MB         | full scene initialize (12 nodes)
-00:00:00   290MB WARNING |  [Deprecated] Using AtFileType::Procedural is deprecated, use AtFileType::Asset instead
-00:00:01  1248MB         |  [proc] /aiStandIn/aiStandInShape: loaded 627 nodes (625 objects, 2 shaders)
-00:00:01  1250MB WARNING |  /sopimport1/mocapbiped3_514/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
-00:00:01  1250MB WARNING |  /sopimport1/mocapbiped3_514/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointWeights'
-00:00:01  1252MB WARNING |  /sopimport1/mocapbiped3_467/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
-00:00:01  1252MB WARNING |  /sopimport1/mocapbiped3_175/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
-00:00:01  1252MB WARNING |  /sopimport1/mocapbiped3_527/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
-00:00:15   778MB         |  creating root object list ...
-00:00:15   778MB         | full scene initialize done in 0:14.74 (multithreaded)
-00:00:15   778MB         | fast scene update (639 of 640 nodes)
-00:00:15   778MB         |  /aiSkyDomeLight1/aiSkyDomeLightShape1: skydome_light using 1 sample, 2 volume samples
-00:00:15   778MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
-00:00:15   778MB         |  procedural instancing optimization done in 0:00.00 (625 objects promoted)
-00:00:15   734MB         |  scene bounds: (-29.9203186 0.330095589 39.1202316) -> (-10.1137581 18.0125237 58.8431206)
-00:00:15   734MB         | fast scene update done in 0:00.03 (multithreaded)
-00:00:15   734MB         | [light_sampler] Group 0: Total number of lights 1, sampled lights 0, fixed lights 1
-00:00:15   734MB         | [light_sampler] Group 0: Took 0.005000 ms to build the tree
-00:00:15   734MB         | [aov] parsing 1 drivers ...
-00:00:15   734MB         | [aov] parsing 1 render_outputs for driver: mydriver
-00:00:15   734MB         | [aov] registered driver: "mydriver" (driver_tiff)
-00:00:15   734MB         | [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
-00:00:15   734MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
-00:00:15   735MB         | starting 48 bucket workers of size 16x16 ...
-00:00:15   739MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 625 prims, 1 key
-00:00:15   836MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   863MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   858MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   857MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   840MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   835MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   834MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   835MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   834MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   834MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   816MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   815MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   807MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   806MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   796MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   781MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   792MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   798MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   807MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   811MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   812MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   815MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   816MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   831MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   832MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   830MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   823MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   825MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   823MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   823MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   821MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   821MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   819MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   820MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   826MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   826MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   825MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   827MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   826MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   827MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   830MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   830MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   839MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   836MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   835MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   832MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   833MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   836MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   839MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   847MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   847MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   845MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   850MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   844MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   840MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   844MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   843MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   842MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   845MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   843MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   839MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   838MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   835MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   834MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   830MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   829MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   828MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   826MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   828MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   827MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   825MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   824MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   825MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   837MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   837MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   841MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   839MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   837MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   832MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   832MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   832MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   852MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   848MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   848MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   845MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   845MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   848MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   852MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   849MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   849MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   851MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   852MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   852MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   853MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   850MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   850MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   858MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   859MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   860MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   861MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   863MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   875MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   879MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   880MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   881MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   878MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   877MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   870MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   868MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   868MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   870MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   867MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   866MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   865MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   865MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   868MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   871MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   875MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   880MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   878MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   878MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   881MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   881MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   881MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   877MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   879MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   878MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   880MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   878MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   879MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   879MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   880MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   887MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   889MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   889MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   888MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   886MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   888MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   889MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   889MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   891MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   891MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   888MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   888MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   877MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   877MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   875MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   874MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   877MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   893MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   897MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   897MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   901MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   906MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   907MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   909MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   907MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   907MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   905MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   903MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   903MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   899MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   897MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   895MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   890MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   888MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   887MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   899MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   893MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   893MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   893MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   893MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   895MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   899MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   900MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   898MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   901MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   907MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   901MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   900MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   901MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   913MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   912MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   912MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   912MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   905MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   904MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   904MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   905MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   906MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   900MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   898MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   898MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   896MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   894MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   911MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   911MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   908MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   908MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   904MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   904MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
-00:00:15   905MB         |  [accel] polymesh bvh4 done - 0:00.08 (wall time) - 9166 prims, 1 key
-00:00:15   906MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   907MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   920MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   923MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   929MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   932MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   935MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   935MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   946MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   946MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   947MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   941MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   949MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   947MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   939MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   942MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   941MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   941MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   941MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   942MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   949MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   951MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   952MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   959MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   960MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   956MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   955MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   956MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   954MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   952MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   951MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   953MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   950MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   950MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   947MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   946MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   949MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   937MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   936MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   936MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   945MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   946MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   946MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   948MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   981MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   973MB         |  [accel] polymesh bvh4 done - 0:00.05 (wall time) - 9166 prims, 1 key
-00:00:15   972MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   964MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   967MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   968MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   971MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   967MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   967MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   960MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   960MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   958MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   955MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   951MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   951MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   951MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   944MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   952MB         |  [accel] polymesh bvh4 done - 0:00.05 (wall time) - 9166 prims, 1 key
-00:00:15   960MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   962MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   962MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   968MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   968MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   961MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   974MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   977MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   980MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   980MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   977MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   976MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   973MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   974MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   977MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   966MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   967MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   963MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   964MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   968MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   966MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   962MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   962MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   960MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   959MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   958MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   958MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
-00:00:15   963MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   965MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   976MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   979MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   980MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   981MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   987MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   990MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1000MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1007MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1005MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1005MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   999MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   995MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   993MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   992MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   991MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   986MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   987MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   984MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   982MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   976MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   976MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   977MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   975MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   974MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   969MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   970MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   972MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   982MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   983MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   990MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   990MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1007MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1007MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1003MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   995MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   995MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   995MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   988MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   988MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   988MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   985MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   998MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1003MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1000MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   998MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   998MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1000MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1004MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1004MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1000MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   996MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   995MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   993MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   992MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   993MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   993MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   996MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1004MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1004MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1011MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.05 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1006MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1002MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   998MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   997MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15   993MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   994MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15   994MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1000MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1001MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1004MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1012MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1014MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1035MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1024MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1022MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1022MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1020MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1017MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1017MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1014MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1015MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1016MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1014MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1014MB         |  [accel] polymesh bvh4 done - 0:00.05 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1007MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1005MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1005MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1011MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1012MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1011MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1019MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1030MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1030MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1026MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1026MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1025MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1018MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1019MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
-00:00:15  1019MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1022MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1022MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1021MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1021MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1021MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1027MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1028MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1028MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1027MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1025MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1024MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1024MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1022MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1023MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1025MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1024MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1027MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1036MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1040MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1038MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1038MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1030MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.15 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1026MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1027MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1024MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1027MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1026MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1026MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1033MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1036MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1037MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1039MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1048MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1040MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1040MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1040MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1037MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1038MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
-00:00:15  1036MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1036MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1031MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1032MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1034MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1029MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1008MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
-00:00:15  1009MB         |  [accel] polymesh bvh4 done - 0:00.04 (wall time) - 9166 prims, 1 key
-00:00:15  1010MB         |  [accel] polymesh bvh4 done - 0:00.15 (wall time) - 9166 prims, 1 key
-00:00:15  1020MB         |    1% done - 159 rays/pixel
-00:00:15  1024MB         |    5% done - 170 rays/pixel
-00:00:15  1024MB         |   10% done - 178 rays/pixel
-00:00:15  1025MB         |   15% done - 192 rays/pixel
-00:00:15  1025MB         |   20% done - 175 rays/pixel
-00:00:15  1025MB         |   25% done - 172 rays/pixel
-00:00:15  1025MB         |   30% done - 193 rays/pixel
-00:00:15  1025MB         |   35% done - 290 rays/pixel
-00:00:15  1025MB         |   40% done - 160 rays/pixel
-00:00:15  1026MB         |   45% done - 202 rays/pixel
-00:00:15  1026MB         |   50% done - 162 rays/pixel
-00:00:15  1026MB         |   55% done - 245 rays/pixel
-00:00:15  1026MB         |   60% done - 144 rays/pixel
-00:00:15  1026MB         |   65% done - 102 rays/pixel
-00:00:15  1026MB         |   70% done - 141 rays/pixel
-00:00:15  1026MB         |   75% done - 61 rays/pixel
-00:00:15  1026MB         |   80% done - 110 rays/pixel
-00:00:15  1026MB         |   85% done - 50 rays/pixel
-00:00:15  1026MB         |   90% done - 36 rays/pixel
-00:00:18  1026MB         |   95% done - 109 rays/pixel
-00:00:19  1026MB         |  100% done - 114 rays/pixel
-00:00:24  1026MB         | render done in 0:09.444
-00:00:24  1026MB         | [driver_tiff] writing file `D:\arnold\arnold-usd\testsuite_results\test_0131\testrender.tif'
-00:00:24  1028MB         | render done
-00:00:24  1028MB         |  
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | frame time                   0:24.68    machine utilization (3.52%) 
-00:00:24  1028MB         |  scene creation time         0:00.35 
-00:00:24  1028MB         |   ass parsing                0:00.03 
-00:00:24  1028MB         |   unaccounted                0:00.32 
-00:00:24  1028MB         |  node init                   0:14.78 
-00:00:24  1028MB         |   sanity checks              0:00.01 
-00:00:24  1028MB         |  driver init/close           0:00.01 
-00:00:24  1028MB         |  rendering                   0:09.44 
-00:00:24  1028MB         |   mesh processing            0:00.07 
-00:00:24  1028MB         |   accel building             0:00.28 
-00:00:24  1028MB         |   pixel rendering            0:09.07 
-00:00:24  1028MB         |  unaccounted                 0:00.08 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | top frame self-times by category 
-00:00:24  1028MB         |  RenderBucket                                                       0:03.55 (56.94%) 
-00:00:24  1028MB         |  PolyMeshPackFloats                                                 0:00.64 (10.40%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_565/geometry/default_geo_skin/mesh_0      0:00.27 ( 4.39%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_92/geometry/default_geo_skin/mesh_0       0:00.10 ( 1.68%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_199/geometry/default_geo_skin/mesh_0      0:00.10 ( 1.68%) 
-00:00:24  1028MB         |  PolyMeshTriangulate                                                0:00.42 ( 6.82%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_387/geometry/default_geo_skin/mesh_0      0:00.25 ( 4.00%) 
-00:00:24  1028MB         |  node_init                                                          0:00.41 ( 6.67%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_563/geometry/default_geo_skin/mesh_0      0:00.27 ( 4.39%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_84/geometry/default_geo_skin/mesh_0       0:00.10 ( 1.68%) 
-00:00:24  1028MB         |  sceneInitialize                                                    0:00.26 ( 4.27%) 
-00:00:24  1028MB         |  BVH::build                                                         0:00.23 ( 3.74%) 
-00:00:24  1028MB         |  BVH::intersect                                                     0:00.20 ( 3.29%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_591/geometry/default_geo_skin/mesh_0      0:00.05 ( 0.88%) 
-00:00:24  1028MB         |   /sopimport1/mocapbiped3_577/geometry/default_geo_skin/mesh_0      0:00.05 ( 0.87%) 
-00:00:24  1028MB         |   root                                                              0:00.04 ( 0.72%) 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | top frame self-times by node 
-00:00:24  1028MB         |  RenderBucket                                                       0:03.55 (56.94%) 
-00:00:24  1028MB         |  polymesh:/sopimport1/mocapbiped3_563/geometry/default_geo_skin/mesh_0     0:00.27 ( 4.40%) 
-00:00:24  1028MB         |   node_init                                                         0:00.27 ( 4.39%) 
-00:00:24  1028MB         |  polymesh:/sopimport1/mocapbiped3_565/geometry/default_geo_skin/mesh_0     0:00.27 ( 4.39%) 
-00:00:24  1028MB         |   PolyMeshPackFloats                                                0:00.27 ( 4.39%) 
-00:00:24  1028MB         |  sceneInitialize                                                    0:00.26 ( 4.27%) 
-00:00:24  1028MB         |  polymesh:/sopimport1/mocapbiped3_387/geometry/default_geo_skin/mesh_0     0:00.25 ( 4.02%) 
-00:00:24  1028MB         |   PolyMeshTriangulate                                               0:00.25 ( 4.00%) 
-00:00:24  1028MB         |  Sample loop                                                        0:00.11 ( 1.82%) 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | peak CPU memory used     1290.46MB 
-00:00:24  1028MB         |  at startup                83.39MB 
-00:00:24  1028MB         |  AOV samples                0.50MB 
-00:00:24  1028MB         |  output buffers             0.26MB 
-00:00:24  1028MB         |  framebuffers               0.31MB 
-00:00:24  1028MB         |  node overhead              0.34MB 
-00:00:24  1028MB         |  message passing            0.09MB 
-00:00:24  1028MB         |  memory pools              66.39MB 
-00:00:24  1028MB         |  geometry                 268.62MB 
-00:00:24  1028MB         |   top level                 0.01MB 
-00:00:24  1028MB         |   polymesh                268.60MB 
-00:00:24  1028MB         |    vertices                66.98MB 
-00:00:24  1028MB         |    vertex indices          38.25MB 
-00:00:24  1028MB         |    packed normals          22.33MB 
-00:00:24  1028MB         |    normal indices           0.01MB 
-00:00:24  1028MB         |    uv coords               24.40MB 
-00:00:24  1028MB         |    uv coords idxs          38.25MB 
-00:00:24  1028MB         |    uniform indices          9.58MB 
-00:00:24  1028MB         |    userdata                68.64MB 
-00:00:24  1028MB         |  accel structs            184.90MB 
-00:00:24  1028MB         |  strings                   24.50MB 
-00:00:24  1028MB         |  profiler                   0.22MB 
-00:00:24  1028MB         |  backtrace handler        122.18MB 
-00:00:24  1028MB         |  unaccounted              538.76MB 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
-00:00:24  1028MB         |  camera                   192800 (  10.04,    1.00) (  6.68%) (     0.78) (       2)
-00:00:24  1028MB         |  shadow                  1497948 (  78.02,    7.77) ( 51.88%) (     0.47) (       1)
-00:00:24  1028MB         |  diffuse_reflect          598679 (  31.18,    3.11) ( 20.73%) (     0.42) (       1)
-00:00:24  1028MB         |  specular_reflect         598071 (  31.15,    3.10) ( 20.71%) (     0.51) (       1)
-00:00:24  1028MB         |  total                   2887498 ( 150.39,   14.98) (100.00%) (     0.49) (       2)
-00:00:24  1028MB         | by ray depth:              0     1
-00:00:24  1028MB         |  total                   48.1% 51.9% 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | shader calls                     (  /pixel,  /sample) (% total)
-00:00:24  1028MB         |  primary                 1418296 (   73.87,     7.36) (100.00%)
-00:00:24  1028MB         |  total                   1418296 (   73.87,     7.36) (100.00%)
-00:00:24  1028MB         | by ray depth:              0     1
-00:00:24  1028MB         |  total                   21.2% 78.8% 
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
-00:00:24  1028MB         |  top level                     1 (100.0%) (        0) (      0.01,       0.01)
-00:00:24  1028MB         |  procs                         1 (  0.0%) (        0) (      0.01,       0.01)
-00:00:24  1028MB         |  polymeshes                  625 (100.0%) (        0) (    246.26,     268.60)
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | geometric elements               (      min) (       avg.) (      max)
-00:00:24  1028MB         |  objects (top level)           1 (        1) (        1.0) (        1)
-00:00:24  1028MB         |  objects (procs)             625 (      625) (      625.0) (      625)
-00:00:24  1028MB         |  polygons                5728750 (     9166) (     9166.0) (     9166)
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
-00:00:24  1028MB         |  polymeshes             11450000 (    18320) (    18320.0) (    18320) (     2.00) (100.00%)
-00:00:24  1028MB         |  unique triangles       11450000 
-00:00:24  1028MB         |  largest polymeshes by triangle count 
-00:00:24  1028MB         |      18320 tris -- /sopimport1/mocapbiped3_82/geometry/default_geo_skin/mesh_0
-00:00:24  1028MB         |      18320 tris -- /sopimport1/mocapbiped3_178/geometry/default_geo_skin/mesh_0
-00:00:24  1028MB         |      18320 tris -- /sopimport1/mocapbiped3_529/geometry/default_geo_skin/mesh_0
-00:00:24  1028MB         |      18320 tris -- /sopimport1/mocapbiped3_564/geometry/default_geo_skin/mesh_0
-00:00:24  1028MB         |      18320 tris -- /sopimport1/mocapbiped3_474/geometry/default_geo_skin/mesh_0
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | acceleration structures:         (% total)
-00:00:24  1028MB         |  bvh                         626 (100.00%)
-00:00:24  1028MB         |  total                       626 (100.00%)
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | number of warnings, warning type:
-00:00:24  1028MB         |  1250:  %s: varying user-data count wrong! (found %zu expected %d) -- disabling user-data '%s'
-00:00:24  1028MB         |     1:  [Deprecated] Using %s is deprecated, use AtFileType::Asset instead
-00:00:24  1028MB         |     1:  rendering with watermarks because the skip_license_check option was enabled
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         | performance warnings:
-00:00:24  1028MB WARNING |  Rendering CPU utilization was only 3%. Your render may be bound by a single threaded process or I/O.
-00:00:24  1028MB         | -----------------------------------------------------------------------------------
-00:00:24  1028MB         |  
-00:00:24  1028MB         | releasing resources
-00:00:24   333MB         |   
-00:00:24   333MB         |  releasing resources
-00:00:24   320MB         |   unloading 2 plugins
-00:00:24   320MB         |    closing usd_proc.dll ...
-00:00:24   320MB         |    closing alembic_proc.dll ...
-00:00:24   320MB         |   unloading plugins done
-00:00:24   320MB         |  Arnold shutdown
-00:00:24   306MB         |  Installing system handler with mask 0
+00:00:00    97MB         | log started Thu Feb  5 17:10:40 2026
+00:00:00    97MB         | Arnold 7.5.0.0 [2a538adb] windows x86_64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-10.0.1.66 clmhub-3.3.0.15 rlm-17.0.1 optix-8.0.0 2026/02/05 05:35:33
+00:00:00    97MB         | running on ADSKEM00ZH29, pid=41544
+00:00:00    97MB         |  1 x Intel(R) Xeon(R) w7-2495X (24 cores, 48 logical) with 64987MB
+00:00:00   110MB         |  NVIDIA driver version 591.59
+00:00:00   110MB         |  GPU 0: NVIDIA T1000 8GB @ 1395MHz (compute 7.5) with 8191MB (5330MB available) (NVLink:0)
+00:00:00   110MB         |  Windows 10 (version 10.0, build 26100)
+00:00:00   110MB         |  soft limit for open files is set at 2048
+00:00:00   110MB         |  
+00:00:00   110MB         | Installing system handler with mask 255
+00:00:00   121MB         | loading plugins from D:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.25.5_arnold-7.5.0.0\plugins\procedural ...
+00:00:00   129MB         |  usd_proc.dll: usd uses Arnold 7.5.0.0
+00:00:00   129MB         | loaded 1 plugins from 1 lib(s) in 0:00.01
+00:00:00   129MB         | loading plugins from D:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   129MB         |  alembic_proc.dll: alembic uses Arnold 7.5.0.0
+00:00:00   129MB         |  skipping already loaded plugin: D:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   129MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00   133MB         | [kick] command: kick test.ass -dw -r 160 120 -bs 16 -sm lambert -sl -o D:\arnold\arnold-usd\testsuite_results\test_0131\testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   133MB         | loading plugins from . ...
+00:00:00   133MB         | no plugins loaded
+00:00:00   133MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   136MB         | [metadata] loading metadata file: test.ass
+00:00:00   137MB         | [ass] loading test.ass ...
+00:00:00   137MB         | [ass] read 1861 bytes, 8 nodes in 0:00.00
+00:00:00   137MB         | [kick] applying 2 attr value overrides
+00:00:00   137MB         | 
+00:00:00   137MB WARNING | rendering with watermarks because the skip_license_check option was enabled
+00:00:00   137MB         | 
+00:00:00   137MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   138MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   139MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   193MB         |  
+00:00:00   193MB         | there are 1 light and 2 objects:
+00:00:00   193MB         |       1 persp_camera
+00:00:00   193MB         |       1 skydome_light
+00:00:00   193MB         |       3 utility
+00:00:00   193MB         |       1 standard_surface
+00:00:00   193MB         |       1 driver_tiff
+00:00:00   193MB         |       2 box_filter
+00:00:00   193MB         |       1 gaussian_filter
+00:00:00   193MB         |       2 list_aggregate
+00:00:00   193MB         |       2 color_manager_ocio
+00:00:00   193MB         |       1 usd
+00:00:00   193MB         |  
+00:00:00   193MB         | rendering image at 160 x 120, 3 AA samples
+00:00:00   193MB         |   AA samples max    <disabled>
+00:00:00   193MB         |   AA sample clamp   <disabled>
+00:00:00   193MB         |   diffuse           samples  2 / depth  1
+00:00:00   193MB         |   specular          samples  2 / depth  1
+00:00:00   193MB         |   transmission      samples  2 / depth  8
+00:00:00   193MB         |   volume indirect   <disabled by depth>
+00:00:00   193MB         |   total                          depth 10
+00:00:00   193MB         |   bssrdf            samples  2
+00:00:00   193MB         |   light             <using per light samples>
+00:00:00   193MB         |   transparency      depth 10
+00:00:00   193MB         | full scene initialize (12 nodes)
+00:00:01  1155MB         |  [proc] /aiStandIn/aiStandInShape: loaded 627 nodes (625 objects, 2 shaders)
+00:00:01  1156MB WARNING |  /sopimport1/mocapbiped3_624/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
+00:00:01  1156MB WARNING |  /sopimport1/mocapbiped3_624/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointWeights'
+00:00:01  1157MB WARNING |  /sopimport1/mocapbiped3_142/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
+00:00:01  1157MB WARNING |  /sopimport1/mocapbiped3_317/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
+00:00:01  1157MB WARNING |  /sopimport1/mocapbiped3_474/geometry/default_geo_skin/mesh_0: varying user-data count wrong! (found 37460 expected 9365) -- disabling user-data 'skel:jointIndices'
+00:00:02   686MB         |  creating root object list ...
+00:00:02   686MB         | full scene initialize done in 0:01.91 (multithreaded)
+00:00:02   686MB         | fast scene update (639 of 640 nodes)
+00:00:02   686MB         |  /aiSkyDomeLight1/aiSkyDomeLightShape1: skydome_light using 1 sample, 2 volume samples
+00:00:02   687MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file D:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:02   687MB         |  procedural instancing optimization done in 0:00.00 (625 objects promoted)
+00:00:02   638MB         |  scene bounds: (-29.9203186 0.330095589 39.1202316) -> (-10.1137581 18.0125237 58.8431206)
+00:00:02   638MB         | fast scene update done in 0:00.08 (multithreaded)
+00:00:02   638MB         | [light_sampler] Group 0: Total number of lights 1, sampled lights 0, fixed lights 1
+00:00:02   638MB         | [light_sampler] Group 0: Took 0.013000 ms to build the tree
+00:00:02   638MB         | [aov] parsing 1 drivers ...
+00:00:02   638MB         | [aov] parsing 1 render_outputs for driver: mydriver
+00:00:02   638MB         | [aov] registered driver: "mydriver" (driver_tiff)
+00:00:02   638MB         | [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
+00:00:02   638MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:02   639MB         | starting 48 bucket workers of size 16x16 ...
+00:00:02   643MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 625 prims, 1 key
+00:00:02   761MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   764MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   766MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   770MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   775MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   772MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   767MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   765MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   760MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   756MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   752MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   753MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   754MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   741MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   741MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   737MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   728MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   728MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   729MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   726MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   726MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   725MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   722MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   722MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   716MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   716MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   717MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   718MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   718MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   721MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   715MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   715MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   715MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   717MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   717MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   714MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   714MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   715MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   718MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   725MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   732MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   737MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   742MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   739MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   740MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   740MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   743MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   755MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   758MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   755MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   755MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   752MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   751MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   751MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   752MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   753MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   746MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   746MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   746MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   748MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   748MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   739MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   737MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   739MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   738MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   734MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   734MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   730MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   728MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   728MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   729MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   750MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   750MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   755MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   771MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   781MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   772MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   772MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   771MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   770MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   764MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   762MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   762MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   759MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   758MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   759MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   757MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   753MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   754MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   751MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   751MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   751MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   771MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   768MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   774MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   775MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   773MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   773MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   774MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   771MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   764MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   764MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   765MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   759MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   759MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   759MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   760MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   763MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   775MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   791MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   788MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   781MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   775MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   773MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   774MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   777MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   771MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   770MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   769MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   766MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   788MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   795MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   793MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   794MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   791MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   792MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   791MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   789MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   781MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   783MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   776MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   774MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   774MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   781MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   787MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   787MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   786MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   778MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   787MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   788MB         |  [accel] polymesh bvh4 done - 0:00.11 (wall time) - 9166 prims, 1 key
+00:00:02   788MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   787MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   781MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   785MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   791MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   799MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   800MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   798MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   797MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   797MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   798MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   793MB         |  [accel] polymesh bvh4 done - 0:00.11 (wall time) - 9166 prims, 1 key
+00:00:02   793MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   790MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   791MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   784MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   782MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   779MB         |  [accel] polymesh bvh4 done - 0:00.11 (wall time) - 9166 prims, 1 key
+00:00:02   780MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   807MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   813MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   816MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   831MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   832MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   828MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   824MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   824MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   824MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   822MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   819MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   819MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   818MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   816MB         |  [accel] polymesh bvh4 done - 0:00.11 (wall time) - 9166 prims, 1 key
+00:00:02   816MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   819MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   820MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   818MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   813MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   812MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   804MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   803MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   805MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   806MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   806MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   802MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   802MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   822MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   837MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   839MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   851MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   863MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   864MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   865MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   869MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   869MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   870MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   859MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   851MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   846MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   847MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   847MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   847MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   846MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   845MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   845MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   846MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   844MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   844MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   843MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   844MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   839MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   836MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   837MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   837MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   838MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   828MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   829MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   829MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   829MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   830MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   829MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   872MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   881MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   891MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   888MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   888MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   889MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   888MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   882MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   881MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   876MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   875MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   872MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   872MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   870MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   865MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   858MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   858MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   857MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   858MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   858MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   857MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   857MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   856MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   865MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   867MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   870MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   873MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   878MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   872MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   865MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   864MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   864MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   864MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   864MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   874MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   874MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   868MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   866MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   876MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   877MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   879MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   879MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   880MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   901MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   899MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   899MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   899MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   901MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   892MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   892MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   892MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   890MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   884MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   884MB         |  [accel] polymesh bvh4 done - 0:00.06 (wall time) - 9166 prims, 1 key
+00:00:02   884MB         |  [accel] polymesh bvh4 done - 0:00.04 (wall time) - 9166 prims, 1 key
+00:00:02   882MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   889MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   885MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   884MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   884MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   894MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   896MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   898MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   901MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   901MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   912MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   913MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   913MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   910MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   907MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   909MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   909MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   907MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   904MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   897MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   897MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   890MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   890MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   890MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   891MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   892MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   890MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   891MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   883MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   881MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   871MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   871MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   870MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   869MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   869MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   873MB         |  [accel] polymesh bvh4 done - 0:00.05 (wall time) - 9166 prims, 1 key
+00:00:02   876MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   877MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   880MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   882MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   896MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   899MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   899MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 9166 prims, 1 key
+00:00:02   900MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   902MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   923MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   920MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   922MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   922MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   920MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   919MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   920MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   920MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   920MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   916MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   916MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   916MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   915MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   910MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   910MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   903MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   903MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   902MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   902MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   910MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   908MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   907MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   905MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   905MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   905MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   910MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   916MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   936MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   932MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   932MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   931MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   931MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   931MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   933MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   928MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   929MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   929MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   928MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   930MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   929MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   930MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   930MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   931MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   926MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   926MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   919MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   917MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   915MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   914MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   914MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   914MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   913MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   913MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   914MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   923MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   932MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   936MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   957MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   947MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   945MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   946MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   933MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   932MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   945MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   947MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   949MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   951MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   952MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   959MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   955MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   952MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   952MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   952MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   961MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   960MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   957MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   957MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   958MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   959MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   950MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   950MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   951MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   949MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   948MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   954MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   959MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   959MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   960MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   959MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.04 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   928MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   925MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   925MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   926MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   924MB         |  [accel] polymesh bvh4 done - 0:00.08 (wall time) - 9166 prims, 1 key
+00:00:02   923MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   923MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   924MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   922MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   921MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   924MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   928MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   929MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   929MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   947MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   952MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   949MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   941MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.01 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   937MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   939MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   936MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   935MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   943MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   942MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   940MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   936MB         |  [accel] polymesh bvh4 done - 0:00.02 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.10 (wall time) - 9166 prims, 1 key
+00:00:02   934MB         |  [accel] polymesh bvh4 done - 0:00.07 (wall time) - 9166 prims, 1 key
+00:00:02   938MB         |    1% done - 118 rays/pixel
+00:00:02   940MB         |    5% done - 133 rays/pixel
+00:00:02   942MB         |   10% done - 176 rays/pixel
+00:00:02   944MB         |   15% done - 231 rays/pixel
+00:00:02   944MB         |   20% done - 186 rays/pixel
+00:00:02   944MB         |   25% done - 219 rays/pixel
+00:00:02   945MB         |   30% done - 225 rays/pixel
+00:00:02   945MB         |   35% done - 224 rays/pixel
+00:00:02   945MB         |   40% done - 59 rays/pixel
+00:00:02   945MB         |   45% done - 167 rays/pixel
+00:00:02   945MB         |   50% done - 178 rays/pixel
+00:00:02   946MB         |   55% done - 139 rays/pixel
+00:00:02   946MB         |   60% done - 199 rays/pixel
+00:00:02   946MB         |   65% done - 192 rays/pixel
+00:00:02   946MB         |   70% done - 19 rays/pixel
+00:00:02   946MB         |   75% done - 135 rays/pixel
+00:00:02   946MB         |   80% done - 219 rays/pixel
+00:00:02   946MB         |   85% done - 97 rays/pixel
+00:00:02   946MB         |   90% done - 32 rays/pixel
+00:00:02   946MB         |   95% done - 43 rays/pixel
+00:00:02   946MB         |  100% done - 112 rays/pixel
+00:00:02   946MB         | render done in 0:00.665
+00:00:02   946MB         | [driver_tiff] writing file `D:\arnold\arnold-usd\testsuite_results\test_0131\testrender.tif'
+00:00:02   947MB         | render done
+00:00:02   947MB         |  
+00:00:02   947MB         | -----------------------------------------------------------------------------------
+00:00:02   947MB         | frame time                   0:02.84    machine utilization (33.24%) 
+00:00:02   947MB         |  scene creation time         0:00.10 
+00:00:02   947MB         |   unaccounted                0:00.10 
+00:00:02   947MB         |  node init                   0:02.00 
+00:00:02   947MB         |   sanity checks              0:00.02 
+00:00:02   947MB         |  driver init/close           0:00.01 
+00:00:02   947MB         |  rendering                   0:00.66 
+00:00:02   947MB         |   subdivision                0:00.01 
+00:00:02   947MB         |    threads blocked           0:00.01 
+00:00:02   947MB         |   mesh processing            0:00.09 
+00:00:02   947MB         |   threads blocked            0:00.01 
+00:00:02   947MB         |   accel building             0:00.34 
+00:00:02   947MB         |   pixel rendering            0:00.21 
+00:00:02   947MB         |  unaccounted                 0:00.05 
+00:00:02   947MB         | -----------------------------------------------------------------------------------
+00:00:02   947MB         | top frame self-times by category 
+00:00:02   947MB         |  BVH::build                                                         0:00.29 (22.89%) 
+00:00:02   947MB         |  PolyMeshTriangulate                                                0:00.22 (17.64%) 
+00:00:02   947MB         |  PolyMeshPackFloats                                                 0:00.21 (16.84%) 
+00:00:02   947MB         |  AiFree                                                             0:00.09 ( 7.42%) 
+00:00:02   947MB         |  BVH::intersect                                                     0:00.09 ( 7.04%) 
+00:00:02   947MB         |   root                                                              0:00.04 ( 3.27%) 
+00:00:02   947MB         |  AiMalloc                                                           0:00.06 ( 5.28%) 
+00:00:02   947MB         |  thread blocked                                                     0:00.04 ( 3.16%) 
+00:00:02   947MB         |  node_init                                                          0:00.03 ( 2.68%) 
+00:00:02   947MB         |  surface closure (aiStandardSurface1)                               0:00.03 ( 2.50%) 
+00:00:02   947MB         |  polymesh::intersect                                                0:00.02 ( 2.13%) 
+00:00:02   947MB         |  PolyMeshSmooth                                                     0:00.02 ( 2.06%) 
+00:00:02   947MB         | -----------------------------------------------------------------------------------
+00:00:02   947MB         | top frame self-times by node 
+00:00:02   948MB         |  standard_surface:aiStandardSurface1                                0:00.05 ( 4.45%) 
+00:00:02   948MB         |   surface closure                                                   0:00.03 ( 2.50%) 
+00:00:02   948MB         |   ray traversal+intersection                                        0:00.00 ( 0.53%) 
+00:00:02   948MB         |  list_aggregate:root (BVH::intersect)                               0:00.04 ( 3.27%) 
+00:00:02   948MB         |  polymesh:/sopimport1/mocapbiped3_480/geometry/default_geo_skin/mesh_0     0:00.03 ( 2.93%) 
+00:00:02   948MB         |   BVH::build                                                        0:00.03 ( 2.42%) 
+00:00:02   948MB         |  polymesh:/sopimport1/mocapbiped3_176/geometry/default_geo_skin/mesh_0     0:00.03 ( 2.71%) 
+00:00:02   948MB         |   BVH::build                                                        0:00.03 ( 2.45%) 
+00:00:02   948MB         |  usd:/aiStandIn/aiStandInShape                                      0:00.02 ( 2.08%) 
+00:00:02   948MB         |   usd_proc:read_stage                                               0:00.02 ( 1.65%) 
+00:00:02   948MB         |  RenderBucket                                                       0:00.01 ( 1.26%) 
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | peak CPU memory used     1204.51MB 
+00:00:02   948MB         |  at startup                80.45MB 
+00:00:02   948MB         |  AOV samples                0.52MB 
+00:00:02   948MB         |  output buffers             0.27MB 
+00:00:02   948MB         |  framebuffers               0.31MB 
+00:00:02   948MB         |  node overhead              0.34MB 
+00:00:02   948MB         |  message passing            0.09MB 
+00:00:02   948MB         |  memory pools              67.89MB 
+00:00:02   948MB         |  geometry                 268.62MB 
+00:00:02   948MB         |   top level                 0.01MB 
+00:00:02   948MB         |   polymesh                268.60MB 
+00:00:02   948MB         |    vertices                66.98MB 
+00:00:02   948MB         |    vertex indices          38.25MB 
+00:00:02   948MB         |    packed normals          22.33MB 
+00:00:02   948MB         |    normal indices           0.01MB 
+00:00:02   948MB         |    uv coords               24.40MB 
+00:00:02   948MB         |    uv coords idxs          38.25MB 
+00:00:02   948MB         |    uniform indices          9.58MB 
+00:00:02   948MB         |    userdata                68.64MB 
+00:00:02   948MB         |  accel structs            184.99MB 
+00:00:02   948MB         |  strings                   24.50MB 
+00:00:02   948MB         |  profiler                   0.35MB 
+00:00:02   948MB         |  backtrace handler         30.45MB 
+00:00:02   948MB         |  unaccounted              545.74MB 
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:02   948MB         |  camera                   192800 (  10.04,    1.00) (  6.68%) (     0.78) (       2)
+00:00:02   948MB         |  shadow                  1497867 (  78.01,    7.77) ( 51.88%) (     0.47) (       1)
+00:00:02   948MB         |  diffuse_reflect          598689 (  31.18,    3.11) ( 20.73%) (     0.42) (       1)
+00:00:02   948MB         |  specular_reflect         598046 (  31.15,    3.10) ( 20.71%) (     0.51) (       1)
+00:00:02   948MB         |  total                   2887402 ( 150.39,   14.98) (100.00%) (     0.49) (       2)
+00:00:02   948MB         | by ray depth:              0     1
+00:00:02   948MB         |  total                   48.1% 51.9% 
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:02   948MB         |  primary                 1418214 (   73.87,     7.36) (100.00%)
+00:00:02   948MB         |  total                   1418214 (   73.87,     7.36) (100.00%)
+00:00:02   948MB         | by ray depth:              0     1
+00:00:02   948MB         |  total                   21.2% 78.8% 
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:02   948MB         |  top level                     1 (100.0%) (        0) (      0.01,       0.01)
+00:00:02   948MB         |  procs                         1 (  0.0%) (        0) (      0.01,       0.01)
+00:00:02   948MB         |  polymeshes                  625 (100.0%) (        0) (    246.26,     268.60)
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:02   948MB         |  objects (top level)           1 (        1) (        1.0) (        1)
+00:00:02   948MB         |  objects (procs)             625 (      625) (      625.0) (      625)
+00:00:02   948MB         |  polygons                5728750 (     9166) (     9166.0) (     9166)
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:02   948MB         |  polymeshes             11450000 (    18320) (    18320.0) (    18320) (     2.00) (100.00%)
+00:00:02   948MB         |  unique triangles       11450000 
+00:00:02   948MB         |  largest polymeshes by triangle count 
+00:00:02   948MB         |      18320 tris -- /sopimport1/mocapbiped3_82/geometry/default_geo_skin/mesh_0
+00:00:02   948MB         |      18320 tris -- /sopimport1/mocapbiped3_178/geometry/default_geo_skin/mesh_0
+00:00:02   948MB         |      18320 tris -- /sopimport1/mocapbiped3_474/geometry/default_geo_skin/mesh_0
+00:00:02   948MB         |      18320 tris -- /sopimport1/mocapbiped3_472/geometry/default_geo_skin/mesh_0
+00:00:02   948MB         |      18320 tris -- /sopimport1/mocapbiped3_2/geometry/default_geo_skin/mesh_0
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | acceleration structures:         (% total)
+00:00:02   948MB         |  bvh                         626 (100.00%)
+00:00:02   948MB         |  total                       626 (100.00%)
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | number of warnings, warning type:
+00:00:02   948MB         |  1250:  %s: varying user-data count wrong! (found %zu expected %d) -- disabling user-data '%s'
+00:00:02   948MB         |     1:  rendering with watermarks because the skip_license_check option was enabled
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   948MB         | performance warnings:
+00:00:02   948MB WARNING |  Rendering CPU utilization was only 33%. Your render may be bound by a single threaded process or I/O.
+00:00:02   948MB         | -----------------------------------------------------------------------------------
+00:00:02   947MB         |  
+00:00:02   947MB         | releasing resources
+00:00:03   242MB         |   
+00:00:03   242MB         |  releasing resources
+00:00:03   230MB         |   unloading 2 plugins
+00:00:03   230MB         |    closing usd_proc.dll ...
+00:00:03   230MB         |    closing alembic_proc.dll ...
+00:00:03   230MB         |   unloading plugins done
+00:00:03   230MB         |  Arnold shutdown
+00:00:03   216MB         |  Installing system handler with mask 0

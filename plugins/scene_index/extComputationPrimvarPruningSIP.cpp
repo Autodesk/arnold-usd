@@ -12,7 +12,6 @@
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/imaging/hdsi/extComputationPrimvarPruningSceneIndex.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
-#include <pxr/usdImaging/usdSkelImaging/bindingSchema.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -61,23 +60,17 @@ HdContainerDataSourceHandle _NormalsPruning(const HdContainerDataSourceHandle &p
 
 inline bool _PrimIsSkinnedMesh(const HdSceneIndexPrim &prim)
 {
-    if (prim.primType == HdPrimTypeTokens->mesh) {
-        // const UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim.dataSource);
-        // return primInfo.GetTypeName()->GetTypedValue(0.0) == TfToken("Skeleton");
-        UsdSkelImagingBindingSchema usdSkelBindings = UsdSkelImagingBindingSchema::GetFromParent(prim.dataSource);
-        if (usdSkelBindings) {
-            const HdPathDataSourceHandle skeleton = usdSkelBindings.GetSkeleton();
+    if (prim.primType == HdPrimTypeTokens->mesh && prim.dataSource) {
+        // We were previously using UsdSkelImagingBindingSchema from the library UsdSkelImaging, however since the dynamic linking
+        // is causing issues, we unrolled the schema code into the following lines
+        auto usdSkelBindingsDS = HdContainerDataSource::Cast(prim.dataSource->Get(TfToken("skelBinding")));
+        if (usdSkelBindingsDS) {
+            const HdPathDataSourceHandle skeleton  = HdPathDataSource::Cast(usdSkelBindingsDS->Get(TfToken("skeleton")));
             return skeleton && !skeleton->GetTypedValue(0.0).IsEmpty();
-            // if (prim.primType == HdPrimTypeTokens->mesh) {
-            //         UsdImagingUsdPrimInfoSchema primInfo = UsdImagingUsdPrimInfoSchema::GetFromParent(prim);
-            //         if (primInfo && primInfo.GetTypeName() == TfToken(""))
-            //     UsdSkelImagingBindingSchema usdSkelBindings =
-            //     UsdSkelImagingBindingSchema::GetFromParent(prim.dataSource); if (usdSkelBindings) {
-            // const HdBoolDataSourceHandle hasSkelRoot = usdSkelBindings.GetHasSkelRoot();
-            // return hasSkelRoot && hasSkelRoot->GetTypedValue(0.0);
         }
+        // Previously using
+        //UsdSkelImagingBindingSchema usdSkelBindings = UsdSkelImagingBindingSchema::GetFromParent(prim.dataSource);
     }
-
     return false;
 }
 
