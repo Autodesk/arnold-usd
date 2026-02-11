@@ -474,9 +474,14 @@ AtNode* HydraArnoldAPI::LookupTargetNode(const char* targetName, const AtNode* s
 {
     return _renderDelegate->LookupNode(targetName, true);
 }
-const AtString& HydraArnoldAPI::GetPxrMtlxPath() 
+const AtString& HydraArnoldAPI::GetPxrMtlxPath()
 {
     return _renderDelegate->GetPxrMtlxPath();
+}
+
+void HydraArnoldAPI::RegisterImageCopNode(AtNode *imageCopNode)
+{
+    _renderDelegate->RegisterImageCopNode(imageCopNode);
 }
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 
@@ -685,8 +690,16 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         printf("Houdini COP texture change detected, restarting render to update textures.\n");
         AiMsgWarning("Houdini COP texture change detected, restarting render to update textures.");
         // COP textures need updating
-        // TODO do this properly, restarting the whole render is wasteful
-        //_renderParam->Restart();
+        // Update all tracked image_cop nodes
+        const auto& imageCopNodes = GetImageCopNodes();
+        for (AtNode* imageCopNode : imageCopNodes) {
+            printf("TODO: Update image_cop node: %s\n", AiNodeGetName(imageCopNode));
+        }
+        _renderParam->Pause();
+        // TODO can we be more granular about the update?
+        // I.e. maybe use AiNodeReplace to only update the image nodes
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        _renderParam->Restart();
     }
 
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.

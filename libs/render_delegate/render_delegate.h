@@ -88,17 +88,19 @@ struct HdArnoldDelegateRenderProduct {
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
 public:
-    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) : 
+    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) :
         _renderDelegate(renderDelegate) {}
-    AtNode *CreateArnoldNode(const char *type, const char *name) override; 
-    
+    AtNode *CreateArnoldNode(const char *type, const char *name) override;
+
     // Does the caller really need the primvars ? as hydra should have taken care of it
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
 
-    void AddNodeName(const std::string &name, AtNode *node) override; 
-    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
+    void AddNodeName(const std::string &name, AtNode *node) override;
+    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override;
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
+
+    void RegisterImageCopNode(AtNode *imageCopNode) override;
 
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
@@ -693,6 +695,18 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
+    void RegisterImageCopNode(AtNode *imageCopNode) {
+        std::lock_guard<std::mutex> guard(_imageCopNodesMutex);
+        _imageCopNodes.insert(imageCopNode);
+    }
+    void UnregisterImageCopNode(AtNode *imageCopNode) {
+        std::lock_guard<std::mutex> guard(_imageCopNodesMutex);
+        _imageCopNodes.erase(imageCopNode);
+    }
+    const std::set<AtNode*>& GetImageCopNodes() const {
+        return _imageCopNodes;
+    }
+
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
     // Return true if the render delegate supports shape instancing
@@ -814,9 +828,11 @@ private:
 
     std::mutex _meshLightsMutex;
     std::mutex _defaultShadersMutex;
+    std::mutex _imageCopNodesMutex;
 
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
+    std::set<AtNode*> _imageCopNodes;
 
     /// FPS value from render settings.
     float _fps;
