@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.1.0] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
+
 ## [7.5.0.0] (Unreleased)
 
 ### Features

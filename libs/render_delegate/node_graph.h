@@ -194,7 +194,7 @@ protected:
         /// @param terminalName Name of the terminal.
         /// @param terminal Arnold node at the terminal.
         /// @return True if the terminal has changed, false otherwise.
-        bool UpdateTerminal(const TfToken& terminalName, AtNode* terminal)
+        bool UpdateTerminal(const TfToken& terminalName, AtNode* terminal, AtNode*& oldTerminal)
         {
             // TODO if a node changes and it was stored in a terminal, 
             // it needs to be removed from this list
@@ -205,7 +205,7 @@ protected:
                 terminals.push_back({terminalName, terminal});
                 return true;
             } else {
-                auto* oldTerminal = it->second;
+                oldTerminal = it->second;
                 it->second = terminal;
                 return oldTerminal != terminal;
             }
