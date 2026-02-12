@@ -473,6 +473,16 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Empty render product %s\n", product.name.GetText());
         }
 
+        // Check if this product has a specific resolution set
+        // If so, use it instead of the global render settings resolution
+        // Note that this sets the last product resolution found.
+        if (product.resolution[0] > 0 && product.resolution[1] > 0) {
+            AiNodeSetInt(options, str::xres, product.resolution[0]);
+            AiNodeSetInt(options, str::yres, product.resolution[1]);
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                .Msg("Using product resolution: %dx%d\n", product.resolution[0], product.resolution[1]);
+        }
+
         // Create driver node
         std::string driverType = "driver_exr"; // Default driver type
         std::string driverName = product.productPath.GetString();
@@ -575,7 +585,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                     .Msg("Set imager on driver %s\n", driverNodeName);
             }
         }
-        
+        // TODO handle resolution / pixelAspectRatio / apertureSize / dataWindowNDC 
         // Track AOV names to detect duplicates
         std::unordered_set<std::string> aovNames;
         std::unordered_set<std::string> duplicatedAovs;
@@ -723,7 +733,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
 
             // Optional per-AOV camera
+            // Initialize with product.cameraPath if available
             std::string cameraName;
+            if (!product.cameraPath.IsEmpty()) {
+                cameraName = product.cameraPath.GetString();
+            }
+            
+            // Override with arnold:camera if specified in render var settings
             auto cameraIt = renderVarSettings.find("arnold:camera");
             if (cameraIt != renderVarSettings.end()) {
                 const VtValue& cameraValue = cameraIt->second;
