@@ -81,7 +81,7 @@ ArnoldUsdDiagnostic::IssueFatalError(const TfCallContext& ctx, const std::string
         ss << "]";
     }
     
-    AiMsgError("[usd] Fatal error: %s", ss.str().c_str());
+    AiMsgWarning("[usd] Fatal error: %s", ss.str().c_str());
 }
 
 void
