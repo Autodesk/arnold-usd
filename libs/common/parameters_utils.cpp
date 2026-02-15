@@ -64,6 +64,10 @@ bool _ReadArrayAttribute(const InputAttribute& attr, AtNode* node, const char* a
             }
             context.AddConnection(node, attrName, serializedArray, ArnoldAPIAdapter::CONNECTION_ARRAY);
             return true;
+        } else if (attr.value.IsHolding<std::string>()) {
+            const std::string linearizedArray = attr.value.UncheckedGet<std::string>();
+            context.AddConnection(node, attrName, linearizedArray, ArnoldAPIAdapter::CONNECTION_ARRAY);
+            return true;
         }
         return false;
     }

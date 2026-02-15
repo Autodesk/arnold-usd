@@ -94,6 +94,7 @@ def "root"
         {
             custom int arnold:global:AA_samples = 6
             custom int arnold:global:AA_seed
+            int arnold:global:AA_seed = 5
             int arnold:global:AA_seed.timeSamples = {
                 5: 5,
             }

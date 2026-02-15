@@ -18,6 +18,7 @@ set(SRC
     render_delegate.cpp
     render_param.cpp
     render_pass.cpp
+    render_settings.cpp
     shape.cpp
 	shared_arrays.cpp
     utils.cpp
@@ -45,6 +46,7 @@ set(HDR
     render_delegate.h
     render_param.h
     render_pass.h
+    render_settings.h
     shape.h
     utils.h
     volume.h
@@ -68,6 +70,9 @@ endif ()
 target_link_libraries(render_delegate INTERFACE common)
 if (ENABLE_SHARED_ARRAYS)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SHARED_ARRAYS=1)
+endif()
+if (ENABLE_HYDRA2_RENDERSETTINGS)
+    target_compile_definitions(render_delegate PUBLIC ENABLE_HYDRA2_RENDERSETTINGS=1)
 endif()
 if (HYDRA_NORMALIZE_DEPTH)
     target_compile_definitions(render_delegate PUBLIC HYDRA_NORMALIZE_DEPTH=1)

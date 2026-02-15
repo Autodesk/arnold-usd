@@ -438,7 +438,42 @@ void ChooseRenderSettings(UsdStageRefPtr _stage, std::string &_renderSettings, T
 
 }
 
+void SetArnoldDefaultOptions(AtUniverse *universe)
+{
+    // Set default attribute values so that they match the defaults in arnold plugins,
+    // as well as the render delegate's #1525
+    AtNode *options = AiUniverseGetOptions(universe);
+    AiNodeSetInt(options, str::AA_samples, 3);
+    AiNodeSetInt(options, str::GI_diffuse_depth, 1);
+    AiNodeSetInt(options, str::GI_specular_depth, 1);
+    AiNodeSetInt(options, str::GI_transmission_depth, 8);
+}
 
+void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolution)
+{
+    if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
+        // Need to invert the window range in the Y axis
+        GfVec4f adjustedWindow = windowNDC;
+        float minY = 1. - adjustedWindow[3];
+        float maxY = 1. - adjustedWindow[1];
+        adjustedWindow[1] = minY;
+        adjustedWindow[3] = maxY;
+
+        // Ensure the user isn't setting invalid ranges
+        if (adjustedWindow[0] > adjustedWindow[2])
+            std::swap(adjustedWindow[0], adjustedWindow[2]);
+        if (adjustedWindow[1] > adjustedWindow[3])
+            std::swap(adjustedWindow[1], adjustedWindow[3]);
+        
+        AiNodeSetInt(options, str::region_min_x, int(adjustedWindow[0] * resolution[0]));
+        AiNodeSetInt(options, str::region_min_y, int(adjustedWindow[1] * resolution[1]));
+        AiNodeSetInt(options, str::region_max_x, int(adjustedWindow[2] * resolution[0]) - 1);
+        AiNodeSetInt(options, str::region_max_y, int(adjustedWindow[3] * resolution[1]) - 1);
+    }
+}
 
 AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 
     ProceduralReader *reader, const TimeSettings &time, AtUniverse *universe, SdfPath& cameraPath) {
@@ -466,42 +501,17 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         resolution[0] = AiNodeGetInt(options, str::xres);
         resolution[1] = AiNodeGetInt(options, str::yres);
     }
-    // Set default attribute values so that they match the defaults in arnold plugins, 
-    // as well as the render delegate's #1525
-    AiNodeSetInt(options, str::AA_samples, 3);
-    AiNodeSetInt(options, str::GI_diffuse_depth, 1);
-    AiNodeSetInt(options, str::GI_specular_depth, 1);
-    AiNodeSetInt(options, str::GI_transmission_depth, 8);
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
     GfVec4f windowNDC;
     if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
-        if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
-            (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
-            // Need to invert the window range in the Y axis
-            float minY = 1. - windowNDC[3];
-            float maxY = 1. - windowNDC[1];
-            windowNDC[1] = minY;
-            windowNDC[3] = maxY;
-
-            // Ensure the user isn't setting invalid ranges
-            if (windowNDC[0] > windowNDC[2])
-                std::swap(windowNDC[0], windowNDC[2]);
-            if (windowNDC[1] > windowNDC[3])
-                std::swap(windowNDC[1], windowNDC[3]);
-            
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * resolution[0]));
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * resolution[1]));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * resolution[0]) - 1);
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * resolution[1]) - 1);
-        }
+        SetRegion(options, windowNDC, resolution);
     }    
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
+    // GetInstantaneousShutterAttr is deprecated, we should use disableMotionBlur on the render product
     if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue, time.frame) && 
             VtValueGetBool(instantShutterValue)) {
         AiNodeSetBool(options, str::ignore_motion_blur, true);
@@ -818,7 +828,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
         }
     }
-    const std::string &commandLine = reader->GetCommandLine();
+
     if (colorManager == nullptr) {
         // use the default color manager
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
@@ -860,7 +870,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         ReadArnoldParameters(renderSettingsPrim, context, colorManager, time, "arnold:color_manager");
     }
 
-
+    const std::string &commandLine = reader->GetCommandLine();
     // log file
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;

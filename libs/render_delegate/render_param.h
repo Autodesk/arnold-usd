@@ -150,6 +150,18 @@ public:
     /// @return error code.
     AtRenderErrorCode GetErrorCode() const {return _errorCode;};
 
+    /// Sets the path to the driving hydra render settings prim.
+    ///
+    /// @param path Path to the render settings prim.
+    HDARNOLD_API
+    void SetHydraRenderSettingsPrimPath(SdfPath const &path);
+
+    /// Gets the path to the driving hydra render settings prim.
+    ///
+    /// @return Constant reference to the render settings prim path.
+    HDARNOLD_API
+    const SdfPath& GetHydraRenderSettingsPrimPath() const;
+
 private:
     inline void ResetStartTimer()
     {
@@ -180,6 +192,8 @@ private:
     std::string _debugScene;
     /// Arnold error code
     AtRenderErrorCode _errorCode = AI_SUCCESS;
+    /// Path to the driving hydra render settings prim.
+    SdfPath _hydraRenderSettingsPrimPath;
 };
 
 class HdArnoldRenderParamInterrupt {

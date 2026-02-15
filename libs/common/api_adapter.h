@@ -12,6 +12,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// Hash function for std::pair<std::string, TfToken>
+struct PairStringTfTokenHash {
+    std::size_t operator()(const std::pair<std::string, TfToken>& p) const {
+        std::size_t h1 = std::hash<std::string>{}(p.first);
+        std::size_t h2 = p.second.Hash();
+        // Combine hashes using boost's hash_combine algorithm
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    }
+};
+
 // This is a base class used to call Arnold API functions within a particular context.
 // For example we might want to wrap the AiNode call and add mutex, or store the nodes dependending on the context.
 class ArnoldAPIAdapter {
@@ -21,6 +31,9 @@ public:
     virtual ~ArnoldAPIAdapter() {}
     
     // Type of connection between 2 nodes
+    // CONNECTION_LINK is for shader graph evaluation, 
+    // CONNECTION_PTR is for simple node references, 
+    // and CONNECTION_ARRAY is for multiple node references.
     enum ConnectionType {
         CONNECTION_LINK = 0,
         CONNECTION_PTR = 1,
@@ -62,25 +75,42 @@ public:
     }
     const std::vector<Connection>& GetConnections() const {return _connections;}
     void ClearConnections() {_connections.clear();}
+
+    // Add a connection alias. This function is used when a new arnold node is created and it's name doesn't correspond
+    // to the usd prim name. In that case we store the mapping from the usd prim it was created to the new arnold name
+    void AddConnectionPathAlias(const std::string &usdPath, TfToken terminalName, const std::string &arnoldPath)
+    {
+        if (usdPath != arnoldPath) {
+            // Remove :i1 :i2, any added suffix from the terminal name
+            auto names = TfStringTokenize(terminalName.GetString(), ":");
+            if (names.size() > 1) {
+                terminalName = TfToken(names[0]); // Remove any namespaces
+            }
+            auto it = _connectionPathsAliases.find(std::make_pair(usdPath, terminalName));
+            if (it == _connectionPathsAliases.end()) {
+                _connectionPathsAliases[std::make_pair(usdPath, terminalName)] = arnoldPath;
+            } else {
+                // we concatenate the paths found and separate them with the space character.
+                it->second = it->second + " " + arnoldPath;
+            }
+        }
+    }
+
     virtual bool ProcessConnection(const Connection& connection)
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
             std::vector<AtNode *> vecNodes;
-            std::stringstream ss(connection.target);
-            std::string token;
-            while (std::getline(ss, token, ' ')) {
-                AtNode *target = LookupTargetNode(token.c_str(), connection.sourceNode, connection.type);
-                if (target == nullptr)
-                    return false; // node is missing, we don't process the connection                
-                vecNodes.push_back(target);
+            for (const auto &targetPath : TfStringTokenize(connection.target)) {
+                _LookupTargetNodeArrayWithAlias(vecNodes, targetPath.c_str(), connection.sourceNode, connection.type, connection.sourceAttr);
             }
             AiNodeSetArray(
                 connection.sourceNode, AtString(connection.sourceAttr.c_str()),
                 AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
         } else {
-            AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, connection.type);
+            AtNode *target = _LookupTargetNodeWithAlias(connection.target.c_str(), connection.sourceNode, connection.type, connection.sourceAttr);
             if (target == nullptr)
                 return false;// node is missing, we don't process the connection
+
             if (connection.type == ArnoldAPIAdapter::CONNECTION_PTR) {
                 if (connection.sourceAttr.back() == ']' ) {
                     std::stringstream ss(connection.sourceAttr);
@@ -118,7 +148,7 @@ public:
 
                 if (isNodeAttr) {
                     // If we're trying to link a node attribute, we should just set its pointer
-                    AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR);
+                    AtNode *target = _LookupTargetNodeWithAlias(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR, connection.sourceAttr);
                     AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
                 } else if (target == nullptr) {
                     AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
@@ -196,6 +226,55 @@ protected:
     AtMutex _oslCodeCacheMutex;
     std::unordered_map<std::string, AtString> _oslCodeCache;
 #endif
+    // Maps an usd path + terminal to a created node if the node path and the usd path are different
+    std::unordered_map<std::pair<std::string, TfToken>, std::string, PairStringTfTokenHash> _connectionPathsAliases;
+
+private:
+
+    // Similar to LookupTargetNode but also search for an aliased target
+    inline AtNode *_LookupTargetNodeWithAlias(const char *targetName, const AtNode *source, ConnectionType c, const std::string &sourceAttr)
+    {
+        // By default we optimistically look for a 1/1 mapping of arnold name to node name.
+        AtNode *target = LookupTargetNode(targetName, source, c);
+        // But the node might have been created on a different material terminal, so we look for those as well
+        auto FindAliasWithTerminal = [&](const TfToken &terminal) {
+            auto it = _connectionPathsAliases.find(std::make_pair(targetName, terminal));
+            if (it != _connectionPathsAliases.end()) {
+                target = LookupTargetNode(it->second.c_str(), source, c);
+            }
+        };
+        if (target == nullptr) {
+            FindAliasWithTerminal(TfToken("input"));
+        }
+        if (target == nullptr) { 
+            FindAliasWithTerminal(TfToken(sourceAttr));
+        }
+        return target;
+    }
+
+    // Similar to LookupTargetNode but also search for aliased target node
+    inline void _LookupTargetNodeArrayWithAlias(
+        std::vector<AtNode *> &nodes, const char *targetName, const AtNode *source, ConnectionType c,
+        const std::string &sourceAttr)
+    {
+        // By default we optimistically look for a 1/1 mapping of arnold name to node name.
+        AtNode *target = LookupTargetNode(targetName, source, c);
+        if (target) {
+            nodes.push_back(target);
+        }
+        auto FindAliasWithTerminal = [&](const TfToken &terminal) {
+            auto it = _connectionPathsAliases.find(std::make_pair(targetName, terminal));
+            if (it != _connectionPathsAliases.end()) {
+                for (const std::string &aliasPath : TfStringTokenize(it->second)) {
+                    target = LookupTargetNode(aliasPath.c_str(), source, c);
+                    if (target)
+                        nodes.push_back(target);
+                }
+            }
+        };
+        FindAliasWithTerminal(TfToken("input"));
+        FindAliasWithTerminal(TfToken(sourceAttr));
+    }
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
