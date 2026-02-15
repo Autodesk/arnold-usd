@@ -47,6 +47,7 @@
 #if PXR_VERSION >= 2302
 #include <pxr/usd/usdLux/lightAPI.h>
 #endif
+#include <pxr/usd/usdLux/shapingAPI.h>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -200,6 +201,24 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
             ReadLightCommon(prim, meshLightNode, time);
             ReadLightNormalize(prim, meshLightNode, time);
+
+            // Transfer IES filename from shaping API
+            UsdLuxShapingAPI shapingAPI(prim);
+            VtValue iesFileValue;
+            if (shapingAPI.GetShapingIesFileAttr().Get(&iesFileValue, frame)) {
+                std::string iesFile = VtValueGetString(iesFileValue);
+                if (!iesFile.empty())
+                    AiNodeSetStr(meshLightNode, str::filename, AtString(iesFile.c_str()));
+            }
+            
+            // Send iesNormalize and iesAngleScale to the node
+            VtValue iesNormalizeValue;
+            if (shapingAPI.GetShapingIesNormalizeAttr().Get(&iesNormalizeValue, frame)) 
+                AiNodeSetBool(meshLightNode, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+            VtValue iesAngleScaleValue;
+            if (shapingAPI.GetShapingIesAngleScaleAttr().Get(&iesAngleScaleValue, frame)) 
+                AiNodeSetFlt(meshLightNode, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+
             ReadMatrix(prim, meshLightNode, time, context);
         }
 #endif
