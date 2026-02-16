@@ -1,5 +1,6 @@
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 set(COMMON_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/diagnostic_utils.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/common_utils.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/constant_strings.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/materials_utils.cpp"
@@ -10,6 +11,7 @@ set(COMMON_SRC
 
 set(COMMON_HDR
     "${CMAKE_CURRENT_SOURCE_DIR}/api_adapter.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/diagnostic_utils.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common_bits.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common_utils.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/constant_strings.h"

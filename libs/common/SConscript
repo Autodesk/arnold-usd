@@ -19,6 +19,7 @@ local_env = env.Clone()
 
 src_dir = os.path.join(env['ROOT_DIR'], 'libs', 'common')
 source_files = [
+    'diagnostic_utils.cpp',
     'common_utils.cpp',
     'constant_strings.cpp',
     'parameters_utils.cpp',
