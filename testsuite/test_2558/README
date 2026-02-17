@@ -1,0 +1,6 @@
+Indexed user data shouldn't author the idxs attribute to USD
+
+See #2558
+
+author: sebastien.ortega
+
