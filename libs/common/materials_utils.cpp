@@ -563,9 +563,6 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         }
         context.AddNodeName(nodeName, imageCopNode);
 
-        // Register this image_cop node for tracking
-        context.RegisterImageCopNode(imageCopNode);
-
         // Set the op: path on the image_cop node
         AiNodeSetStr(imageCopNode, str::filename, opFilename);
 

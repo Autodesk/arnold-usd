@@ -474,14 +474,9 @@ AtNode* HydraArnoldAPI::LookupTargetNode(const char* targetName, const AtNode* s
 {
     return _renderDelegate->LookupNode(targetName, true);
 }
-const AtString& HydraArnoldAPI::GetPxrMtlxPath()
+const AtString& HydraArnoldAPI::GetPxrMtlxPath() 
 {
     return _renderDelegate->GetPxrMtlxPath();
-}
-
-void HydraArnoldAPI::RegisterImageCopNode(AtNode *imageCopNode)
-{
-    _renderDelegate->RegisterImageCopNode(imageCopNode);
 }
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 

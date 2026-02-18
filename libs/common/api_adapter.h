@@ -52,9 +52,6 @@ public:
     virtual AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) = 0;
     virtual const AtString& GetPxrMtlxPath() = 0;
 
-    // Called when an image_cop node is created to track it for updates
-    virtual void RegisterImageCopNode(AtNode *imageCopNode) {};
-
     virtual void ProcessConnections()
     {
         std::lock_guard<AtMutex> lock(_connectionMutex);
