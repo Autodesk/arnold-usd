@@ -686,6 +686,16 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _renderParam->Restart();
     }
 
+    // See the HDK hydra docs for more details
+    //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
+    if (_key == str::t_houdiniCopTextureChanged) {
+        // COP textures need updating, flush the texture cache to trigger a refresh
+        // of all the image_cop nodes
+        _renderParam->Pause();
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        _renderParam->Restart();
+    }
+
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);

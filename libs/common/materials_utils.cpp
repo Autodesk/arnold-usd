@@ -412,11 +412,31 @@ const ShaderReadFuncs& _ShaderReadFuncs()
 }
 
 /// Read an Arnold builtin shader, with a 1-1 mapping
-AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId, 
-    const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
+AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
+    const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context,
     const TimeSettings& time, MaterialReader& materialReader)
 {
-    AtNode* node = materialReader.CreateArnoldNode(shaderId.GetText(), nodeName.c_str());
+// TODO Make this a build flag, so DCCs who definitely don't need this can skip this block entirely?
+#define HOUDINI_COPS_SUPPORT 1
+#ifdef HOUDINI_COPS_SUPPORT
+    bool is_op_path = false;
+    std::string internalNodeName = nodeName;
+    if (shaderId == str::t_image) {
+        const auto filenameAttr = inputAttrs.find(str::t_filename);
+        if (filenameAttr != inputAttrs.end() && !filenameAttr->second.value.IsEmpty()) {
+            std::string filename = VtValueGetString(filenameAttr->second.value);
+            if (filename.length() >= 3 && filename.substr(0, 3) == "op:") {
+                is_op_path = true;
+                internalNodeName = nodeName + "_src";
+            }
+        }
+    }
+#else
+    constexpr is_op_path = false;
+    const std::string& internalNodeName = nodeName;
+#endif
+
+    AtNode* node = materialReader.CreateArnoldNode(shaderId.GetText(), internalNodeName.c_str());
     if (node == nullptr)
         return nullptr;
 
@@ -452,6 +472,7 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             continue;
         }
 #endif
+
         if (attrName == str::t_name) {
             // If attribute "name" is set in the usd prim, we need to set the node name
             // accordingly. We also store this node original name in a map, that we
@@ -459,9 +480,9 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             VtValue nameValue;
             if (!attr.value.IsEmpty()) {
                 std::string nameStr = VtValueGetString(attr.value);
-                if ((!nameStr.empty()) && nameStr != nodeName) {
+                if ((!nameStr.empty()) && nameStr != internalNodeName) {
                     AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
-                    context.AddNodeName(nodeName, node);
+                    context.AddNodeName(internalNodeName, node);
                 }
             }
             continue;
@@ -519,6 +540,39 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             ReadAttribute(attr, node, attrNameStr, time, 
                 context, paramType, arrayType);
         }
+    }
+
+    // Special case for Houdini op: paths referencing COP nodes
+    // At this point the original image node will have been translated and
+    // it's image path is invalid (since core doesn't understand op: paths)
+    // However, we want to keep it around so we can respond to it's parameter changes
+    if(is_op_path) {
+        const AtString opFilename = AiNodeGetStr(node, str::filename);
+
+        // ignore missing textures on the reference node, otherwise
+        // it will fail the whole render (and we only need non-filename parameters)
+        AiNodeSetBool(node, str::ignore_missing_textures, true);
+        AiNodeSetStr(node, str::filename, AtString(""));
+
+        // image_cop is built by HtoA and links against the Houdini libraries
+        // It wraps an image node that points to the resolved COP raster image data
+        AtNode* imageCopNode = materialReader.CreateArnoldNode("image_cop", nodeName.c_str());
+        if (imageCopNode == nullptr)
+        {
+            return nullptr;
+        }
+        context.AddNodeName(nodeName, imageCopNode);
+
+        // Set the op: path on the image_cop node
+        AiNodeSetStr(imageCopNode, str::filename, opFilename);
+
+        // To avoid having to maintain a duplicate of the image interface,
+        // just keep the original image node around as reference so it can
+        // react to parameter changes that will be propogated to the internal
+        // image_cop node
+        AiNodeSetPtr(imageCopNode, str::src_image_node, node);
+
+        return imageCopNode;
     }
 
     return node;
