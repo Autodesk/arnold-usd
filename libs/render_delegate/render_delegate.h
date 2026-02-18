@@ -100,8 +100,6 @@ public:
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
 
-    void RegisterImageCopNode(AtNode *imageCopNode) override;
-
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
     std::vector<UsdGeomPrimvar> _primvars;
@@ -695,18 +693,6 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
-    void RegisterImageCopNode(AtNode *imageCopNode) {
-        std::lock_guard<std::mutex> guard(_imageCopNodesMutex);
-        _imageCopNodes.insert(imageCopNode);
-    }
-    void UnregisterImageCopNode(AtNode *imageCopNode) {
-        std::lock_guard<std::mutex> guard(_imageCopNodesMutex);
-        _imageCopNodes.erase(imageCopNode);
-    }
-    const std::set<AtNode*>& GetImageCopNodes() const {
-        return _imageCopNodes;
-    }
-
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
     // Return true if the render delegate supports shape instancing
@@ -828,11 +814,9 @@ private:
 
     std::mutex _meshLightsMutex;
     std::mutex _defaultShadersMutex;
-    std::mutex _imageCopNodesMutex;
 
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
-    std::set<AtNode*> _imageCopNodes;
 
     /// FPS value from render settings.
     float _fps;
