@@ -7,7 +7,7 @@
 
 - [usd#2557](https://github.com/Autodesk/arnold-usd/issues/2557) - Fix regression when a geometry has an instancer without any instances
 
-## [7.4.5.0] (Unreleased)
+## [7.4.5.0] 2026-02-10
 
 ### Features
 
@@ -22,7 +22,7 @@
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
 
-## [7.4.4.2] (Unreleased)
+## [7.4.4.2] 2026-01-22
 
 ### Bug Fixes
 
