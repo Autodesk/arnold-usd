@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.5.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2557](https://github.com/Autodesk/arnold-usd/issues/2557) - Fix regression when a geometry has an instancer without any instances
+
 ## [7.4.5.0] (Unreleased)
 
 ### Features
