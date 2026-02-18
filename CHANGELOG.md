@@ -6,6 +6,9 @@
 ### Bug Fixes
 
 - [usd#2557](https://github.com/Autodesk/arnold-usd/issues/2557) - Fix regression when a geometry has an instancer without any instances
+- [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
+- [usd#2536](https://github.com/Autodesk/arnold-usd/issues/2536) - ArnoldUsd procedural filename is not reported as an asset
+- [usd#2544](https://github.com/Autodesk/arnold-usd/issues/2544) - Fix error with different number of motion keys in vertex/normal arrays
 
 ## [7.4.5.0] 2026-02-10
 
