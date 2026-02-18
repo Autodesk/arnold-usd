@@ -232,9 +232,13 @@ void HdArnoldShape::_SyncInstances(
     {
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-        instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape);
-        instancer->ComputeShapeInstancesPrimvars(_renderDelegate, id, _shape);
-        instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
+        if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
+            instancer->ComputeShapeInstancesPrimvars(_renderDelegate, id, _shape);
+            instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
+        } else {
+            // hide the source mesh if it doesn't have any instance #2557
+            AiNodeSetByte(_shape, str::visibility, 0);
+        }
     }
 }
 
