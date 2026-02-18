@@ -88,15 +88,15 @@ struct HdArnoldDelegateRenderProduct {
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
 public:
-    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) :
+    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) : 
         _renderDelegate(renderDelegate) {}
-    AtNode *CreateArnoldNode(const char *type, const char *name) override;
-
+    AtNode *CreateArnoldNode(const char *type, const char *name) override; 
+    
     // Does the caller really need the primvars ? as hydra should have taken care of it
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
 
-    void AddNodeName(const std::string &name, AtNode *node) override;
-    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override;
+    void AddNodeName(const std::string &name, AtNode *node) override; 
+    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
 
