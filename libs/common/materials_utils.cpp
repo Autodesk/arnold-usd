@@ -416,7 +416,9 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context,
     const TimeSettings& time, MaterialReader& materialReader)
 {
-#if 1
+// TODO Make this a build flag, so DCCs who definitely don't need this can skip this block entirely?
+#define HOUDINI_COPS_SUPPORT 1
+#ifdef HOUDINI_COPS_SUPPORT
     bool is_op_path = false;
     std::string internalNodeName = nodeName;
     if (shaderId == str::t_image) {
@@ -455,7 +457,6 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             }
         }            
     }
-
     // Loop through the input attributes, and only set these ones.
     // As opposed to UsdPreviewSurface translator, we'll be doing a 1-1 conversion here,
     // so we don't need to care about default values. The attributes that are not part of our
@@ -542,8 +543,9 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     }
 
     // Special case for Houdini op: paths referencing COP nodes
-    // At this point the original image node will have been translated,
-    // but we want to keep it around so we can respond to it's parameter changes
+    // At this point the original image node will have been translated and
+    // it's image path is invalid (since core doesn't understand op: paths)
+    // However, we want to keep it around so we can respond to it's parameter changes
     if(is_op_path) {
         const AtString opFilename = AiNodeGetStr(node, str::filename);
 

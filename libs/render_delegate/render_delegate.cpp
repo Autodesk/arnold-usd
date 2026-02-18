@@ -687,17 +687,9 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     }
 
     if (_key == str::t_houdiniCopTextureChanged) {
-        printf("Houdini COP texture change detected, restarting render to update textures.\n");
-        AiMsgWarning("Houdini COP texture change detected, restarting render to update textures.");
-        // COP textures need updating
-        // Update all tracked image_cop nodes
-        const auto& imageCopNodes = GetImageCopNodes();
-        for (AtNode* imageCopNode : imageCopNodes) {
-            printf("TODO: Update image_cop node: %s\n", AiNodeGetName(imageCopNode));
-        }
+        // COP textures need updating, flush the texture cache to trigger a refresh
+        // of all the image_cop nodes
         _renderParam->Pause();
-        // TODO can we be more granular about the update?
-        // I.e. maybe use AiNodeReplace to only update the image nodes
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         _renderParam->Restart();
     }
