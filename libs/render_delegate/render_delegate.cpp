@@ -686,6 +686,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _renderParam->Restart();
     }
 
+    // See the HDK hydra docs for more details
+    //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
     if (_key == str::t_houdiniCopTextureChanged) {
         // COP textures need updating, flush the texture cache to trigger a refresh
         // of all the image_cop nodes
@@ -1019,7 +1021,6 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
 
 void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue& value)
 {
-    printf("Render setting changed: %s\n", key.GetText());
     _renderParam->Interrupt();
     _SetRenderSetting(key, value);
 }
