@@ -90,7 +90,6 @@ protected:
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtValue _vertexCountsVtValue;      ///< Vertex nsides. We need to keep it alive for left handed geometries.
     bool _isLeftHanded = false;       ///< Whether the geometry is left handed or not.
-    bool _useSubdiv = false;       ///< Whether the geometry use subdivision.
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh

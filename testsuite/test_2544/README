@@ -1,7 +1,0 @@
-Animated left handed mesh with face varying normals
-
-Fixes #2544
-
-author: cyril.pichard@autodesk.com 
-
-PARAMS: {'scene':'test.usd', 'kick_params':'-frame 10'}
