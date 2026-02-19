@@ -1095,7 +1095,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             aovShaders.empty()
                 ? AiArray(0, 1, AI_TYPE_NODE)
                 : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-        clearBuffers(_renderBuffers, true, width, height);
+        int bufferWidth = width;
+        int bufferHeight = height;
+        if (hasWindowNDC) {
+            int regionMinX = AiNodeGetInt(options, str::region_min_x);
+            int regionMaxX = AiNodeGetInt(options, str::region_max_x);
+            int regionMinY = AiNodeGetInt(options, str::region_min_y);
+            int regionMaxY = AiNodeGetInt(options, str::region_max_y);
+            if (regionMaxX - regionMinX > 0 && regionMaxY - regionMinY > 0) {
+                bufferWidth = regionMaxX - regionMinX + 1;
+                bufferHeight = regionMaxY - regionMinY + 1;
+            }                
+        }
+        clearBuffers(_renderBuffers, true, bufferWidth, bufferHeight);
     }
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
