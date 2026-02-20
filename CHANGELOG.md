@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.4.5.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
+
 ## [7.4.5.1] (Unreleased)
 
 ### Bug Fixes
