@@ -22,6 +22,11 @@ ArnoldUsdDiagnostic::~ArnoldUsdDiagnostic()
 std::string
 ArnoldUsdDiagnostic::_FormatDiagnostic(const TfDiagnosticBase& diagnostic) const
 {
+    return diagnostic.GetCommentary();
+
+/*
+    For now we skip the file location. We might want to include it in MsgDebug
+
     std::stringstream ss;
     
     // Include the commentary (main message)
@@ -42,6 +47,7 @@ ArnoldUsdDiagnostic::_FormatDiagnostic(const TfDiagnosticBase& diagnostic) const
     }
     
     return ss.str();
+*/
 }
 
 void
@@ -50,7 +56,9 @@ ArnoldUsdDiagnostic::IssueError(const TfError& err)
     if (!err.GetQuiet()) {
         std::string message = _FormatDiagnostic(err);
         if (!message.empty()) {
-            AiMsgError("[usd] %s", message.c_str());
+            // Note: we don't want to call AiMsgError that
+            // would abort renders by default
+            AiMsgWarning("[usd] %s", message.c_str());
         }
     }
 }
