@@ -559,7 +559,7 @@ inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
  * The function collects all dependencies 
  * and converts them to Arnold assets.
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets)
+bool CollectSceneAssets(const std::string& filename, bool isProcedural, std::vector<AtAsset*>& assets)
 {
     // open the scene file
     UsdStageRefPtr stage = UsdStage::Open(filename);
@@ -576,6 +576,18 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
+
+    // if the scene is loaded as a procedural, we need to ignore the render settings
+    // only cameras, lights, shapes, shaders and operators are permitted
+    if (isProcedural)
+    {
+        std::vector<USDDependency> filtered;
+        std::copy_if(dependencies.begin(), dependencies.end(), std::back_inserter(filtered),
+            [](const USDDependency& dep) {
+                return dep.primTypeName != TfToken("RenderSettings");
+            });
+        dependencies = std::move(filtered);
+    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)

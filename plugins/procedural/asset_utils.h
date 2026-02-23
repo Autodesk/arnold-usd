@@ -77,7 +77,7 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage);
 /**
  * Returns all assets found in the given USD scene. 
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets);
+bool CollectSceneAssets(const std::string& filename, bool isProcedural, std::vector<AtAsset*>& assets);
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
