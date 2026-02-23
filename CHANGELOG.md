@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.5.1] (Unreleased)
+## [7.4.5.2] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
+
+## [7.4.5.1] 2026-02-19
 
 ### Bug Fixes
 

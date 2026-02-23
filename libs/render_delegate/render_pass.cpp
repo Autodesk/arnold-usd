@@ -457,7 +457,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
-        delegateResolution[0] != width && delegateResolution[1] != height) {
+        (delegateResolution[0] != width || delegateResolution[1] != height)) {
 
         // If a resolution is provided through the render settings, we use
         // that instead of the viewport.
