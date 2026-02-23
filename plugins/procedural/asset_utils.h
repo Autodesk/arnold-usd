@@ -35,6 +35,7 @@ struct USDDependency
     std::string resolvedPath;  // absolute resolved filesystem path
     SdfLayerRefPtr layer;      // the layer where the dependency was authored
     SdfPath primPath;          // prim that introduced the dependency
+    TfToken primTypeName;      // prim type name
     SdfPath attribute;         // prim attribute that introduced the dependency
 
     USDDependency() = default;
@@ -43,12 +44,14 @@ struct USDDependency
                   const std::string& p_resolvedPath,
                   const SdfLayerRefPtr p_layer,
                   const SdfPath& p_primPath,
+                  const TfToken& p_primTypeName,
                   const SdfPath& p_attribute) : 
         type(p_type),
         authoredPath(p_authoredPath),
         resolvedPath(p_resolvedPath),
         layer(p_layer),
         primPath(p_primPath),
+        primTypeName(p_primTypeName),
         attribute(p_attribute)
     {
     }

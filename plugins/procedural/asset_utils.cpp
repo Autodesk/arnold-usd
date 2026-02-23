@@ -145,7 +145,7 @@ inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::st
  * Adds the given dependency to our list.
  */
 inline void AddDependency(const std::string& ref, USDDependency::Type type,
-    const SdfPath& primPath, const SdfPath& attribute,
+    const SdfPath& primPath, const TfToken& primTypeName, const SdfPath& attribute,
     std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
     const SdfLayerHandle& layer, ArResolver& resolver, 
     SeenReferenceMap& seenReferences)
@@ -156,7 +156,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string anchoredPath;
     std::string resolvedPath;
 
-    // the reference was already processed, use the reolved paths
+    // the reference was already processed, use the resolved paths
     if (seenReferences.find(ref) != seenReferences.end())
     {
         auto refPaths = seenReferences[ref];
@@ -183,7 +183,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
 
     // create a dependency
     dependencies.push_back(USDDependency(type, anchoredPath,
-        resolvedPath, layer, primPath, attribute));
+        resolvedPath, layer, primPath, primTypeName, attribute));
 }
 
 /**
@@ -272,7 +272,7 @@ inline void CollectOslShaderDependencies(
             CollectAttrDependencies<std::string>(pathAttr, layer,
                 [&](const std::string& val) {
                     AddDependency(val, USDDependency::Type::Attribute, 
-                        prim->GetPath(), pathAttr->GetPath(),
+                        prim->GetPath(), prim->GetTypeName(), pathAttr->GetPath(),
                         dependencies, stage, layer, resolver, seenReferences);
                 });
         }
@@ -324,7 +324,7 @@ inline void CollectDependenciesFromLayer(
     // collect sublayers
     for (const std::string& sub : layer->GetSubLayerPaths())
     {
-        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), SdfPath(),
+        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), TfToken(), SdfPath(),
             dependencies, stage, layer, resolver, seenReferences);
     }
 
@@ -345,7 +345,7 @@ inline void CollectDependenciesFromLayer(
                 CollectAttrDependencies<SdfAssetPath>(attr, layer,
                     [&](const SdfAssetPath& val) {
                         AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
-                            prim->GetPath(), attr->GetPath(),
+                            prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
                     });
             }
@@ -358,7 +358,7 @@ inline void CollectDependenciesFromLayer(
                         for (SdfAssetPath val : arr)
                         {
                             AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
-                                prim->GetPath(), attr->GetPath(),
+                                prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
                                 dependencies, stage, layer, resolver, seenReferences);
                         }
                     });
@@ -371,7 +371,7 @@ inline void CollectDependenciesFromLayer(
                 CollectAttrDependencies<std::string>(attr, layer,
                     [&](const std::string& val) {
                         AddDependency(val, USDDependency::Type::Attribute, 
-                            prim->GetPath(), attr->GetPath(),
+                            prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
                     });
             }
@@ -399,7 +399,7 @@ inline void CollectDependenciesFromLayer(
         for (const SdfReference& ref : refs)
         {
             AddDependency(ref.GetAssetPath(), USDDependency::Type::Reference, 
-                prim->GetPath(), SdfPath(),
+                prim->GetPath(), prim->GetTypeName(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
 
@@ -420,7 +420,7 @@ inline void CollectDependenciesFromLayer(
         for (const SdfPayload& p : payloads)
         {
             AddDependency(p.GetAssetPath(), USDDependency::Type::Payload,
-                prim->GetPath(), SdfPath(),
+                prim->GetPath(), prim->GetTypeName(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
     });
@@ -466,10 +466,10 @@ inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
 {
     // Set Procedural type for an Arnold Procedural scene file.
     // This tells Arnold to collect assets from this scene file.
-    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename")
     {
-       SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
-       if (prim && (prim->GetTypeName() == TfToken("ArnoldProcedural") || prim->GetTypeName() == TfToken("ArnoldUsd")))
+       if (dep.primTypeName == TfToken("ArnoldProcedural") || dep.primTypeName == TfToken("ArnoldUsd")
+          || dep.primTypeName == TfToken("ArnoldAlembic"))
           return AtFileType::Procedural;
     }
 
