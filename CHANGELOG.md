@@ -6,6 +6,7 @@
 ### Bug Fixes
 
 - [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
+- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
 
 ## [7.4.5.1] 2026-02-19
 
