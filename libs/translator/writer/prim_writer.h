@@ -72,6 +72,7 @@ public:
     float GetMotionEnd() const { return _motionEnd; }
 
     static int GetShadersMask() {return AI_NODE_SHADER| AI_NODE_OPERATOR |AI_NODE_IMAGER;}
+    void AddExportedAttr(const std::string &s) {_exportedAttrs.insert(s);}
     
 protected:
     virtual void Write(const AtNode *node, UsdArnoldWriter &writer) = 0;

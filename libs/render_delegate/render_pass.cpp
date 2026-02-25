@@ -384,21 +384,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
             }
         }
     }
-#if ARNOLD_VERSION_NUM >= 70405
-    // With Arnold 7.4.5.0 and up, arnold converts the options outputs strings as render_output nodes.
-    // Here we are destroying the filters & drivers, but we also have to destroy the render_outputs
-    // in order to avoid possible crashes during interactive updates. This can go away when we directly
-    // create render outputs here
-    if (!_renderDelegate->GetProceduralParent()) {
-        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_renderDelegate->GetUniverse(), AI_NODE_RENDER_OUTPUT);
-        while (!AiNodeIteratorFinished(nodeIter))
-        {
-           AtNode *node = AiNodeIteratorGetNext(nodeIter);
-           AiNodeDestroy(node);
-        }
-        AiNodeIteratorDestroy(nodeIter);
-    }
-#endif
     _ClearRenderBuffers();
 }
 
@@ -472,7 +457,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
-        delegateResolution[0] != width && delegateResolution[1] != height) {
+        (delegateResolution[0] != width || delegateResolution[1] != height)) {
 
         // If a resolution is provided through the render settings, we use
         // that instead of the viewport.
@@ -726,6 +711,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _usingFallbackBuffers || updateAovs || updateImagers) {
         _usingFallbackBuffers = false;
         renderParam->Interrupt();
+        if (_mainDriver)
+            AiNodeResetParameter(_mainDriver, str::render_outputs);
+
         _ClearRenderBuffers();
         _renderDelegate->ClearCryptomatteDrivers();
         AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
@@ -1107,7 +1095,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             aovShaders.empty()
                 ? AiArray(0, 1, AI_TYPE_NODE)
                 : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-        clearBuffers(_renderBuffers, true, width, height);
+        int bufferWidth = width;
+        int bufferHeight = height;
+        if (hasWindowNDC) {
+            int regionMinX = AiNodeGetInt(options, str::region_min_x);
+            int regionMaxX = AiNodeGetInt(options, str::region_max_x);
+            int regionMinY = AiNodeGetInt(options, str::region_min_y);
+            int regionMaxY = AiNodeGetInt(options, str::region_max_y);
+            if (regionMaxX - regionMinX > 0 && regionMaxY - regionMinY > 0) {
+                bufferWidth = regionMaxX - regionMinX + 1;
+                bufferHeight = regionMaxY - regionMinY + 1;
+            }                
+        }
+        clearBuffers(_renderBuffers, true, bufferWidth, bufferHeight);
     }
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
@@ -1154,6 +1154,24 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
 
 void HdArnoldRenderPass::_ClearRenderBuffers()
 {
+#if ARNOLD_VERSION_NUM >= 70405
+    
+    AiNodeResetParameter(_renderDelegate->GetOptions(), str::drivers);
+    // With Arnold 7.4.5.0 and up, arnold converts the options outputs strings as render_output nodes.
+    // Here we are destroying the filters & drivers, but we also have to destroy the render_outputs
+    // in order to avoid possible crashes during interactive updates. This can go away when we directly
+    // create render outputs here
+    if (!_renderDelegate->GetProceduralParent()) {
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_renderDelegate->GetUniverse(), AI_NODE_RENDER_OUTPUT);
+        while (!AiNodeIteratorFinished(nodeIter))
+        {
+           AtNode *node = AiNodeIteratorGetNext(nodeIter);
+           AiNodeDestroy(node);
+        }
+        AiNodeIteratorDestroy(nodeIter);
+    }
+#endif
+
 
     for (auto& buffer : _renderBuffers) {
         if (buffer.second.filter != nullptr) {

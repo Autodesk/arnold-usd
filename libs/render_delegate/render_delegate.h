@@ -830,7 +830,6 @@ private:
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
     int _mask = AI_NODE_ALL;  // mask for node types to be translated

@@ -145,7 +145,7 @@ inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::st
  * Adds the given dependency to our list.
  */
 inline void AddDependency(const std::string& ref, USDDependency::Type type,
-    const SdfPath& primPath, const SdfPath& attribute,
+    const SdfPath& primPath, const TfToken& primTypeName, const SdfPath& attribute,
     std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
     const SdfLayerHandle& layer, ArResolver& resolver, 
     SeenReferenceMap& seenReferences)
@@ -156,7 +156,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string anchoredPath;
     std::string resolvedPath;
 
-    // the reference was already processed, use the reolved paths
+    // the reference was already processed, use the resolved paths
     if (seenReferences.find(ref) != seenReferences.end())
     {
         auto refPaths = seenReferences[ref];
@@ -183,7 +183,37 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
 
     // create a dependency
     dependencies.push_back(USDDependency(type, anchoredPath,
-        resolvedPath, layer, primPath, attribute));
+        resolvedPath, layer, primPath, primTypeName, attribute));
+}
+
+/**
+ * Helper function to read the value of a prim attribute
+ * and add it as a file dependency. Handles time samples.
+ */
+template <typename T>
+inline void CollectAttrDependencies(
+    const SdfAttributeSpecHandle& attr,
+    const SdfLayerHandle& layer,
+    const std::function<void(const T&)>& process_func)
+{
+    // collect attribute value
+    VtValue defaultVal = attr->GetDefaultValue();
+    if (defaultVal.IsHolding<T>())
+    {
+        T value = defaultVal.UncheckedGet<T>();
+        process_func(value);
+    }
+        
+    // collect time samples
+    std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
+    for (double t : timeSamples)
+    {
+        T value_t;
+        if (layer->QueryTimeSample(attr->GetPath(), t, &value_t))
+        {
+            process_func(value_t);
+        }
+    }
 }
 
 /**
@@ -239,13 +269,12 @@ inline void CollectOslShaderDependencies(
             if (!pathAttr || !pathAttr->GetDefaultValue().IsHolding<std::string>())
                 continue;
 
-            const std::string& value = pathAttr->GetDefaultValue().Get<std::string>();
-            if (value.empty())
-                continue;
-
-            AddDependency(value, USDDependency::Type::Attribute,
-                          prim->GetPath(), pathAttr->GetPath(),
-                          dependencies, stage, layer, resolver, seenReferences);
+            CollectAttrDependencies<std::string>(pathAttr, layer,
+                [&](const std::string& val) {
+                    AddDependency(val, USDDependency::Type::Attribute, 
+                        prim->GetPath(), prim->GetTypeName(), pathAttr->GetPath(),
+                        dependencies, stage, layer, resolver, seenReferences);
+                });
         }
     }
     AiParamIteratorDestroy(piter);
@@ -295,7 +324,7 @@ inline void CollectDependenciesFromLayer(
     // collect sublayers
     for (const std::string& sub : layer->GetSubLayerPaths())
     {
-        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), SdfPath(),
+        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), TfToken(), SdfPath(),
             dependencies, stage, layer, resolver, seenReferences);
     }
 
@@ -313,62 +342,38 @@ inline void CollectDependenciesFromLayer(
             // asset type attribute
             if (attr->GetTypeName() == SdfValueTypeNames->Asset)
             {
-                // collect attribute value
-                VtValue defaultVal = attr->GetDefaultValue();
-                if (defaultVal.IsHolding<SdfAssetPath>())
-                {
-                    SdfAssetPath val = defaultVal.UncheckedGet<SdfAssetPath>();
-                    AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
-                        prim->GetPath(), attr->GetPath(),
-                        dependencies, stage, layer, resolver, seenReferences);
-                }
-
-                // collect time samples
-                std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
-                for (double t : timeSamples)
-                {
-                    SdfAssetPath val_t;
-                    if (layer->QueryTimeSample(attr->GetPath(), t, &val_t))
-                    {
-                        AddDependency(val_t.GetAssetPath(), USDDependency::Type::Attribute,
-                            prim->GetPath(), attr->GetPath(),
+                CollectAttrDependencies<SdfAssetPath>(attr, layer,
+                    [&](const SdfAssetPath& val) {
+                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
+                            prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
                             dependencies, stage, layer, resolver, seenReferences);
-                    }
-                }
+                    });
             }
 
             // asset array type attribute
             else if (attr->GetTypeName() == SdfValueTypeNames->AssetArray)
             {
-                // collect attribute value
-                VtValue defaultVal = attr->GetDefaultValue();
-                if (defaultVal.IsHolding<VtArray<SdfAssetPath>>())
-                {
-                    VtArray<SdfAssetPath> arr = defaultVal.UncheckedGet<VtArray<SdfAssetPath>>();
-
-                    for (SdfAssetPath val : arr)
-                    {
-                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
-                            prim->GetPath(), attr->GetPath(),
-                            dependencies, stage, layer, resolver, seenReferences);
-                    }
-                }
-
-                // collect time samples
-                std::set<double> timeSamples = layer->ListTimeSamplesForPath(attr->GetPath());
-                for (double t : timeSamples)
-                {
-                    VtArray<SdfAssetPath> arr_t;
-                    if (layer->QueryTimeSample(attr->GetPath(), t, &arr_t))
-                    {
-                        for (SdfAssetPath val : arr_t)
+                CollectAttrDependencies<VtArray<SdfAssetPath>>(attr, layer,
+                    [&](const VtArray<SdfAssetPath>& arr) {
+                        for (SdfAssetPath val : arr)
                         {
                             AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
-                                prim->GetPath(), attr->GetPath(),
+                                prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
                                 dependencies, stage, layer, resolver, seenReferences);
                         }
-                    }
-                }
+                    });
+            }
+
+            // NOTE filename in ArnoldUsd is a string type not an asset type
+            // therefore it needs special care
+            if (attrName == "arnold:filename" && prim->GetTypeName().GetString() == "ArnoldUsd")
+            {
+                CollectAttrDependencies<std::string>(attr, layer,
+                    [&](const std::string& val) {
+                        AddDependency(val, USDDependency::Type::Attribute, 
+                            prim->GetPath(), prim->GetTypeName(), attr->GetPath(),
+                            dependencies, stage, layer, resolver, seenReferences);
+                    });
             }
         }
 
@@ -394,7 +399,7 @@ inline void CollectDependenciesFromLayer(
         for (const SdfReference& ref : refs)
         {
             AddDependency(ref.GetAssetPath(), USDDependency::Type::Reference, 
-                prim->GetPath(), SdfPath(),
+                prim->GetPath(), prim->GetTypeName(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
 
@@ -415,7 +420,7 @@ inline void CollectDependenciesFromLayer(
         for (const SdfPayload& p : payloads)
         {
             AddDependency(p.GetAssetPath(), USDDependency::Type::Payload,
-                prim->GetPath(), SdfPath(),
+                prim->GetPath(), prim->GetTypeName(), SdfPath(),
                 dependencies, stage, layer, resolver, seenReferences);
         }
     });
@@ -461,10 +466,10 @@ inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
 {
     // Set Procedural type for an Arnold Procedural scene file.
     // This tells Arnold to collect assets from this scene file.
-    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename")
     {
-       SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
-       if (prim && prim->GetTypeName().GetString() == "ArnoldProcedural")
+       if (dep.primTypeName == TfToken("ArnoldProcedural") || dep.primTypeName == TfToken("ArnoldUsd")
+          || dep.primTypeName == TfToken("ArnoldAlembic"))
           return AtFileType::Procedural;
     }
 
@@ -554,7 +559,7 @@ inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
  * The function collects all dependencies 
  * and converts them to Arnold assets.
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets)
+bool CollectSceneAssets(const std::string& filename, bool isProcedural, std::vector<AtAsset*>& assets)
 {
     // open the scene file
     UsdStageRefPtr stage = UsdStage::Open(filename);
@@ -571,6 +576,18 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
+
+    // if the scene is loaded as a procedural, we need to ignore the render settings
+    // only cameras, lights, shapes, shaders and operators are permitted
+    if (isProcedural)
+    {
+        std::vector<USDDependency> filtered;
+        std::copy_if(dependencies.begin(), dependencies.end(), std::back_inserter(filtered),
+            [](const USDDependency& dep) {
+                return dep.primTypeName != TfToken("RenderSettings");
+            });
+        dependencies = std::move(filtered);
+    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)

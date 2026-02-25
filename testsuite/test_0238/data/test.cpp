@@ -10,13 +10,14 @@ int main(int argc, char **argv)
     AiBegin(); 
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AtParamValueMap* params = AiParamValueMap();
-    AiSceneLoad(nullptr, "test.usda", nullptr);
+    AiParamValueMapSetBool(params, AtString("convert_string_outputs"), false);
+    AiSceneLoad(nullptr, "test.usda", params);
     AiSceneWrite(nullptr, "scene.ass", params);
-    AiParamValueMapDestroy(params);
     AiEnd();
 
     AiBegin();
-    AiSceneLoad(nullptr, "scene.ass", nullptr);
+    AiSceneLoad(nullptr, "scene.ass", params);
+    AiParamValueMapDestroy(params);
     AtArray *array = AiNodeGetArray(AiUniverseGetOptions(nullptr), AtString("outputs"));
     AtString output1 = AiArrayGetStr(array, 0);
     AtString output2 = AiArrayGetStr(array, 1);

@@ -463,11 +463,11 @@ void HdArnoldMesh::Sync(
                     if (primvar.first == HdTokens->points) {
                         HdArnoldSetPositionFromValue(node, str::vlist, desc.value);
                     } else {
-                        HdArnoldSetVertexPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
+                        HdArnoldSetVertexPrimvar(node, primvar.first, desc.role, desc.value, &desc.valueIndices, GetRenderDelegate());
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
+                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, &desc.valueIndices, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));

@@ -231,7 +231,7 @@ if (HOUDINI_LOCATION)
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ hdsi;usdSkelImaging;ts)
+            list(APPEND ARNOLD_USD_LIBS_ hdsi;ts)
         endif()
         if (APPLE)
            set(HOUDINI_LIBS_LOCATION ${HOUDINI_LOCATION}/Frameworks/Houdini.framework/Versions/Current/Libraries)
@@ -412,7 +412,7 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdSkelImaging;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
+set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 if (${USD_VERSION} VERSION_LESS "0.25.05")
     list(APPEND USD_LIBS ndr)
 endif()

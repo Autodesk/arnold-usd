@@ -1,0 +1,368 @@
+### exported: Fri Jan 30 14:39:27 2026
+### from:     Arnold 7.4.5.0 [c0f0baea] windows x86_64 clang-20.1.8 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-9.8.2.57 clmhub-3.1.1.43 rlm-17.0.1 optix-8.0.0 2026/01/26 23:57:37
+### host app: MAXtoA 5.9.0.0 (2027) 3ds Max 29.0.0.2027 
+### frame: 0
+### scene: H:\Models\perlage-box.max
+### fps: 30
+### user: andersz
+### bounds: -270.172180 -849.538025 -688.485962 1235.730713 -113.593727 809.025696
+### meters_per_unit: 0.025400
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 0
+ abort_on_license_fail off
+ outputs "RGBA RGBA max_filter Untitled_Main"
+ xres 1280
+ yres 720
+ ignore_motion_blur on
+ texture_automip off
+ camera "/viewport_camera"
+ background "/background"
+ meters_per_unit 0.0253999997
+ nits_per_unit 477.464844
+ fps 30
+ osl_includepath "d:/dev/max2027/3dswin/bin/x64/release/OSL/;d:/dev/max2027/3dswin/bin/x64/release/stdplugs/OSL/;d:/dev/max2027/3dswin/bin/x64/release/PlugIns/OSL/;d:/dev/arnold-maxtoa/artifacts/max-usd/2027/3dsmax-component-usd/contents/materialx_plugin/contents/OSL/;d:/dev/arnold-maxtoa/artifacts/max-usd/2027/3dsmax-component-usd/contents/materialx_plugin/contents/OSL/MaterialX/"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+gaussian_filter
+{
+ name max_filter
+}
+
+persp_camera
+{
+ name /viewport_camera
+ matrix
+ 0.751804173 -0.659248114 0.013494852 0
+ 0.310564995 0.372073054 0.874706507 0
+ -0.581670105 -0.653417051 0.48446545 0
+ 924.843933 -771.935669 30.6139908 1
+ far_clip 9.99999996e+11
+ shutter_start -0.25
+ shutter_end 0.25
+ fov 79.8263397
+ focus_distance 0
+ aperture_size 0
+ lens_tilt_angle 0 0
+ lens_shift 0 0
+}
+
+driver_tiff
+{
+ name Untitled_Main
+ filename "testrender.tif"
+}
+
+polymesh
+{
+ name /Box002
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 949.453125 -743.477966 0 1
+ shader "/Copper_Patterned"
+ id 826326274
+ vidxs 36 1 b85UINT
+B$v;W,%X%i.%<r,<%X.r/$v)E,$?l`8%sS/5$$690$[;f4
+ nidxs 36 1 b85UINT
+B&pjh<(k)IB'nd<l)1hvI'6aJA%YGOf*/+W\$[N2P&V^d\
+ uvidxs 36 1 b85UINT
+B+,C`')M/]n)2&Zl(kE-[$??Q?$$69,'R^:K%X&,?%<r,<
+ vlist 8 1 b85VECTOR
+b,)6Gawq_dz8u8Zqawq_dzb,)6G8l,/9z8u8Zq8l,/9zb,)6Gawq_d9,&/b8u8Zqawq_d9,&/bb,)6G8l,/99,&/b8u8Zq8l,/99,&/b
+ nlist 24 1 b85VECTOR
+zzaRT=dzaRT=dzaRT=d!$$$$$$$$$(aRT=dzaRT=dzy!$$$$$$$$$(aRT=dzyzaRT=d!$$$$$$$$$(aRT=dyzM/iTOzy!$$$$$$$$$'yzaRT=dzaRT=d!$$$$$$$$$'M/iTOyzaRT=dzyM/iTOzM/iTOzyzyzaRT=dM/iTOM/iTOzzyy!$$$$$$$$$'yz
+ uvlist 24 1 b85VECTOR2
+zzyzz!8Fcb9$$$$'zzyzz!8Fcb9$$$$'zzyzz!8Fcb9$$$$'zzyzz!8Fcb9$$$$'zzyzz!8Fcb9$$$$'zzyzz!8Fcb9$$$$'
+ disp_map NULL
+ declare mtlID uniform INT
+ mtlID 12 1 b85INT
+B$$$'&$v;]2$ZlQ2
+ declare nodeName constant STRING
+ nodeName "Box002"
+ declare nodeRenderID constant INT
+ nodeRenderID 65535
+ declare gBufID constant INT
+ gBufID 0
+ declare nodeHandle constant INT
+ nodeHandle 717
+ declare wireColor constant RGB
+ wireColor 0.109803922 0.349019617 0.694117665
+ declare crypto_asset constant STRING
+ crypto_asset ""
+}
+
+openpbr_surface
+{
+ name /Copper_Patterned
+ base_color /Map__36.param_Col
+ base_metalness 1
+ specular_color 0.447870851 0.133208528 0.00502820313
+ specular_roughness 0.310000002
+ specular_roughness_anisotropy 0.800000012
+ specular_ior 1.51999998
+ transmission_depth 30
+ transmission_dispersion_abbe_number 0
+ subsurface_color 0.784172654 0.931844056 1
+ subsurface_radius 5
+ coat_ior 1.5
+ coat_darkening 0.5
+ fuzz_roughness 0.300000012
+ thin_film_thickness 555
+ thin_film_ior 1.29999995
+ geometry_normal /Copper_Patterned_bump_1
+ geometry_tangent /Map__35
+ declare nodeName constant STRING
+ nodeName "Copper Patterned"
+}
+
+osl
+{
+ name /Map__36
+ declare output constant STRING
+ output "Col"
+ code "shader Perlage
+[[ string help=\"Nice Perlage Pattern.\",
+   string category = \"Textures\"
+]]
+(
+	point UVW    = vector(u,v,0) [[ string help = \"The position input, defaulting to object space. Connect an UVW shader for other alternatives.\" ]],
+	float Scale  = 0.25,
+	color Color1 = color(1.0,0.5,0.25), 
+	color Color2 = color(0.8,0.3,0.1), 	
+	float MinRadius = 0.8    [[ float min=0.0, float max=2.0, string help=\"Smallest radius\" ]],
+	float MaxRadius = 1.0    [[ float min=0.0, float max=2.0, string help=\"Largest radius\" ]],
+	float Offset = 0.2		 [[ float min=0.0, float max=2.0, string help=\"How unevenly placed the circles are\" ]],
+	float AnisoOffset = 0.0  [[ float min=0.0, float max=1.0, string help=\"Offset on the Anisotropy output\" ]], 
+	float AnisoMax    = 1.0  [[ float min=0.0, float max=1.0, string help=\"Maximum Anisotropy output (for one revolution)\" ]],
+	float RadialNoise = 0.2  [[ float min=0.0, float max=1.0, string help=\"Amount of Radial Noise\" ]],
+	float RadialNoiseScale = 0.2  [[ float min=0.0, float max=1.0, string help=\"Scale of Radial Noise\" ]],
+	
+	output color Col    = 0,
+	output float Alpha  = 0,
+	output float Aniso  = 0,
+	output color AnisoFlow  = 0,
+	
+	output float Dist   = 0,
+	output float RadRnd = 0,
+	output vector RandomPoint = 0
+)
+{
+	point pnt = UVW / Scale;	
+	float pri = -1;
+  
+	// Standard method for randomization:
+  	// Go through a 3x3x3 grid that we offset
+  	for (float x = -1; x <= 1; x++)
+	{
+    	for (float y = -1; y <= 1; y++)
+		{
+			point rndpoint = floor(pnt) + point(x, y, 0);
+			
+			vector rnd = noise(\"cell\", rndpoint, 1) - 0.5;
+			// Compute a center 
+			point dotcenter = rndpoint + rnd * vector(Offset, Offset, 0.0);
+			float dist      = distance(dotcenter, pnt);
+			float Radius    = mix(MinRadius, MaxRadius, rnd[2]);
+
+			// If within the radius, and priority is higher
+			if (dist < Radius)
+			{
+				Col    = mix(Color1, Color2, (float)noise(\"cell\", rndpoint, 3));
+				Dist   = dist / Radius;
+				Alpha  = 1.0;
+				Aniso  = (atan2(pnt[1]-dotcenter[1],pnt[0]-dotcenter[0]) / M_2PI) + 1.0 + AnisoOffset;
+				Aniso  = fmod(Aniso, AnisoMax);
+				
+				AnisoFlow = color(cos(Aniso * M_2PI), sin(Aniso * M_2PI), 0.0) / 2.0 + 0.5;
+				
+				RadRnd = noise(rndpoint, dist / RadialNoiseScale);
+				Col   *= mix(1.0, RadRnd, RadialNoise);
+				RandomPoint = rndpoint;
+				return;
+			}
+		}
+	}
+}"
+ param_Scale 0.100000001
+ param_Color1 0.796078503 0.600000024 0.321568638
+ param_Color2 0.796078503 0.600000024 0.321568638
+ param_RadialNoise 0.800000012
+ param_RadialNoiseScale 0.00999999978
+ declare nodeName constant STRING
+ nodeName "Map #36"
+}
+
+bump2d
+{
+ name /Copper_Patterned_bump_1
+ bump_map /Map__36.param_RadRnd
+ bump_height 0.00199999986
+}
+
+osl
+{
+ name /Map__35
+ declare output constant STRING
+ output "Tangent"
+ code "// Transform a Flow Map into a world space tangent with optional Y-flipping and additional rotation
+// Copyright 2024 Autodesk Inc, All rights reserved. This file is licensed under Apache 2.0 license
+//    https://github.com/ADN-DevTech/3dsMax-OSL-Shaders/blob/license/LICENSE.txt
+
+shader FlowMapTransform(
+    color  FlowMap = color(1.0, 0.5, 0.5),
+    int    RemapFromColor = 1 [[ string widget   = \"checkBox\", string label = \"Remap from a color value to flow map\", int connectable = 0 ]],
+    int    FlipV = 0          [[ string widget   = \"checkBox\", string label = \"Invert the flow map V direction\", int connectable = 0  ]],
+    float  Rotate = 0         [[ string packName = \"Rotate Flowmap\" ]],
+	string RotateMode = \"0-1\" [[ string packName = \"Rotate Flowmap\", string widget = \"popup\", string options=\"0-1|radians|degrees\", int connectable=0 ]], 
+	string RotateDir  = \"CCW\" [[ string packName = \"Rotate Flowmap\", string widget = \"popup\", string options=\"CCW|CW\", int connectable=0 ]], 
+	output color Tangent  = 0.0
+)
+{
+	vector vu = normalize(transform(\"world\", dPdu));
+	vector vv = normalize(transform(\"world\", dPdv));
+	
+	// Should we remap from a positive color centered around 0.5,0.5
+	// to become a full flow direction centered around 0, 0	
+	vector flow = RemapFromColor ? (FlowMap * 2.0 - 1.0) : FlowMap;
+	
+	// Should we flip the V direction? (Depends on your flowmap generation tool)
+	float flowu = flow[0];
+	float flowv = flow[1];	
+	if (FlipV) flowv = -flowv;
+	
+	float angle = Rotate;
+
+	// Rotation direction	
+	if (RotateDir == \"CW\")       angle = -angle;
+	// Rotation unit
+	if (RotateMode == \"0-1\")     angle *= M_2PI;
+	if (RotateMode == \"degrees\") angle  = radians(angle);
+
+	// Rotate the flow map
+	if (angle != 0.0)
+	{
+		float fu = flowu;
+		float fv = flowv;
+		flowu = cos(angle) * fu - sin(angle) * fv;
+		flowv = sin(angle) * fu + cos(angle) * fv;
+	}	
+	
+	Tangent = vu * flowu + vv * flowv;
+}
+"
+ param_FlowMap /Map__36.param_AnisoFlow
+ declare nodeName constant STRING
+ nodeName "Map #35"
+}
+
+point_light
+{
+ name /TPhotometricLight001
+ matrix
+ -0.850255549 0.526370108 0 0
+ -0.441167623 -0.712626338 0.545467496 0
+ 0.287117779 0.463786781 0.838131964 0
+ 1228.09741 -276.934509 801.091309 1
+ color 1 0.99999994 1.00000012
+ intensity 1170345
+ radius 0.00100000005
+ declare nodeHandle constant INT
+ nodeHandle 696
+}
+
+point_light
+{
+ name /TPhotometricLight002
+ matrix
+ 0.361134559 -0.932513714 0 0
+ -0.0222842712 -0.00863002893 0.999714434 0
+ -0.9322474 -0.361031413 -0.0238969903 0
+ 643.691284 -841.622253 -11.1333389 1
+ color 0.154152289 0.271577418 0.737204969
+ intensity 1170345
+ radius 69.5749969
+ declare nodeHandle constant INT
+ nodeHandle 718
+}
+
+persp_camera
+{
+ name /PhysCamera001
+ matrix
+ -0.171258792 0.985224664 2.98023224e-08 0
+ -0.450305879 -0.0782750547 0.889435291 0
+ 0.87629509 0.152322978 0.457057536 0
+ 1268.64783 -214.888367 116.593857 1
+ far_clip 9.99999996e+11
+ shutter_start -0.25
+ shutter_end 0.25
+ fov 62.1108398
+ focus_distance 1749.89319
+ declare nodeHandle constant INT
+ nodeHandle 343
+}
+
+persp_camera
+{
+ name /PhysCamera002
+ matrix
+ 0.502093971 0.86481303 1.15833245e-07 0
+ -0.434982657 0.252542704 0.864298582 0
+ 0.747455955 -0.43395862 0.502979398 0
+ 950.231812 -389.97406 114.058434 1
+ far_clip 9.99999996e+11
+ shutter_start -0.25
+ shutter_end 0.25
+ fov 62.1107407
+ focus_distance 621.624146
+ aperture_size 0.469843686
+ declare nodeHandle constant INT
+ nodeHandle 353
+}
+
+persp_camera
+{
+ name /PhysCamera003
+ matrix
+ 0.884022295 0.467443317 -8.94069672e-08 0
+ -0.397901893 0.752508044 0.524791181 0
+ 0.2453098 -0.463927627 0.851230919 0
+ 999.737671 -851.533997 164.308594 1
+ far_clip 9.99999996e+11
+ shutter_start -0.25
+ shutter_end 0.25
+ fov 62.110569
+ focus_distance 464.697083
+ declare nodeHandle constant INT
+ nodeHandle 355
+}
+
+shuffle
+{
+ name /background
+ color /background_ray_switch
+ alpha 0
+}
+
+ray_switch_rgba
+{
+ name /background_ray_switch
+ camera /background/user_data_rbg
+ diffuse_transmission /background/user_data_rbg
+ specular_transmission /background/user_data_rbg
+}
+
+user_data_rgb
+{
+ name /background/user_data_rbg
+}
+

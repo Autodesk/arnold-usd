@@ -43,7 +43,7 @@ if (BUILD_SCENE_INDEX_PLUGIN)
             target_sources(sceneIndexArnold PRIVATE ${HDR})
         endif ()
         #TODO check only the useful ones
-        set(SCENEINDEX_LIBS ar;arch;plug;tf;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi;usdSkelImaging)
+        set(SCENEINDEX_LIBS ar;arch;plug;tf;vt;gf;work;sdf;sdr;hf;hd;usd;usdGeom;usdImaging;hdsi)
         if (${USD_VERSION} VERSION_LESS "0.25.05")
             list(APPEND SCENEINDEX_LIBS ndr)
         endif()

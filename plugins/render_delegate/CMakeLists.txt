@@ -25,7 +25,7 @@ if (BUILD_RENDER_DELEGATE OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
             set(_usd_deps ${_usd_deps} hdx)
         endif ()
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            set(_usd_deps ${_usd_deps} hdsi;usdSkelImaging;ts)
+            set(_usd_deps ${_usd_deps} hdsi;ts)
         endif ()
         add_common_dependencies(
             TARGET_NAME hdArnold

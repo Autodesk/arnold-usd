@@ -40,7 +40,7 @@ endif()
 target_link_libraries(${BUNDLE_NAME} PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects)
 target_link_libraries(${BUNDLE_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
 if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
-	target_link_libraries(${BUNDLE_NAME} PRIVATE sceneIndexArnoldObjects;hdsi;usdSkelImaging;ts)
+	target_link_libraries(${BUNDLE_NAME} PRIVATE sceneIndexArnoldObjects;hdsi;ts)
 endif ()
 
 # Install the Bundle inside a new directory to avoid any collision with other installed plugins
