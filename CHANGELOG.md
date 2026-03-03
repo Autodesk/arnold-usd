@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 
+- [usd#2572](https://github.com/Autodesk/arnold-usd/issues/2572) - Arnold product types not working if drivers:parameter:aov:name is not defined
 - [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
 - [usd#2566](https://github.com/Autodesk/arnold-usd/issues/2566) - Fixed crashes when a render delegate is deleted while another is rendering
 

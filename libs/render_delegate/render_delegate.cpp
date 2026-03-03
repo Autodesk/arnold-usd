@@ -995,8 +995,11 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
                         renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
                     }
-                    // Any other cases should have good/reasonable defaults.
-                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
+
+                    if (!renderVar.sourceName.empty()) {
+                        // if drivers:parameters:aov:name is not defined, use sourceName instead #2572
+                        if (renderVar.name.empty())
+                            renderVar.name = renderVar.sourceName;
                         product.renderVars.emplace_back(std::move(renderVar));
                     }
                 }
