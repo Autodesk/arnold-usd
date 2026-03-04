@@ -552,9 +552,13 @@ void ReadArnoldParameters(
         
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {
-            // For custom procedurals, there will be an attribute node_entry that should be ignored.
-            // In any other case, let's dump a warning
-            if (arnoldAttr != "node_entry" || AiNodeEntryGetDerivedType(nodeEntry) != AI_NODE_SHAPE_PROCEDURAL) {
+            // Handle this explicitly so we can use "primvars:arnold:interior_set"
+            if (arnoldAttr == "interior_set") {
+                DeclareArnoldAttribute(node, arnoldAttr.c_str(), "constant", "STRING");
+                ReadAttribute(attr, node, arnoldAttr, time, context, AI_TYPE_STRING, AI_TYPE_NONE);
+            } else if (arnoldAttr != "node_entry" || AiNodeEntryGetDerivedType(nodeEntry) != AI_NODE_SHAPE_PROCEDURAL) {
+                // For custom procedurals, there will be an attribute node_entry that should be ignored.
+                // In any other case, let's dump a warning
                 AiMsgWarning(
                     "USD arnold attribute %s not recognized in %s for %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry), AiNodeGetName(node));
             }

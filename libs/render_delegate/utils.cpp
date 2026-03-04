@@ -324,6 +324,12 @@ bool ConvertPrimvarToBuiltinParameter(
         HdArnoldSetParameter(node, paramEntry, value, renderDelegate);
         return true;
     }
+
+    if (strcmp(paramName, "interior_set") == 0) {
+        DeclareAndAssignParameter(node, TfToken(paramName), str::t_constant, value,
+            renderDelegate->GetAPIAdapter(), false);
+        return true;
+    }
     // This attribute hasn't been recognized, let's return false so that it can be treated
     // as a user data eventually
     return false;
