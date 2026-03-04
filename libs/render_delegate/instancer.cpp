@@ -187,12 +187,12 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
 
 // Should that be SyncPrototypeTransforms
 // This method use the instance_matrix feature to create instances
-void HdArnoldInstancer::ComputeShapeInstancesTransforms(
+bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
     const SdfPath& instancerId = GetId();
     if (!prototypeNode)
-        return;
+        return false;
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
 
     // If the sampling interval has changed we need to resample the translate, orientations and scales
@@ -202,7 +202,7 @@ void HdArnoldInstancer::ComputeShapeInstancesTransforms(
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
-        return;
+        return false;
     }
 
     HdArnoldSampledMatrixArrayType sampleArray;
@@ -230,6 +230,7 @@ void HdArnoldInstancer::ComputeShapeInstancesTransforms(
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
+    return true;
 }
 
 void HdArnoldInstancer::ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {

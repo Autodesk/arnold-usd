@@ -577,9 +577,13 @@ scene_write
 // static AtArray* SceneGetAssets(const char* filename, const AtParamValueMap* params)
 scene_get_assets
 {
+    bool isProcedural = false;
+    if (params)
+        AiParamValueMapGetBool(params, AtString("is_procedural"), &isProcedural);
+
     // collect assets from the scene
     std::vector<AtAsset*> assets;
-    CollectSceneAssets(filename, assets);
+    CollectSceneAssets(filename, isProcedural, assets);
 
     if (assets.empty())
         return nullptr;

@@ -15,6 +15,8 @@
 #include <pxr/usd/sdf/layerUtils.h>
 #include <pxr/usd/sdf/payload.h>
 #include <pxr/usd/sdf/primSpec.h>
+#include <pxr/usd/sdf/variantSetSpec.h>
+#include <pxr/usd/sdf/variantSpec.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
@@ -142,13 +144,25 @@ inline std::string ComputeRelativePathToRoot(UsdStageRefPtr stage, const std::st
 }
 
 /**
+ * Helper struct that passed to dependency collector functions.
+ */
+struct DependencyData
+{
+    UsdStageRefPtr stage;
+    SdfLayerHandle layer;
+    std::vector<USDDependency> dependencies;
+    SeenReferenceMap seenReferences;
+    ArResolver& resolver = ArGetResolver();
+};
+
+void TraversePrimSpecs(const SdfPrimSpecHandle& prim, DependencyData& data);
+
+/**
  * Adds the given dependency to our list.
  */
 inline void AddDependency(const std::string& ref, USDDependency::Type type,
-    const SdfPath& primPath, const SdfPath& attribute,
-    std::vector<USDDependency>& dependencies, UsdStageRefPtr stage, 
-    const SdfLayerHandle& layer, ArResolver& resolver, 
-    SeenReferenceMap& seenReferences)
+    const SdfPath& primPath, const TfToken& primTypeName, const SdfPath& attribute,
+    DependencyData& data)
 {
     if (ref.empty())
         return;
@@ -156,34 +170,33 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string anchoredPath;
     std::string resolvedPath;
 
-    // the reference was already processed, use the reolved paths
-    if (seenReferences.find(ref) != seenReferences.end())
+    // the reference was already processed, use the resolved paths
+    if (data.seenReferences.find(ref) != data.seenReferences.end())
     {
-        auto refPaths = seenReferences[ref];
+        auto refPaths = data.seenReferences[ref];
         anchoredPath = refPaths.first;
         resolvedPath = refPaths.second;
     }
     else
     {
         // resolve the reference to an absolute path
-        std::string relRef = SdfComputeAssetPathRelativeToLayer(layer, ref);
-        resolvedPath = resolver.Resolve(relRef);
-        // convert a relative reference relative to the main scene
+        std::string relRef = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
+        resolvedPath = data.resolver.Resolve(relRef);
         anchoredPath = ref;
+        // convert a relative reference relative to the main scene
         if (!resolvedPath.empty() && TfIsRelativePath(ref))
         {
-            std::string relativeToRoot = ComputeRelativePathToRoot(stage, resolvedPath);
+            std::string relativeToRoot = ComputeRelativePathToRoot(data.stage, resolvedPath);
             // convert only if the file is located under the root folder
             if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
                 anchoredPath = relativeToRoot;
         }
-
-        seenReferences[ref] = std::make_pair(anchoredPath, resolvedPath);
+        data.seenReferences[ref] = std::make_pair(anchoredPath, resolvedPath);
     }
 
     // create a dependency
-    dependencies.push_back(USDDependency(type, anchoredPath,
-        resolvedPath, layer, primPath, attribute));
+    data.dependencies.push_back(USDDependency(type, anchoredPath,
+        resolvedPath, data.layer, primPath, primTypeName, attribute));
 }
 
 /**
@@ -223,13 +236,7 @@ inline void CollectAttrDependencies(
  * we need to load the OSL code into an Arnold shader
  * and check the meta data of the node parameters.
  */
-inline void CollectOslShaderDependencies(
-    UsdStageRefPtr stage,
-    const SdfLayerHandle& layer,
-    const SdfPrimSpecHandle& prim,
-    std::vector<USDDependency>& dependencies,
-    SeenReferenceMap& seenReferences,
-    ArResolver& resolver)
+inline void CollectOslShaderDependencies(const SdfPrimSpecHandle& prim, DependencyData& data)
 {
     // read the osl shader code
     SdfAttributeSpecHandle codeAttr = prim->GetAttributes().get(TfToken("inputs:code"));
@@ -269,11 +276,10 @@ inline void CollectOslShaderDependencies(
             if (!pathAttr || !pathAttr->GetDefaultValue().IsHolding<std::string>())
                 continue;
 
-            CollectAttrDependencies<std::string>(pathAttr, layer,
+            CollectAttrDependencies<std::string>(pathAttr, data.layer,
                 [&](const std::string& val) {
                     AddDependency(val, USDDependency::Type::Attribute, 
-                        prim->GetPath(), pathAttr->GetPath(),
-                        dependencies, stage, layer, resolver, seenReferences);
+                        prim->GetPath(), prim->GetTypeName(), pathAttr->GetPath(), data);
                 });
         }
     }
@@ -284,146 +290,189 @@ inline void CollectOslShaderDependencies(
 }
 
 /**
- * Helper function to iterate over all prims in a layer.
+ * Returns dependencies found in the selected variants of a prim.
  */
-inline void TraversePrimSpecs(
-    const SdfPrimSpecHandle& prim,
-    const std::function<void(const SdfPrimSpecHandle&)>& fn)
+inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
 {
-    fn(prim);
+    const auto variantSets = prim->GetVariantSets();
+    if (variantSets.empty())
+        return;
 
-    for (const auto& child : prim->GetNameChildren())
-        TraversePrimSpecs(child, fn);
+    const SdfVariantSelectionMap selections = prim->GetVariantSelections();
+    for (const auto& vsetit : variantSets.items())
+    {
+        const std::string setName = vsetit.first;
+        const SdfVariantSetSpecHandle& vset = vsetit.second;
+        if (!vset)
+            continue;
+
+        // only process the active/selected variant
+        const auto itSel = selections.find(setName);
+        if (itSel == selections.end())
+            continue;
+        const std::string& selectedVariantName = itSel->second;
+
+        // iterate all variants in the set
+        for (const SdfVariantSpecHandle& variant : vset->GetVariants())
+        {
+            if (!variant)
+                continue;
+
+            const std::string variantName = variant->GetName();
+            if (variantName != selectedVariantName)
+                continue;
+
+            // get the root prim spec for the variant
+            const SdfPrimSpecHandle vPrim = variant->GetPrimSpec();
+            if (!vPrim)
+                continue;
+
+            // scan the variant-authored prim spec
+            TraversePrimSpecs(vPrim, data);
+        }
+    }
+}
+
+/**
+ * Returns dependencies found in a prim. This includes dependencies
+ * defined in asset type attributes, references and payloads.
+ */
+inline void CollectPrimDependencies(const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    // collect dependencies from attributes
+    for (const SdfAttributeSpecHandle& attr : prim->GetAttributes())
+    {
+        if (!attr)
+            continue;
+
+        const std::string attrName = attr->GetName();
+
+        // asset type attribute
+        if (attr->GetTypeName() == SdfValueTypeNames->Asset)
+        {
+            CollectAttrDependencies<SdfAssetPath>(attr, data.layer,
+                [&](const SdfAssetPath& val) {
+                    AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
+                        prim->GetPath(), prim->GetTypeName(), attr->GetPath(), data);
+                });
+        }
+
+        // asset array type attribute
+        else if (attr->GetTypeName() == SdfValueTypeNames->AssetArray)
+        {
+            CollectAttrDependencies<VtArray<SdfAssetPath>>(attr, data.layer,
+                [&](const VtArray<SdfAssetPath>& arr) {
+                    for (SdfAssetPath val : arr)
+                    {
+                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
+                            prim->GetPath(), prim->GetTypeName(), attr->GetPath(), data);
+                    }
+                });
+        }
+
+        // NOTE filename in ArnoldUsd is a string type not an asset type
+        // therefore it needs special care
+        if (attrName == "arnold:filename" && prim->GetTypeName().GetString() == "ArnoldUsd")
+        {
+            CollectAttrDependencies<std::string>(attr, data.layer,
+                [&](const std::string& val) {
+                    AddDependency(val, USDDependency::Type::Attribute, 
+                        prim->GetPath(), prim->GetTypeName(), attr->GetPath(), data);
+                });
+        }
+    }
+
+    // collect dependencies from Arnold OSL shader
+    if (IsArnoldShader(prim, TfToken("osl")))
+        CollectOslShaderDependencies(prim, data);
+        
+    // collect references
+    const auto refList = prim->GetReferenceList();
+    SdfReferenceVector refs;
+    {
+        const auto prependedItems = refList.GetPrependedItems();
+        const auto appendedItems = refList.GetAppendedItems();
+        const auto addedItems = refList.GetAddedItems();
+        const auto explicitItems = refList.GetExplicitItems();
+
+        // combine all authored list-op opinions
+        refs.insert(refs.end(), prependedItems.begin(), prependedItems.end());
+        refs.insert(refs.end(), appendedItems.begin(), appendedItems.end());
+        refs.insert(refs.end(), addedItems.begin(), addedItems.end());
+        refs.insert(refs.end(), explicitItems.begin(), explicitItems.end());
+    }
+    for (const SdfReference& ref : refs)
+    {
+        AddDependency(ref.GetAssetPath(), USDDependency::Type::Reference, 
+            prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+    }
+
+    // collect payloads
+    const auto payloadList = prim->GetPayloadList();
+    SdfPayloadVector payloads;
+    {
+        const auto prependedItems = payloadList.GetPrependedItems();
+        const auto appendedItems = payloadList.GetAppendedItems();
+        const auto addedItems = payloadList.GetAddedItems();
+        const auto explicitItems = payloadList.GetExplicitItems();
+        // combine all authored list-op opinions
+        payloads.insert(payloads.end(), prependedItems.begin(), prependedItems.end());
+        payloads.insert(payloads.end(), appendedItems.begin(), appendedItems.end());
+        payloads.insert(payloads.end(), addedItems.begin(), addedItems.end());
+        payloads.insert(payloads.end(), explicitItems.begin(), explicitItems.end());
+    }
+    for (const SdfPayload& p : payloads)
+    {
+        AddDependency(p.GetAssetPath(), USDDependency::Type::Payload,
+            prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+    }
+
+    // collects variants
+    CollectDependenciesFromVariants(prim, data);
 }
 
 /**
  * Helper function to iterate over all prims in a layer.
  */
-inline void TraverseLayer(const SdfLayerHandle& layer,
-                   const std::function<void(const SdfPrimSpecHandle&)>& fn)
+inline void TraversePrimSpecs(const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    // collect dependencies from the prim
+    CollectPrimDependencies(prim, data);
+
+    // iterate descendants
+    for (const auto& child : prim->GetNameChildren())
+        TraversePrimSpecs(child, data);
+}
+
+/**
+ * Helper function to iterate over all prims in a layer.
+ */
+inline void TraverseLayer(const SdfLayerHandle& layer, DependencyData& data)
 {
     SdfPrimSpecHandle root = layer->GetPseudoRoot();
 
     for (const auto& prim : root->GetNameChildren())
-        TraversePrimSpecs(prim, fn);
+        TraversePrimSpecs(prim, data);
 }
 
 /**
  * Returns all dependencies found in the given layer.
  */
-inline void CollectDependenciesFromLayer(
-    UsdStageRefPtr stage,
-    const SdfLayerHandle& layer,
-    std::vector<USDDependency>& dependencies,
-    SeenReferenceMap& seenReferences,
-    ArResolver& resolver)
+inline void CollectDependenciesFromLayer(const SdfLayerHandle& layer, DependencyData& data)
 {
     if (!layer)
         return;
 
+    data.layer = layer;
+
     // collect sublayers
     for (const std::string& sub : layer->GetSubLayerPaths())
     {
-        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), SdfPath(),
-            dependencies, stage, layer, resolver, seenReferences);
+        AddDependency(sub, USDDependency::Type::Sublayer, SdfPath(), TfToken(), SdfPath(), data);
     }
 
     // iterate all prims in this layer
-    TraverseLayer(layer, [&](const SdfPrimSpecHandle& prim) {
-
-        // collect dependencies from attributes
-        for (const SdfAttributeSpecHandle& attr : prim->GetAttributes())
-        {
-            if (!attr)
-                continue;
-
-            const std::string attrName = attr->GetName();
-
-            // asset type attribute
-            if (attr->GetTypeName() == SdfValueTypeNames->Asset)
-            {
-                CollectAttrDependencies<SdfAssetPath>(attr, layer,
-                    [&](const SdfAssetPath& val) {
-                        AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute, 
-                            prim->GetPath(), attr->GetPath(),
-                            dependencies, stage, layer, resolver, seenReferences);
-                    });
-            }
-
-            // asset array type attribute
-            else if (attr->GetTypeName() == SdfValueTypeNames->AssetArray)
-            {
-                CollectAttrDependencies<VtArray<SdfAssetPath>>(attr, layer,
-                    [&](const VtArray<SdfAssetPath>& arr) {
-                        for (SdfAssetPath val : arr)
-                        {
-                            AddDependency(val.GetAssetPath(), USDDependency::Type::Attribute,
-                                prim->GetPath(), attr->GetPath(),
-                                dependencies, stage, layer, resolver, seenReferences);
-                        }
-                    });
-            }
-
-            // NOTE filename in ArnoldUsd is a string type not an asset type
-            // therefore it needs special care
-            if (attrName == "arnold:filename" && prim->GetTypeName().GetString() == "ArnoldUsd")
-            {
-                CollectAttrDependencies<std::string>(attr, layer,
-                    [&](const std::string& val) {
-                        AddDependency(val, USDDependency::Type::Attribute, 
-                            prim->GetPath(), attr->GetPath(),
-                            dependencies, stage, layer, resolver, seenReferences);
-                    });
-            }
-        }
-
-        // collect dependencies from Arnold OSL shader
-        if (IsArnoldShader(prim, TfToken("osl")))
-            CollectOslShaderDependencies(stage, layer, prim, dependencies, seenReferences, resolver);
-        
-        // collect references
-        const auto refList = prim->GetReferenceList();
-        SdfReferenceVector refs;
-        {
-            const auto prependedItems = refList.GetPrependedItems();
-            const auto appendedItems = refList.GetAppendedItems();
-            const auto addedItems = refList.GetAddedItems();
-            const auto explicitItems = refList.GetExplicitItems();
-
-            // combine all authored list-op opinions
-            refs.insert(refs.end(), prependedItems.begin(), prependedItems.end());
-            refs.insert(refs.end(), appendedItems.begin(), appendedItems.end());
-            refs.insert(refs.end(), addedItems.begin(), addedItems.end());
-            refs.insert(refs.end(), explicitItems.begin(), explicitItems.end());
-        }
-        for (const SdfReference& ref : refs)
-        {
-            AddDependency(ref.GetAssetPath(), USDDependency::Type::Reference, 
-                prim->GetPath(), SdfPath(),
-                dependencies, stage, layer, resolver, seenReferences);
-        }
-
-        // collect payloads
-        const auto payloadList = prim->GetPayloadList();
-        SdfPayloadVector payloads;
-        {
-            const auto prependedItems = payloadList.GetPrependedItems();
-            const auto appendedItems = payloadList.GetAppendedItems();
-            const auto addedItems = payloadList.GetAddedItems();
-            const auto explicitItems = payloadList.GetExplicitItems();
-            // combine all authored list-op opinions
-            payloads.insert(payloads.end(), prependedItems.begin(), prependedItems.end());
-            payloads.insert(payloads.end(), appendedItems.begin(), appendedItems.end());
-            payloads.insert(payloads.end(), addedItems.begin(), addedItems.end());
-            payloads.insert(payloads.end(), explicitItems.begin(), explicitItems.end());
-        }
-        for (const SdfPayload& p : payloads)
-        {
-            AddDependency(p.GetAssetPath(), USDDependency::Type::Payload,
-                prim->GetPath(), SdfPath(),
-                dependencies, stage, layer, resolver, seenReferences);
-        }
-    });
+    TraverseLayer(layer, data);
 }
 
 /**
@@ -435,20 +484,15 @@ inline void CollectDependenciesFromLayer(
  */
 std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 {
-    std::vector<USDDependency> dependencies;
-
-    ArResolver& resolver = ArGetResolver();
-    SeenReferenceMap seenReferences;
+    DependencyData data;
+    data.stage = stage;
 
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
     for (auto &layer : usedLayers)
-    {
-        CollectDependenciesFromLayer(stage, layer, dependencies,
-            seenReferences, resolver);
-    }
+        CollectDependenciesFromLayer(layer, data);
 
-    return dependencies;
+    return data.dependencies;
 }
 
 /**
@@ -466,10 +510,10 @@ inline AtFileType GetArnoldFileTypeFromDependency(const USDDependency& dep)
 {
     // Set Procedural type for an Arnold Procedural scene file.
     // This tells Arnold to collect assets from this scene file.
-    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename" && dep.layer)
+    if (dep.type == USDDependency::Type::Attribute && dep.attribute.GetName() == "arnold:filename")
     {
-       SdfPrimSpecHandle prim = dep.layer->GetPrimAtPath(dep.primPath);
-       if (prim && (prim->GetTypeName() == TfToken("ArnoldProcedural") || prim->GetTypeName() == TfToken("ArnoldUsd")))
+       if (dep.primTypeName == TfToken("ArnoldProcedural") || dep.primTypeName == TfToken("ArnoldUsd")
+          || dep.primTypeName == TfToken("ArnoldAlembic"))
           return AtFileType::Procedural;
     }
 
@@ -559,7 +603,7 @@ inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
  * The function collects all dependencies 
  * and converts them to Arnold assets.
  */
-bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& assets)
+bool CollectSceneAssets(const std::string& filename, bool isProcedural, std::vector<AtAsset*>& assets)
 {
     // open the scene file
     UsdStageRefPtr stage = UsdStage::Open(filename);
@@ -576,6 +620,18 @@ bool CollectSceneAssets(const std::string& filename, std::vector<AtAsset*>& asse
 
     // collect dependencies from the USD scene
     std::vector<USDDependency> dependencies = CollectDependencies(stage);
+
+    // if the scene is loaded as a procedural, we need to ignore the render settings
+    // only cameras, lights, shapes, shaders and operators are permitted
+    if (isProcedural)
+    {
+        std::vector<USDDependency> filtered;
+        std::copy_if(dependencies.begin(), dependencies.end(), std::back_inserter(filtered),
+            [](const USDDependency& dep) {
+                return dep.primTypeName != TfToken("RenderSettings");
+            });
+        dependencies = std::move(filtered);
+    }
 
     // log dependencies
     for (const USDDependency& dep : dependencies)

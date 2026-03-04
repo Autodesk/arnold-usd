@@ -1,0 +1,5 @@
+Instancer prototypes that are referenced but not used in the protoIndices
+
+Fixes #2557
+
+PARAMS: {'scene':'test.usda'}

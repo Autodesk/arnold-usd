@@ -50,6 +50,11 @@
 #ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
 #endif
+#include <regex>
+#include <cmath>
+#include <cstdio>
+#include <sstream>
+#include <iomanip>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -291,6 +296,134 @@ const std::string _CreateAOV(
 
 } // namespace
 
+namespace {
+
+// Replace frame tokens in filenames with the current frame value. This is based on 
+// the format supported by Houdini's husk command (#2569)
+// Supported tokens:
+//   - $F, $FF, $F4:     current frame (plain, 2-digit padding, N-digit padding)
+//   - <F>, <FF>, <F4>:  frame UDIM style
+//   - %d, %g, %04d:     frame printf style
+static std::string ResolveFilenameTokens(const std::string &in, float frameF)
+{
+    if (in.find('$') == std::string::npos && in.find('<') == std::string::npos && in.find('%') == std::string::npos)
+        return in;
+
+    const int frame = static_cast<int>(std::lround(frameF));
+    std::string out = in;
+
+    auto formatInt = [&](int value, int width) {
+        std::ostringstream ss;
+        if (width > 0)
+            ss << std::setw(width) << std::setfill('0') << value;
+        else
+            ss << value;
+        return ss.str();
+    };
+
+    // Handle $F<num> (e.g. $F4) and $F repeated (e.g. $FF)
+    {
+        std::regex re_dollar_F_num("\\$F(\\d+)");
+        std::smatch m;
+        std::string tmp = out;
+        out.clear();
+        std::string::const_iterator searchStart(tmp.cbegin());
+        while (std::regex_search(searchStart, tmp.cend(), m, re_dollar_F_num)) {
+            out.append(m.prefix().first, m.prefix().second);
+            int w = std::stoi(m[1].str());
+            out += formatInt(frame, w);
+            searchStart = m.suffix().first;
+        }
+        out.append(searchStart, tmp.cend());
+    }
+
+    // Handle $F repeated like $FF, $FFF etc.
+    {
+        std::regex re_dollar_Fs("\\$F{2,}");
+        std::smatch m2;
+        std::string tmp2 = out;
+        out.clear();
+        std::string::const_iterator searchStart2(tmp2.cbegin());
+        while (std::regex_search(searchStart2, tmp2.cend(), m2, re_dollar_Fs)) {
+            out.append(m2.prefix().first, m2.prefix().second);
+            int w = static_cast<int>(m2.str().size() - 1);
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "%0*d", w, frame);
+            out += buf;
+            searchStart2 = m2.suffix().first;
+        }
+        out.append(searchStart2, tmp2.cend());
+    }
+
+    // Single $F -> plain integer
+    {
+        std::regex re_dollar_F("\\$F(?![0-9F])");
+        out = std::regex_replace(out, re_dollar_F, formatInt(frame, 0));
+    }
+
+    // Angle bracket style <F>, <FF>, <F4>
+    {
+        std::regex re_angle_num("<F(\\d+)>");
+        std::smatch m;
+        std::string tmp = out;
+        out.clear();
+        std::string::const_iterator searchStart(tmp.cbegin());
+        while (std::regex_search(searchStart, tmp.cend(), m, re_angle_num)) {
+            out.append(m.prefix().first, m.prefix().second);
+            int w = std::stoi(m[1].str());
+            out += formatInt(frame, w);
+            searchStart = m.suffix().first;
+        }
+        out.append(searchStart, tmp.cend());
+
+        std::regex re_angle_fs("<F{2,}>");
+        std::smatch m3;
+        std::string tmp3 = out;
+        out.clear();
+        std::string::const_iterator searchStart3(tmp3.cbegin());
+        while (std::regex_search(searchStart3, tmp3.cend(), m3, re_angle_fs)) {
+            out.append(m3.prefix().first, m3.prefix().second);
+            int w = static_cast<int>(m3.str().size() - 2);
+            char buf[64];
+            std::snprintf(buf, sizeof(buf), "%0*d", w, frame);
+            out += buf;
+            searchStart3 = m3.suffix().first;
+        }
+        out.append(searchStart3, tmp3.cend());
+
+        std::regex re_angle_F("<F>");
+        out = std::regex_replace(out, re_angle_F, formatInt(frame, 0));
+    }
+    
+    // printf style: %04d, %d, %g
+    {
+        std::regex re_printf("%(0?)(\\d*)[dg]");
+        std::smatch m;
+        std::string tmp = out;
+        out.clear();
+        std::string::const_iterator searchStart(tmp.cbegin());
+        while (std::regex_search(searchStart, tmp.cend(), m, re_printf)) {
+            out.append(m.prefix().first, m.prefix().second);
+            std::string spec = m[0].str();
+            char buf[128] = {0};
+            if (spec.back() == 'g') {
+                double frameD = static_cast<double>(frameF);
+                std::snprintf(buf, sizeof(buf), spec.c_str(), frameD);
+            } else {
+                // assume integer
+                std::snprintf(buf, sizeof(buf), spec.c_str(), frame);
+            }
+            out += buf;
+            searchStart = m.suffix().first;
+        }
+        out.append(searchStart, tmp.cend());
+    }
+
+    return out;
+}
+
+} // namespace
+
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
@@ -494,7 +627,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
-        delegateResolution[0] != width && delegateResolution[1] != height) {
+        (delegateResolution[0] != width || delegateResolution[1] != height)) {
 
         // If a resolution is provided through the render settings, we use
         // that instead of the viewport.
@@ -744,6 +877,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _usingFallbackBuffers || updateAovs || updateImagers) {
         _usingFallbackBuffers = false;
         renderParam->Interrupt();
+        if (_mainDriver)
+            AiNodeResetParameter(_mainDriver, str::render_outputs);
+
         _ClearRenderBuffers();
         _renderDelegate->ClearCryptomatteDrivers();
         AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
@@ -912,28 +1048,27 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // were added above with hydra drives, since they will render to the same filename
             // and we don't want several drivers writing to the same image
             const std::string &outputOverride = _renderDelegate->GetOutputOverride();
+            // Output overrides can be set to force an output filename.
+            // However we don't always want to do this for arnold product types
+            // to avoid having multiple drivers writing to the same filename #2187
+            bool hasOutputOverride = !outputOverride.empty();
+
             for (const auto& product : delegateRenderProducts) {
                 CustomProduct customProduct;
                 if (product.renderVars.empty()) {
                     continue;
                 }
-
-                // Output overrides can be set to force an output filename.
-                // However we don't always want to do this for arnold product types
-                // to avoid having multiple drivers writing to the same filename #2187
-                bool hasOutputOverride = !outputOverride.empty();
-                if (hasOutputOverride) {
+                // if the outputs are empty, we always assume this is a beauty AOV
+                bool isBeauty = outputs.empty();
+                if (hasOutputOverride && !isBeauty) {
                     // Check if one of this render product's AOVs is the beauty.
                     // If not, we'll ignore the output override
-                    bool hasBeauty = false;
                     for (const auto& renderVar : product.renderVars) {
                         if (renderVar.sourceName == HdAovTokens->color || renderVar.sourceName == "RGBA") {
-                            hasBeauty = true;
+                            isBeauty = true;
                             break;
                         }
                     }
-                    if (!outputs.empty() && !hasBeauty)
-                        hasOutputOverride = false;
                 }
                 const AtString customDriverName =
                     AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
@@ -943,16 +1078,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     continue;
                 }
 
-                if (!hasOutputOverride) {
+                if (hasOutputOverride && isBeauty) {
+                    // If the delegate has an output image override, we want to use this for this driver.
+                    // Note we can only use it once as multiple drivers pointing to the same filename
+                    // will cause errors. outputOverride is resolved for frame tokens: $F/$FF/$F4, 
+                    // <F>/<FF>/<F4>, and printf-style %d/%g/%04d.
+                    std::string resolved = ResolveFilenameTokens(outputOverride, 
+                        AiNodeGetFlt(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::frame));
+                    AiNodeSetStr(customProduct.driver, str::filename, AtString(resolved.c_str()));
+                    hasOutputOverride = false;
+                } else {
                     // default use case : set the product name as the output image filename
                     AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
-                }
-                else {
-                    // If the delegate has an output image override, we want to use this for this driver.
-                    // Note that we can only use it once as multiple drivers pointing to the same filename
-                    // will cause errors
-                    AiNodeSetStr(customProduct.driver, str::filename, AtString(outputOverride.c_str()));
-                    hasOutputOverride = false;
                 }
                 // One filter per custom driver.
                 customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
@@ -1125,7 +1262,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             aovShaders.empty()
                 ? AiArray(0, 1, AI_TYPE_NODE)
                 : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-        clearBuffers(_renderBuffers, true, width, height);
+        int bufferWidth = width;
+        int bufferHeight = height;
+        if (hasWindowNDC) {
+            int regionMinX = AiNodeGetInt(options, str::region_min_x);
+            int regionMaxX = AiNodeGetInt(options, str::region_max_x);
+            int regionMinY = AiNodeGetInt(options, str::region_min_y);
+            int regionMaxY = AiNodeGetInt(options, str::region_max_y);
+            if (regionMaxX - regionMinX > 0 && regionMaxY - regionMinY > 0) {
+                bufferWidth = regionMaxX - regionMinX + 1;
+                bufferHeight = regionMaxY - regionMinY + 1;
+            }                
+        }
+        clearBuffers(_renderBuffers, true, bufferWidth, bufferHeight);
     }
 
     // Check if hydra still has pending changes that will be processed in the next iteration.
@@ -1174,8 +1323,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
 {
 #if ARNOLD_VERSION_NUM >= 70405
     
-    if (_mainDriver)
-        AiNodeResetParameter(_mainDriver, str::render_outputs);
     AiNodeResetParameter(_renderDelegate->GetOptions(), str::drivers);
     // With Arnold 7.4.5.0 and up, arnold converts the options outputs strings as render_output nodes.
     // Here we are destroying the filters & drivers, but we also have to destroy the render_outputs

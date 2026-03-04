@@ -503,11 +503,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
+    bool isArnoldActive = 
 #if ARNOLD_VERSION_NUM >= 70100
-    _isArnoldActive = AiArnoldIsActive();
+        AiArnoldIsActive();
 #else
-    _isArnoldActive = AiUniverseIsActive();
+        AiUniverseIsActive();
 #endif
+
     if (_isBatch && _renderDelegateOwnsUniverse) {
 #if ARNOLD_VERSION_NUM >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
@@ -518,7 +520,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiErrorReportingSetEnabled(false);
 #endif
     }
-    if (!_isArnoldActive) {
+    if (!isArnoldActive) {
         AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
         AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
@@ -644,12 +646,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
     _renderParam->Interrupt();
     if (_renderDelegateOwnsUniverse) {
         AiRenderSessionDestroy(GetRenderSession());
-        hdArnoldUninstallNodes();
         AiUniverseDestroy(_universe);
-        // We must end the arnold session, only if we created it during the constructor.
-        // Otherwise we could be destroying a session that is being used elsewhere
-        if (!_isArnoldActive)
-        AiEnd();
     }
 
 }
@@ -1007,8 +1004,11 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
                         renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
                     }
-                    // Any other cases should have good/reasonable defaults.
-                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
+
+                    if (!renderVar.sourceName.empty()) {
+                        // if drivers:parameters:aov:name is not defined, use sourceName instead #2572
+                        if (renderVar.name.empty())
+                            renderVar.name = renderVar.sourceName;
                         product.renderVars.emplace_back(std::move(renderVar));
                     }
                 }
