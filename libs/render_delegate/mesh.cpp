@@ -292,12 +292,12 @@ void HdArnoldMesh::Sync(
         }
 
         scheme = topology.GetScheme();
-        bool useSubdiv = scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark;
+        bool useSubdiv = scheme != PxOsdOpenSubdivTokens->none;
         if (useSubdiv != _useSubdiv) {
             dirtyPrimvars = true;
         }
         _useSubdiv = useSubdiv;
-        if (_useSubdiv) {
+        if (_useSubdiv && (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark)) {
             AiNodeSetStr(node, str::subdiv_type, str::catclark);
         } else {
             AiNodeSetStr(node, str::subdiv_type, str::none);
