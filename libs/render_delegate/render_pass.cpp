@@ -301,14 +301,12 @@ namespace {
 //   - $F, $FF, $F4:     current frame (plain, 2-digit padding, N-digit padding)
 //   - <F>, <FF>, <F4>:  frame UDIM style
 //   - %d, %g, %04d:     frame printf style
-static std::string ResolveFilenameTokens(const std::string &in, HdArnoldRenderDelegate* renderDelegate)
+static std::string ResolveFilenameTokens(const std::string &in, float frameF)
 {
     if (in.find('$') == std::string::npos && in.find('<') == std::string::npos && in.find('%') == std::string::npos)
         return in;
 
-    const float frameF = AiNodeGetFlt(AiUniverseGetOptions(renderDelegate->GetUniverse()), str::frame);
     const int frame = static_cast<int>(std::lround(frameF));
-
     std::string out = in;
 
     auto formatInt = [&](int value, int width) {
@@ -1052,7 +1050,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     // Note we can only use it once as multiple drivers pointing to the same filename
                     // will cause errors. outputOverride is resolved for frame tokens: $F/$FF/$F4, 
                     // <F>/<FF>/<F4>, and printf-style %d/%g/%04d.
-                    std::string resolved = ResolveFilenameTokens(outputOverride, _renderDelegate);
+                    std::string resolved = ResolveFilenameTokens(outputOverride, 
+                        AiNodeGetFlt(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::frame));
                     AiNodeSetStr(customProduct.driver, str::filename, AtString(resolved.c_str()));
                     hasOutputOverride = false;
                 } else {
