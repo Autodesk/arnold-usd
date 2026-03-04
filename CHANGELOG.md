@@ -4,7 +4,7 @@
 ## [7.5.1.0] (Unreleased)
 
 ### Features
-
+- [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
 - [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
 
 ### Bug Fixes
