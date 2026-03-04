@@ -212,13 +212,22 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
                 }
                 if (nodeGraphChanged && node && oldTerminal && oldTerminal != node) {
-                    for (const auto& previousNode : _previousNodes) {
-                        if (previousNode.second == oldTerminal) {
-                            // Tell arnold to replace all links to the previous node with links to the new node
-                            AiNodeReplace(oldTerminal, node, false);
-                            break;
+                    
+                    auto replaceOldTerminal = [&](std::unordered_map<std::string, AtNode*> &nodesList) -> bool {
+                        for (const auto& n : nodesList) {
+                            if (n.second == oldTerminal) {
+                                // Tell arnold to replace all links to the previous node with links to the new node
+                                AiNodeReplace(oldTerminal, node, false);
+                                return true;
+                            }
                         }
-                    }
+                        return false;
+                    };                        
+
+                    // Search for the node to be replaced in the previous nodes list, 
+                    // but also in the new one, in case the old is still part of the shading tree #2568
+                    if (!replaceOldTerminal(_previousNodes))
+                        replaceOldTerminal(_nodes);
                 }
             }
             // Loop through previous AtNodes that were created for this node graph.
