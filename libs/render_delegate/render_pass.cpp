@@ -398,6 +398,7 @@ void _SetAovBindingsAsConverged(const HdRenderPassAovBindingVector& aovBindings,
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (_renderDelegate->IsUsingHydraRenderSettings()) {
         // If we are using the hydra render settings, we let the render settings prim handle the conversion.
         // We need to provide a camera pas
@@ -425,7 +426,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // We couldn't use the render settings, we fall back to the original code
     }
-
+#endif
     _renderDelegate->SetRenderTags(renderTags);
 
     AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());

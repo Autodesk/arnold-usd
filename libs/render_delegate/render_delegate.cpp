@@ -65,12 +65,11 @@
 #include "procedural_custom.h"
 #include "render_buffer.h"
 #include "render_pass.h"
-#include "render_settings.h"
 #include "volume.h"
 #include <cctype>
 
 #ifdef ENABLE_HYDRA2_RENDERSETTINGS
-#include <render_settings.h>
+#include "render_settings.h"
 #endif
 
 PXR_NAMESPACE_OPEN_SCOPE
