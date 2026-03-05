@@ -327,7 +327,7 @@ bool FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
         return false;
 
     return _FlattenIndexedValue<float, double, GfVec2f, GfVec2d, GfVec3f, 
-                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool,
+                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool, std::string,
                 TfToken, GfHalf, GfVec2h, GfVec3h, GfVec4h, GfMatrix4f, GfMatrix4d>(in, idx, out);
 
 }
