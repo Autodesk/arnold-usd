@@ -171,9 +171,11 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     std::string resolvedPath;
 
     // the reference was already processed, use the resolved paths
-    if (data.seenReferences.find(ref) != data.seenReferences.end())
+    std::string layerName = data.layer ? data.layer->GetIdentifier() : std::string();
+    std::string refId = layerName + "#" + ref;
+    if (data.seenReferences.find(refId) != data.seenReferences.end())
     {
-        auto refPaths = data.seenReferences[ref];
+        auto refPaths = data.seenReferences[refId];
         anchoredPath = refPaths.first;
         resolvedPath = refPaths.second;
     }
@@ -191,7 +193,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
             if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
                 anchoredPath = relativeToRoot;
         }
-        data.seenReferences[ref] = std::make_pair(anchoredPath, resolvedPath);
+        data.seenReferences[refId] = std::make_pair(anchoredPath, resolvedPath);
     }
 
     // create a dependency
