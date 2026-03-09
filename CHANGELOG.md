@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.2.0] (Unreleased)
+
+### Features
+- [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
+
+
 ## [7.5.1.0] (Unreleased)
 
 ### Features

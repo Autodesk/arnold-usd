@@ -167,6 +167,14 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
 
 void HdArnoldInstancer::ResampleInstancePrimvars()
 {
+    // Ensure the parent instancers also update their primvars
+    const auto parentId = GetParentId();
+    if (!parentId.IsEmpty()) {
+        auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+        if (parentInstancer)
+            parentInstancer->ResampleInstancePrimvars();
+    }
+
     const auto& id = GetId();
     std::lock_guard<std::mutex> lock(_mutex);
     // Recompute the sampled primvars only if they were previously sampled
@@ -196,22 +204,20 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
 
     // If the sampling interval has changed we need to resample the translate, orientations and scales
-    if (UpdateSamplingInterval(renderParam->GetShutterRange())){
+    if (UpdateSamplingInterval(renderParam->GetShutterRange()))
         ResampleInstancePrimvars();
-    }
-
-    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
-    if (instanceIndices.empty()) {
-        return false;
-    }
-
+    
     HdArnoldSampledMatrixArrayType sampleArray;
-    ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+    int instanceCount = ComputeSampleMatrixArrayRecursive(renderDelegate, sampleArray, prototypeId);
+    if (instanceCount == 0)
+        return false;
 
-    AtArray* matrices = AiArrayAllocate(instanceIndices.size(), sampleArray.count, AI_TYPE_MATRIX);
+    AtArray* matrices = AiArrayAllocate(instanceCount, sampleArray.count, AI_TYPE_MATRIX);
+    std::vector<AtMatrix> matrixVector;
     for (size_t n = 0; n < sampleArray.count; ++n) {
         const auto& instanceMatrices = sampleArray.values[n];
-        std::vector<AtMatrix> matrixVector;
+        matrixVector.clear();
+        matrixVector.reserve(instanceMatrices.size());
         for (const auto& instanceMatrix : instanceMatrices) {
             AtMatrix arnoldMatrix;
             ConvertValue(arnoldMatrix, instanceMatrix);
@@ -230,32 +236,64 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
     AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count - 1]);
+
+    // Build chain from leaf (this) to parent instancer
+    struct InstancerChain {
+        HdArnoldInstancer* instancer = nullptr;
+        VtIntArray instanceIndices;
+        int childInstanceMult = 1;
+    };
+    std::vector<InstancerChain> instancers;
+    SdfPath childId = prototypeId;
+    HdArnoldInstancer* current = this;
+    // For each instancer, we want to know how many child instances there are, 
+    // as it requires to duplicate a value for each of them.
+    int childInstanceMult = 1;
+    // Store all the instancers in a list, to be able
+    while (current) {
+        const SdfPath &currentId = current->GetId();
+        const VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(currentId, childId);
+        if (instanceIndices.empty())
+            break;
+        instancers.push_back(InstancerChain{current, instanceIndices, childInstanceMult});
+        const auto parentId = current->GetParentId();
+        if (parentId.IsEmpty())
+            break;
+        auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+        if (!parentInstancer)
+            break;
+        childId = currentId;
+        current = parentInstancer;
+        childInstanceMult *= instanceIndices.size();        
+    }
+
+    // Add primvars from root to leaf so child overwrites parent for same name. Each level uses
+    // expanded indices so that the primvar index corresponds to the instance index in the full, 
+    // flattened list
+    // Store a multiplier for parent instances as the primvars need to be duplicated
+    int parentInstancesMult = 1;
+    VtIntArray expandedIndices;
+    for (size_t i = instancers.size(); i > 0; --i) {
+        const InstancerChain& entry = instancers[i - 1];
+        if (parentInstancesMult <= 1 && entry.childInstanceMult <= 1) {
+            // Simpler use case, just a single instancer
+            expandedIndices = entry.instanceIndices;
+        } else {
+            expandedIndices.clear();
+            expandedIndices.reserve(instanceCount);
+            // Duplicate the primvar index for each parent instancer and each child instancer
+            for (int p = 0; p < parentInstancesMult; ++p) {
+                for (const auto &idx : entry.instanceIndices) {
+                    for (int c = 0; c < entry.childInstanceMult; ++c)
+                        expandedIndices.push_back(idx);
+                }
+            }
+        }
+        // Ask this instancer to add its primvars to the prototype node as an "instance" user data
+        entry.instancer->AddInstancePrimvarsWithIndices(renderDelegate, prototypeNode, expandedIndices);
+        parentInstancesMult *= entry.instanceIndices.size();
+    }
     return true;
-}
-
-void HdArnoldInstancer::ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
-    const SdfPath& instancerId = GetId();
-    if (!prototypeNode) return;
-
-    // When polymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
-    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
-    if (instanceIndices.empty()) {
-        return;
-    }
-
-    for (auto& primvar : _primvars) {
-        auto& desc = primvar.second;
-        const char* paramName = primvar.first.GetText();
-
-        VtValue instanceValue;
-        if (instanceIndices.empty() || !FlattenIndexedValue(desc.value, instanceIndices, instanceValue))
-             instanceValue = desc.value;
-        
-        DeclareAndAssignParameter(prototypeNode, TfToken{paramName}, 
-            str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(), 
-            desc.role == HdPrimvarRoleTokens->color);
-    }
-
 }
 
 void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
@@ -289,6 +327,26 @@ void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
         applyRayFlags(_tokens->visibilitySubsurface);
         if (assignVisibility)
             AiNodeSetByte(node, str::visibility, rayFlags.Compose());
+    }
+}
+
+void HdArnoldInstancer::AddInstancePrimvarsWithIndices(HdArnoldRenderDelegate* renderDelegate, AtNode* prototypeNode,
+    const VtIntArray& expandedIndices)
+{
+    if (!prototypeNode || expandedIndices.empty())
+        return;
+    std::lock_guard<std::mutex> lock(_mutex);
+    for (auto& primvar : _primvars) {
+        auto& desc = primvar.second;
+        const char* paramName = primvar.first.GetText();
+
+        VtValue instanceValue;
+        if (!FlattenIndexedValue(desc.value, expandedIndices, instanceValue))
+            instanceValue = desc.value;
+
+        DeclareAndAssignParameter(prototypeNode, TfToken{paramName},
+            str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(),
+            desc.role == HdPrimvarRoleTokens->color);
     }
 }
 
@@ -411,6 +469,58 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
     }
 }
 
+int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId)
+{
+    const auto parentId = GetParentId();
+    HdArnoldSampledMatrixArrayType parentSampleArray;
+    int parentInstanceCount = 0;
+    if (!parentId.IsEmpty()) {
+        auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+        if (parentInstancer) {
+            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursive(renderDelegate, parentSampleArray, prototypeId);
+        }
+    }
+    
+    const SdfPath& instancerId = GetId();
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    const int instanceCount = static_cast<int>(instanceIndices.size());
+    if (!instanceIndices.empty()) {
+        ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+    }
+
+    if (parentInstanceCount == 0 || parentSampleArray.count == 0) {
+        // Parent had no time samples; use child result only.
+        return instanceCount;
+    }
+
+    // Use the sample times that have the biggest amount of keys. The time samples
+    // should be regular so we don't need to consider the union of both time steps.
+    auto sampleTimes = sampleArray.times.size() >= parentSampleArray.times.size() ? 
+        sampleArray.times : parentSampleArray.times;
+    const size_t numSamples = sampleTimes.size();
+    if (numSamples == 0) {
+        return 0;
+    }
+    const int totalInstanceCount = parentInstanceCount * instanceCount;
+    HdArnoldSampledMatrixArrayType outArray;
+    outArray.Resize(static_cast<int>(numSamples));
+    outArray.count = static_cast<int>(numSamples);
+    for (size_t s = 0; s < numSamples; ++s) {
+        const float t = sampleTimes[s];
+        outArray.times[s] = t;
+        const VtMatrix4dArray parentMats = parentSampleArray.Resample(t);
+        const VtMatrix4dArray childMats = sampleArray.Resample(t);
+        outArray.values[s].reserve(totalInstanceCount);
+        for (int i = 0; i < parentInstanceCount; ++i) {
+            const GfMatrix4d& parentMatrix = parentMats[i];
+            for (int j = 0; j < instanceCount; ++j) {
+                outArray.values[s].push_back(childMats[j] * parentMatrix);
+            }
+        }
+    }
+    sampleArray = std::move(outArray);
+    return totalInstanceCount;
+}
 
 void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
