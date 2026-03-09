@@ -23,6 +23,7 @@ options
  GI_transmission_depth 8
  declare render_layer constant STRING
  render_layer "defaultRenderLayer"
+ abort_on_license_fail off
 }
 
 gaussian_filter

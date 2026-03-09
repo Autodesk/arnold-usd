@@ -94,6 +94,7 @@ def Scope "Render"
         rel camera = </cameras/camera1>
         rel products = </Render/Products/renderproduct1>
         int2 resolution = (160, 120)
+        custom bool arnold:global:abort_on_license_fail = 0
     }
 }
 

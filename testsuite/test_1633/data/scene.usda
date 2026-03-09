@@ -95,6 +95,7 @@ def Scope "Render"
     def RenderSettings "renderSettings"
     {
         custom float arnold:global:AA_adaptive_threshold = 0.03
+        custom bool arnold:abort_on_license_fail = 0
         custom int arnold:global:AA_samples = 3
         custom int arnold:global:AA_samples_max = 8
         custom int arnold:global:AA_seed
