@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
@@ -342,11 +343,21 @@ inline void CollectOslShaderDependencies(const SdfPrimSpecHandle& prim, Dependen
  */
 inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
 {
+    // skip when no variant sets are defined in the prim
     const auto variantSets = prim->GetVariantSets();
     if (variantSets.empty())
         return;
 
-    const SdfVariantSelectionMap selections = prim->GetVariantSelections();
+    // we need to read variant selections from a USDPrim
+    // the SDF prim contains selections defined within the layer that authors the prim,
+    // while the USD prim contains composed selection across all layers
+    UsdPrim usdPrim = data.stage->GetPrimAtPath(prim->GetPath().StripAllVariantSelections());
+    if (!usdPrim.IsValid())
+    {
+        AiMsgWarning("Could not find USDPrim of %s", prim->GetPath().GetString().c_str());
+        return;
+    }
+
     for (const auto& vsetit : variantSets.items())
     {
         const std::string setName = vsetit.first;
@@ -354,11 +365,10 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
-        // only process the active/selected variant
-        const auto itSel = selections.find(setName);
-        if (itSel == selections.end())
+        UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
+        if (!usdVset)
             continue;
-        const std::string& selectedVariantName = itSel->second;
+        std::string selectedVariantName = usdVset.GetVariantSelection();
 
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
