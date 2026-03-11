@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.2.0] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
+
 ## [7.5.1.0] (Unreleased)
 
 ### Features
