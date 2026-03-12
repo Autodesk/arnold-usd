@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
@@ -157,6 +158,36 @@ struct DependencyData
 
 void TraversePrimSpecs(const SdfPrimSpecHandle& prim, DependencyData& data);
 
+bool GetAttributeCustomDataBool(const SdfLayerHandle& layer, const SdfPath& attrPath, 
+    const TfToken& key, bool defaultValue)
+{
+    if (!layer || !attrPath.IsPropertyPath())
+        return defaultValue;
+
+    SdfSpecHandle spec = layer->GetObjectAtPath(attrPath);
+    SdfAttributeSpecHandle attr = TfDynamic_cast<SdfAttributeSpecHandle>(spec);
+    if (!attr)
+        return defaultValue;
+
+    VtDictionary dict = attr->GetCustomData();
+
+    auto it = dict.find(key);
+    if (it == dict.end())
+        return defaultValue;
+
+    VtValue& v = it->second;
+
+    // defined as bool 
+    if (v.IsHolding<bool>())
+        return v.UncheckedGet<bool>();
+
+    // defined as int
+    if (v.IsHolding<int>())
+        return v.UncheckedGet<int>() != 0;
+
+    return defaultValue;
+}
+
 /**
  * Adds the given dependency to our list.
  */
@@ -182,8 +213,24 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     else
     {
         // resolve the reference to an absolute path
-        std::string relRef = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
-        resolvedPath = data.resolver.Resolve(relRef);
+        std::string refPath = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
+        resolvedPath = data.resolver.Resolve(refPath);
+        // If USD can not resolve the path this could be an Arnold specific path, like UDIM.
+        // If the asset comes from a prim attribute, check if the "arnold_relative_path" metadata 
+        // is defined on an attribute, which means Arnold needs to resolve the relative path.
+        // If not defined, then use the absolute path returned by SdfComputeAssetPathRelativeToLayer.
+        if (resolvedPath.empty() && TfIsRelativePath(ref))
+        {
+            bool remap = true;
+            if (type == USDDependency::Type::Attribute)
+            {
+                bool isArnoldRelativePath = GetAttributeCustomDataBool(data.layer, attribute, TfToken("arnold_relative_path"), false);
+                remap = !isArnoldRelativePath;
+            }
+
+            if (remap)
+                resolvedPath = refPath;
+        }
         anchoredPath = ref;
         // convert a relative reference relative to the main scene
         if (!resolvedPath.empty() && TfIsRelativePath(ref))
@@ -296,11 +343,21 @@ inline void CollectOslShaderDependencies(const SdfPrimSpecHandle& prim, Dependen
  */
 inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
 {
+    // skip when no variant sets are defined in the prim
     const auto variantSets = prim->GetVariantSets();
     if (variantSets.empty())
         return;
 
-    const SdfVariantSelectionMap selections = prim->GetVariantSelections();
+    // we need to read variant selections from a USDPrim
+    // the SDF prim contains selections defined within the layer that authors the prim,
+    // while the USD prim contains composed selection across all layers
+    UsdPrim usdPrim = data.stage->GetPrimAtPath(prim->GetPath().StripAllVariantSelections());
+    if (!usdPrim.IsValid())
+    {
+        AiMsgWarning("Could not find USDPrim of %s", prim->GetPath().GetString().c_str());
+        return;
+    }
+
     for (const auto& vsetit : variantSets.items())
     {
         const std::string setName = vsetit.first;
@@ -308,11 +365,10 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
-        // only process the active/selected variant
-        const auto itSel = selections.find(setName);
-        if (itSel == selections.end())
+        UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
+        if (!usdVset)
             continue;
-        const std::string& selectedVariantName = itSel->second;
+        std::string selectedVariantName = usdVset.GetVariantSelection();
 
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())

@@ -1,15 +1,17 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Future version
+## [7.5.2.0] (Unreleased)
 
-### Features
+### Bug Fixes
 
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
 
 ## [7.5.1.0] (Unreleased)
 
 ### Features
+
 - [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
 - [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
 

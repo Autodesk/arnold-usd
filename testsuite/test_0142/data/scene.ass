@@ -6,6 +6,7 @@ options
  yres 120
  pixel_aspect_ratio 1.33333325
  texture_per_file_stats on
+ abort_on_license_fail off
  texture_automip off
  camera "/persp/perspShape"
  frame 1

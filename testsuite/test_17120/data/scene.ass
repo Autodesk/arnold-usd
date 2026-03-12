@@ -23,6 +23,7 @@ options
  GI_specular_depth 1
  GI_transmission_depth 8
  GI_volume_samples 1
+ abort_on_license_fail off
 }
 
 closest_filter
