@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.2.0] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
+
 ## [7.5.1.0] (Unreleased)
 
 ### Features
