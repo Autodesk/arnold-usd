@@ -18,6 +18,7 @@ options
  texture_automip off
  camera "/persp/perspShape"
  frame 1
+ abort_on_license_fail off
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
