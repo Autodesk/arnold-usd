@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Future version
+
+### Features
+
+- [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
+
 ## [7.5.1.0] (Unreleased)
 
 ### Features

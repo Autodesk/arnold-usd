@@ -454,6 +454,14 @@ void HydraArnoldReader::SetMask(int m) {GetArnoldRenderDelegate()->SetMask(m); }
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
+void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
+    if (_sceneGlobalsSceneIndex) {
+        SdfPath renderPassPrimPath(renderPass);
+        if (!renderPassPrimPath.IsEmpty()) {
+            _sceneGlobalsSceneIndex->SetActiveRenderPassPrimPath(renderPassPrimPath);
+        }
+    }
+}
 
 void HydraArnoldReader::Update()
 {
@@ -504,6 +512,10 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
             HdsiPrimTypePruningSceneIndexTokens->bindingToken,
             HdRetainedTypedSampledDataSource<TfToken>::New(
                 HdMaterialBindingsSchema::GetSchemaToken()));
+    // Add a SceneGlobals scene index that we can use to set the render pass, render settings
+    // shutter, frame, etc.
+    sceneIndex = _sceneGlobalsSceneIndex = 
+        HdsiSceneGlobalsSceneIndex::New(sceneIndex);
 
     // Prune scene materials prior to flattening inherited
     // materials bindings and resolving material bindings
