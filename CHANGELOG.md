@@ -3,6 +3,9 @@
 
 ## [7.5.2.0] (Unreleased)
 
+### Features
+- [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
+
 ### Bug Fixes
 
 - [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD

@@ -139,11 +139,6 @@ static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDel
     if (!renderDelegate->SupportShapeInstancing())
         return true;
 
-    // If we have a nested instancer configuration, we'll use an arnold instancer node.
-    HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
-    if (parentInstancer)
-        return true;
-
     // Procedural nodes do not currently support shapes inner instancing
     return AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE_PROCEDURAL;
 }
@@ -233,7 +228,6 @@ void HdArnoldShape::_SyncInstances(
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
         if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
-            instancer->ComputeShapeInstancesPrimvars(_renderDelegate, id, _shape);
             instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
         } else {
             // hide the source mesh if it doesn't have any instance #2557
