@@ -221,7 +221,7 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
  **/
 void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 {
-    if (node == nullptr) {
+    if (node == nullptr || AiNodeIsDisabled(node)) {
         return;
     }
 
