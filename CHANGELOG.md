@@ -7,9 +7,9 @@
 
 - [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
 - [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
 
-
-## [7.5.1.0] (Unreleased)
+## [7.5.1.0] 2026-03-25
 
 ### Features
 - [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
@@ -24,7 +24,7 @@
 - [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
 - [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
 
-## [7.5.0.0] (Unreleased)
+## [7.5.0.0] 2026-03-25
 
 ### Features
 
