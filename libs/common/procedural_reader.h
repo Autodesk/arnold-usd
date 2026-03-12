@@ -19,6 +19,7 @@ public:
     virtual void SetPurpose(const std::string &p) = 0;
     virtual void SetMask(int m) = 0;
     virtual void SetRenderSettings(const std::string &renderSettings) = 0;
+    virtual void SetRenderPass(const std::string &renderSettings) = 0;
     virtual void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) = 0;
     virtual void ReadStage(UsdStageRefPtr stage,
                    const std::string &path) = 0;

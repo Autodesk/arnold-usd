@@ -170,23 +170,18 @@ HdSceneIndexPrim HdArnoldRenderPassSceneIndex::GetPrim(const SdfPath &primPath) 
         primvarVals.push_back(cameraInvisDs);
     }
 
-    // TODO to Arnold matte
-    // Matte -> ri:Matte
-    //
-    // If the matte pattern matches this prim, set ri:Matte=1.
+    // Matte -> arnold:matte
+    // If the matte pattern matches this prim, set arnold:matte=1.
     // Matte only applies to geometry types.
-    // We do not bother to check if the upstream prim already
-    // has matte set since that is essentially never the case.
-    //
-    // if (_activeRenderPass.DoesOverrideMatte(primPath, prim)) {
-    //     static const HdContainerDataSourceHandle matteDs =
-    //         HdPrimvarSchema::Builder()
-    //             .SetPrimvarValue(HdRetainedTypedSampledDataSource<int>::New(1))
-    //             .SetInterpolation(HdPrimvarSchema::BuildInterpolationDataSource(HdPrimvarSchemaTokens->constant))
-    //             .Build();
-    //     primvarNames.push_back(_tokens->riAttributesRiMatte);
-    //     primvarVals.push_back(matteDs);
-    // }
+    if (_activeRenderPass.DoesOverrideMatte(primPath, prim)) {
+        static const HdContainerDataSourceHandle matteDs =
+            HdPrimvarSchema::Builder()
+                .SetPrimvarValue(HdRetainedTypedSampledDataSource<bool>::New(true))
+                .SetInterpolation(HdPrimvarSchema::BuildInterpolationDataSource(HdPrimvarSchemaTokens->constant))
+                .Build();
+        primvarNames.push_back(str::t_arnold_matte);
+        primvarVals.push_back(matteDs);
+    }
 
     // Apply any accumulated primvar overrides.
     if (!primvarNames.empty()) {
