@@ -16,7 +16,7 @@
 // dependent on an hydra object. It also allows to share arrays between hydra objects. However it needs more testing to
 // make sure there is no degradation of performance due to contention or high load in the hash map.
 // The following define allows to switch between the two methods for testing
-#define SHARED_ARRAYS_USE_GLOBAL_MAP 0
+#define SHARED_ARRAYS_USE_GLOBAL_MAP 1
 
 PXR_NAMESPACE_OPEN_SCOPE
 
