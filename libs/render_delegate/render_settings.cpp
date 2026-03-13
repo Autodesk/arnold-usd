@@ -47,6 +47,7 @@
 #include "camera.h"
 
 #include "render_delegate.h"
+#include "node_graph.h"
 #include "render_param.h"
 #include "utils.h"
 
@@ -98,6 +99,11 @@ std::string _GetArnoldOptionName(std::string const& propertyName)
     // Strip "arnold:" prefix if present
     if (TfStringStartsWith(propertyName, "arnold:")) {
         return propertyName.substr(7); // strlen("arnold:")
+    }
+    if (TfStringStartsWith(propertyName, "primvars:")) {
+        // TODO : we should do AiNodeDeclare here so that primvars are authored
+        // as user data in the options
+        return "";
     }
 
     TF_WARN("Could not translate settings property %s to Arnold option name.", propertyName.c_str());
@@ -167,19 +173,50 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
     for (auto const& pair : arnoldOptions) {
         const std::string& name = pair.first;
         const VtValue& value = pair.second;
+        AtString nameStr(name.c_str());
+        if (nameStr == str::atmosphere || nameStr == str::background || nameStr == str::shader_override || nameStr == str::_operator) {
+            // Get the node graph referenced by this attribute and assign its terminal node
+            // to the arnold options
+            SdfPath nodeGraphPath(VtValueGetString(value));
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath);
+            AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, TfToken(name)) : nullptr;
+            AiNodeSetPtr(options, nameStr, target);
+        } else if (nameStr == str::aov_shaders) {
+            // Get the node graph referenced by this attribute and set
+            // list of aov shaders in the options attribute            
+            std::vector<AtNode*> aovShaders;
+            std::string aovShadersStr = VtValueGetString(value);
+            for (const auto &shader: TfStringTokenize(aovShadersStr)) {
+                SdfPath path(shader);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path);
+                if (nodeGraph) {                
+                    for (int i = 1; ; ++i ) {
+                        std::stringstream ss;
+                        ss << "aov_shaders:i"<<i ;
+                        AtNode *t = nodeGraph->GetOrCreateTerminal(sceneDelegate, TfToken(ss.str()));
+                        if (!t)
+                            break;
+                        aovShaders.push_back(t);
+                    }                
+                }
+            }
+            if (!aovShaders.empty())
+                AiNodeSetArray(options, str::aov_shaders, AiArrayConvert(aovShaders.size(), 1, AI_TYPE_NODE, aovShaders.data()));
 
-        // Convert VtValue to Arnold parameter
-        const AtParamEntry* paramEntry =
-            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), AtString(name.c_str()));
+        } else {
 
-        if (!paramEntry) {
-            TF_WARN("Unknown Arnold option: %s", name.c_str());
-            continue;
+            // Convert VtValue to Arnold parameter
+            const AtParamEntry* paramEntry =
+                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), nameStr);
+
+            if (!paramEntry) {
+                // Declare user data
+                TF_WARN("Unknown Arnold option: %s", name.c_str());
+                continue;
+            }
+
+            HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
         }
-        // NOTE: the handling of the atmosphere, background, shader_override, aov_shaders and operator are all managed
-        // in the HdArnoldSetParameter. The connections are resolved later on using an alias system
-        // Except when atmosphere and background are connected to "sub outputs" outputs:environment outputs:background. Still to fix
-        HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
     }
 
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu Arnold options from render settings\n", arnoldOptions.size());
@@ -322,7 +359,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
     HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
     if (terminalSi) {
         HdSceneIndexPrim prim = terminalSi->GetPrim(GetId());
-        if (prim) {
+        if (prim.dataSource) {
             HdArnoldRenderDelegate* renderDelegate =
                 static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
             UsdImagingUsdRenderSettingsSchema usdRss =
@@ -529,6 +566,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
         // Set driver parameters from product's arnold-namespaced settings
         const std::string driverPrefix = "arnold:" + driverType + ":";
+        AtNode *driverImager = nullptr;
         
         for (const auto& pair : productSettings) {
             const std::string& settingName = pair.first;
@@ -559,6 +597,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                     .Msg("Unknown driver parameter: %s for driver %s\n", paramName.c_str(), driverNodeName);
                 continue;
             }
+            if (paramName == "input") {
+                SdfPath imagerPath(VtValueGetString(pair.second));
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath);
+                driverImager = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
+                AiNodeSetPtr(driver, str::input, driverImager);
+                continue;
+            }
 
             // Set the parameter value using HdArnoldSetParameter
             HdArnoldSetParameter(driver, paramEntry, pair.second, renderDelegate);
@@ -573,17 +618,16 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         // Set imager on the driver if arnold:global:imager is specified in the render settings
         const VtDictionary& namespacedSettings = GetNamespacedSettings();
         auto imagerIt = namespacedSettings.find("arnold:global:imager");
-        if (imagerIt != namespacedSettings.end()) {
+        if (driverImager == nullptr && imagerIt != namespacedSettings.end()) {
             const VtValue& imagerValue = imagerIt->second;
-            const AtParamEntry* paramEntry =
-                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::input);
-            
-            if (paramEntry) {
-                HdArnoldSetParameter(driver, paramEntry, imagerValue, renderDelegate);
+            SdfPath imagerPath(VtValueGetString(imagerValue));
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath);
+            AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
+            AiNodeSetPtr(driver, str::input, target);
                 
-                TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
-                    .Msg("Set imager on driver %s\n", driverNodeName);
-            }
+            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+                .Msg("Set imager on driver %s\n", driverNodeName);
+            
         }
         // TODO handle resolution / pixelAspectRatio / apertureSize / dataWindowNDC 
         // Track AOV names to detect duplicates
@@ -735,8 +779,12 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             // Optional per-AOV camera
             // Initialize with product.cameraPath if available
             std::string cameraName;
-            if (!product.cameraPath.IsEmpty()) {
+            if (!product.cameraPath.IsEmpty() && product.cameraPath != _hydraCameraPath) {
                 cameraName = product.cameraPath.GetString();
+                // Check the arnold camera name in case its name is different from the prim name
+                AtNode *cam = renderDelegate->LookupNode(cameraName.c_str());
+                if (cam)
+                    cameraName = std::string(AiNodeGetName(cam));
             }
             
             // Override with arnold:camera if specified in render var settings
