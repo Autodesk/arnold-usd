@@ -69,7 +69,7 @@ public:
     void SetPurpose(const std::string &p) override { _purpose = TfToken(p.c_str()); }
     void SetId(unsigned int id) override { _id = id; }
     void SetRenderSettings(const std::string &renderSettings) override {_renderSettings = renderSettings;}
-    void SetRenderPass(const std::string &renderPass) override {/* Not implemented */}  
+    void SetRenderPass(const std::string &) override {/* Not implemented */}  
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const override { return _nodes; }
     float GetFrame() const { return _time.frame; }
