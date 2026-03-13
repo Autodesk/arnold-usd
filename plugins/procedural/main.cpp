@@ -489,7 +489,7 @@ scene_load
         if (AiParamValueMapGetStr(params, str::render_settings, &renderSettings) && renderSettings.length() > 0)
             reader->SetRenderSettings(std::string(renderSettings.c_str()));
         // We use the "render_pass" argument to set the path to the render pass to use for rendering
-        // With kick you can use -sceneload_arg to pass the argument, note that is works only with the scene index enabled (hydra2)
+        // With kick you can use -sceneload_arg to pass the argument, note that it works only with the scene index enabled (hydra2)
         //
         // kick -sceneload_arg render_pass /Render/Passes/renderpass2 myscene.usda
         //
