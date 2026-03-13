@@ -12,16 +12,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// Hash function for std::pair<std::string, TfToken>
-struct PairStringTfTokenHash {
-    std::size_t operator()(const std::pair<std::string, TfToken>& p) const {
-        std::size_t h1 = std::hash<std::string>{}(p.first);
-        std::size_t h2 = p.second.Hash();
-        // Combine hashes using boost's hash_combine algorithm
-        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
-    }
-};
-
 // This is a base class used to call Arnold API functions within a particular context.
 // For example we might want to wrap the AiNode call and add mutex, or store the nodes dependending on the context.
 class ArnoldAPIAdapter {

@@ -523,11 +523,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     _ClearRenderBuffers();
 }
 
-void _SetAovBindingsAsConverged(const HdRenderPassAovBindingVector& aovBindings, const HdRenderIndex* const renderIndex)
-{
-
-}
-
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
