@@ -197,7 +197,7 @@ def Scope "Render"
     def RenderSettings "rendersettings1"
     {
         custom int arnold:global:AA_samples = 6
-        custom int arnold:global:AA_seed
+        custom int arnold:global:AA_seed = 5
         int arnold:global:AA_seed.timeSamples = {
             5: 5,
         }

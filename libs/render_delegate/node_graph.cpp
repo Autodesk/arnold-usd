@@ -493,8 +493,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
         AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
-        if (node.path == terminalPath)
+        if (node.path == terminalPath) {
             terminalNode = arnoldNode;
+            
+        }
+
     }
     // Return the root shader for this shading network
     return terminalNode;

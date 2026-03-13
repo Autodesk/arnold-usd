@@ -10,7 +10,7 @@
 def DistantLight "Light"
 {
     float inputs:intensity = 1
-    bool inputs:normalize=true
+    bool inputs:normalize = 1
 }
 
 def "Cameras"
@@ -135,7 +135,7 @@ def Scope "Render"
     def RenderSettings "rendersettings3"
     {
         custom int arnold:global:AA_samples = 1
-        custom int arnold:global:AA_seed
+        custom int arnold:global:AA_seed = 224
         int arnold:global:AA_seed.timeSamples = {
             224: 224,
         }

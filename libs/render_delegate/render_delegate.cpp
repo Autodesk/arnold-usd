@@ -68,6 +68,10 @@
 #include "volume.h"
 #include <cctype>
 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#include "render_settings.h"
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -268,6 +272,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+
 #if PXR_VERSION >= 2208
     if (!ownsUniverse) {
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
@@ -275,7 +280,11 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+#else
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+#endif
         return r;
     }
 }
@@ -1098,6 +1107,15 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
+// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
+bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    return true; 
+#else
+    return false;
+#endif
+}
+
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1321,12 +1339,19 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
-    // Silently ignore render settings primitives, at the moment they're treated
-    // through a different code path
+
 #if PXR_VERSION >= 2208
+    // Only support render settings when we don't own the universe (procedural context).
+    // When we own the universe (batch context), settings come through SetRenderSettings.
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
+        return new HdArnoldRenderSettings(bprimId);
+    }
+#else
     if (typeId == HdPrimTypeTokens->renderSettings)
         return nullptr;
-#endif
+#endif // ENABLE_HYDRA2_RENDERSETTINGS
+#endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
