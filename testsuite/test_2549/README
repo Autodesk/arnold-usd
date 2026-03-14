@@ -1,0 +1,9 @@
+Test render pass with matte
+
+It works only in hydra2 mode with the scene index.
+
+Fixes #2549
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-sceneload_arg render_pass /Render/Passes/renderpass2'}
