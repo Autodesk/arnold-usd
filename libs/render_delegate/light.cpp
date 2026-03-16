@@ -96,7 +96,12 @@ std::vector<ParamDesc> genericParams = {
     {"shadow_color", UsdLuxTokens->inputsShadowColor},
 };
 
-std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> pointParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
 
 std::vector<ParamDesc> spotParams = {
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
@@ -109,9 +114,31 @@ std::vector<ParamDesc> photometricParams = {
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
-std::vector<ParamDesc> diskParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> diskParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
 
-std::vector<ParamDesc> cylinderParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> quadParams = {
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
+
+std::vector<ParamDesc> cylinderParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
+
+std::vector<ParamDesc> meshParams = {
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint}};
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
@@ -146,7 +173,7 @@ void readUserData(
         }
     }
 }
-AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
+AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id, HdArnoldRenderDelegate* renderDelegate)
 {
     auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
         auto val = delegate->GetLightParamValue(id, paramName);
@@ -188,7 +215,12 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
     if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
-        return str::spot_light;
+        // If usdlux_version is enabled use a point light
+        AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
+        if (AiNodeGetByte(options, str::usdlux_version) != 0) 
+            return str::point_light;
+        else 
+            return str::spot_light;
     }
     // Finally, we default to a point light
     return str::point_light;
@@ -342,6 +374,7 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
             4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
             AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
 
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, quadParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
@@ -369,6 +402,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         AiNodeSetPtr(light, str::mesh, (void*)mesh);
     }
 #endif
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, meshParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
@@ -518,7 +552,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
         if (_light == nullptr || lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
-            const auto newLightType = getLightType(sceneDelegate, id);
+            const auto newLightType = getLightType(sceneDelegate, id, _delegate);
             if (newLightType != lightType) {
                 if (_light) {
                     AiNodeSetStr(_light, str::name, AtString());

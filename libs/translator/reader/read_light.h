@@ -40,3 +40,4 @@ REGISTER_PRIM_READER(UsdArnoldReadCylinderLight, AI_NODE_LIGHT);
 
 void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time);
 void ReadLightNormalize(const UsdPrim& prim, AtNode *node, const TimeSettings &time);
+void ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettings& time, bool checkShaping = true);
