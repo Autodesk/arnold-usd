@@ -7,6 +7,7 @@
 
 - [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
 - [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
 - [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
 
 ## [7.5.1.0] 2026-03-25
