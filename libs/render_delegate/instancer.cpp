@@ -477,7 +477,7 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
     if (!parentId.IsEmpty()) {
         auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
         if (parentInstancer) {
-            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursive(renderDelegate, parentSampleArray, prototypeId);
+            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursive(renderDelegate, parentSampleArray, GetId());
         }
     }
     
