@@ -10,6 +10,7 @@
 ### Bug Fixes
 
 - [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
+- [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
 
 ## [7.5.1.0] (Unreleased)
 
