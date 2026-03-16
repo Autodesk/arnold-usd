@@ -9,6 +9,7 @@
 
 ### Bug Fixes
 
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
 - [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
 

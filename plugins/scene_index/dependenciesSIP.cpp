@@ -12,6 +12,7 @@
 #include <pxr/imaging/hd/lazyContainerDataSource.h>
 #include <pxr/imaging/hd/lightSchema.h>
 #include <pxr/imaging/hd/mapContainerDataSource.h>
+#include <pxr/imaging/hd/materialBindingsSchema.h>
 #include <pxr/imaging/hd/materialSchema.h>
 #include <pxr/imaging/hd/overlayContainerDataSource.h>
 #include <pxr/imaging/hd/perfLog.h>
@@ -25,7 +26,17 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_PRIVATE_TOKENS(
-    _tokens, ((sceneIndexPluginName, "HdArnoldDependencySceneIndexPlugin"))(__dependenciesToFilters));
+    _tokens,
+    ((sceneIndexPluginName, "HdArnoldDependencySceneIndexPlugin"))
+    (__dependenciesToFilters)
+    // Material bindings: when a material is added/removed, geometry with that
+    // binding must be invalidated (see HdDependencyForwardingSceneIndex).
+    (arnoldAddedToMaterialBindings)
+    (arnoldRemovedToMaterialBindings)
+    (arnoldMaterialBindingsToAddedDependency)
+    (arnoldMaterialBindingsToRemovedDependency)
+    ((added, "__added__"))
+    ((removed, "__removed__")));
 
 TF_REGISTRY_FUNCTION(TfType) { HdSceneIndexPluginRegistry::Define<HdArnoldDependencySceneIndexPlugin>(); }
 
@@ -133,6 +144,102 @@ HdContainerDataSourceHandle _ComputeLightFilterDependencies(const HdContainerDat
     return nullptr;
 }
 
+// When a material is added or removed, prims that have a material binding to
+// that material need to be invalidated. We declare dependencies on nonexistent
+// locators __added__ and __removed__ so we only get dirty signals when the
+// material prim is added (then we dirty geometry's materialBindings) or when
+// the material is removed (HdDependencyForwardingSceneIndex dirties dependants).
+HdContainerDataSourceHandle _ComputeMaterialBindingsDependencies(
+    const HdContainerDataSourceHandle &inputDs)
+{
+    const HdMaterialBindingsSchema materialBindings =
+        HdMaterialBindingsSchema::GetFromParent(inputDs);
+    const HdMaterialBindingSchema binding =
+        materialBindings.GetMaterialBinding();
+    const HdContainerDataSourceHandle bindingContainer = binding.GetContainer();
+    if (!bindingContainer) {
+        return nullptr;
+    }
+    HdDataSourceBaseHandle pathDs = bindingContainer->Get(HdMaterialBindingSchemaTokens->path);
+    if (!pathDs) {
+        return nullptr;
+    }
+    HdSampledDataSourceHandle pathSampled = HdSampledDataSource::Cast(pathDs);
+    if (!pathSampled) {
+        return nullptr;
+    }
+    const VtValue pathVal = pathSampled->GetValue(0.0f);
+    if (!pathVal.IsHolding<SdfPath>()) {
+        return nullptr;
+    }
+    const SdfPath &bindingPath = pathVal.UncheckedGet<SdfPath>();
+    if (bindingPath.IsEmpty()) {
+        return nullptr;
+    }
+
+    static const HdLocatorDataSourceHandle materialBindingsLocDs =
+        HdRetainedTypedSampledDataSource<HdDataSourceLocator>::New(
+            HdMaterialBindingsSchema::GetDefaultLocator());
+    static const HdLocatorDataSourceHandle addedLocDs =
+        HdRetainedTypedSampledDataSource<HdDataSourceLocator>::New(
+            HdDataSourceLocator(_tokens->added));
+    static const HdLocatorDataSourceHandle removedLocDs =
+        HdRetainedTypedSampledDataSource<HdDataSourceLocator>::New(
+            HdDataSourceLocator(_tokens->removed));
+    static const HdLocatorDataSourceHandle atmbDependencyLocDs =
+        HdRetainedTypedSampledDataSource<HdDataSourceLocator>::New(
+            HdDependenciesSchema::GetDefaultLocator().Append(
+                _tokens->arnoldAddedToMaterialBindings));
+    static const HdLocatorDataSourceHandle rtmbDependencyLocDs =
+        HdRetainedTypedSampledDataSource<HdDataSourceLocator>::New(
+            HdDependenciesSchema::GetDefaultLocator().Append(
+                _tokens->arnoldRemovedToMaterialBindings));
+
+    TfToken names[4];
+    HdDataSourceBaseHandle dataSources[4];
+    size_t count = 0;
+
+    // If the bound material's __added__ is dirtied (e.g. material added
+    // after geometry), dirty this prim's material bindings.
+    names[count] = _tokens->arnoldAddedToMaterialBindings;
+    dataSources[count++] =
+        HdDependencySchema::Builder()
+            .SetDependedOnPrimPath(
+                HdRetainedTypedSampledDataSource<SdfPath>::New(bindingPath))
+            .SetDependedOnDataSourceLocator(addedLocDs)
+            .SetAffectedDataSourceLocator(materialBindingsLocDs)
+            .Build();
+
+    // If the bound material's __removed__ is dirtied (material removed or
+    // made typeless), dirty this prim's material bindings.
+    names[count] = _tokens->arnoldRemovedToMaterialBindings;
+    dataSources[count++] =
+        HdDependencySchema::Builder()
+            .SetDependedOnPrimPath(
+                HdRetainedTypedSampledDataSource<SdfPath>::New(bindingPath))
+            .SetDependedOnDataSourceLocator(removedLocDs)
+            .SetAffectedDataSourceLocator(materialBindingsLocDs)
+            .Build();
+
+    // When material bindings change, the above dependencies may need to be
+    // reevaluated.
+    names[count] = _tokens->arnoldMaterialBindingsToAddedDependency;
+    dataSources[count++] =
+        HdDependencySchema::Builder()
+            .SetDependedOnDataSourceLocator(materialBindingsLocDs)
+            .SetAffectedDataSourceLocator(atmbDependencyLocDs)
+            .Build();
+    names[count] = _tokens->arnoldMaterialBindingsToRemovedDependency;
+    dataSources[count++] =
+        HdDependencySchema::Builder()
+            .SetDependedOnDataSourceLocator(materialBindingsLocDs)
+            .SetAffectedDataSourceLocator(rtmbDependencyLocDs)
+            .Build();
+
+    return HdRetainedContainerDataSource::New(
+        count, names, dataSources);
+}
+
 TF_DECLARE_REF_PTRS(_DependenciesSceneIndex);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -153,13 +260,34 @@ public:
     HdSceneIndexPrim GetPrim(const SdfPath &primPath) const override
     {
         const HdSceneIndexPrim prim = _GetInputSceneIndex()->GetPrim(primPath);
-        if (HdPrimTypeIsLight(prim.primType)) {
+        const bool hasLightDeps = HdPrimTypeIsLight(prim.primType);
+        const bool hasMaterialBindings =
+            static_cast<bool>(HdMaterialBindingsSchema::GetFromParent(prim.dataSource));
+
+        if (hasLightDeps || hasMaterialBindings) {
+            HdContainerDataSourceHandle depOverlay =
+                HdLazyContainerDataSource::New(
+                    [prim, hasLightDeps, hasMaterialBindings]()
+                    -> HdContainerDataSourceHandle {
+                        HdContainerDataSourceHandle light =
+                            hasLightDeps ? _ComputeLightFilterDependencies(prim.dataSource) : nullptr;
+                        HdContainerDataSourceHandle mat =
+                            _ComputeMaterialBindingsDependencies(prim.dataSource);
+                        if (!mat) {
+                            return light;
+                        }
+                        if (!light) {
+                            return mat;
+                        }
+                        return HdContainerDataSourceHandle(
+                            HdOverlayContainerDataSource::New(light, mat));
+                    });
             return {
                 prim.primType,
                 HdContainerDataSourceEditor(prim.dataSource)
                     .Overlay(
                         HdDependenciesSchema::GetDefaultLocator(),
-                        HdLazyContainerDataSource::New(std::bind(_ComputeLightFilterDependencies, prim.dataSource)))
+                        depOverlay)
                     .Finish()};
         }
         return prim;
@@ -183,8 +311,23 @@ protected:
             return;
         }
 
-        // Check if prims added are light and have dependencies, keep the dependencies
         _SendPrimsAdded(entries);
+
+        // So that HdDependencyForwardingSceneIndex propagates correctly when
+        // materials are added/removed: dirty synthetic __removed__ on prims
+        // that become typeless, and __added__ on material prims so geometry
+        // that was added earlier can refresh its material binding.
+        HdSceneIndexObserver::DirtiedPrimEntries dirtied;
+        for (const auto &entry : entries) {
+            if (entry.primType.IsEmpty()) {
+                dirtied.emplace_back(entry.primPath, HdDataSourceLocator(_tokens->removed));
+            } else if (entry.primType == HdPrimTypeTokens->material) {
+                dirtied.emplace_back(entry.primPath, HdDataSourceLocator(_tokens->added));
+            }
+        }
+        if (!dirtied.empty()) {
+            _SendPrimsDirtied(dirtied);
+        }
     }
 
     void _PrimsRemoved(const HdSceneIndexBase &sender, const HdSceneIndexObserver::RemovedPrimEntries &entries) override
