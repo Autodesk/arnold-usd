@@ -179,14 +179,14 @@ def Scope "Render"
                 </Render/Products/Vars/direct>,
                 </Render/Products/Vars/specular>,
             ]
-            token productName = "C:/arnold/htoa/testsuite/test_0315/data/testrender.tif"
+            token productName = "testrender.tif"
             token productType = "raster"
         }
     }
 
     def RenderSettings "rendersettings2"
     {
-        custom int arnold:global:AA_seed
+        custom int arnold:global:AA_seed = 26
         int arnold:global:AA_seed.timeSamples = {
             26: 26,
         }
