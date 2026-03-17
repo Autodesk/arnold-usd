@@ -348,27 +348,12 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
     if (variantSets.empty())
         return;
 
-    // we need to read variant selections from a USDPrim
-    // the SDF prim contains selections defined within the layer that authors the prim,
-    // while the USD prim contains composed selection across all layers
-    UsdPrim usdPrim = data.stage->GetPrimAtPath(prim->GetPath().StripAllVariantSelections());
-    if (!usdPrim.IsValid())
-    {
-        AiMsgWarning("Could not find USDPrim of %s", prim->GetPath().GetString().c_str());
-        return;
-    }
-
     for (const auto& vsetit : variantSets.items())
     {
         const std::string setName = vsetit.first;
         const SdfVariantSetSpecHandle& vset = vsetit.second;
         if (!vset)
             continue;
-
-        UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
-        if (!usdVset)
-            continue;
-        std::string selectedVariantName = usdVset.GetVariantSelection();
 
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
@@ -377,8 +362,6 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
                 continue;
 
             const std::string variantName = variant->GetName();
-            if (variantName != selectedVariantName)
-                continue;
 
             // get the root prim spec for the variant
             const SdfPrimSpecHandle vPrim = variant->GetPrimSpec();
