@@ -1,0 +1,178 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Sphere "sphere2"
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    double radius = 1
+    matrix4d xformOp:transform = ( (0.9416856640808597, 0.18276664552007746, -0.28253223417855966, 0), (-0.1847689846204967, 0.9825828678885212, 0.019782063953989536, 0), (0.28122683440045465, 0.03357470800033019, 0.9590538079773167, 0), (1.312116856001186, -0.06923751582065685, 1.9091188743347765, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Sphere "sphere1"
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    double radius = 1
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.13682451844215393, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Xform "lights"
+{
+    def SphereLight "light1" (
+        prepend apiSchemas = ["HoudiniViewportLightAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 houdini:clippingRange = (0.001, 10000)
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 2
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        rel light:filters = None
+        bool treatAsPoint = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.8511126935482025, 1.5181875824928284, 3.3624656200408936, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def SphereLight "light2" (
+        prepend apiSchemas = ["HoudiniViewportLightAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 houdini:clippingRange = (0.001, 10000)
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 2
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        rel light:filters = None
+        bool treatAsPoint = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.10289344191551208, -0.8335426449775696, 3.3624656200408936, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI", "HoudiniCameraPlateAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 8.634279
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9758476647123758, 0, -0.21845213497561072, 0), (0, 1, 0, 0), (0.21845213497561072, 0, 0.9758476647123758, 0), (2.193348701857996, 0, 7.208519330964168, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct"
+        {
+            custom string arnold:driver = "driver_tiff"
+            rel orderedVars = </Render/Products/Vars/RGBA>
+            token productName = "render.tif"
+            token productType = "raster"
+            int2 resolution = (1920, 1080)
+        }
+    }
+
+    def RenderSettings "rendersettings"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed = 1 
+        custom string arnold:global:imager = "/materials/default_arnold_imager"
+        rel camera = </cameras/camera1>
+        bool disableDepthOfField = 0
+        token[] includedPurposes = ["default"]
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        rel products = </Render/Products/renderproduct>
+        int2 resolution = (1920, 1080)
+    }
+
+    def Scope "Passes"
+    {
+        def RenderPass "renderpass2"
+        {
+            rel collection:cameraVisibility:excludes = None
+            uniform token collection:cameraVisibility:expansionRule = "expandPrims"
+            rel collection:cameraVisibility:includes = None
+            rel collection:matte:excludes = None
+            uniform token collection:matte:expansionRule = "explicitOnly"
+            rel collection:matte:includes = </sphere2>
+            rel collection:prune:excludes = None
+            uniform token collection:prune:expansionRule = "explicitOnly"
+            rel collection:prune:includes = None
+            rel collection:renderVisibility:excludes = None
+            uniform token collection:renderVisibility:expansionRule = "expandPrims"
+            rel collection:renderVisibility:includes = None
+        }
+    }
+}
+
+def "materials"
+{
+    def ArnoldNodeGraph "default_arnold_imager"
+    {
+        custom int _delegate_update
+        token outputs:input.connect = </materials/default_arnold_imager/oidn_denoiser.outputs:shader>
+
+        def Shader "oidn_denoiser"
+        {
+            uniform token info:id = "arnold:imager_denoiser_oidn"
+            string inputs:albedo = "denoise_albedo_noisy"
+            string inputs:input
+            string inputs:layer_selection = "RGBA"
+            string inputs:output_suffix = ""
+            token inputs:render_device = "auto"
+            token outputs:shader
+        }
+    }
+}
+
