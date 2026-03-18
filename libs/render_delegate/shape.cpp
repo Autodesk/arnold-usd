@@ -41,11 +41,9 @@ HdArnoldShape::HdArnoldShape(
 HdArnoldShape::~HdArnoldShape()
 {
     if (_shape) {
-        _renderDelegate->UntrackRenderTag(_shape);
         _renderDelegate->DestroyArnoldNode(_shape);
     }
     for (auto &instancer : _instancers) {
-        _renderDelegate->UntrackRenderTag(instancer);
         _renderDelegate->DestroyArnoldNode(instancer);
     }
 }
@@ -53,7 +51,6 @@ HdArnoldShape::~HdArnoldShape()
 void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id) 
 {
     if (_shape != nullptr && !AiNodeIs(_shape, shapeType)) {
-        _renderDelegate->UntrackRenderTag(_shape);
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }

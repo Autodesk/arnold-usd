@@ -492,6 +492,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
+    // use the "render" tag by default
+    _renderTags.push_back(UsdGeomTokens->render);
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     bool isArnoldActive = 
@@ -1834,30 +1836,39 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
+    if (node == nullptr)
+        return;
+
     AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
-    _renderTagTrackQueue.push({node, tag});
+    // If a specific render tag (i.e. node default nor geometry) is set on this 
+    // primitive, we create a user data to track it later on
+    if (tag != str::t__default && tag != str::t_geometry) {
+        if (!AiNodeLookUpUserParameter(node, str::usd_purpose)) 
+            AiNodeDeclare(node, str::usd_purpose, str::constantString);
+        AiNodeSetStr(node, str::usd_purpose, AtString(tag.GetText()));
+    }
 }
 
-void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
-
-void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
+bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
-    RenderTagTrackQueueElem renderTagRegister;
-    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
-        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
-    }
-    AtNode* node;
-    while (_renderTagUntrackQueue.try_pop(node)) {
-        _renderTagMap.erase(node);
-    }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        _renderParam->Interrupt();
+    // In this function we store the provided render tags, and we want to return
+    // whether they have changed since the previous iteration
+    if (renderTags == _renderTags)
+        return false;
 
-        for (auto& elem : _renderTagMap) {
-            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+    // if the amount of elements has not changed, we also want to check if we're receiving 
+    // the render tags in a different order
+    bool renderTagsChanged = renderTags.size() != _renderTags.size();
+    if (!renderTagsChanged) {
+        for (auto t : renderTags) {
+            if (std::find(_renderTags.begin(), _renderTags.end(), t) == _renderTags.end()) {
+                renderTagsChanged = true;
+                break;
+            }
         }
     }
+    _renderTags = renderTags;
+    return renderTagsChanged;
 }
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
