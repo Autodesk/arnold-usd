@@ -32,10 +32,14 @@
 #include "render_param.h"
 #include "render_delegate.h"
 #include <constant_strings.h>
+#include <pxr/base/tf/debug.h>
 #include <pxr/base/tf/envSetting.h>
 #include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+// Extern declaration for the debug code defined in render_settings.cpp
+TF_DEBUG_CODES(HDARNOLD_RENDER_SETTINGS);
 
 namespace {
 
@@ -254,6 +258,20 @@ std::string HdArnoldRenderParam::GetRenderStatusString() const
         return result;
     }
     return "";
+}
+
+void HdArnoldRenderParam::SetHydraRenderSettingsPrimPath(SdfPath const &path)
+{
+    if (path != _hydraRenderSettingsPrimPath) {
+        _hydraRenderSettingsPrimPath = path;
+        TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg(
+            "Hydra render settings prim is %s\n", path.GetText());
+    }
+}
+
+const SdfPath& HdArnoldRenderParam::GetHydraRenderSettingsPrimPath() const
+{
+    return _hydraRenderSettingsPrimPath;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

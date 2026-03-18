@@ -21,6 +21,9 @@ public:
     virtual ~ArnoldAPIAdapter() {}
     
     // Type of connection between 2 nodes
+    // CONNECTION_LINK is for shader graph evaluation, 
+    // CONNECTION_PTR is for simple node references, 
+    // and CONNECTION_ARRAY is for multiple node references.
     enum ConnectionType {
         CONNECTION_LINK = 0,
         CONNECTION_PTR = 1,
@@ -62,6 +65,7 @@ public:
     }
     const std::vector<Connection>& GetConnections() const {return _connections;}
     void ClearConnections() {_connections.clear();}
+    
     virtual bool ProcessConnection(const Connection& connection)
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
@@ -81,6 +85,7 @@ public:
             AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, connection.type);
             if (target == nullptr)
                 return false;// node is missing, we don't process the connection
+
             if (connection.type == ArnoldAPIAdapter::CONNECTION_PTR) {
                 if (connection.sourceAttr.back() == ']' ) {
                     std::stringstream ss(connection.sourceAttr);
@@ -196,6 +201,7 @@ protected:
     AtMutex _oslCodeCacheMutex;
     std::unordered_map<std::string, AtString> _oslCodeCache;
 #endif
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
