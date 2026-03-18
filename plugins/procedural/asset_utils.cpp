@@ -31,6 +31,25 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
 
+struct SdfPrimSpecHandleHash
+{
+    size_t operator()(const SdfPrimSpecHandle& h) const noexcept
+    {
+        return hash_value(h);
+    }
+};
+
+struct SdfPrimSpecHandleEqual
+{
+    bool operator()(const SdfPrimSpecHandle& a,
+                    const SdfPrimSpecHandle& b) const noexcept
+    {
+        return a == b;
+    }
+};
+
+typedef std::unordered_map<const SdfPrimSpecHandle, std::vector<UsdPrim>, SdfPrimSpecHandleHash, SdfPrimSpecHandleEqual> UsdPrimMap;
+
 /**
  * A wrapper over the AiBegin/AiEnd calls to follow the RAII technique,
  * and close the session when the object goes out of scope.
@@ -154,6 +173,7 @@ struct DependencyData
     std::vector<USDDependency> dependencies;
     SeenReferenceMap seenReferences;
     ArResolver& resolver = ArGetResolver();
+    UsdPrimMap usdPrimMap;
 };
 
 void TraversePrimSpecs(const SdfPrimSpecHandle& prim, DependencyData& data);
@@ -339,6 +359,36 @@ inline void CollectOslShaderDependencies(const SdfPrimSpecHandle& prim, Dependen
 }
 
 /**
+ * Returns all Usd prims that include the given Sdf prim spec.
+ */
+inline std::vector<UsdPrim> FindUsdPrims(const SdfPrimSpecHandle& primSpec, UsdPrimMap& usdPrimMap)
+{
+    auto it = usdPrimMap.find(primSpec);
+    return it != usdPrimMap.end() ? it->second : std::vector<UsdPrim>();
+}
+
+/**
+ * Builds an (Sdf prim - Usd prim list) map.
+ * It lists all Usd prims that an Sdf prim is contributing to.
+ */
+inline void CreateUsdPrimMap(const UsdStageRefPtr& stage, UsdPrimMap& usdPrimMap)
+{
+    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage))
+    {
+        if (!usdPrim)
+            continue;
+
+        for (const SdfPrimSpecHandle& spec : usdPrim.GetPrimStack())
+        {
+            if (!spec)
+                continue;
+
+            usdPrimMap[spec].push_back(usdPrim);
+        }
+    }
+}
+
+/**
  * Returns dependencies found in the selected variants of a prim.
  */
 inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
@@ -348,6 +398,15 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
     if (variantSets.empty())
         return;
 
+    // we need to read variant selections from Usd prims
+    // the Sdf prim contains selections defined within the layer that authors the prim,
+    // while the Usd prim contains composed selections across all layers
+    // a prim spec can contribute to multiple Usd prims
+    std::vector<UsdPrim> usdPrims = FindUsdPrims(prim, data.usdPrimMap);
+    if (usdPrims.empty())
+        return;
+
+    // interate the variant sets
     for (const auto& vsetit : variantSets.items())
     {
         const std::string setName = vsetit.first;
@@ -355,13 +414,28 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
+        // get the selected variants from Usd prims
+        std::unordered_set<std::string> selectedVariants;
+        for (const UsdPrim usdPrim : usdPrims)
+        {
+            UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
+            if (!usdVset)
+                continue;
+            std::string selectedVariantName = usdVset.GetVariantSelection();
+            if (!selectedVariantName.empty())
+                selectedVariants.insert(selectedVariantName);
+        }
+
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
         {
             if (!variant)
                 continue;
 
+            // ignore the variant if it's not selected
             const std::string variantName = variant->GetName();
+            if (!selectedVariants.count(variantName))
+                continue;
 
             // get the root prim spec for the variant
             const SdfPrimSpecHandle vPrim = variant->GetPrimSpec();
@@ -527,6 +601,9 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 {
     DependencyData data;
     data.stage = stage;
+
+    // create a map that lists all UsdPrims that include an SdfPrim
+    CreateUsdPrimMap(stage, data.usdPrimMap);
 
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
