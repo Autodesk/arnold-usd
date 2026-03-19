@@ -495,12 +495,13 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
 
     // Use the sample times that have the biggest amount of keys. The time samples
     // should be regular so we don't need to consider the union of both time steps.
-    auto sampleTimes = sampleArray.times.size() >= parentSampleArray.times.size() ? 
-        sampleArray.times : parentSampleArray.times;
-    const size_t numSamples = sampleTimes.size();
+    auto samples = sampleArray.times.size() >= parentSampleArray.times.size() ? 
+        sampleArray : parentSampleArray;
+    const size_t numSamples = samples.count;
     if (numSamples == 0) {
         return 0;
     }
+    auto &sampleTimes = samples.times;
     const int totalInstanceCount = parentInstanceCount * instanceCount;
     HdArnoldSampledMatrixArrayType outArray;
     outArray.Resize(static_cast<int>(numSamples));
