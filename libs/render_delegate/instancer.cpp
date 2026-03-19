@@ -495,7 +495,7 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
 
     // Use the sample times that have the biggest amount of keys. The time samples
     // should be regular so we don't need to consider the union of both time steps.
-    auto samples = sampleArray.times.size() >= parentSampleArray.times.size() ? 
+    auto samples = sampleArray.count >= parentSampleArray.count ? 
         sampleArray : parentSampleArray;
     const size_t numSamples = samples.count;
     if (numSamples == 0) {
