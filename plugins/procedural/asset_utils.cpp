@@ -621,11 +621,11 @@ inline void CollectPrimDependencies(const SdfPrimSpecHandle& prim, DependencyDat
             prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
     }
 
-    // collect dependencies from variants
-    CollectDependenciesFromVariants(prim, data);
-
     // collect dependencies from value clips
     CollectDependenciesFromClips(prim, data);
+
+    // collect dependencies from variants
+    CollectDependenciesFromVariants(prim, data);
 }
 
 /**
