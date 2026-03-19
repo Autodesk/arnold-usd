@@ -449,6 +449,85 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
 }
 
 /**
+ * Stores asset paths from the given clip dictionary value.
+ */
+inline void CollectClipDependencies(const VtValue& value, const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    if (value.IsHolding<SdfAssetPath>())
+    {
+        SdfAssetPath v = value.UncheckedGet<SdfAssetPath>();
+        AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
+            prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+    }
+    else if (value.IsHolding<VtArray<SdfAssetPath>>())
+    {
+        const auto& arr = value.UncheckedGet<VtArray<SdfAssetPath>>();
+        for (SdfAssetPath v : arr)
+        {
+            AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
+                prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+        }
+    }
+    else if (value.IsHolding<std::vector<SdfAssetPath>>())
+    {
+        const auto& arr = value.UncheckedGet<std::vector<SdfAssetPath>>();
+        for (SdfAssetPath v : arr)
+        {
+            AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
+                prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+        }
+    }
+    else if (value.IsHolding<VtDictionary>())
+    {
+        const VtDictionary& dict = value.UncheckedGet<VtDictionary>();
+        for (const auto& it : dict)
+            CollectClipDependencies(it.second, prim, data);
+    }
+}
+
+/**
+ * Stores dependencies found in the clips metadata on a prim.
+ * Value clips are a mechanism for providing time-varying data from external USD files.
+ */
+inline void CollectDependenciesFromClips(const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    if (!prim)
+        return;
+
+    static const TfToken clipsToken("clips");
+    const VtValue clipsValue = prim->GetInfo(clipsToken);
+
+    if (!clipsValue.IsHolding<VtDictionary>())
+        return;
+
+    const VtDictionary& clipsDict = clipsValue.UncheckedGet<VtDictionary>();
+
+    // clips = {
+    //   dictionary <clipSetName> = {
+    //       ...
+    //       asset manifestAssetPath = ...
+    //       asset[] assetPaths = [...]
+    //   }
+    // }
+    for (const auto& clipSetIt : clipsDict)
+    {
+        const std::string& clipSetName = clipSetIt.first;
+        const VtValue& clipSetValue = clipSetIt.second;
+
+        if (!clipSetValue.IsHolding<VtDictionary>())
+            continue;
+
+        const VtDictionary& clipSetDict = clipSetValue.UncheckedGet<VtDictionary>();
+
+        for (const auto& entry : clipSetDict)
+        {
+            const VtValue& value = entry.second;
+            CollectClipDependencies(value, prim, data);
+        }
+    }
+}
+
+/**
  * Returns dependencies found in a prim. This includes dependencies
  * defined in asset type attributes, references and payloads.
  */
@@ -542,8 +621,11 @@ inline void CollectPrimDependencies(const SdfPrimSpecHandle& prim, DependencyDat
             prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
     }
 
-    // collects variants
+    // collect dependencies from variants
     CollectDependenciesFromVariants(prim, data);
+
+    // collect dependencies from value clips
+    CollectDependenciesFromClips(prim, data);
 }
 
 /**
@@ -659,6 +741,7 @@ inline std::string GetNodeNameFromDependency(const USDDependency& dep)
         case USDDependency::Type::Attribute:
         case USDDependency::Type::Reference:
         case USDDependency::Type::Payload:
+        case USDDependency::Type::Clip:
             return dep.primPath.GetString();
         // otherwise (sublayer)
         // we use the layer name
@@ -689,6 +772,7 @@ inline std::string GetNodeParameterFromDependency(const USDDependency& dep)
         case USDDependency::Type::Sublayer: return "sublayer";
         case USDDependency::Type::Reference: return "reference";
         case USDDependency::Type::Payload: return "payload";
+        case USDDependency::Type::Clip: return "clips";
         // return empty string for everything else
         default: return std::string();
     }
