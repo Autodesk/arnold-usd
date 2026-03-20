@@ -555,7 +555,24 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // We couldn't use the render settings, we fall back to the original code
     }
 #endif
-    _renderDelegate->SetRenderTags(renderTags);
+
+    if (_renderDelegate->SetRenderTags(renderTags)) {
+        // Render tags have changed, let's iterate through all the nodes
+        // in order to update their "disabled" status
+        renderParam->Interrupt();
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_renderDelegate->GetUniverse(), AI_NODE_SHAPE | AI_NODE_LIGHT);
+        while (!AiNodeIteratorFinished(nodeIter))
+        {
+            AtNode *node = AiNodeIteratorGetNext(nodeIter);
+            if (!AiNodeLookUpUserParameter(node, str::usd_purpose))
+                continue;
+            AtString purpose = AiNodeGetStr(node, str::usd_purpose);
+            if (!purpose.empty()) {
+                AiNodeSetDisabled(node, !_renderDelegate->IsVisibleRenderTag(TfToken(purpose.c_str())));
+            }
+        }        
+        AiNodeIteratorDestroy(nodeIter);
+    }
 
     AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
     bool isOrtho = false;
