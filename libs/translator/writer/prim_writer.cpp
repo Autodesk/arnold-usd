@@ -1217,7 +1217,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         // skipped a few lines above. We need to set it now
         // before we call SetAttribute (see #871)
         if (!attr.Get(&previousVal)) {
-            GfMatrix4d m;
+            GfMatrix4d m(1.0);
             attr.Set(m);
         }
     }
@@ -1267,6 +1267,8 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
 
     std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
     std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
+    const std::string standaloneShaderName = shaderName;
+    const std::string standaloneDispName = dispName;
     std::string materialName;    
     UsdShadeMaterial mat;
 
@@ -1348,6 +1350,16 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
             dispOutput.ConnectToSource(SdfPath(dispTargetName));
         }
     }
+    // In append mode, if the shader or displacement was previously written as a 
+    // standalone prim (on an earlier frame before the geometry existed), remove 
+    // the stale standalone prim now that it lives under the material.
+    if (writer.GetAppendFile()) {
+        if (!standaloneShaderName.empty() && standaloneShaderName != shaderName)
+            writer.GetUsdStage()->RemovePrim(SdfPath(standaloneShaderName));
+        if (!standaloneDispName.empty() && standaloneDispName != dispName)
+            writer.GetUsdStage()->RemovePrim(SdfPath(standaloneDispName));
+    }
+
     // Restore the previous scope
     writer.SetScope(scope);
     // Eventually restore the previous stripHierarchy

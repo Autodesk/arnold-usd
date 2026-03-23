@@ -128,7 +128,16 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
             entryName != "alembic" && entryName != "usd") {
             // For custom procedurals, we want a dedicated schema "ArnoldProceduralCustom"
             RegisterWriter(entryName, new UsdArnoldWriteProceduralCustom(entryName));
-        } else {
+        } 
+        else if (
+            AiNodeEntryGetType(nodeEntry) == AI_NODE_SHAPE &&
+            AiNodeEntryGetDerivedType(nodeEntry) == AI_NODE_SHAPE_IMPLICIT && entryName != "volume_implicit" &&
+            entryName != "implicit")
+        {
+            // For custom implicit nodes, we use "ArnoldProceduralCustom"
+            RegisterWriter(entryName, new UsdArnoldWriteProceduralCustom(entryName));
+        }        
+		else {
             // Generic writer for arnold nodes.
             usdName = std::string("Arnold") + usdName;
             RegisterWriter(entryName, new UsdArnoldWriteArnoldType(entryName, usdName, entryTypeName));
