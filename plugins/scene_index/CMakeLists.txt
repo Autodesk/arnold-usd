@@ -30,7 +30,7 @@ set(HDR
 add_library(sceneIndexArnoldObjects OBJECT ${SRC})
 target_compile_definitions(sceneIndexArnoldObjects PRIVATE "HDSCENEINDEX_EXPORTS=1")
 add_common_includes(TARGET_NAME sceneIndexArnoldObjects DEPENDENCIES common)
-if (BUILD_SCENE_INDEX_PLUGIN)
+if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(sceneIndexArnoldObjects PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 
@@ -53,9 +53,7 @@ if (BUILD_SCENE_INDEX_PLUGIN)
 
         target_link_libraries(sceneIndexArnold PRIVATE common)
         target_compile_definitions(sceneIndexArnold PRIVATE "HDSCENEINDEXARNOLD_EXPORTS=1")
-        if (BUILD_SCENE_INDEX_PLUGIN)
-            target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
-        endif()
+
         # For the generated shape adapters to find headers here.
         target_include_directories(sceneIndexArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
         

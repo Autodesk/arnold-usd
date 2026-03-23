@@ -33,15 +33,20 @@ target_include_directories(${BUNDLE_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/.
 
 target_compile_definitions(${BUNDLE_NAME} PRIVATE "HDARNOLD_EXPORTS=1")
 target_compile_definitions(${BUNDLE_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
-if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+
+
+if (ENABLE_SCENE_INDEX_IN_BUNDLE)
 	target_compile_definitions(${BUNDLE_NAME} PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 
 target_link_libraries(${BUNDLE_NAME} PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects)
 target_link_libraries(${BUNDLE_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
-if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
-	target_link_libraries(${BUNDLE_NAME} PRIVATE sceneIndexArnoldObjects;hdsi;ts)
-endif ()
+  if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
+      target_link_libraries(${BUNDLE_NAME} PRIVATE hdsi;ts)                                                                                                                     
+  endif()
+  if (ENABLE_SCENE_INDEX_IN_BUNDLE)                                                                                                                                             
+      target_link_libraries(${BUNDLE_NAME} PRIVATE sceneIndexArnoldObjects)                                                                                                     
+  endif()
 
 # Install the Bundle inside a new directory to avoid any collision with other installed plugins
 install(TARGETS ${BUNDLE_NAME} DESTINATION "${PREFIX_BUNDLE}")
@@ -71,7 +76,7 @@ install_hdarnold_arnold_pluginfo(
 
 # install the scene index if we include it
 message(STATUS "USDVERSION ${USD_VERSION}")
-if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
+if (ENABLE_SCENE_INDEX_IN_BUNDLE)
 	install_sceneindex_arnold_pluginfo(
 		../${BUNDLE_NAME}
 		"${CMAKE_CURRENT_BINARY_DIR}/sceneIndexArnold/resources/plugInfo.json"
