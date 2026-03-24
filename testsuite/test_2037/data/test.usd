@@ -167,7 +167,7 @@ def Scope "Render"
         custom bool arnold:global:AA_sample_clamp_affects_aovs = 1
         custom int arnold:global:AA_samples = 8
         custom int arnold:global:AA_samples_max = 8
-        custom int arnold:global:AA_seed
+        custom int arnold:global:AA_seed = 105
         int arnold:global:AA_seed.timeSamples = {
             105: 105,
             106: 106,

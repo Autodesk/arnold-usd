@@ -206,10 +206,10 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 
                 // Special case for light filters, we need to flush the cache to ensure
                 // they're properly updated in Arnold
-                if (terminalType == str::color || terminalType.GetString().rfind(
-                        "light_filter", 0) == 0) {
+                if (_wasSyncedOnce && (terminalType == str::color || terminalType.GetString().rfind(
+                        "light_filter", 0) == 0)) {
                     nodeGraphChanged = true;
-                    AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
+                    AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND | AI_CACHE_QUAD);
                 }
                 if (nodeGraphChanged && node && oldTerminal && oldTerminal != node) {
                     
@@ -493,8 +493,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
         AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
-        if (node.path == terminalPath)
+        if (node.path == terminalPath) {
             terminalNode = arnoldNode;
+            
+        }
+
     }
     // Return the root shader for this shading network
     return terminalNode;

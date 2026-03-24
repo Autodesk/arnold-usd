@@ -49,6 +49,7 @@
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
+#include "constant_strings.h"
 
 #include <ai.h>
 
@@ -463,20 +464,14 @@ public:
 
     bool IsVisibleRenderTag(const TfToken& tag) const
     {
-        return std::find(_renderTags.begin(), _renderTags.end(), tag) != _renderTags.end();
+        return tag == str::t__default || tag == str::t_geometry || std::find(_renderTags.begin(), _renderTags.end(), tag) != _renderTags.end();
     }
-
-    /// Deregisters a shape from the render tag map.
-    ///
-    /// @param node Pointer to the Arnold node.
-    HDARNOLD_API
-    void UntrackRenderTag(AtNode* node);
 
     /// Sets render tags to display.
     ///
     /// @param renderTags List of render tags to display.
     HDARNOLD_API
-    void SetRenderTags(const TfTokenVector& renderTags);
+    bool SetRenderTags(const TfTokenVector& renderTags);
 
     /// Get the background shader.
     ///
@@ -704,6 +699,8 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
+    bool IsUsingHydraRenderSettings() const;
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -767,17 +764,7 @@ private:
     PathDependenciesMap _sourceToTargetsMap;       ///< Map to track dependencies between a source and its targets
     PathDependenciesMap _targetToSourcesMap;       ///< Map to track dependencies between a target and its sources   
     DirtyBitsMap _dependencyToDirtyBitsMap;  //< Map to track the dirty bits per dependencies
-
-    using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
-    /// Type to register shapes with render tags.
-    using RenderTagTrackQueue = tbb::concurrent_queue<RenderTagTrackQueueElem>;
-    /// Type to deregister shapes from the render tags map.
-    using RenderTagUntrackQueue = tbb::concurrent_queue<AtNode*>;
-    using RenderTagMap = std::unordered_map<AtNode*, TfToken>;
-    RenderTagMap _renderTagMap;                   ///< Map to track render tags for each shape.
-    RenderTagTrackQueue _renderTagTrackQueue;     ///< Queue to track shapes with render tags.
-    RenderTagUntrackQueue _renderTagUntrackQueue; ///< Queue to untrack shapes from render tag map.
-
+    
     std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.

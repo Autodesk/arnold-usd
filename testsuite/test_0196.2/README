@@ -1,0 +1,7 @@
+Nested point Instancer with primvars on parent instancer with motion blur
+
+see #949
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-frame 4'}

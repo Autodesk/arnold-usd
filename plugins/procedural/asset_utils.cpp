@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
@@ -29,6 +30,25 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
+
+struct SdfPrimSpecHandleHash
+{
+    size_t operator()(const SdfPrimSpecHandle& h) const noexcept
+    {
+        return hash_value(h);
+    }
+};
+
+struct SdfPrimSpecHandleEqual
+{
+    bool operator()(const SdfPrimSpecHandle& a,
+                    const SdfPrimSpecHandle& b) const noexcept
+    {
+        return a == b;
+    }
+};
+
+typedef std::unordered_map<const SdfPrimSpecHandle, std::vector<UsdPrim>, SdfPrimSpecHandleHash, SdfPrimSpecHandleEqual> UsdPrimMap;
 
 /**
  * A wrapper over the AiBegin/AiEnd calls to follow the RAII technique,
@@ -153,9 +173,40 @@ struct DependencyData
     std::vector<USDDependency> dependencies;
     SeenReferenceMap seenReferences;
     ArResolver& resolver = ArGetResolver();
+    UsdPrimMap usdPrimMap;
 };
 
 void TraversePrimSpecs(const SdfPrimSpecHandle& prim, DependencyData& data);
+
+bool GetAttributeCustomDataBool(const SdfLayerHandle& layer, const SdfPath& attrPath, 
+    const TfToken& key, bool defaultValue)
+{
+    if (!layer || !attrPath.IsPropertyPath())
+        return defaultValue;
+
+    SdfSpecHandle spec = layer->GetObjectAtPath(attrPath);
+    SdfAttributeSpecHandle attr = TfDynamic_cast<SdfAttributeSpecHandle>(spec);
+    if (!attr)
+        return defaultValue;
+
+    VtDictionary dict = attr->GetCustomData();
+
+    auto it = dict.find(key);
+    if (it == dict.end())
+        return defaultValue;
+
+    VtValue& v = it->second;
+
+    // defined as bool 
+    if (v.IsHolding<bool>())
+        return v.UncheckedGet<bool>();
+
+    // defined as int
+    if (v.IsHolding<int>())
+        return v.UncheckedGet<int>() != 0;
+
+    return defaultValue;
+}
 
 /**
  * Adds the given dependency to our list.
@@ -182,8 +233,24 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     else
     {
         // resolve the reference to an absolute path
-        std::string relRef = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
-        resolvedPath = data.resolver.Resolve(relRef);
+        std::string refPath = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
+        resolvedPath = data.resolver.Resolve(refPath);
+        // If USD can not resolve the path this could be an Arnold specific path, like UDIM.
+        // If the asset comes from a prim attribute, check if the "arnold_relative_path" metadata 
+        // is defined on an attribute, which means Arnold needs to resolve the relative path.
+        // If not defined, then use the absolute path returned by SdfComputeAssetPathRelativeToLayer.
+        if (resolvedPath.empty() && TfIsRelativePath(ref))
+        {
+            bool remap = true;
+            if (type == USDDependency::Type::Attribute)
+            {
+                bool isArnoldRelativePath = GetAttributeCustomDataBool(data.layer, attribute, TfToken("arnold_relative_path"), false);
+                remap = !isArnoldRelativePath;
+            }
+
+            if (remap)
+                resolvedPath = refPath;
+        }
         anchoredPath = ref;
         // convert a relative reference relative to the main scene
         if (!resolvedPath.empty() && TfIsRelativePath(ref))
@@ -292,15 +359,54 @@ inline void CollectOslShaderDependencies(const SdfPrimSpecHandle& prim, Dependen
 }
 
 /**
+ * Returns all Usd prims that include the given Sdf prim spec.
+ */
+inline std::vector<UsdPrim> FindUsdPrims(const SdfPrimSpecHandle& primSpec, UsdPrimMap& usdPrimMap)
+{
+    auto it = usdPrimMap.find(primSpec);
+    return it != usdPrimMap.end() ? it->second : std::vector<UsdPrim>();
+}
+
+/**
+ * Builds an (Sdf prim - Usd prim list) map.
+ * It lists all Usd prims that an Sdf prim is contributing to.
+ */
+inline void CreateUsdPrimMap(const UsdStageRefPtr& stage, UsdPrimMap& usdPrimMap)
+{
+    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage))
+    {
+        if (!usdPrim)
+            continue;
+
+        for (const SdfPrimSpecHandle& spec : usdPrim.GetPrimStack())
+        {
+            if (!spec)
+                continue;
+
+            usdPrimMap[spec].push_back(usdPrim);
+        }
+    }
+}
+
+/**
  * Returns dependencies found in the selected variants of a prim.
  */
 inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
 {
+    // skip when no variant sets are defined in the prim
     const auto variantSets = prim->GetVariantSets();
     if (variantSets.empty())
         return;
 
-    const SdfVariantSelectionMap selections = prim->GetVariantSelections();
+    // we need to read variant selections from Usd prims
+    // the Sdf prim contains selections defined within the layer that authors the prim,
+    // while the Usd prim contains composed selections across all layers
+    // a prim spec can contribute to multiple Usd prims
+    std::vector<UsdPrim> usdPrims = FindUsdPrims(prim, data.usdPrimMap);
+    if (usdPrims.empty())
+        return;
+
+    // interate the variant sets
     for (const auto& vsetit : variantSets.items())
     {
         const std::string setName = vsetit.first;
@@ -308,11 +414,17 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
-        // only process the active/selected variant
-        const auto itSel = selections.find(setName);
-        if (itSel == selections.end())
-            continue;
-        const std::string& selectedVariantName = itSel->second;
+        // get the selected variants from Usd prims
+        std::unordered_set<std::string> selectedVariants;
+        for (const UsdPrim usdPrim : usdPrims)
+        {
+            UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
+            if (!usdVset)
+                continue;
+            std::string selectedVariantName = usdVset.GetVariantSelection();
+            if (!selectedVariantName.empty())
+                selectedVariants.insert(selectedVariantName);
+        }
 
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
@@ -320,8 +432,9 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
             if (!variant)
                 continue;
 
+            // ignore the variant if it's not selected
             const std::string variantName = variant->GetName();
-            if (variantName != selectedVariantName)
+            if (!selectedVariants.count(variantName))
                 continue;
 
             // get the root prim spec for the variant
@@ -488,6 +601,9 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
 {
     DependencyData data;
     data.stage = stage;
+
+    // create a map that lists all UsdPrims that include an SdfPrim
+    CreateUsdPrimMap(stage, data.usdPrimMap);
 
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();

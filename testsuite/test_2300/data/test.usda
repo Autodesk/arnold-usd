@@ -203,6 +203,7 @@ def Scope "Render"
     {
         rel camera = </cameras/camera1>
         custom int arnold:global:AA_samples = 4
+        custom bool arnold:global:abort_on_license_fail = 0
         token[] includedPurposes = ["default"]
         token[] materialBindingPurposes = ["full", "allPurpose"]
         rel products = </Render/Products/renderproduct>
