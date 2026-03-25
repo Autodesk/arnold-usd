@@ -4,11 +4,16 @@
 
 #include "asset_utils.h"
 
+#define USE_COMPUTE_ALL_DEPENDENCIES 0
+
 // Asset API was added in Arnold 7.4.5.0
 #if ARNOLD_VERSION_NUM >= 70405
 
 #include <pxr/pxr.h>
+#include <pxr/base/tf/fileUtils.h>
 #include <pxr/base/tf/pathUtils.h>
+#include <pxr/base/tf/stringUtils.h>
+#include <pxr/usd/ar/defaultResolverContext.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/sdf/attributeSpec.h>
 #include <pxr/usd/sdf/layer.h>
@@ -18,6 +23,7 @@
 #include <pxr/usd/sdf/variantSetSpec.h>
 #include <pxr/usd/sdf/variantSpec.h>
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/usd/primFlags.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/variantSets.h>
@@ -25,6 +31,7 @@
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
 #include <sstream>
+#include <unordered_set>
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -47,6 +54,15 @@ struct SdfPrimSpecHandleEqual
         return a == b;
     }
 };
+
+inline bool _IsFileRelative(const std::string& path) { return path.find("./") == 0 || path.find("../") == 0; }
+inline bool _IsRelativePath(const std::string& path) { return (!path.empty() && TfIsRelativePath(path)); }
+inline bool _IsSearchPath(const std::string& path) { return _IsRelativePath(path) && !_IsFileRelative(path); }
+inline std::string _AnchorRelativePath(const std::string& anchorLayerPath, const std::string& relativePath)
+{
+    const std::string anchorPath = TfGetPathName(anchorLayerPath);
+    return anchorPath.empty() ? relativePath : TfStringCatPaths(anchorPath, relativePath);
+}
 
 typedef std::unordered_map<const SdfPrimSpecHandle, std::vector<UsdPrim>, SdfPrimSpecHandleHash, SdfPrimSpecHandleEqual> UsdPrimMap;
 
@@ -236,6 +252,7 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
         std::string refPath = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
         resolvedPath = data.resolver.Resolve(refPath);
         // If USD can not resolve the path this could be an Arnold specific path, like UDIM.
+        // It can also be a relative search path, in that case the resolver doesn't return the absolute path
         // If the asset comes from a prim attribute, check if the "arnold_relative_path" metadata 
         // is defined on an attribute, which means Arnold needs to resolve the relative path.
         // If not defined, then use the absolute path returned by SdfComputeAssetPathRelativeToLayer.
@@ -253,12 +270,47 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
         }
         anchoredPath = ref;
         // convert a relative reference relative to the main scene
-        if (!resolvedPath.empty() && TfIsRelativePath(ref))
+        if (!resolvedPath.empty() && TfIsRelativePath(resolvedPath))
         {
-            std::string relativeToRoot = ComputeRelativePathToRoot(data.stage, resolvedPath);
-            // convert only if the file is located under the root folder
-            if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
-                anchoredPath = relativeToRoot;
+            if (ref.find("UDIM") != std::string::npos) {
+                std::cout << "resolved path not empty but ref is relative " << resolvedPath << std::endl;
+            }
+
+            // If the resolved path is still relative, it could be a search path with UDIM
+            if (_IsSearchPath(resolvedPath) && resolvedPath.find("<UDIM>") != std::string::npos) {
+                // Search all configured search paths for matching UDIM files.
+                // Mirrors ArDefaultResolver::_Resolve: layer dir first, then bound context paths.
+                // We probe with tile 1001, which is always the first tile in a UDIM sequence.
+                const std::string udimProbe = TfStringReplace(resolvedPath, "<UDIM>", "1001");
+
+                std::vector<std::string> searchDirs;
+                // 1. Layer directory (mirrors file-relative anchoring priority)
+                searchDirs.push_back(TfGetPathName(data.layer->GetIdentifier()));
+                // 2. Directories from the currently-bound ArDefaultResolverContext
+                const ArResolverContext ctx = data.resolver.GetCurrentContext();
+                if (const ArDefaultResolverContext* defCtx = ctx.Get<ArDefaultResolverContext>()) {
+                    for (const std::string& sp : defCtx->GetSearchPath())
+                        searchDirs.push_back(sp);
+                }
+                std::string foundDir;
+                for (const std::string& dir : searchDirs) {
+                    if (dir.empty())
+                        continue;
+                    if (TfPathExists(TfStringCatPaths(dir, udimProbe))) {
+                        foundDir = dir;
+                        break;
+                    }
+                }
+                if (!foundDir.empty()) {
+                    anchoredPath = "./" + resolvedPath;
+                    resolvedPath = TfStringCatPaths(foundDir, resolvedPath);
+                }
+            } else {
+                std::string relativeToRoot = ComputeRelativePathToRoot(data.stage, resolvedPath);
+                // convert only if the file is located under the root folder
+                if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
+                    anchoredPath = relativeToRoot;
+            }
         }
         data.seenReferences[refId] = std::make_pair(anchoredPath, resolvedPath);
     }
@@ -373,7 +425,12 @@ inline std::vector<UsdPrim> FindUsdPrims(const SdfPrimSpecHandle& primSpec, UsdP
  */
 inline void CreateUsdPrimMap(const UsdStageRefPtr& stage, UsdPrimMap& usdPrimMap)
 {
-    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage))
+    // Use UsdPrimAllPrimsPredicate so that 'over' prims are included.
+    // When CollectSceneAssets is called directly on a file whose prims are all
+    // 'over' specifiers (e.g. a stitched clip file), the default predicate
+    // (UsdPrimDefaultPredicate, which requires UsdPrimIsDefined) would return
+    // nothing and leave the map empty, causing variant traversal to be skipped.
+    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage, UsdPrimAllPrimsPredicate))
     {
         if (!usdPrim)
             continue;
@@ -403,8 +460,6 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
     // while the Usd prim contains composed selections across all layers
     // a prim spec can contribute to multiple Usd prims
     std::vector<UsdPrim> usdPrims = FindUsdPrims(prim, data.usdPrimMap);
-    if (usdPrims.empty())
-        return;
 
     // interate the variant sets
     for (const auto& vsetit : variantSets.items())
@@ -414,7 +469,13 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
-        // get the selected variants from Usd prims
+        // Get the selected variants from composed Usd prims (respects stronger-layer
+        // overrides). When the selection cannot be determined — e.g. the stage was
+        // opened directly from a file whose prims are all 'over' specifiers, or no
+        // variant is selected — fall back to traversing ALL variants so that clip
+        // dependencies (manifest, assetPaths, etc.) are never silently missed.
+        // This matches the behaviour of UsdUtils_LocalizationContext::_ProcessLayer
+        // which unconditionally traverses every variant spec.
         std::unordered_set<std::string> selectedVariants;
         for (const UsdPrim usdPrim : usdPrims)
         {
@@ -425,6 +486,7 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
             if (!selectedVariantName.empty())
                 selectedVariants.insert(selectedVariantName);
         }
+        const bool traverseAllVariants = selectedVariants.empty();
 
         // iterate all variants in the set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
@@ -432,9 +494,9 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
             if (!variant)
                 continue;
 
-            // ignore the variant if it's not selected
+            // skip unselected variants only when a selection is known
             const std::string variantName = variant->GetName();
-            if (!selectedVariants.count(variantName))
+            if (!traverseAllVariants && !selectedVariants.count(variantName))
                 continue;
 
             // get the root prim spec for the variant
@@ -523,6 +585,44 @@ inline void CollectDependenciesFromClips(const SdfPrimSpecHandle& prim, Dependen
         {
             const VtValue& value = entry.second;
             CollectClipDependencies(value, prim, data);
+        }
+
+        // Handle templateAssetPath: a string like "clips/shot.###.usd" where '#'
+        // characters form a pattern. USD expands this by globbing the filesystem.
+        // This is separate from assetPaths (explicit SdfAssetPath list) and is
+        // completely missed by CollectClipDependencies which only handles SdfAssetPath.
+        static const std::string templateKey("templateAssetPath");
+        const VtValue* templateValue = clipSetDict.GetValueAtPath(templateKey);
+        if (templateValue && templateValue->IsHolding<std::string>() && data.layer)
+        {
+            const std::string& templatePath = templateValue->UncheckedGet<std::string>();
+            const std::string clipsDir = TfGetPathName(templatePath);
+            if (!clipsDir.empty())
+            {
+                const std::string clipsDirResolved =
+                    SdfComputeAssetPathRelativeToLayer(data.layer, clipsDir);
+
+                if (TfIsDir(clipsDirResolved))
+                {
+                    const std::string baseName = TfGetBaseName(templatePath);
+                    const std::string globPattern = TfStringCatPaths(
+                        clipsDirResolved, TfStringReplace(baseName, "#", "*"));
+
+                    std::vector<std::string> clipFiles = TfGlob(globPattern);
+                    // TfGlob returns the pattern unchanged when there are no matches
+                    if (clipFiles.size() == 1 && clipFiles[0] == globPattern)
+                        clipFiles.clear();
+
+                    for (const std::string& clipFile : clipFiles)
+                    {
+                        // Reconstruct path relative to the layer (matching USD behaviour)
+                        const std::string relClipFile =
+                            TfStringReplace(clipFile, clipsDirResolved + '/', clipsDir);
+                        AddDependency(relClipFile, USDDependency::Type::Clip,
+                            prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
+                    }
+                }
+            }
         }
     }
 }
@@ -687,10 +787,45 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
     // create a map that lists all UsdPrims that include an SdfPrim
     CreateUsdPrimMap(stage, data.usdPrimMap);
 
+    // Track layers that have already been traversed to avoid duplicate work.
+    // Clip files are demand-loaded by USD and are NOT in GetUsedLayers() until
+    // attribute values at specific times are accessed. Mirror what
+    // UsdUtils_LocalizationContext does: open every discovered USD file as a
+    // layer and traverse it, processing transitive dependencies as a queue.
+    std::unordered_set<std::string> processedLayerIds;
+
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
     for (auto &layer : usedLayers)
+    {
+        processedLayerIds.insert(layer->GetIdentifier());
         CollectDependenciesFromLayer(layer, data);
+    }
+
+    // Follow any USD-file dependencies that were discovered in clip metadata
+    // (manifestAssetPath, assetPaths, templateAssetPath expansions) but were
+    // not yet opened as layers. New entries may appear as inner layers are
+    // traversed, so iterate until the list stabilises.
+    for (size_t i = 0; i < data.dependencies.size(); ++i)
+    {
+        const std::string& resolvedPath = data.dependencies[i].resolvedPath;
+        if (resolvedPath.empty() || !UsdStage::IsSupportedFile(resolvedPath))
+            continue;
+        if (processedLayerIds.count(resolvedPath))
+            continue;
+
+        processedLayerIds.insert(resolvedPath);
+
+        SdfLayerRefPtr depLayer = SdfLayer::FindOrOpen(resolvedPath);
+        if (!depLayer)
+            continue;
+
+        // a layer can have a different identifier from its resolved path
+        if (!processedLayerIds.insert(depLayer->GetIdentifier()).second)
+            continue;
+
+        CollectDependenciesFromLayer(depLayer, data);
+    }
 
     return data.dependencies;
 }
@@ -799,6 +934,98 @@ inline bool GetIgnoreMissingFromDependency(const USDDependency& dep)
     return false;
 }
 
+// Use UsdUtilsComputeAllDependencies and compare the dependencies found by USD
+// This might return more dependencies than needed
+#if USE_COMPUTE_ALL_DEPENDENCIES
+/**
+ * Collects dependencies using standard USD API.
+ *
+ * This function returns only resolved paths, but can not tell
+ * how and where these files are referenced in the scene.
+ */
+inline void ComputeAllDependencies(UsdStageRefPtr& stage, std::vector<std::string>& dependencies)
+{
+    // collect all asset dependencies (layers, references, payloads, unresolved) for a USD file
+    // prepare containers for outputs
+    std::vector<SdfLayerRefPtr> layerDeps;
+    std::vector<std::string> assetDeps;
+    std::vector<std::string> unresolvedDeps;
+
+    // read dependencies
+    std::string rootLayerPath = stage->GetRootLayer()->GetIdentifier();
+    SdfAssetPath rootLayerAssetPath(rootLayerPath);
+    bool ok = UsdUtilsComputeAllDependencies(
+        rootLayerAssetPath,
+        &layerDeps,
+        &assetDeps,
+        &unresolvedDeps);
+
+    if (!ok)
+    {
+        AiMsgWarning("Could not resolve dependencies via UsdUtilsComputeAllDependencies");
+        return;
+    }
+
+    // layer dependencies (opened as layers)
+    for (auto const &layerPtr : layerDeps)
+    {
+        const std::string& layerPath = layerPtr->GetIdentifier();
+        // ignore the root layer
+        if (layerPath != rootLayerPath)
+            dependencies.push_back(layerPath);
+    }
+    // other asset dependencies (references, payloads, clips, etc)
+    for (const std::string& path : assetDeps)
+        dependencies.push_back(path);
+
+    /* - we don't care about unresolved dependencies for now
+    // unresolved asset paths (could not resolve)
+    for (const std::string& unresolvedPath : unresolvedDeps)
+        dependencies.push_back(unresolvedPath);
+    */
+}
+
+inline std::string NormalizePath(const std::string path)
+{
+#ifdef WIN32
+    std::string normalizedPath = path;
+    std::replace(normalizedPath.begin(), normalizedPath.end(), '\\', '/');
+    std::transform(normalizedPath.begin(), normalizedPath.end(), normalizedPath.begin(), [](unsigned char c) { return (unsigned char)std::tolower(c); });
+    return normalizedPath;
+#else
+    return path;
+#endif
+}
+
+inline void AddMissedDependencies(UsdStageRefPtr& stage, const std::vector<USDDependency>& dependencies, std::vector<AtAsset*>& assets)
+{
+    std::unordered_set<std::string> foundDependencies;
+    for (const USDDependency& dep : dependencies)
+        foundDependencies.insert(NormalizePath(dep.resolvedPath));
+
+    std::vector<std::string> stageDependencies;
+    ComputeAllDependencies(stage, stageDependencies);
+
+    int numAdditionalDependencies = 0;
+    for (const std::string& resolvedPath : stageDependencies)
+    {
+        if (!foundDependencies.count(NormalizePath(resolvedPath)))
+        {
+            AiMsgDebug("[usd] additional dependency: %s", resolvedPath.c_str());
+
+            // add the dependency to the asset list
+            AtAsset* asset = AiAsset(resolvedPath.c_str(), AtFileType::Custom);
+            assets.push_back(asset);
+
+            ++numAdditionalDependencies;
+        }
+    }
+
+    if (numAdditionalDependencies)
+        AiMsgDebug("[usd] %d additional dependencies found", numAdditionalDependencies);
+}
+#endif // USE_COMPUTE_ALL_DEPENDENCIES
+
 /**
  * Returns all assets found in the given USD scene.
  * 
@@ -867,7 +1094,13 @@ bool CollectSceneAssets(const std::string& filename, bool isProcedural, std::vec
             StdToAtString(GetNodeParameterFromDependency(dep)));
         assets.push_back(asset);
     }
-
+#if USE_COMPUTE_ALL_DEPENDENCIES
+    // look for missed dependencies
+    if (!isProcedural)
+    {
+        AddMissedDependencies(stage, dependencies, assets);
+    }
+#endif
     return true;
 }
 
