@@ -58,11 +58,6 @@ struct SdfPrimSpecHandleEqual
 inline bool _IsFileRelative(const std::string& path) { return path.find("./") == 0 || path.find("../") == 0; }
 inline bool _IsRelativePath(const std::string& path) { return (!path.empty() && TfIsRelativePath(path)); }
 inline bool _IsSearchPath(const std::string& path) { return _IsRelativePath(path) && !_IsFileRelative(path); }
-inline std::string _AnchorRelativePath(const std::string& anchorLayerPath, const std::string& relativePath)
-{
-    const std::string anchorPath = TfGetPathName(anchorLayerPath);
-    return anchorPath.empty() ? relativePath : TfStringCatPaths(anchorPath, relativePath);
-}
 
 typedef std::unordered_map<const SdfPrimSpecHandle, std::vector<UsdPrim>, SdfPrimSpecHandleHash, SdfPrimSpecHandleEqual> UsdPrimMap;
 
@@ -270,12 +265,8 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
         }
         anchoredPath = ref;
         // convert a relative reference relative to the main scene
-        if (!resolvedPath.empty() && TfIsRelativePath(resolvedPath))
+        if (!resolvedPath.empty() && TfIsRelativePath(ref))
         {
-            if (ref.find("UDIM") != std::string::npos) {
-                std::cout << "resolved path not empty but ref is relative " << resolvedPath << std::endl;
-            }
-
             // If the resolved path is still relative, it could be a search path with UDIM
             if (_IsSearchPath(resolvedPath) && resolvedPath.find("<UDIM>") != std::string::npos) {
                 // Search all configured search paths for matching UDIM files.
