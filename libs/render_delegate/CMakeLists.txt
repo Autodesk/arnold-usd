@@ -74,7 +74,7 @@ if (HYDRA_NORMALIZE_DEPTH)
 endif()
 
 target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
-if (BUILD_SCENE_INDEX_PLUGIN)
+if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})

@@ -23,7 +23,7 @@
 #include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
 #include "pxr/imaging/hd/materialBindingsSchema.h"
 
-#endif
+#endif // ENABLE_SCENE_INDEX
 #include "timesettings.h"
 
 TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
@@ -77,7 +77,6 @@ private:
     HdsiLegacyDisplayStyleOverrideSceneIndexRefPtr _displayStyleSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _materialPruningSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _lightPruningSceneIndex;
-
     AtUniverse *_universe = nullptr;
     HdRenderPassSharedPtr _syncPass;
     HdRprimCollection _collection;

@@ -440,7 +440,6 @@ void HydraArnoldReader::SetMask(int m) {GetArnoldRenderDelegate()->SetMask(m); }
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
-
 void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
