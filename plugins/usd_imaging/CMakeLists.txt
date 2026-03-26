@@ -31,12 +31,12 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURR
 add_library(usdImagingArnoldObjects OBJECT ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 target_compile_definitions(usdImagingArnoldObjects PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME usdImagingArnoldObjects DEPENDENCIES common)
-if (BUILD_SCENE_INDEX_PLUGIN)
+if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(usdImagingArnoldObjects PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 
 
-if (BUILD_USD_IMAGING_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
+if (BUILD_USD_IMAGING_PLUGIN)
 # If we want a usdImagingArnold shared plugin
     if (NOT BUILD_WITH_USD_STATIC)
 
@@ -47,9 +47,6 @@ if (BUILD_USD_IMAGING_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
         endif ()
 
         set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
-        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            list(APPEND USDIMAGING_LIBS hdsi)
-        endif()
 
         if (${USD_VERSION} VERSION_LESS "0.25.05")
             list(APPEND USDIMAGING_LIBS ndr)
