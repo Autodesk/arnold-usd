@@ -420,17 +420,17 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
 #define HOUDINI_COPS_SUPPORT 1
 #ifdef HOUDINI_COPS_SUPPORT
     bool is_op_path = false;
-    std::string internalNodeName = nodeName;
     if (shaderId == str::t_image) {
         const auto filenameAttr = inputAttrs.find(str::t_filename);
         if (filenameAttr != inputAttrs.end() && !filenameAttr->second.value.IsEmpty()) {
             std::string filename = VtValueGetString(filenameAttr->second.value);
-            if (filename.length() >= 3 && filename.substr(0, 3) == "op:") {
+            if (filename.substr(0, 3) == "op:" ||
+                filename.find("opdef:") != std::string::npos) {
                 is_op_path = true;
-                internalNodeName = nodeName + "_src";
             }
         }
     }
+    const std::string& internalNodeName = nodeName;
 #else
     constexpr is_op_path = false;
     const std::string& internalNodeName = nodeName;
@@ -542,37 +542,20 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         }
     }
 
-    // Special case for Houdini op: paths referencing COP nodes
-    // At this point the original image node will have been translated and
-    // it's image path is invalid (since core doesn't understand op: paths)
-    // However, we want to keep it around so we can respond to it's parameter changes
+    // Special case for Houdini op:/opdef: paths referencing COP nodes.
+    // Create an image_cop node to export the COP raster to a temp file and
+    // link its string output to the image node's filename input.
     if(is_op_path) {
         const AtString opFilename = AiNodeGetStr(node, str::filename);
-
-        // ignore missing textures on the reference node, otherwise
-        // it will fail the whole render (and we only need non-filename parameters)
-        AiNodeSetBool(node, str::ignore_missing_textures, true);
+        // Clear the op: path from the image node; image_cop will provide the real path
         AiNodeSetStr(node, str::filename, AtString(""));
 
-        // image_cop is built by HtoA and links against the Houdini libraries
-        // It wraps an image node that points to the resolved COP raster image data
-        AtNode* imageCopNode = materialReader.CreateArnoldNode("image_cop", nodeName.c_str());
-        if (imageCopNode == nullptr)
-        {
-            return nullptr;
+        std::string copNodeName = nodeName + "_cop";
+        AtNode* imageCopNode = materialReader.CreateArnoldNode("image_cop", copNodeName.c_str());
+        if (imageCopNode != nullptr) {
+            AiNodeSetStr(imageCopNode, str::filename, opFilename);
+            AiNodeLink(imageCopNode, str::filename, node);
         }
-        context.AddNodeName(nodeName, imageCopNode);
-
-        // Set the op: path on the image_cop node
-        AiNodeSetStr(imageCopNode, str::filename, opFilename);
-
-        // To avoid having to maintain a duplicate of the image interface,
-        // just keep the original image node around as reference so it can
-        // react to parameter changes that will be propogated to the internal
-        // image_cop node
-        AiNodeSetPtr(imageCopNode, str::src_image_node, node);
-
-        return imageCopNode;
     }
 
     return node;

@@ -459,6 +459,8 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
 
         inputAttrs.clear();
         bool isCameraProjection = (node.identifier == str::t_camera_projection);
+        const bool isImage = (node.identifier == str::t_image);
+        std::string imageCopFilename;
 
         // Check if this shader has connected input attributes 
         const auto connectedIt = connectedInputs.find(node.path);
@@ -472,6 +474,15 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         // build the input attributes map, where they keys are the attribute names.
         for (const auto& p : node.parameters) {
             // Store this attribute VtValue
+            if(isImage && p.first == str::t_filename) {
+                // check for houdini's op: format
+                std::string filename = VtValueGetString(p.second);
+                if(filename.substr(0, 3) == "op:" ||
+                   filename.find("opdef:") != std::string::npos) {
+                    imageCopFilename = filename;
+                    continue; // image_cop will link the real path via AiNodeLink
+                }
+            }
             inputAttrs[p.first].value = p.second;
             if (isCameraProjection && p.first == str::t_camera) {
                 _renderDelegate->TrackDependencies(GetId(), 
@@ -492,6 +503,17 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         // we add the prefix to the shader name #1940
         std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
         AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+
+        if(!imageCopFilename.empty()) {
+            std::string arnoldCopName = arnoldNodeName + std::string("_cop");
+            inputAttrs.clear();
+            inputAttrs[str::t_filename].value = VtValue(imageCopFilename);
+            AtNode* copNode = ReadShader(arnoldCopName, TfToken("image_cop"), inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+            if(copNode) {
+                AiNodeLink(copNode, str::filename, arnoldNode);
+            }
+        }
+
         // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath) {
             terminalNode = arnoldNode;
