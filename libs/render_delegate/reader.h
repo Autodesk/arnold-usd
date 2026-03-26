@@ -79,8 +79,9 @@ private:
     HdsiLegacyDisplayStyleOverrideSceneIndexRefPtr _displayStyleSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _materialPruningSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _lightPruningSceneIndex;
+#ifdef ARNOLD_SCENE_INDEX
     HdsiSceneGlobalsSceneIndexRefPtr _sceneGlobalsSceneIndex;
-
+#endif
     AtUniverse *_universe = nullptr;
     HdRenderPassSharedPtr _syncPass;
     HdRprimCollection _collection;
