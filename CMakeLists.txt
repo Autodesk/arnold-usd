@@ -19,6 +19,21 @@ include(build)
 # Include default compiler options 
 include(defaults)
 
+# If we are building the bundle, we don't want to build the other plugins
+if (BUILD_BUNDLE AND NOT BUILD_WITH_USD_STATIC)
+    message(STATUS "Building Bundle - deactivating other plugins")
+    set(BUILD_RENDER_DELEGATE OFF)
+    set(BUILD_NDR_PLUGIN OFF)
+    set(BUILD_USD_IMAGING_PLUGIN OFF)
+    set(BUILD_SCENE_INDEX_PLUGIN OFF)
+    set(BUILD_PROCEDURAL OFF)
+else()
+    # And if we build with USD static, we don't want the bundle (for now)
+    message(STATUS "Setting BUILD_BUNDLE=OFF and ENABLE_SCENE_INDEX_IN_BUNDLE=OFF")
+    set(BUILD_BUNDLE OFF)
+    set(ENABLE_SCENE_INDEX_IN_BUNDLE OFF)
+endif()
+
 # Adding libs and plugins
 add_subdirectory(libs)
 add_subdirectory(plugins)
@@ -47,7 +62,7 @@ if (BUILD_TESTSUITE AND BUILD_PROCEDURAL)
 endif ()
 
 if (NOT BUILD_WITH_USD_STATIC)
-    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN OR BUILD_SCENE_INDEX)
+    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN OR BUILD_SCENE_INDEX_PLUGIN)
         install(FILES plugInfo.json
             DESTINATION "${PREFIX_PLUGINS}")
     endif ()

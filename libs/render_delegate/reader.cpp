@@ -464,6 +464,7 @@ void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
 #endif
 }
 
+
 void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();

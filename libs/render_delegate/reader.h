@@ -24,7 +24,7 @@
 #include "pxr/imaging/hdsi/sceneGlobalsSceneIndex.h"
 #include "pxr/imaging/hd/materialBindingsSchema.h"
 
-#endif
+#endif // ENABLE_SCENE_INDEX
 #include "timesettings.h"
 
 TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
