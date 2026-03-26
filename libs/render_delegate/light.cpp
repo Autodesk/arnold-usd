@@ -493,7 +493,6 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     _delegate->DestroyArnoldNode(_filter);
     _delegate->ClearDependencies(GetId());
     for (auto &instancer : _instancers) {
-        _delegate->UntrackRenderTag(instancer);
         _delegate->DestroyArnoldNode(instancer);
     }
 }

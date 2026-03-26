@@ -68,6 +68,10 @@
 #include "volume.h"
 #include <cctype>
 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#include "render_settings.h"
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -268,6 +272,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+
 #if PXR_VERSION >= 2208
     if (!ownsUniverse) {
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
@@ -275,7 +280,11 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+#else
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+#endif
         return r;
     }
 }
@@ -492,6 +501,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
+    // use the "render" tag by default
+    _renderTags.push_back(UsdGeomTokens->render);
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     bool isArnoldActive = 
@@ -1005,8 +1016,11 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
                         renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
                     }
-                    // Any other cases should have good/reasonable defaults.
-                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
+
+                    if (!renderVar.sourceName.empty()) {
+                        // if drivers:parameters:aov:name is not defined, use sourceName instead #2572
+                        if (renderVar.name.empty())
+                            renderVar.name = renderVar.sourceName;
                         product.renderVars.emplace_back(std::move(renderVar));
                     }
                 }
@@ -1103,6 +1117,15 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         ret.emplace_back(std::move(desc));
     }
     return ret;
+}
+
+// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
+bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    return true; 
+#else
+    return false;
+#endif
 }
 
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
@@ -1328,12 +1351,19 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
-    // Silently ignore render settings primitives, at the moment they're treated
-    // through a different code path
+
 #if PXR_VERSION >= 2208
+    // Only support render settings when we don't own the universe (procedural context).
+    // When we own the universe (batch context), settings come through SetRenderSettings.
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
+        return new HdArnoldRenderSettings(bprimId);
+    }
+#else
     if (typeId == HdPrimTypeTokens->renderSettings)
         return nullptr;
-#endif
+#endif // ENABLE_HYDRA2_RENDERSETTINGS
+#endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
@@ -1841,30 +1871,39 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
+    if (node == nullptr)
+        return;
+
     AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
-    _renderTagTrackQueue.push({node, tag});
+    // If a specific render tag (i.e. node default nor geometry) is set on this 
+    // primitive, we create a user data to track it later on
+    if (tag != str::t__default && tag != str::t_geometry) {
+        if (!AiNodeLookUpUserParameter(node, str::usd_purpose)) 
+            AiNodeDeclare(node, str::usd_purpose, str::constantString);
+        AiNodeSetStr(node, str::usd_purpose, AtString(tag.GetText()));
+    }
 }
 
-void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
-
-void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
+bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
-    RenderTagTrackQueueElem renderTagRegister;
-    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
-        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
-    }
-    AtNode* node;
-    while (_renderTagUntrackQueue.try_pop(node)) {
-        _renderTagMap.erase(node);
-    }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        _renderParam->Interrupt();
+    // In this function we store the provided render tags, and we want to return
+    // whether they have changed since the previous iteration
+    if (renderTags == _renderTags)
+        return false;
 
-        for (auto& elem : _renderTagMap) {
-            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+    // if the amount of elements has not changed, we also want to check if we're receiving 
+    // the render tags in a different order
+    bool renderTagsChanged = renderTags.size() != _renderTags.size();
+    if (!renderTagsChanged) {
+        for (auto t : renderTags) {
+            if (std::find(_renderTags.begin(), _renderTags.end(), t) == _renderTags.end()) {
+                renderTagsChanged = true;
+                break;
+            }
         }
     }
+    _renderTags = renderTags;
+    return renderTagsChanged;
 }
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)

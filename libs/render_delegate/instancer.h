@@ -69,9 +69,6 @@ public:
     bool ComputeShapeInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
 
     HDARNOLD_API
-    void ComputeShapeInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
-
-    HDARNOLD_API
     void ApplyInstancerVisibilityToArnoldNode(AtNode *node);
 
     /// Sets the primvars on the instancer node.
@@ -105,6 +102,9 @@ protected:
     /// @brief Resamples the stored sampled primvars. This is necessary when the sampling interval has changed
     void ResampleInstancePrimvars();
 
+    void AddInstancePrimvarsWithIndices(HdArnoldRenderDelegate* renderDelegate, AtNode* prototypeNode,
+        const VtIntArray& expandedIndices);
+
     HdArnoldRenderDelegate* _delegate = nullptr;
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.
@@ -117,6 +117,7 @@ protected:
 
 private:
     void ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray);
+    int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
 
     GfVec2f _samplingInterval = {0.f, 0.f}; //< Keep track of the primvar sampling interval used 
 

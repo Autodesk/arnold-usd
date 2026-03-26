@@ -21,9 +21,10 @@
 #include "pxr/usdImaging/usdImaging/rootOverridesSceneIndex.h"
 #include "pxr/imaging/hd/retainedDataSource.h"
 #include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
+#include "pxr/imaging/hdsi/sceneGlobalsSceneIndex.h"
 #include "pxr/imaging/hd/materialBindingsSchema.h"
 
-#endif
+#endif // ENABLE_SCENE_INDEX
 #include "timesettings.h"
 
 TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
@@ -53,6 +54,7 @@ public:
     void SetPurpose(const std::string &p) override;
     void SetId(unsigned int id) override;
     void SetRenderSettings(const std::string &renderSettings) override;
+    void SetRenderPass(const std::string &renderPass) override;
     void Update() override;
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
 
@@ -77,7 +79,9 @@ private:
     HdsiLegacyDisplayStyleOverrideSceneIndexRefPtr _displayStyleSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _materialPruningSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _lightPruningSceneIndex;
-
+#ifdef ARNOLD_SCENE_INDEX
+    HdsiSceneGlobalsSceneIndexRefPtr _sceneGlobalsSceneIndex;
+#endif
     AtUniverse *_universe = nullptr;
     HdRenderPassSharedPtr _syncPass;
     HdRprimCollection _collection;

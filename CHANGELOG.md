@@ -1,16 +1,34 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.1.0] (Unreleased)
+## [7.5.2.0] (Unreleased)
 
 ### Features
 
-- [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
+- [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
+- [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 
 ### Bug Fixes
 
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
+- [usd#2433](https://github.com/Autodesk/arnold-usd/issues/2433) - Support interactive changes of shaders connected to quad lights
+- [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
+
+## [7.5.1.0] (Unreleased)
+
+### Features
+- [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
+- [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
+- [usd#2597](https://github.com/Autodesk/arnold-usd/issues/2597) - Export custom implicit shapes as ArnoldProceduralCustom primitives
+
+### Bug Fixes
+
+- [usd#2572](https://github.com/Autodesk/arnold-usd/issues/2572) - Arnold product types not working if drivers:parameter:aov:name is not defined
 - [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
 - [usd#2566](https://github.com/Autodesk/arnold-usd/issues/2566) - Fixed crashes when a render delegate is deleted while another is rendering
+- [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
+- [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
 
 ## [7.5.0.0] (Unreleased)
 

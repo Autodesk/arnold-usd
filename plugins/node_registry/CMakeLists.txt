@@ -17,12 +17,12 @@ set(HDR
 add_library(ndrObjects OBJECT ${SRC})
 target_compile_definitions(ndrObjects PRIVATE "NDRARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME ndrObjects DEPENDENCIES common)
-if (BUILD_SCENE_INDEX_PLUGIN)
+if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(ndrObjects PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
 
 # The NDR plugin must be compiled with USD shared
-if (BUILD_NDR_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
+if (BUILD_NDR_PLUGIN)
     if (NOT BUILD_WITH_USD_STATIC)
         # Create an USD plugin as shared library
         add_library(nodeRegistryArnold SHARED)
