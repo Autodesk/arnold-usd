@@ -33,6 +33,9 @@
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdVol/openVDBAsset.h>
 #include <pxr/usd/usdVol/volume.h>
+#if PXR_VERSION >= 2603
+#include <pxr/usd/usdVol/particleField3DGaussianSplat.h>
+#endif
 
 #include <pxr/base/gf/matrix4f.h>
 #include <pxr/base/gf/rotation.h>
@@ -716,6 +719,179 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     
     return node;
 }
+
+#if PXR_VERSION >= 2603
+AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    const TimeSettings &time = context.GetTimeSettings();
+    float frame = time.frame;
+
+    AtNode *node = context.CreateArnoldNode("points", prim.GetPath().GetText());
+
+    UsdVolParticleField3DGaussianSplat gs(prim);
+
+    // Enable gaussian splat mode
+    AiNodeSetStr(node, str::mode, str::gaussian);
+
+    // --- Positions ----------------------------------------------------------
+    {
+        UsdAttribute posAttr;
+        bool isFloat = gs.UsesFloatPositions(&posAttr);
+        if (posAttr) {
+            if (isFloat) {
+                VtArray<GfVec3f> positions;
+                if (posAttr.Get(&positions, frame) && !positions.empty()) {
+                    AiNodeSetArray(node, str::points,
+                        AiArrayConvert(positions.size(), 1, AI_TYPE_VECTOR, positions.cdata()));
+                }
+            } else {
+                VtArray<GfVec3h> positionsh;
+                if (posAttr.Get(&positionsh, frame) && !positionsh.empty()) {
+                    std::vector<GfVec3f> positions(positionsh.size());
+                    for (size_t i = 0; i < positionsh.size(); ++i)
+                        positions[i] = GfVec3f(positionsh[i]);
+                    AiNodeSetArray(node, str::points,
+                        AiArrayConvert(positions.size(), 1, AI_TYPE_VECTOR, positions.data()));
+                }
+            }
+        }
+    }
+
+    // --- Scales -------------------------------------------------------------
+    {
+        UsdAttribute scaleAttr;
+        bool isFloat = gs.UsesFloatScales(&scaleAttr);
+        if (scaleAttr) {
+            if (isFloat) {
+                VtArray<GfVec3f> scales;
+                if (scaleAttr.Get(&scales, frame) && !scales.empty()) {
+                    AiNodeSetArray(node, str::gs_scale,
+                        AiArrayConvert(scales.size(), 1, AI_TYPE_VECTOR, scales.cdata()));
+                }
+            } else {
+                VtArray<GfVec3h> scalesh;
+                if (scaleAttr.Get(&scalesh, frame) && !scalesh.empty()) {
+                    std::vector<GfVec3f> scales(scalesh.size());
+                    for (size_t i = 0; i < scalesh.size(); ++i)
+                        scales[i] = GfVec3f(scalesh[i]);
+                    AiNodeSetArray(node, str::gs_scale,
+                        AiArrayConvert(scales.size(), 1, AI_TYPE_VECTOR, scales.data()));
+                }
+            }
+        }
+    }
+
+    // --- Orientations -------------------------------------------------------
+    // Arnold gs_rotation stores 4 floats per point as [x, y, z, w].
+    // USD GfQuatf stores GetReal()=w and GetImaginary()=(x,y,z).
+    {
+        UsdAttribute orientAttr;
+        bool isFloat = gs.UsesFloatOrientations(&orientAttr);
+        if (orientAttr) {
+            VtArray<GfQuatf> orientations;
+            if (!isFloat) {
+                VtArray<GfQuath> orientationsh;
+                if (orientAttr.Get(&orientationsh, frame) && !orientationsh.empty()) {
+                    orientations.resize(orientationsh.size());
+                    for (size_t i = 0; i < orientationsh.size(); ++i)
+                        orientations[i] = GfQuatf(orientationsh[i]);
+                }
+            } else {
+                orientAttr.Get(&orientations, frame);
+            }
+            if (!orientations.empty()) {
+                size_t n = orientations.size();
+                AtArray *rotArray = AiArrayAllocate(n * 4, 1, AI_TYPE_FLOAT);
+                float *out = static_cast<float *>(AiArrayMap(rotArray));
+                for (size_t i = 0; i < n; ++i) {
+                    const GfVec3f &imag = orientations[i].GetImaginary();
+                    float w = orientations[i].GetReal();
+                    out[i * 4 + 0] = imag[0]; // x
+                    out[i * 4 + 1] = imag[1]; // y
+                    out[i * 4 + 2] = imag[2]; // z
+                    out[i * 4 + 3] = w;       // w
+                }
+                AiArrayUnmap(rotArray);
+                AiNodeSetArray(node, str::gs_rotation, rotArray);
+            }
+        }
+    }
+
+    // --- Opacities ----------------------------------------------------------
+    {
+        UsdAttribute opAttr;
+        bool isFloat = gs.UsesFloatOpacities(&opAttr);
+        if (opAttr) {
+            if (isFloat) {
+                VtArray<float> opacities;
+                if (opAttr.Get(&opacities, frame) && !opacities.empty()) {
+                    AiNodeSetArray(node, str::gs_opacity,
+                        AiArrayConvert(opacities.size(), 1, AI_TYPE_FLOAT, opacities.cdata()));
+                }
+            } else {
+                VtArray<GfHalf> opacitiesh;
+                if (opAttr.Get(&opacitiesh, frame) && !opacitiesh.empty()) {
+                    std::vector<float> opacities(opacitiesh.size());
+                    for (size_t i = 0; i < opacitiesh.size(); ++i)
+                        opacities[i] = static_cast<float>(opacitiesh[i]);
+                    AiNodeSetArray(node, str::gs_opacity,
+                        AiArrayConvert(opacities.size(), 1, AI_TYPE_FLOAT, opacities.data()));
+                }
+            }
+        }
+    }
+
+    // --- Spherical harmonics coefficients -----------------------------------
+    // Arnold's gaussianEvalSh expects the DC SH coefficient (index 0 per
+    // particle) pre-stored as (raw_f_dc * C0 + 0.5), where
+    // C0 = 0.28209479177387814 (the l=0 SH basis constant).
+    // USD radiance:sphericalHarmonicsCoefficients stores raw coefficients;
+    // apply the transformation here before building the Arnold atarray.
+    {
+        UsdAttribute shAttr;
+        bool isFloat = gs.UsesFloatRadianceCoefficients(&shAttr);
+        if (shAttr) {
+            std::vector<GfVec3f> shCoeffs;
+            if (isFloat) {
+                VtArray<GfVec3f> tmp;
+                if (shAttr.Get(&tmp, frame) && !tmp.empty())
+                    shCoeffs.assign(tmp.begin(), tmp.end());
+            } else {
+                VtArray<GfVec3h> tmph;
+                if (shAttr.Get(&tmph, frame) && !tmph.empty()) {
+                    shCoeffs.resize(tmph.size());
+                    for (size_t i = 0; i < tmph.size(); ++i)
+                        shCoeffs[i] = GfVec3f(tmph[i]);
+                }
+            }
+            if (!shCoeffs.empty()) {
+                // Determine how many SH coefficients exist per point so we
+                // can locate the DC term (index 0 per particle).
+                AtArray* ptsArray = AiNodeGetArray(node, str::points);
+                if (ptsArray) {
+                    const size_t nPts = AiArrayGetNumElements(ptsArray);
+                    if (nPts > 0 && shCoeffs.size() % nPts == 0) {
+                        const size_t nPerPt = shCoeffs.size() / nPts;
+                        if (nPerPt == 1 || nPerPt == 4 || nPerPt == 9 || nPerPt == 16) {
+                            constexpr float C0 = 0.28209479177387814f;
+                            for (size_t i = 0; i < nPts; ++i) {
+                                GfVec3f& dc = shCoeffs[i * nPerPt];
+                                dc = dc * C0 + GfVec3f(0.5f);
+                            }
+                        }
+                    }
+                }
+                AiNodeSetArray(node, str::gs_sh,
+                    AiArrayConvert(shCoeffs.size(), 1, AI_TYPE_RGB, shCoeffs.data()));
+            }
+        }
+    }
+
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+
+    return node;
+}
+#endif
 
 /**
  *   Convert the basic USD shapes (cube, sphere, cylinder, cone,...)

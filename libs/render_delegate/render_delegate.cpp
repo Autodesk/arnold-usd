@@ -53,6 +53,7 @@
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
+#include "gaussian_splat.h"
 #include "instancer.h"
 #include "light.h"
 #include "mesh.h"
@@ -531,6 +532,9 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
+#if PXR_VERSION >= 2603
+    _supportedRprimTypes.push_back(HdPrimTypeTokens->particleField);
+#endif
     if (_mask & AI_NODE_SHAPE) {
         auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
         while (!AiNodeEntryIteratorFinished(shapeIter)) {
@@ -1222,6 +1226,11 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->points) {
         return new HdArnoldPoints(this, rprimId);
     }
+#if PXR_VERSION >= 2603
+    if (typeId == HdPrimTypeTokens->particleField) {
+        return new HdArnoldGaussianSplat(this, rprimId);
+    }
+#endif
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
