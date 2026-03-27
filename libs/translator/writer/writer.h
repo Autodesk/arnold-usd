@@ -150,9 +150,16 @@ public:
                     // so far it just has a constant value. 
                     // We want to check if it's different from the current one
                     VtValue previousVal;
-                    if (!attr.Get(&previousVal))
+                    if (!attr.HasAuthoredValue()) {
+                        // No previously authored value at all. This can happen when an 
+                        // object first appears mid-animation. Write as default so that 
+                        // constant attributes don't get spurious time samples. For motion  
+                        // blur sub-frame keys we still need actual time samples.
+                        attr.Set(value, subFrame ? GetTime(*subFrame) : UsdTimeCode::Default());
+                    } else if (!attr.Get(&previousVal))
                     {
-                        // couldn't get the previous value, just set the current time
+                        // Has authored value but can't read at default time (e.g. only 
+                        // has time samples from motion blur keys). Write at current time.
                         attr.Set(value, subFrame ? GetTime(*subFrame) : GetTime());
                     } else if (previousVal != value) {
                         // the attribute value has changed since the previously 
