@@ -957,7 +957,21 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
         }
     }
 
-    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    // Use gaussian_splat_shader as the default shader.
+    // We call _ReadGenericShape with readMaterial=false to prevent it from
+    // overwriting our shader with GetDefaultShader() when no material is bound.
+    // ReadMaterialBinding is called separately with assignDefault=false so that
+    // an explicitly bound material still takes effect via a deferred connection.
+    {
+        AtUniverse* universe = AiNodeGetUniverse(node);
+        AtNode* gsShader = AiNodeLookUpByName(universe, str::gaussian_splat_shader);
+        if (gsShader == nullptr)
+            gsShader = AiNode(universe, str::gaussian_splat_shader, str::gaussian_splat_shader);
+        AiNodeSetPtr(node, str::shader, gsShader);
+    }
+
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold", nullptr, false);
+    ReadMaterialBinding(prim, node, context, false);
 
     return node;
 }
