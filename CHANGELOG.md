@@ -7,6 +7,7 @@
 
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
+- [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.
 
 ### Bug Fixes
 
