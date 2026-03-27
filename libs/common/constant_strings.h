@@ -310,6 +310,7 @@ ASTR(gaussian_splat_shader);
 ASTR(geometry);
 ASTR(ginstance);
 ASTR(grids);
+ASTR(GS_Alpha);
 ASTR(gs_opacity);
 ASTR(gs_rotation);
 ASTR(gs_scale);

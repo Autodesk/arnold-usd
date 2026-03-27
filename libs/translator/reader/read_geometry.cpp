@@ -692,6 +692,76 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     AtArray *pointsArray = AiNodeGetArray(node, AtString("points"));
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
+    // --- Houdini Gaussian Splat detection -----------------------------------
+    // Houdini exports gaussian splats as a UsdGeomPoints prim with a
+    // primvars:GS_Alpha attribute (linear opacity). The other GS attributes
+    // are: primvars:displayColor (gs_sh DC, already normalized),
+    // primvars:scale (gs_scale, linear), primvars:orient (rotation, GfQuatf).
+    UsdGeomPrimvarsAPI primvarsAPI(prim);
+    if (primvarsAPI.HasPrimvar(TfToken("GS_Alpha"))) {
+        AiNodeSetStr(node, str::mode, str::gaussian);
+
+        // gs_sh from primvars:displayColor (values already = raw_f_dc * C0 + 0.5)
+        UsdGeomPrimvar displayColorPv = primvarsAPI.GetPrimvar(TfToken("displayColor"));
+        if (displayColorPv) {
+            VtArray<GfVec3f> displayColor;
+            if (displayColorPv.Get(&displayColor, frame) && !displayColor.empty())
+                AiNodeSetArray(node, str::gs_sh,
+                    AiArrayConvert(displayColor.size(), 1, AI_TYPE_RGB, displayColor.cdata()));
+        }
+
+        // gs_opacity from primvars:GS_Alpha (already linear [0,1])
+        UsdGeomPrimvar gsAlphaPv = primvarsAPI.GetPrimvar(TfToken("GS_Alpha"));
+        {
+            VtArray<float> opacities;
+            if (gsAlphaPv.Get(&opacities, frame) && !opacities.empty())
+                AiNodeSetArray(node, str::gs_opacity,
+                    AiArrayConvert(opacities.size(), 1, AI_TYPE_FLOAT, opacities.cdata()));
+        }
+
+        // gs_scale from primvars:scale (already linear, exp() already applied by Houdini)
+        UsdGeomPrimvar scalePv = primvarsAPI.GetPrimvar(TfToken("scale"));
+        if (scalePv) {
+            VtArray<GfVec3f> scales;
+            if (scalePv.Get(&scales, frame) && !scales.empty())
+                AiNodeSetArray(node, str::gs_scale,
+                    AiArrayConvert(scales.size(), 1, AI_TYPE_VECTOR, scales.cdata()));
+        }
+
+        // gs_rotation from primvars:orient: GfQuatf is (w, x, y, z),
+        // Arnold gs_rotation expects 4 floats per splat as [x, y, z, w]
+        UsdGeomPrimvar orientPv = primvarsAPI.GetPrimvar(TfToken("orient"));
+        if (orientPv) {
+            VtArray<GfQuatf> orientations;
+            if (orientPv.Get(&orientations, frame) && !orientations.empty()) {
+                const size_t n = orientations.size();
+                AtArray* rotArray = AiArrayAllocate(n * 4, 1, AI_TYPE_FLOAT);
+                float* out = static_cast<float*>(AiArrayMap(rotArray));
+                for (size_t i = 0; i < n; ++i) {
+                    const GfVec3f& imag = orientations[i].GetImaginary();
+                    const float    w    = orientations[i].GetReal();
+                    out[i * 4 + 0] = imag[0]; // x
+                    out[i * 4 + 1] = imag[1]; // y
+                    out[i * 4 + 2] = imag[2]; // z
+                    out[i * 4 + 3] = w;        // w
+                }
+                AiArrayUnmap(rotArray);
+                AiNodeSetArray(node, str::gs_rotation, rotArray);
+            }
+        }
+
+        // Set gaussian_splat_shader if no material will be bound
+        AtUniverse* universe = AiNodeGetUniverse(node);
+        AtNode* gsShader = AiNodeLookUpByName(universe, str::gaussian_splat_shader);
+        if (gsShader == nullptr)
+            gsShader = AiNode(universe, str::gaussian_splat_shader, str::gaussian_splat_shader);
+        AiNodeSetPtr(node, str::shader, gsShader);
+
+        _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+        return node;
+    }
+    // --- end Houdini Gaussian Splat -----------------------------------------
+
     // Points radius
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtArray<float> widthArray;
