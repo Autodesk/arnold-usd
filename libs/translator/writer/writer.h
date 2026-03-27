@@ -128,7 +128,7 @@ public:
     void CreateScopeHierarchy(const SdfPath &path);
 
     const std::vector<float> &GetAuthoredFrames() const {return _authoredFrames;}
-
+    const std::vector<float> &GetNearestFrames() const {return _nearestFrames;}
     /** Set a parameter value on a usd attribute. If we're appending data from varying times, 
      *  this function will take care of creating time samples if needed, or just keeping a 
      *  constant value otherwise. A sub-frame can eventually be provided, in case we need to 

@@ -46,7 +46,6 @@ for frame in range(NUM_FRAMES):
         AiNodeSetRGB(late_shader, 'base_color', 0.8, 0.1, 0.1)
         AiNodeSetFlt(late_shader, 'specular_roughness', 0.3)
 
-
         late_obj = AiNode(universe, 'polymesh', '/late_object')
         AiNodeSetArray(late_obj, 'vlist', AiArray(8, 1, AI_TYPE_VECTOR,
             AtVector(-1, -1, 2), AtVector(1, -1, 2),
@@ -99,26 +98,32 @@ if 'inputs:specular_roughness.timeSamples' in content:
 if 'info:id.timeSamples' in content:
     errors.append('info:id has timeSamples (should be uniform default)')
 
-# 3) There should be no standalone Shader "late_shader" at the root scope;
-#    it should only exist under the material hierarchy.
-lines = content.split('\n')
-'''
-for line in lines:
-    stripped = line.strip()
-    indent = len(line) - len(line.lstrip())
-    if 'def Shader "late_shader"' in stripped and indent == 0:
-        errors.append('Stale standalone "late_shader" found at root scope')
-        break
-'''
 
 # 4) The transform for late_object must not contain garbage (denormalized floats)
+# 5) late_object must have time samples on primvars:arnold:visibility (invisible before
+#    first appearance frame, fully visible after (e.g. 1: 0, 2: 255 when APPEAR_FRAME is 2)
 late_obj_start = content.find('def Mesh "late_object"')
 if late_obj_start >= 0:
     late_obj_section = content[late_obj_start:content.find('\ndef ', late_obj_start + 1)]
     if re.search(r'[0-9]+\.[0-9]+e-[23][0-9]{2}', late_obj_section):
         errors.append('Transform for late_object contains garbage/denormalized values')
 
-# 5) Constant attributes on the always-present object must not have timeSamples
+    vis_ts = re.search(
+        r'uchar\s+primvars:arnold:visibility\.timeSamples\s*=\s*\{([^}]*)\}',
+        late_obj_section,
+        re.DOTALL)
+    if not vis_ts:
+        errors.append(
+            'late_object missing uchar primvars:arnold:visibility.timeSamples block')
+    else:
+        vis_body = vis_ts.group(1)
+        if not re.search(r'1:\s*0\b', vis_body) or not re.search(r'2:\s*255\b', vis_body):
+            errors.append(
+                'late_object primvars:arnold:visibility.timeSamples must include 1: 0 and 2: 255')
+else:
+    errors.append('def Mesh "late_object" not found')
+
+# 6) Constant attributes on the always-present object must not have timeSamples
 always_start = content.find('def Mesh "always_here"')
 always_end = content.find('\ndef ', always_start + 1) if always_start >= 0 else -1
 if always_start >= 0 and always_end >= 0:
