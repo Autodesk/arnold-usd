@@ -29,6 +29,7 @@
 #include <pxr/usd/usdShade/udimUtils.h>
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -509,40 +510,125 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
     }
 }
 
-/**
- * Stores asset paths from the given clip dictionary value.
- */
-inline void CollectClipDependencies(const VtValue& value, const SdfPrimSpecHandle& prim, DependencyData& data)
+inline int GetIntDictField(const VtDictionary& dict, const std::string& key)
 {
-    if (value.IsHolding<SdfAssetPath>())
+    auto it = dict.find(key);
+    if (it == dict.end())
+        return 0;
+
+    const VtValue& v = it->second;
+
+    if (v.IsHolding<double>()) return static_cast<int>(v.UncheckedGet<double>());
+    if (v.IsHolding<float>())  return static_cast<int>(v.UncheckedGet<float>());
+    if (v.IsHolding<int>())    return v.UncheckedGet<int>();
+    if (v.IsHolding<long>())   return static_cast<int>(v.UncheckedGet<long>());
+    if (v.IsHolding<long long>()) return static_cast<int>(v.UncheckedGet<long long>());
+
+    return 0;
+}
+
+/**
+ * Template asset path is a convenience mechanism in value clips that lets you define
+ * a pattern for clip filenames, instead of listing every file explicitly in assetPaths.
+ * It is a string pattern like "clip.####.usd" where '#' characters represent a padded frame number.
+ * This function resolves the '#' characters in the pattern.
+ */
+inline std::string ResolveTemplateAssetPath(const std::string& pattern, int frame)
+{
+    const std::size_t firstHash = pattern.find('#');
+    if (firstHash == std::string::npos)
+        return pattern;
+
+    std::size_t lastHash = firstHash;
+    while (lastHash < pattern.size() && pattern[lastHash] == '#')
+        ++lastHash;
+
+    const std::size_t width = lastHash - firstHash;
+
+    std::ostringstream oss;
+    if (frame < 0)
+        oss << "-" << std::setw(static_cast<int>(width)) << std::setfill('0') << std::llabs(frame);
+    else
+        oss << std::setw(static_cast<int>(width)) << std::setfill('0') << frame;
+
+    return pattern.substr(0, firstHash) + oss.str() + pattern.substr(lastHash);
+}
+
+/**
+ * Template asset path is a convenience mechanism in value clips that lets you define
+ * a pattern for clip filenames, instead of listing every file explicitly in assetPaths.
+ * It is a string pattern like "clip.####.usd" where '#' characters represent a padded frame number.
+ * This function returns the list of resolved filenames from the template.
+ */
+inline std::vector<std::string> ResolveTemplateAssetPath(const std::string templateAssetPath, int start, int end, int stride)
+{
+    std::vector<std::string> result;
+
+    if (templateAssetPath.empty())
+        return result;
+
+    if (stride == 0)
+        stride = 1;
+
+    const std::string pattern = templateAssetPath;
+    if (pattern.find('#') == std::string::npos)
+        return result;
+
+    if (stride > 0 && start <= end)
     {
-        SdfAssetPath v = value.UncheckedGet<SdfAssetPath>();
+        for (int frame = start; frame <= end; frame += stride)
+            result.push_back(ResolveTemplateAssetPath(pattern, frame));
+    }
+    else if (stride < 0 && start >= end)
+    {
+        for (int frame = start; frame >= end; frame += stride)
+            result.push_back(ResolveTemplateAssetPath(pattern, frame));
+    }
+
+    return result;
+}
+
+/**
+ * Stores asset paths from the given clip dictionary.
+ */
+inline void CollectClipDependencies(const VtDictionary& clipSetDict, const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    // manifest asset path
+    const VtValue* manifestAssetPathValue = clipSetDict.GetValueAtPath("manifestAssetPath");
+    if (manifestAssetPathValue && manifestAssetPathValue->IsHolding<SdfAssetPath>())
+    {
+        SdfAssetPath v = manifestAssetPathValue->UncheckedGet<SdfAssetPath>();
         AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
             prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
     }
-    else if (value.IsHolding<VtArray<SdfAssetPath>>())
+
+    // asset paths
+    const VtValue* assetPathsValue = clipSetDict.GetValueAtPath("assetPaths");
+    if (assetPathsValue && assetPathsValue->IsHolding<VtArray<SdfAssetPath>>())
     {
-        const auto& arr = value.UncheckedGet<VtArray<SdfAssetPath>>();
+        const auto& arr = assetPathsValue->UncheckedGet<VtArray<SdfAssetPath>>();
         for (SdfAssetPath v : arr)
         {
             AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
                 prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
         }
     }
-    else if (value.IsHolding<std::vector<SdfAssetPath>>())
+
+    // template asset path
+    const VtValue* templateAssetPathValue = clipSetDict.GetValueAtPath("templateAssetPath");
+    if (templateAssetPathValue && templateAssetPathValue->IsHolding<SdfAssetPath>())
     {
-        const auto& arr = value.UncheckedGet<std::vector<SdfAssetPath>>();
-        for (SdfAssetPath v : arr)
+        SdfAssetPath templateAssetPath = templateAssetPathValue->UncheckedGet<SdfAssetPath>();
+        int start = GetIntDictField(clipSetDict, "templateStartTime");
+        int end = GetIntDictField(clipSetDict, "templateEndTime");
+        int stride = GetIntDictField(clipSetDict, "templateStride");
+
+        std::vector<std::string> assetPaths = ResolveTemplateAssetPath(templateAssetPath.GetAssetPath(), start, end, stride);
+        for (const std::string v : assetPaths)
         {
-            AddDependency(v.GetAssetPath(), USDDependency::Type::Clip,
+            AddDependency(v, USDDependency::Type::Clip,
                 prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
         }
-    }
-    else if (value.IsHolding<VtDictionary>())
-    {
-        const VtDictionary& dict = value.UncheckedGet<VtDictionary>();
-        for (const auto& it : dict)
-            CollectClipDependencies(it.second, prim, data);
     }
 }
 
@@ -579,50 +665,7 @@ inline void CollectDependenciesFromClips(const SdfPrimSpecHandle& prim, Dependen
             continue;
 
         const VtDictionary& clipSetDict = clipSetValue.UncheckedGet<VtDictionary>();
-
-        for (const auto& entry : clipSetDict)
-        {
-            const VtValue& value = entry.second;
-            CollectClipDependencies(value, prim, data);
-        }
-
-        // Handle templateAssetPath: a string like "clips/shot.###.usd" where '#'
-        // characters form a pattern. USD expands this by globbing the filesystem.
-        // This is separate from assetPaths (explicit SdfAssetPath list) and is
-        // completely missed by CollectClipDependencies which only handles SdfAssetPath.
-        static const std::string templateKey("templateAssetPath");
-        const VtValue* templateValue = clipSetDict.GetValueAtPath(templateKey);
-        if (templateValue && templateValue->IsHolding<std::string>() && data.layer)
-        {
-            const std::string& templatePath = templateValue->UncheckedGet<std::string>();
-            const std::string clipsDir = TfGetPathName(templatePath);
-            if (!clipsDir.empty())
-            {
-                const std::string clipsDirResolved =
-                    SdfComputeAssetPathRelativeToLayer(data.layer, clipsDir);
-
-                if (TfIsDir(clipsDirResolved))
-                {
-                    const std::string baseName = TfGetBaseName(templatePath);
-                    const std::string globPattern = TfStringCatPaths(
-                        clipsDirResolved, TfStringReplace(baseName, "#", "*"));
-
-                    std::vector<std::string> clipFiles = TfGlob(globPattern);
-                    // TfGlob returns the pattern unchanged when there are no matches
-                    if (clipFiles.size() == 1 && clipFiles[0] == globPattern)
-                        clipFiles.clear();
-
-                    for (const std::string& clipFile : clipFiles)
-                    {
-                        // Reconstruct path relative to the layer (matching USD behaviour)
-                        const std::string relClipFile =
-                            TfStringReplace(clipFile, clipsDirResolved + '/', clipsDir);
-                        AddDependency(relClipFile, USDDependency::Type::Clip,
-                            prim->GetPath(), prim->GetTypeName(), SdfPath(), data);
-                    }
-                }
-            }
-        }
+        CollectClipDependencies(clipSetDict, prim, data);
     }
 }
 
