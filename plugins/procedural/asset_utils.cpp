@@ -31,18 +31,20 @@
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
 #include <sstream>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 typedef std::unordered_map<std::string, std::pair<std::string, std::string>> SeenReferenceMap;
+typedef std::unordered_map<std::string, std::unordered_set<std::string>> VariantSelectionMap;
 
 struct SdfPrimSpecHandleHash
 {
-    size_t operator()(const SdfPrimSpecHandle& h) const noexcept
+    size_t operator()(const SdfPrimSpecHandle& spec) const noexcept
     {
-        return hash_value(h);
+        return std::hash<std::string>()(spec->GetLayer()->GetIdentifier()) ^ (std::hash<std::string>()(spec->GetPath().GetString()) << 1);
     }
 };
 
@@ -51,7 +53,8 @@ struct SdfPrimSpecHandleEqual
     bool operator()(const SdfPrimSpecHandle& a,
                     const SdfPrimSpecHandle& b) const noexcept
     {
-        return a == b;
+        return a->GetLayer()->GetIdentifier() == b->GetLayer()->GetIdentifier()
+            && a->GetPath().GetString() == b->GetPath().GetString();
     }
 };
 
@@ -416,12 +419,7 @@ inline std::vector<UsdPrim> FindUsdPrims(const SdfPrimSpecHandle& primSpec, UsdP
  */
 inline void CreateUsdPrimMap(const UsdStageRefPtr& stage, UsdPrimMap& usdPrimMap)
 {
-    // Use UsdPrimAllPrimsPredicate so that 'over' prims are included.
-    // When CollectSceneAssets is called directly on a file whose prims are all
-    // 'over' specifiers (e.g. a stitched clip file), the default predicate
-    // (UsdPrimDefaultPredicate, which requires UsdPrimIsDefined) would return
-    // nothing and leave the map empty, causing variant traversal to be skipped.
-    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage, UsdPrimAllPrimsPredicate))
+    for (const UsdPrim& usdPrim : UsdPrimRange::Stage(stage))
     {
         if (!usdPrim)
             continue;
@@ -437,6 +435,56 @@ inline void CreateUsdPrimMap(const UsdStageRefPtr& stage, UsdPrimMap& usdPrimMap
 }
 
 /**
+ * Creates a map that contains selected variants of each variant set.
+ */
+inline VariantSelectionMap GetVariantSelection(const SdfPrimSpecHandle& prim, DependencyData& data)
+{
+    VariantSelectionMap selectionMap;
+
+    // Read selections defined in the prim spec
+    const SdfVariantSelectionMap specSelections = prim->GetVariantSelections();
+
+    // Read selections from composed usd prims
+    // The sdf prim contains selections defined within the layer that authors the prim,
+    // while the usd prim contains composed selections across all layers
+    // A prim spec can contribute to multiple usd prims
+    std::vector<UsdPrim> usdPrims = FindUsdPrims(prim, data.usdPrimMap);
+
+    const auto vsets = prim->GetVariantSets();
+    for (const auto& vsetIt : vsets.items())
+    {
+        const std::string setName = vsetIt.first;
+
+        std::unordered_set<std::string>& selectedVariants = selectionMap[setName];
+
+        // First read selection from the prim spec
+        {
+            const auto it = specSelections.find(setName);
+            if (it != specSelections.end())
+            {
+                const std::string& selected = it->second;
+                if (!selected.empty())
+                    selectedVariants.insert(selected);
+            }
+        }
+
+        // Then read selection from the composed usd prims
+        for (const UsdPrim usdPrim : usdPrims)
+        {
+            UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
+            if (usdVset)
+            {
+                std::string selected = usdVset.GetVariantSelection();
+                if (!selected.empty())
+                    selectedVariants.insert(selected);
+            }
+        }
+    }
+
+    return selectionMap;
+}
+
+/**
  * Returns dependencies found in the selected variants of a prim.
  */
 inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, DependencyData& data)
@@ -446,11 +494,8 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
     if (variantSets.empty())
         return;
 
-    // we need to read variant selections from Usd prims
-    // the Sdf prim contains selections defined within the layer that authors the prim,
-    // while the Usd prim contains composed selections across all layers
-    // a prim spec can contribute to multiple Usd prims
-    std::vector<UsdPrim> usdPrims = FindUsdPrims(prim, data.usdPrimMap);
+    // find the selected variants in each set
+    VariantSelectionMap variantSelection = GetVariantSelection(prim, data);
 
     // interate the variant sets
     for (const auto& vsetit : variantSets.items())
@@ -460,34 +505,18 @@ inline void CollectDependenciesFromVariants(const SdfPrimSpecHandle& prim, Depen
         if (!vset)
             continue;
 
-        // Get the selected variants from composed Usd prims (respects stronger-layer
-        // overrides). When the selection cannot be determined — e.g. the stage was
-        // opened directly from a file whose prims are all 'over' specifiers, or no
-        // variant is selected — fall back to traversing ALL variants so that clip
-        // dependencies (manifest, assetPaths, etc.) are never silently missed.
-        // This matches the behaviour of UsdUtils_LocalizationContext::_ProcessLayer
-        // which unconditionally traverses every variant spec.
-        std::unordered_set<std::string> selectedVariants;
-        for (const UsdPrim usdPrim : usdPrims)
-        {
-            UsdVariantSet usdVset = usdPrim.GetVariantSet(setName);
-            if (!usdVset)
-                continue;
-            std::string selectedVariantName = usdVset.GetVariantSelection();
-            if (!selectedVariantName.empty())
-                selectedVariants.insert(selectedVariantName);
-        }
-        const bool traverseAllVariants = selectedVariants.empty();
+        // find the selected variants in this set
+        const std::unordered_set<std::string>& selectedVariants = variantSelection[setName];
 
-        // iterate all variants in the set
+        // iterate all variants in this set
         for (const SdfVariantSpecHandle& variant : vset->GetVariants())
         {
             if (!variant)
                 continue;
 
-            // skip unselected variants only when a selection is known
+            // skip unselected variants
             const std::string variantName = variant->GetName();
-            if (!traverseAllVariants && !selectedVariants.count(variantName))
+            if (!selectedVariants.count(variantName))
                 continue;
 
             // get the root prim spec for the variant
@@ -778,45 +807,10 @@ std::vector<USDDependency> CollectDependencies(UsdStageRefPtr stage)
     // create a map that lists all UsdPrims that include an SdfPrim
     CreateUsdPrimMap(stage, data.usdPrimMap);
 
-    // Track layers that have already been traversed to avoid duplicate work.
-    // Clip files are demand-loaded by USD and are NOT in GetUsedLayers() until
-    // attribute values at specific times are accessed. Mirror what
-    // UsdUtils_LocalizationContext does: open every discovered USD file as a
-    // layer and traverse it, processing transitive dependencies as a queue.
-    std::unordered_set<std::string> processedLayerIds;
-
     // collect dependencies from all used layers
     SdfLayerHandleVector usedLayers = stage->GetUsedLayers();
     for (auto &layer : usedLayers)
-    {
-        processedLayerIds.insert(layer->GetIdentifier());
         CollectDependenciesFromLayer(layer, data);
-    }
-
-    // Follow any USD-file dependencies that were discovered in clip metadata
-    // (manifestAssetPath, assetPaths, templateAssetPath expansions) but were
-    // not yet opened as layers. New entries may appear as inner layers are
-    // traversed, so iterate until the list stabilises.
-    for (size_t i = 0; i < data.dependencies.size(); ++i)
-    {
-        const std::string& resolvedPath = data.dependencies[i].resolvedPath;
-        if (resolvedPath.empty() || !UsdStage::IsSupportedFile(resolvedPath))
-            continue;
-        if (processedLayerIds.count(resolvedPath))
-            continue;
-
-        processedLayerIds.insert(resolvedPath);
-
-        SdfLayerRefPtr depLayer = SdfLayer::FindOrOpen(resolvedPath);
-        if (!depLayer)
-            continue;
-
-        // a layer can have a different identifier from its resolved path
-        if (!processedLayerIds.insert(depLayer->GetIdentifier()).second)
-            continue;
-
-        CollectDependenciesFromLayer(depLayer, data);
-    }
 
     return data.dependencies;
 }
