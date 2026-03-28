@@ -13,7 +13,6 @@
 #include <pxr/base/tf/fileUtils.h>
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/tf/stringUtils.h>
-#include <pxr/usd/ar/defaultResolverContext.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/sdf/attributeSpec.h>
 #include <pxr/usd/sdf/layer.h>
@@ -23,11 +22,11 @@
 #include <pxr/usd/sdf/variantSetSpec.h>
 #include <pxr/usd/sdf/variantSpec.h>
 #include <pxr/usd/usd/prim.h>
-#include <pxr/usd/usd/primFlags.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdRender/settings.h>
+#include <pxr/usd/usdShade/udimUtils.h>
 #include <pxr/usd/usdUtils/dependencies.h>
 #include <algorithm>
 #include <sstream>
@@ -57,10 +56,6 @@ struct SdfPrimSpecHandleEqual
             && a->GetPath().GetString() == b->GetPath().GetString();
     }
 };
-
-inline bool _IsFileRelative(const std::string& path) { return path.find("./") == 0 || path.find("../") == 0; }
-inline bool _IsRelativePath(const std::string& path) { return (!path.empty() && TfIsRelativePath(path)); }
-inline bool _IsSearchPath(const std::string& path) { return _IsRelativePath(path) && !_IsFileRelative(path); }
 
 typedef std::unordered_map<const SdfPrimSpecHandle, std::vector<UsdPrim>, SdfPrimSpecHandleHash, SdfPrimSpecHandleEqual> UsdPrimMap;
 
@@ -222,6 +217,18 @@ bool GetAttributeCustomDataBool(const SdfLayerHandle& layer, const SdfPath& attr
     return defaultValue;
 }
 
+inline std::string ResolvePath(const std::string ref, SdfLayerHandle& layer, ArResolver& resolver)
+{
+    // The resolver can not resolve UDIM paths, they require a dedicated API call
+    if (UsdShadeUdimUtils::IsUdimIdentifier(ref))
+        return UsdShadeUdimUtils::ResolveUdimPath(ref, layer);
+
+    // First convert the apth to an absolute path if it's relative to the layer
+    std::string refAbsPath = SdfComputeAssetPathRelativeToLayer(layer, ref);
+    // Then resolve the path with the resolver
+    return resolver.Resolve(refAbsPath);
+}
+
 /**
  * Adds the given dependency to our list.
  */
@@ -246,11 +253,12 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
     }
     else
     {
+        anchoredPath = ref;
+
         // resolve the reference to an absolute path
-        std::string refPath = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
-        resolvedPath = data.resolver.Resolve(refPath);
+        resolvedPath = ResolvePath(ref, data.layer, data.resolver);
+
         // If USD can not resolve the path this could be an Arnold specific path, like UDIM.
-        // It can also be a relative search path, in that case the resolver doesn't return the absolute path
         // If the asset comes from a prim attribute, check if the "arnold_relative_path" metadata 
         // is defined on an attribute, which means Arnold needs to resolve the relative path.
         // If not defined, then use the absolute path returned by SdfComputeAssetPathRelativeToLayer.
@@ -264,48 +272,19 @@ inline void AddDependency(const std::string& ref, USDDependency::Type type,
             }
 
             if (remap)
-                resolvedPath = refPath;
+                resolvedPath = SdfComputeAssetPathRelativeToLayer(data.layer, ref);
         }
-        anchoredPath = ref;
+
         // convert a relative reference relative to the main scene
         if (!resolvedPath.empty() && TfIsRelativePath(ref))
         {
-            // If the resolved path is still relative, it could be a search path with UDIM
-            if (_IsSearchPath(resolvedPath) && resolvedPath.find("<UDIM>") != std::string::npos) {
-                // Search all configured search paths for matching UDIM files.
-                // Mirrors ArDefaultResolver::_Resolve: layer dir first, then bound context paths.
-                // We probe with tile 1001, which is always the first tile in a UDIM sequence.
-                const std::string udimProbe = TfStringReplace(resolvedPath, "<UDIM>", "1001");
-
-                std::vector<std::string> searchDirs;
-                // 1. Layer directory (mirrors file-relative anchoring priority)
-                searchDirs.push_back(TfGetPathName(data.layer->GetIdentifier()));
-                // 2. Directories from the currently-bound ArDefaultResolverContext
-                const ArResolverContext ctx = data.resolver.GetCurrentContext();
-                if (const ArDefaultResolverContext* defCtx = ctx.Get<ArDefaultResolverContext>()) {
-                    for (const std::string& sp : defCtx->GetSearchPath())
-                        searchDirs.push_back(sp);
-                }
-                std::string foundDir;
-                for (const std::string& dir : searchDirs) {
-                    if (dir.empty())
-                        continue;
-                    if (TfPathExists(TfStringCatPaths(dir, udimProbe))) {
-                        foundDir = dir;
-                        break;
-                    }
-                }
-                if (!foundDir.empty()) {
-                    anchoredPath = "./" + resolvedPath;
-                    resolvedPath = TfStringCatPaths(foundDir, resolvedPath);
-                }
-            } else {
-                std::string relativeToRoot = ComputeRelativePathToRoot(data.stage, resolvedPath);
-                // convert only if the file is located under the root folder
-                if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
-                    anchoredPath = relativeToRoot;
-            }
+            std::string relativeToRoot = ComputeRelativePathToRoot(data.stage, resolvedPath);
+            // convert only if the file is located under the root folder
+            if (!relativeToRoot.empty() && relativeToRoot.at(0) != '.')
+                anchoredPath = relativeToRoot;
         }
+
+        // store the resolved path in our map so it won't be resolved again
         data.seenReferences[refId] = std::make_pair(anchoredPath, resolvedPath);
     }
 
