@@ -454,7 +454,7 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
-#if ARNOLD_SCENE_INDEX
+#ifdef ARNOLD_SCENE_INDEX
     if (_sceneGlobalsSceneIndex) {
         SdfPath renderPassPrimPath(renderPass);
         if (!renderPassPrimPath.IsEmpty()) {
