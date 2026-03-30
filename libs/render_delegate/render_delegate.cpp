@@ -253,20 +253,33 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
     }
 }
 
+
 inline const TfTokenVector& _SupportedSprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->camera,        HdPrimTypeTokens->material,
-                                 HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
-                                 HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
-                                 HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
-#ifdef ENABLE_SCENE_INDEX                               
+    // Hd_PrimTypeIndex::SyncPrims walks types in this order; every prim of type N
+    // is fully synced before any prim of type N+1. Light shaders (and filters) can
+    // target ArnoldNodeGraph prims, which must therefore appear before light types.
+    // Scene-index dependency forwarding dirties lights when graphs change but does
+    // not reorder this pass.
+    static const TfTokenVector r{HdPrimTypeTokens->camera,
+                                 HdPrimTypeTokens->material,
+                                 str::t_ArnoldNodeGraph,
+                                 HdPrimTypeTokens->distantLight,
+                                 HdPrimTypeTokens->sphereLight,
+                                 HdPrimTypeTokens->diskLight,
+                                 HdPrimTypeTokens->rectLight,
+                                 HdPrimTypeTokens->cylinderLight,
+                                 HdPrimTypeTokens->domeLight,
+#ifdef ENABLE_SCENE_INDEX
                                  HdPrimTypeTokens->meshLight,
 #endif
-                                 _tokens->GeometryLight, _tokens->ArnoldOptions,
-                                 HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
+                                 _tokens->GeometryLight,
+                                 _tokens->ArnoldOptions,
+                                 HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
 }
+
 
 inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
