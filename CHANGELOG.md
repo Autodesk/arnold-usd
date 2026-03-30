@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.1.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
+
 ## [7.5.1.0] (Unreleased)
 
 ### Features
