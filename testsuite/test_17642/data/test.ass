@@ -1,0 +1,116 @@
+### exported: Tue Mar 31 18:45:03 2026
+### from:     Arnold 7.5.1.0 [e11a041a] windows x86_64 icx-2025.2.0 oiio-2.6.3 osl-1.13.3 vdb-11.0.0 adlsdk-10.0.1.66 clmhub-3.3.0.15 rlm-17.0.1 optix-8.0.0 2026/03/05 00:21:16
+### meters_per_unit: 0.010000
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 14
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp"
+ color_manager "ai_default_color_manager_ocio"
+ meters_per_unit 0.00999999978
+ frame 14
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+skydome_light
+{
+ name /light
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ color 1 1 1
+ intensity 1
+ exposure 0
+ normalize off
+ diffuse 1
+ specular 1
+ format "angular"
+}
+
+persp_camera
+{
+ name /persp
+ position 0 0 0
+ look_at 0 0 -1
+ up 0 1 0
+ matrix
+ 0.982287228 0 0.187381312 0
+ 0.0868130252 0.886203587 -0.455089808 0
+ -0.166057989 0.463296056 0.870506465 0
+ -7.81219339 9.31462383 20.8970375 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -1 -1
+ screen_window_max 1 1
+ shutter_start 0
+ shutter_end 0
+ exposure 0
+ fov 49.134346
+ focus_distance 1
+ aperture_size 0
+ lens_tilt_angle 0 0
+ lens_shift 0 0
+}
+
+standard_volume
+{
+ name /mtl/material/standard_volume0
+ density 1
+ density_channel "voxel_fog_density"
+ scatter_diffusion 0
+ scatter_diffusion_bias 0.150000006
+ scatter_diffusion_gain 0.5
+ scatter 1
+ scatter_color 1 0.5 0.0
+ scatter_color_channel ""
+ scatter_anisotropy 0
+ scatter_secondary_anisotropy 0
+ scatter_secondary_anisotropy_mix 0
+ scatter_diffusion_roughness 0
+ scatter_diffusion_roughness_bias 0.150000006
+ scatter_diffusion_roughness_gain 0.5
+ transparent 0.36787945 0.36787945 0.36787945
+ transparent_depth 1
+ transparent_channel ""
+ emission_mode "blackbody"
+ emission_scaling "none"
+ emission 1
+ emission_color 1 1 1
+ emission_channel "heat"
+ temperature 1
+ temperature_channel "temperature"
+ blackbody_kelvin 5000
+ blackbody_intensity 1
+ blackbody_contrast 1
+ displacement 0 0 0
+ interpolation "trilinear"
+}
+
+volume
+{
+ name /adsktest/testdata_p_0000025CCCED1550
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "/mtl/material/standard_volume0"
+ filename "D:\arnold\arnold-usd\testsuite\test_17642\data\torus01.vdb"
+ grids "voxel_fog_density[0]"
+ declare hydra_primId constant INT
+ hydra_primId 1
+}
+
