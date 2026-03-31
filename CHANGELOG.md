@@ -10,6 +10,7 @@
 - [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
 - [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
 - [usd#2433](https://github.com/Autodesk/arnold-usd/issues/2433) - Support interactive changes of shaders connected to quad lights
+- [usd#2611](https://github.com/Autodesk/arnold-usd/issues/2611) - Support exporting geometries that get added during a sequence
 
 ## [7.5.1.0] 2026-03-25
 

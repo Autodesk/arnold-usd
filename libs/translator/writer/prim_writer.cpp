@@ -1217,7 +1217,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         // skipped a few lines above. We need to set it now
         // before we call SetAttribute (see #871)
         if (!attr.Get(&previousVal)) {
-            GfMatrix4d m;
+            GfMatrix4d m(1.0);
             attr.Set(m);
         }
     }
