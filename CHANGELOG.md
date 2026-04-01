@@ -25,7 +25,7 @@
 - [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
 
 
-## [7.5.1.0] (Unreleased)
+## [7.5.1.0] 2026-03-25
 
 ### Features
 - [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
@@ -40,7 +40,7 @@
 - [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
 - [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
 
-## [7.5.0.0] (Unreleased)
+## [7.5.0.0] 2026-03-25
 
 ### Features
 
