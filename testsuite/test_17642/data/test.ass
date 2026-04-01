@@ -108,7 +108,7 @@ volume
  0 0 1 0
  0 0 0 1
  shader "/mtl/material/standard_volume0"
- filename "D:\arnold\arnold-usd\testsuite\test_17642\data\torus01.vdb"
+ filename "torus01.vdb"
  grids "voxel_fog_density[0]"
  declare hydra_primId constant INT
  hydra_primId 1
