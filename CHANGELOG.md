@@ -22,6 +22,8 @@
 ### Bug Fixes
 
 - [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
+- [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
+
 
 ## [7.5.1.0] (Unreleased)
 
