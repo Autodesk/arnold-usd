@@ -26,6 +26,8 @@
 - [usd#2566](https://github.com/Autodesk/arnold-usd/issues/2566) - Fixed crashes when a render delegate is deleted while another is rendering
 - [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
 - [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
+- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
+- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
 
 ## [7.5.0.0] 2026-03-25
 
@@ -42,13 +44,6 @@
 
 - [usd#2530](https://github.com/Autodesk/arnold-usd/issues/2530) -  Support uniform and vertex-interpolated primvars that are indexed
 - [usd#2532](https://github.com/Autodesk/arnold-usd/issues/2532) -  Fix crashes in IPR with ArnoldGinstance primitives
-
-## [7.4.5.2] (Unreleased)
-
-### Bug Fixes
-
-- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
-- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
 
 ## [7.4.5.1] 2026-02-19
 
