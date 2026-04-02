@@ -7,14 +7,6 @@
 
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
-- [usd#2611](https://github.com/Autodesk/arnold-usd/issues/2611) - Support exporting geometries that get added during a sequence
-
-
-### Bug Fixes
-
-- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
-- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
-- [usd#2433](https://github.com/Autodesk/arnold-usd/issues/2433) - Support interactive changes of shaders connected to quad lights
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
 
 ## [7.5.1.1] (Unreleased)
@@ -23,7 +15,10 @@
 
 - [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
 - [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
-
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
+- [usd#2433](https://github.com/Autodesk/arnold-usd/issues/2433) - Support interactive changes of shaders connected to quad lights
+- [usd#2611](https://github.com/Autodesk/arnold-usd/issues/2611) - Support exporting geometries that get added during a sequence
 
 ## [7.5.1.0] 2026-03-25
 
@@ -39,6 +34,8 @@
 - [usd#2566](https://github.com/Autodesk/arnold-usd/issues/2566) - Fixed crashes when a render delegate is deleted while another is rendering
 - [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
 - [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
+- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
+- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
 
 ## [7.5.0.0] 2026-03-25
 
@@ -55,13 +52,6 @@
 
 - [usd#2530](https://github.com/Autodesk/arnold-usd/issues/2530) -  Support uniform and vertex-interpolated primvars that are indexed
 - [usd#2532](https://github.com/Autodesk/arnold-usd/issues/2532) -  Fix crashes in IPR with ArnoldGinstance primitives
-
-## [7.4.5.2] (Unreleased)
-
-### Bug Fixes
-
-- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
-- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
 
 ## [7.4.5.1] 2026-02-19
 
