@@ -1217,7 +1217,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         // skipped a few lines above. We need to set it now
         // before we call SetAttribute (see #871)
         if (!attr.Get(&previousVal)) {
-            GfMatrix4d m;
+            GfMatrix4d m(1.0);
             attr.Set(m);
         }
     }
@@ -1246,7 +1246,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     AiArrayUnmapConst(array);
 }
 
-static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)
+static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer, bool isVolume = false)
 {
    
     // Special case : by default when no shader is assigned, the shader that is returned
@@ -1327,13 +1327,14 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         // hierarchy, so we're stripping the scope here
         writer.WritePrimitive(shader); 
         
-        UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
+        UsdShadeOutput shaderOutput = isVolume ? 
+            mat.CreateVolumeOutput(arnoldContext) : mat.CreateSurfaceOutput(arnoldContext);
         // retrieve the new shader name (with the material scope applied)
         shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
             // Connect the surface shader output to the material
-            std::string surfaceTargetName = shaderName + std::string(".outputs:out");
-            surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
+            std::string shaderTargetName = shaderName + std::string(".outputs:out");
+            shaderOutput.ConnectToSource(SdfPath(shaderTargetName));
         }
     }
     if (displacement) {
@@ -1426,5 +1427,5 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     static const AtString polymesh_str("polymesh");
     AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, AtString("disp_map")) : nullptr;
 
-    processMaterialBinding(shader, displacement, prim, writer);
+    processMaterialBinding(shader, displacement, prim, writer, AiNodeIs(node, str::volume));
 }

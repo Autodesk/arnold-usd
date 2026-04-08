@@ -1,0 +1,9 @@
+Fix multi-frame USD export for objects appearing mid-animation
+
+Validates that when exporting a multi-frame scene with append mode, objects
+that first appear on a later frame do not produce spurious timeSamples for
+constant attributes, stale standalone shader prims at the root scope, or
+garbage values in the transform matrix.
+
+author: zap.andersson and Claude
+
