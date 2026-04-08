@@ -353,29 +353,37 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
 
     {
-    TRACE_SCOPE("Populate/SetStage");
-    if (_useSceneIndex) {
-        if (!path.empty()) {
-            UsdStagePopulationMask mask({SdfPath(path)});
-            stage->SetPopulationMask(mask);
-        }
-        _stageSceneIndex->SetStage(stage);
-    } else {
-        SdfPathVector _excludedPrimPaths; // excluding nothing
-        _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
-    }
-    if (!path.empty() && !_useSceneIndex) {
-        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
-        const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
-        _imagingDelegate->SetRootTransform(xf);
-    }
+		TRACE_SCOPE("Populate/SetStage");
+		// We want to render the purpose that this reader was assigned to.
+		// We also support the purposes "default" and "geometry" that are always rendered
+		// so we don't need to provide it here
+		TfTokenVector purpose;
+		purpose.push_back(_purpose);
+		arnoldRenderDelegate->SetRenderTags(purpose);
+
+		// This will return a "hidden" render tag if a primitive is of a disabled type
+		if (_imagingDelegate) {
+			_imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
+			_imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
+			_imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
+		}
+
+		if (_useSceneIndex) {
+			if (!path.empty()) {
+				UsdStagePopulationMask mask({SdfPath(path)});
+				stage->SetPopulationMask(mask);
+			}
+			_stageSceneIndex->SetStage(stage);
+		} else {
+			SdfPathVector _excludedPrimPaths; // excluding nothing
+			_imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+		}
+		if (!path.empty() && !_useSceneIndex) {
+			UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
+			const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
+			_imagingDelegate->SetRootTransform(xf);
+		}
     } // end TRACE_SCOPE("Populate/SetStage")
-    // This will return a "hidden" render tag if a primitive is of a disabled type
-    if (_imagingDelegate) {
-        _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
-        _imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
-        _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
-    }
     
     // Not sure about the meaning of collection geometry -- should that be extended ?
     _collection = HdRprimCollection (HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
@@ -404,16 +412,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         TRACE_SCOPE("ProcessConnections");
         arnoldRenderDelegate->ProcessConnections();
     }
-    
-    // We want to render the purpose that this reader was assigned to.
-    // We must also support the purpose "default". Also, when no
-    // purpose is set in the usd file, it seems to shows as "geometry", so we need to support that too
-    TfTokenVector purpose;
-    purpose.push_back(UsdGeomTokens->default_);
-    purpose.push_back(_purpose);
-    purpose.push_back(HdTokens->geometry);
-    arnoldRenderDelegate->SetRenderTags(purpose);
-
+        
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
     {
@@ -473,13 +472,16 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
+#ifdef ARNOLD_SCENE_INDEX
     if (_sceneGlobalsSceneIndex) {
         SdfPath renderPassPrimPath(renderPass);
         if (!renderPassPrimPath.IsEmpty()) {
             _sceneGlobalsSceneIndex->SetActiveRenderPassPrimPath(renderPassPrimPath);
         }
     }
+#endif
 }
+
 
 void HydraArnoldReader::Update()
 {

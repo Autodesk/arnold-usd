@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 
 ### Bug Fixes
@@ -19,6 +20,7 @@
 ### Features
 - [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
 - [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
+- [usd#2597](https://github.com/Autodesk/arnold-usd/issues/2597) - Export custom implicit shapes as ArnoldProceduralCustom primitives
 
 ### Bug Fixes
 

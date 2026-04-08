@@ -28,6 +28,7 @@ struct USDDependency
         Sublayer,
         Reference,
         Payload,
+        Clip,
     };
 
     Type type;                 // attribute, sublayer, reference, payload, etc.
@@ -64,6 +65,7 @@ struct USDDependency
             case USDDependency::Type::Sublayer: return "sublayer";
             case USDDependency::Type::Reference: return "reference";
             case USDDependency::Type::Payload: return "payload";
+            case USDDependency::Type::Clip: return "clip";
             default: return "unknown";
         }
     }
