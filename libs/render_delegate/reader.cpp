@@ -6,6 +6,7 @@
 #include <constant_strings.h>
 #include <pxr/base/arch/env.h>
 #include <pxr/base/tf/pathUtils.h>
+#include <pxr/base/trace/trace.h>
 #include <iostream>
 #include <vector>
 #include <iostream>
@@ -268,6 +269,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     if (arnoldRenderDelegate == 0)
         return;
     AiProfileBlock("hydra_proc:read_stage"); 
+    TRACE_FUNCTION();
     if (stage == nullptr) {
         AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
         return;
@@ -293,9 +295,13 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                 _renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
 
-        ChooseRenderSettings(stage, _renderSettings, _time);
+        {
+            TRACE_SCOPE("ChooseRenderSettings");
+            ChooseRenderSettings(stage, _renderSettings, _time);
+        }
 // TODO HERE WE COULD CHECK IF WE WANT TO USE HYDRA2
         if (!_renderSettings.empty()) {
+            TRACE_SCOPE("ReadRenderSettings");
             // Sets the default parameters on the Arnold option node (AA_samples, GI_diffuse_depth, ...)
             SetArnoldDefaultOptions(_universe);
 #ifdef ENABLE_HYDRA2_RENDERSETTINGS
@@ -346,6 +352,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
     UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
 
+    {
+    TRACE_SCOPE("Populate/SetStage");
     if (_useSceneIndex) {
         if (!path.empty()) {
             UsdStagePopulationMask mask({SdfPath(path)});
@@ -361,6 +369,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
         _imagingDelegate->SetRootTransform(xf);
     }
+    } // end TRACE_SCOPE("Populate/SetStage")
     // This will return a "hidden" render tag if a primitive is of a disabled type
     if (_imagingDelegate) {
         _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
@@ -387,8 +396,14 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // SdfPathVector root;
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
-    _renderIndex->SyncAll(&_tasks, &_taskContext);
-    arnoldRenderDelegate->ProcessConnections();
+    {
+        TRACE_SCOPE("SyncAll");
+        _renderIndex->SyncAll(&_tasks, &_taskContext);
+    }
+    {
+        TRACE_SCOPE("ProcessConnections");
+        arnoldRenderDelegate->ProcessConnections();
+    }
     
     // We want to render the purpose that this reader was assigned to.
     // We must also support the purpose "default". Also, when no
@@ -401,9 +416,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
-        _renderIndex->SyncAll(&_tasks, &_taskContext);
-        arnoldRenderDelegate->ProcessConnections();
+    {
+        TRACE_SCOPE("PendingChanges");
+        while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
+            _renderIndex->SyncAll(&_tasks, &_taskContext);
+            arnoldRenderDelegate->ProcessConnections();
+        }
     }
 
 #ifndef ENABLE_SHARED_ARRAYS

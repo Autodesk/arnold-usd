@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "basis_curves.h"
+#include <pxr/base/trace/trace.h>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -86,6 +87,7 @@ HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
  

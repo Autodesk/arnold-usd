@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "node_graph.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/vec2f.h>
@@ -148,6 +149,7 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {    
+    TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;
  
@@ -350,6 +352,7 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetOrCreateTerminals(
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, std::vector<SdfPath>& terminals)
 {
+    TRACE_FUNCTION();
     // Nothing to translate here
     if (network.nodes.empty())
         return nullptr;
