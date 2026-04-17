@@ -126,4 +126,4 @@ HdSceneIndexBaseRefPtr HdArnoldFixMaterialPruningSceneIndexPlugin::_AppendSceneI
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
-#endif // PENABLE_SCENE_INDEX
+#endif // ENABLE_SCENE_INDEX

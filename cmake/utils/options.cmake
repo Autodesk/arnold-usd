@@ -12,34 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-option(USD_MONOLITHIC_BUILD "Monolithic build was used for USD." OFF)
+# When using a static build of USD, set BUILD_WITH_USD_STATIC to ON
+# The following options are related to the USD configuration
 option(BUILD_WITH_USD_STATIC "USD is built as a static, monolithic library." OFF)
+option(USD_MONOLITHIC_BUILD "Monolithic build was used for USD." OFF)
 option(TBB_STATIC_BUILD "TBB is built as a static library." OFF)
 option(TBB_NO_EXPLICIT_LINKAGE "Explicit linkage of TBB libraries is disabled on windows." OFF)
 option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)
 option(BUILD_BOOST_ALL_NO_LIB "Disable linking of boost libraries from boost headers." OFF)
 option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
 option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to help when generating IDE projects." OFF)
-option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the  procedural (experimental)" ON)
-option(BUILD_SCENE_INDEX_PLUGIN "Build and enable scene index aka hydra 2" OFF)
-option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
-option(ENABLE_HYDRA2_RENDERSETTINGS "Enable using RenderSetting hydra prim" OFF)
-option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
+option(BUILD_USE_PYTHON3 "Use python 3." ON)
 
-set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
+# When building with USD static library, you will need to add the usd static dependencies in the build as well. They can be passed using the following variables:
+set(USD_TRANSITIVE_STATIC_LIBS "" CACHE STRING "Usd transitive static libraries to embed in the procedural when usd is built in static monolithic. List of elements separated by a semi colon")
+set(USD_TRANSITIVE_SHARED_LIBS "" CACHE STRING "Usd transitive libraries to link with. List of elements separated by a semi colon")
+set(USD_TRANSITIVE_INCLUDE_DIRS "" CACHE STRING "Usd transitive include directory to compile with. List of elements separated by a semi colon")
 
-option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
+# Plugins to build:
+option(BUILD_BUNDLE "Build all the plugins in a bundle" OFF)
+option(BUILD_SCENE_INDEX_PLUGIN "Build the scene index plugin" OFF)
 option(BUILD_RENDER_DELEGATE "Builds the Render Delegate" ON)
 option(BUILD_NDR_PLUGIN "Builds the NDR Plugin" ON)
 option(BUILD_PROCEDURAL "Builds the Procedural" ON)
 option(BUILD_PROC_SCENE_FORMAT "Enables the Procedural Scene format" ON)
 option(BUILD_USD_IMAGING_PLUGIN "Builds the USD Imaging plugins" ON)
+option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
+
+
+# Build additions
 option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
-option(BUILD_USE_PYTHON3 "Use python 3." ON)
 option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
-option(BUILD_BUNDLE "Build a bundle of all the plugin" ON)
+
+# Configurations:
+option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
+option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
+option(ENABLE_HYDRA2_RENDERSETTINGS "Enable using RenderSetting hydra prim" OFF)
+option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
+option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
+
+set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")
@@ -58,6 +72,4 @@ set(TEST_MAKE_THUMBNAILS "Enables the generation of test thumbnails." ON)
 option(TEST_WITH_HYDRA "Run the tests using the hydra procedural." OFF)
 
 set(USD_PROCEDURAL_NAME "usd" CACHE STRING "Name of the usd procedural node.")
-set(USD_TRANSITIVE_STATIC_LIBS "" CACHE STRING "Usd transitive static libraries to embed in the procedural when usd is built in static monolithic. List of elements separated by a semi colon")
-set(USD_TRANSITIVE_SHARED_LIBS "" CACHE STRING "Usd transitive libraries to link with. List of elements separated by a semi colon")
-set(USD_TRANSITIVE_INCLUDE_DIRS "" CACHE STRING "Usd transitive include directory to compile with. List of elements separated by a semi colon")
+

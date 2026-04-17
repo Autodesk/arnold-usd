@@ -28,20 +28,42 @@
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
+#include <iostream>
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
+static inline void _UsdArnoldGeomSetupNewborn(UsdArnoldWriter &writer, UsdPrim &prim)
+{
+    UsdAttribute attr = prim.CreateAttribute(
+            TfToken("primvars:arnold:visibility"), SdfValueTypeNames->UChar, false);
+    
+    const std::vector<float> &nearestFrames = writer.GetNearestFrames();
+    for (auto nearestFrame : nearestFrames)
+        attr.Set((unsigned char)0, UsdTimeCode(nearestFrame));
+
+    attr.Set(AI_RAY_ALL, writer.GetTime());
+}
+
+static inline bool _UsdArnoldGeomIsNewborn(UsdArnoldWriter &writer, const SdfPath &objPath)
+{
+    return writer.GetAppendFile() && !writer.GetAuthoredFrames().empty() && !writer.GetUsdStage()->GetPrimAtPath(objPath);
+}
 
 void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-    SdfPath objPath(nodeName);    
+    SdfPath objPath(nodeName); 
+    bool newborn = _UsdArnoldGeomIsNewborn(writer, objPath); 
     writer.CreateHierarchy(objPath);
+
     UsdGeomMesh mesh = UsdGeomMesh::Define(stage, objPath);
     UsdPrim prim = mesh.GetPrim();
 
     _WriteMatrix(mesh, node, writer);
+    if (newborn) 
+        _UsdArnoldGeomSetupNewborn(writer, prim);
+    
     WriteAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);
 
     writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
@@ -198,11 +220,16 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
     SdfPath objPath(nodeName);    
+    bool newborn = _UsdArnoldGeomIsNewborn(writer, objPath); 
+    
     writer.CreateHierarchy(objPath);
     UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, objPath);
     UsdPrim prim = curves.GetPrim();
 
     _WriteMatrix(curves, node, writer);
+    if (newborn) 
+        _UsdArnoldGeomSetupNewborn(writer, prim);
+    
 
     TfToken curveType = UsdGeomTokens->cubic;
     switch (AiNodeGetInt(node, AtString("basis"))) {
@@ -276,12 +303,16 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-    SdfPath objPath(nodeName);    
+    SdfPath objPath(nodeName);
+    bool newborn = _UsdArnoldGeomIsNewborn(writer, objPath); 
     writer.CreateHierarchy(objPath);
     UsdGeomPoints points = UsdGeomPoints::Define(stage, objPath);
     UsdPrim prim = points.GetPrim();
 
     _WriteMatrix(points, node, writer);
+    if (newborn) 
+        _UsdArnoldGeomSetupNewborn(writer, prim);
+    
 
     WriteAttribute(node, "points", prim, points.GetPointsAttr(), writer);
 
@@ -312,6 +343,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     SdfPath objPath(nodeName);
     _exportedAttrs.insert("name");
 
+    bool newborn = _UsdArnoldGeomIsNewborn(writer, objPath);     
     // All custom procedurals are written as ArnoldProceduralCustom schema
     writer.CreateHierarchy(objPath);
     UsdPrim prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
@@ -322,6 +354,9 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
 
     UsdGeomXformable xformable(prim);
     _WriteMatrix(xformable, node, writer);
+    if (newborn) 
+        _UsdArnoldGeomSetupNewborn(writer, prim);
+    
     _WriteMaterialBinding(node, prim, writer);
     _WriteArnoldParameters(node, writer, prim, "arnold");    
 
