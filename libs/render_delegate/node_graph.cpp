@@ -149,6 +149,7 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {    
+    AiProfileBlock("hydra_proc:HdArnoldNodeGraph:Sync");
     TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;
@@ -352,6 +353,7 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetOrCreateTerminals(
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, std::vector<SdfPath>& terminals)
 {
+    AiProfileBlock("hydra_proc:HdArnoldNodeGraph:ReadMaterialNetwork");
     TRACE_FUNCTION();
     // Nothing to translate here
     if (network.nodes.empty())

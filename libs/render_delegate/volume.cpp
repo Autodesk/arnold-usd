@@ -209,6 +209,7 @@ HdArnoldVolume::~HdArnoldVolume()
 void HdArnoldVolume::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:HdArnoldVolume:Sync");
     TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;

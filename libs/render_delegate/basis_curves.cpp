@@ -87,6 +87,7 @@ HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:sync:HdArnoldBasisCurves"); 
     TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
         return;

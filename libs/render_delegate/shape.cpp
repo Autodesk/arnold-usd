@@ -64,6 +64,7 @@ void HdArnoldShape::Sync(
     HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
     bool force)
 {
+    AiProfileBlock("hydra_proc:HdArnoldShape:Sync");
     TRACE_FUNCTION();
     if (_shape == nullptr)
         return;

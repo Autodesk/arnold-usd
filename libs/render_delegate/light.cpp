@@ -500,6 +500,7 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    AiProfileBlock("hydra_proc:HdArnoldGenericLight:Sync"); 
     TRACE_FUNCTION();
 
     if (!_delegate->CanUpdateScene())
