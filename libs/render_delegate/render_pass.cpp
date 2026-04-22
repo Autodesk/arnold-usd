@@ -41,6 +41,7 @@
 #include <algorithm>
 
 #include <constant_strings.h>
+#include <parameters_utils.h>
 
 #include "camera.h"
 #include "config.h"
@@ -1114,6 +1115,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 // Then we read parameters prefixed with arnold:{driverType}: (e.g. arnold:driver_exr:)
                 std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
                 _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings, _renderDelegate);
+
+                // Read generic primvars as Arnold user data on the driver
+                for (const auto& setting : product.settings) {
+                    if (!TfStringStartsWith(setting.first, "primvars:") ||
+                        TfStringStartsWith(setting.first, "primvars:arnold:"))
+                        continue;
+                    TfToken name(setting.first.GetText() + 9); // strip "primvars:"
+                    DeclareAndAssignParameter(customProduct.driver, name, str::t_constant, setting.second, _renderDelegate->GetAPIAdapter());
+                }
 
                 // Arnold supports multiple deepexr settings per AOV, by setting the parameters
                 // layer_tolerance, layer_half_precision, layer_enable_filtering.

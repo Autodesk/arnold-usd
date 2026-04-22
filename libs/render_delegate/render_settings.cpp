@@ -44,6 +44,7 @@
 #include <iostream>
 #include <string>
 #include "../common/rendersettings_utils.h"
+#include <parameters_utils.h>
 #include "camera.h"
 
 #include "render_delegate.h"
@@ -612,6 +613,16 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 .Msg("Set driver parameter %s on %s\n", paramName.c_str(), driverNodeName);
         }
         
+        // Read generic primvars on the RenderProduct as Arnold user data on the driver
+        for (const auto& pair : productSettings) {
+            const std::string& settingName = pair.first;
+            if (!TfStringStartsWith(settingName, "primvars:") ||
+                TfStringStartsWith(settingName, "primvars:arnold:"))
+                continue;
+            TfToken name(settingName.substr(9)); // strip "primvars:"
+            DeclareAndAssignParameter(driver, name, str::t_constant, pair.second, renderDelegate->GetAPIAdapter());
+        }
+
         // If the driver was renamed using arnold:name, we want to use its new name
         driverNodeName = AiNodeGetName(driver);
         
