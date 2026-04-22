@@ -42,6 +42,21 @@ std::string ArnoldUsdMakeCamelCase(const std::string &in)
 }
 
 
+std::string ArnoldUsdMakeSnakeCase(const std::string &in)
+{
+    std::string out;
+    out.reserve(in.length() + 4);
+    for (size_t i = 0; i < in.length(); ++i) {
+        const unsigned char c = in[i];
+        if (i > 0 && c >= 'A' && c <= 'Z') {
+            out += '_';
+        }
+        out += static_cast<char>(tolower(c));
+    }
+    return out;
+}
+
+
 int ArnoldUsdGetLogVerbosityFromFlags(int flags)
 {
     // This isn't an exact mapping, as verbosity can't emcompass all possible

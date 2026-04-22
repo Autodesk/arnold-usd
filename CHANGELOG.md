@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
