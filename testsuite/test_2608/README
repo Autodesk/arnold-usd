@@ -1,0 +1,5 @@
+Support for USD Gaussian splat schema
+
+see #2608
+
+PARAMS: {'scene':'test.usda'}
