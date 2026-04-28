@@ -76,6 +76,7 @@ ASTR2(constantString, "constant STRING");
 ASTR2(deformKeys, "arnold:deform_keys");
 ASTR2(houdiniFps, "houdini:fps");
 ASTR2(houdiniFrame, "houdini:frame");
+ASTR2(houdiniCopTextureChanged, "houdini:cop_texture_changed");
 ASTR2(hydraPrimId, "hydra_primId");
 ASTR2(inputs_code, "inputs:code");
 ASTR2(inputs_file, "inputs:file");
