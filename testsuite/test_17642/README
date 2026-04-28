@@ -1,0 +1,7 @@
+Export volume shaders in the volume context
+
+see ARNOLD-17642
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.ass', 'resaved':'usda'}

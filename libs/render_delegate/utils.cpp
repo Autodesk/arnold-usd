@@ -209,7 +209,7 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
 void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value, 
     HdArnoldRenderDelegate *renderDelegate)
 {
-    if (value.IsEmpty())
+    if (value.IsEmpty() || pentry == nullptr)
         return;
 
     const AtString paramName = AiParamGetName(pentry);
@@ -359,7 +359,7 @@ void HdArnoldSetConstantPrimvar(
         autobumpVisibility, renderDelegate);
 }
 
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* indices,
     HdArnoldRenderDelegate *renderDelegate)
 {
     // If this attribute already exists in the node entry parameters list, 
@@ -368,19 +368,22 @@ void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken&
         return;
     }
 
+    VtValue uniformValue = value;
+    if (indices && !indices->empty()) {
+        // This uniform-interpolated primvar is also indexed. We need to flatten it
+        // so that arnold can support it
+        VtValue flattened;
+        if (FlattenIndexedValue(value, *indices, flattened))
+            uniformValue = flattened;
+    }
+
     DeclareAndAssignParameter(node, name, 
-         str::t_uniform, value, renderDelegate->GetAPIAdapter(), 
+         str::t_uniform, uniformValue, renderDelegate->GetAPIAdapter(), 
          role == HdPrimvarRoleTokens->color);
 }
 
-void HdArnoldSetUniformPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate)
-{
-    HdArnoldSetUniformPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), renderDelegate);
-}
-
 void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
-    HdArnoldRenderDelegate *renderDelegate)
+    const VtIntArray* indices, HdArnoldRenderDelegate *renderDelegate)
 {
     // If this attribute already exists in the node entry parameters list, 
     // we must skip it #1961
@@ -388,15 +391,17 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
         return;
     }
 
+    VtValue vertexValue = value;
+    if (indices && !indices->empty()) {
+        // This vertex-interpolated primvar is also indexed. We need to flatten it
+        // so that arnold can support it
+        VtValue flattened;
+        if (FlattenIndexedValue(value, *indices, flattened))
+            vertexValue = flattened;
+    }
     DeclareAndAssignParameter(node, name, 
-        str::t_varying, value, renderDelegate->GetAPIAdapter(), 
+        str::t_varying, vertexValue, renderDelegate->GetAPIAdapter(), 
         role == HdPrimvarRoleTokens->color);
-}
-
-void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate)
-{
-    HdArnoldSetVertexPrimvar(node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), renderDelegate);
 }
 
 void HdArnoldSetFaceVaryingPrimvar(

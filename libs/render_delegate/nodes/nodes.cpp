@@ -67,11 +67,4 @@ void hdArnoldInstallNodes()
     }
 }
 
-void hdArnoldUninstallNodes()
-{
-    for (const auto& it : builtInNodes()) {
-        AiNodeEntryUninstall(it.name);
-    }
-}
-
 PXR_NAMESPACE_CLOSE_SCOPE

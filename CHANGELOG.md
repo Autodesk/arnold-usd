@@ -1,15 +1,70 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.0.0] (Unreleased)
+## [7.5.2.0] (Unreleased)
 
 ### Features
 
+- [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
+- [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
+- [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.
+- [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
+
+## [7.5.1.1] (Unreleased)
+
+
+### Bug Fixes
+
+- [usd#2607](https://github.com/Autodesk/arnold-usd/issues/2607) - Updating light shaders interactively hangs the render
+- [usd#2615](https://github.com/Autodesk/arnold-usd/issues/2615) - Export material bindings for volume nodes in the volume context
+- [usd#2589](https://github.com/Autodesk/arnold-usd/issues/2589) - Implement scene index dependencies when materials get added or removed
+- [usd#2582](https://github.com/Autodesk/arnold-usd/issues/2582) - Arnold-disabled nodes should not be authored to USD
+- [usd#2433](https://github.com/Autodesk/arnold-usd/issues/2433) - Support interactive changes of shaders connected to quad lights
+- [usd#2611](https://github.com/Autodesk/arnold-usd/issues/2611) - Support exporting geometries that get added during a sequence
+
+## [7.5.1.0] 2026-03-25
+
+### Features
+- [usd#2569](https://github.com/Autodesk/arnold-usd/issues/2569) - Support husk tokens for frame replacement
+- [usd#2435](https://github.com/Autodesk/arnold-usd/issues/2435) - Report USD warning and errors as Arnold warning and errors.
+- [usd#2597](https://github.com/Autodesk/arnold-usd/issues/2597) - Export custom implicit shapes as ArnoldProceduralCustom primitives
+
+### Bug Fixes
+
+- [usd#2572](https://github.com/Autodesk/arnold-usd/issues/2572) - Arnold product types not working if drivers:parameter:aov:name is not defined
+- [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
+- [usd#2566](https://github.com/Autodesk/arnold-usd/issues/2566) - Fixed crashes when a render delegate is deleted while another is rendering
+- [usd#2568](https://github.com/Autodesk/arnold-usd/issues/2568) - Changing the root shader in IPR is not updated when it was present in the previous shading tree 
+- [usd#2580](https://github.com/Autodesk/arnold-usd/issues/2580) - String per-instance primvars cannot resolve indices
+- [usd#2563](https://github.com/Autodesk/arnold-usd/issues/2563) - Incorrect region renders in hydra when one axis is not cropped
+- [usd#2558](https://github.com/Autodesk/arnold-usd/issues/2558) - Indexed user data shouldn't author the idxs companion to USD
+
+## [7.5.0.0] 2026-03-25
+
+### Features
+
+- [usd#2533](https://github.com/Autodesk/arnold-usd/issues/2533) - Connections to shader with multiple outputs not properly authored to USD
 - [usd#2519](https://github.com/Autodesk/arnold-usd/issues/2519) - Fix transform of cameras under procedurals
 - [usd#2099](https://github.com/Autodesk/arnold-usd/issues/2099) - Ignore UsdGeom doubleSided parameter by default
-- [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) -  Add a new bundle plugin containing the procedural and all usd plugins.
+- [usd#2425](https://github.com/Autodesk/arnold-usd/issues/2425) - Add a new bundle plugin containing the procedural and all usd plugins.
+- [usd#2526](https://github.com/Autodesk/arnold-usd/issues/2526) - Update the arnold frame value when changing frame in solaris
+- [usd#2542](https://github.com/Autodesk/arnold-usd/issues/2542) - Remove dependency on usdSkelImaging in the scene index.
 
-## [7.4.5.0] (Unreleased)
+### Bug Fixes
+
+- [usd#2530](https://github.com/Autodesk/arnold-usd/issues/2530) -  Support uniform and vertex-interpolated primvars that are indexed
+- [usd#2532](https://github.com/Autodesk/arnold-usd/issues/2532) -  Fix crashes in IPR with ArnoldGinstance primitives
+
+## [7.4.5.1] 2026-02-19
+
+### Bug Fixes
+
+- [usd#2557](https://github.com/Autodesk/arnold-usd/issues/2557) - Fix regression when a geometry has an instancer without any instances
+- [usd#2547](https://github.com/Autodesk/arnold-usd/issues/2547) - Changing material terminal is not updated with Hydra 2
+- [usd#2536](https://github.com/Autodesk/arnold-usd/issues/2536) - ArnoldUsd procedural filename is not reported as an asset
+- [usd#2561](https://github.com/Autodesk/arnold-usd/issues/2561) - Fix regression in husk with dataWindow NDC
+
+## [7.4.5.0] 2026-02-10
 
 ### Features
 
@@ -24,7 +79,7 @@
 - [usd#2471](https://github.com/Autodesk/arnold-usd/issues/2471) - Support for USD 25.11
 - [usd#2478](https://github.com/Autodesk/arnold-usd/issues/2478) - Use the Z AOV for the hydra depth buffer
 
-## [7.4.4.2] (Unreleased)
+## [7.4.4.2] 2026-01-22
 
 ### Bug Fixes
 

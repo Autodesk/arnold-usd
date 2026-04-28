@@ -53,6 +53,7 @@
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
+#include "gaussian_splat.h"
 #include "instancer.h"
 #include "light.h"
 #include "mesh.h"
@@ -67,6 +68,10 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
+
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+#include "render_settings.h"
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -249,25 +254,39 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
     }
 }
 
+
 inline const TfTokenVector& _SupportedSprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->camera,        HdPrimTypeTokens->material,
-                                 HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
-                                 HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
-                                 HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
-#ifdef ENABLE_SCENE_INDEX                               
+    // Hd_PrimTypeIndex::SyncPrims walks types in this order; every prim of type N
+    // is fully synced before any prim of type N+1. Light shaders (and filters) can
+    // target ArnoldNodeGraph prims, which must therefore appear before light types.
+    // Scene-index dependency forwarding dirties lights when graphs change but does
+    // not reorder this pass.
+    static const TfTokenVector r{HdPrimTypeTokens->camera,
+                                 HdPrimTypeTokens->material,
+                                 str::t_ArnoldNodeGraph,
+                                 HdPrimTypeTokens->distantLight,
+                                 HdPrimTypeTokens->sphereLight,
+                                 HdPrimTypeTokens->diskLight,
+                                 HdPrimTypeTokens->rectLight,
+                                 HdPrimTypeTokens->cylinderLight,
+                                 HdPrimTypeTokens->domeLight,
+#ifdef ENABLE_SCENE_INDEX
                                  HdPrimTypeTokens->meshLight,
 #endif
-                                 _tokens->GeometryLight, _tokens->ArnoldOptions,
-                                 HdPrimTypeTokens->extComputation, str::t_ArnoldNodeGraph
+                                 _tokens->GeometryLight,
+                                 _tokens->ArnoldOptions,
+                                 HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
 }
+
 
 inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+
 #if PXR_VERSION >= 2208
     if (!ownsUniverse) {
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
@@ -275,7 +294,11 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+#else
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+#endif
         return r;
     }
 }
@@ -492,13 +515,17 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
+    // use the "render" tag by default
+    _renderTags.push_back(UsdGeomTokens->render);
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
+    bool isArnoldActive = 
 #if ARNOLD_VERSION_NUM >= 70100
-    _isArnoldActive = AiArnoldIsActive();
+        AiArnoldIsActive();
 #else
-    _isArnoldActive = AiUniverseIsActive();
+        AiUniverseIsActive();
 #endif
+
     if (_isBatch && _renderDelegateOwnsUniverse) {
 #if ARNOLD_VERSION_NUM >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
@@ -509,7 +536,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiErrorReportingSetEnabled(false);
 #endif
     }
-    if (!_isArnoldActive) {
+    if (!isArnoldActive) {
         AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
         AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
@@ -518,6 +545,9 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
+#if PXR_VERSION >= 2603
+    _supportedRprimTypes.push_back(HdPrimTypeTokens->particleField);
+#endif
     if (_mask & AI_NODE_SHAPE) {
         auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
         while (!AiNodeEntryIteratorFinished(shapeIter)) {
@@ -635,12 +665,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
     _renderParam->Interrupt();
     if (_renderDelegateOwnsUniverse) {
         AiRenderSessionDestroy(GetRenderSession());
-        hdArnoldUninstallNodes();
         AiUniverseDestroy(_universe);
-        // We must end the arnold session, only if we created it during the constructor.
-        // Otherwise we could be destroying a session that is being used elsewhere
-        if (!_isArnoldActive)
-        AiEnd();
     }
 
 }
@@ -677,6 +702,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
 
     // When husk/houdini changes frame, they set the new frame number via the render settings.
     if (_key == str::t_houdiniFrame) {
+        if (_value.IsHolding<double>()) {
+            const float frame = static_cast<float>(_value.UncheckedGet<double>());
+            AiNodeSetFlt(_options, str::frame, frame);
+        }
+
         // We want to restart a new render in that case.
         _renderParam->Restart();
     }
@@ -800,7 +830,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _forceIgnoreMotionBlur = true; 
         });
     } else if (key == str::t_houdiniFps) {
-        _CheckForFloatValue(value, [&](const float f) { _fps = f; });
+        _CheckForFloatValue(value, [&](const float f) {
+            _fps = f;
+            AiNodeSetFlt(_options, str::fps, _fps);
+        });
     } else if (key == str::t_background) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
     } else if (key == str::t_atmosphere) {
@@ -1000,8 +1033,11 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
                         renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
                     }
-                    // Any other cases should have good/reasonable defaults.
-                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
+
+                    if (!renderVar.sourceName.empty()) {
+                        // if drivers:parameters:aov:name is not defined, use sourceName instead #2572
+                        if (renderVar.name.empty())
+                            renderVar.name = renderVar.sourceName;
                         product.renderVars.emplace_back(std::move(renderVar));
                     }
                 }
@@ -1098,6 +1134,15 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         ret.emplace_back(std::move(desc));
     }
     return ret;
+}
+
+// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
+bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    return true; 
+#else
+    return false;
+#endif
 }
 
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
@@ -1204,6 +1249,11 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->points) {
         return new HdArnoldPoints(this, rprimId);
     }
+#if PXR_VERSION >= 2603
+    if (typeId == HdPrimTypeTokens->particleField) {
+        return new HdArnoldGaussianSplat(this, rprimId);
+    }
+#endif
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
@@ -1323,12 +1373,19 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
-    // Silently ignore render settings primitives, at the moment they're treated
-    // through a different code path
+
 #if PXR_VERSION >= 2208
+    // Only support render settings when we don't own the universe (procedural context).
+    // When we own the universe (batch context), settings come through SetRenderSettings.
+#ifdef ENABLE_HYDRA2_RENDERSETTINGS
+    if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
+        return new HdArnoldRenderSettings(bprimId);
+    }
+#else
     if (typeId == HdPrimTypeTokens->renderSettings)
         return nullptr;
-#endif
+#endif // ENABLE_HYDRA2_RENDERSETTINGS
+#endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
@@ -1836,30 +1893,39 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
+    if (node == nullptr)
+        return;
+
     AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
-    _renderTagTrackQueue.push({node, tag});
+    // If a specific render tag (i.e. node default nor geometry) is set on this 
+    // primitive, we create a user data to track it later on
+    if (tag != str::t__default && tag != str::t_geometry) {
+        if (!AiNodeLookUpUserParameter(node, str::usd_purpose)) 
+            AiNodeDeclare(node, str::usd_purpose, str::constantString);
+        AiNodeSetStr(node, str::usd_purpose, AtString(tag.GetText()));
+    }
 }
 
-void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
-
-void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
+bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
-    RenderTagTrackQueueElem renderTagRegister;
-    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
-        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
-    }
-    AtNode* node;
-    while (_renderTagUntrackQueue.try_pop(node)) {
-        _renderTagMap.erase(node);
-    }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        _renderParam->Interrupt();
+    // In this function we store the provided render tags, and we want to return
+    // whether they have changed since the previous iteration
+    if (renderTags == _renderTags)
+        return false;
 
-        for (auto& elem : _renderTagMap) {
-            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+    // if the amount of elements has not changed, we also want to check if we're receiving 
+    // the render tags in a different order
+    bool renderTagsChanged = renderTags.size() != _renderTags.size();
+    if (!renderTagsChanged) {
+        for (auto t : renderTags) {
+            if (std::find(_renderTags.begin(), _renderTags.end(), t) == _renderTags.end()) {
+                renderTagsChanged = true;
+                break;
+            }
         }
     }
+    _renderTags = renderTags;
+    return renderTagsChanged;
 }
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)

@@ -75,7 +75,4 @@ struct DriverMainData {
 /// Installs Arnold nodes that are used by the Render Delegate.
 void hdArnoldInstallNodes();
 
-/// Uninstalls Arnold nodes that are used by the Render Delegate.
-void hdArnoldUninstallNodes();
-
 PXR_NAMESPACE_CLOSE_SCOPE

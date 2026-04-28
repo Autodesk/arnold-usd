@@ -127,7 +127,7 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
                 if (frame < currentFrame && (lowerFrame.IsDefault() || frame > lowerFrame.GetValue()))
                     lowerFrame = UsdTimeCode(frame);
                 else if (frame > currentFrame && (upperFrame.IsDefault() || frame < upperFrame.GetValue()))
-                    lowerFrame = UsdTimeCode(frame);
+                    upperFrame = UsdTimeCode(frame);
 
                 startFrame = std::min(frame, startFrame);
                 endFrame = std::max(frame, endFrame);
@@ -221,7 +221,7 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
  **/
 void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 {
-    if (node == nullptr) {
+    if (node == nullptr || AiNodeIsDisabled(node)) {
         return;
     }
 

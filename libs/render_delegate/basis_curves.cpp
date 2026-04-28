@@ -283,7 +283,7 @@ void HdArnoldBasisCurves::Sync(
                         desc.role == HdPrimvarRoleTokens->color);
 
                 } else {
-                    HdArnoldSetUniformPrimvar(node, arnoldAttributeName, desc.role, value, 
+                    HdArnoldSetUniformPrimvar(node, arnoldAttributeName, desc.role, value, &desc.valueIndices,
                         GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
@@ -315,8 +315,10 @@ void HdArnoldBasisCurves::Sync(
                             str::t_varying, value, GetRenderDelegate()->GetAPIAdapter(), 
                             desc.role == HdPrimvarRoleTokens->color);
                     } else {
+                        // we're not assing the valueIndices here as we already flattened the values above
+                        // (before the remapping)
                         HdArnoldSetVertexPrimvar(node, arnoldAttributeName, desc.role, value, 
-                            GetRenderDelegate());
+                            nullptr, GetRenderDelegate());
                     }
                 }
             }

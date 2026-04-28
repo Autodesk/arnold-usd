@@ -197,18 +197,37 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 // Read the material network and retrieve the "root" shader that will referenced
                 // from other nodes through one of our terminals. 
                 AtNode* node = ReadMaterialNetwork(network, terminalType, terminals);
+                AtNode* oldTerminal = nullptr;
                 // UpdateTerminal assigns a given shader to a terminal name
                 if (node && _nodeGraphCache.UpdateTerminal(
-                        terminalType, node)) {
+                        terminalType, node, oldTerminal)) {
                     nodeGraphChanged = true;
                 }
                 
                 // Special case for light filters, we need to flush the cache to ensure
                 // they're properly updated in Arnold
-                if (terminalType == str::color || terminalType.GetString().rfind(
-                        "light_filter", 0) == 0) {
+                if (_wasSyncedOnce && (terminalType == str::color || terminalType.GetString().rfind(
+                        "light_filter", 0) == 0)) {
                     nodeGraphChanged = true;
-                    AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
+                    AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND | AI_CACHE_QUAD);
+                }
+                if (nodeGraphChanged && node && oldTerminal && oldTerminal != node) {
+                    
+                    auto replaceOldTerminal = [&](std::unordered_map<std::string, AtNode*> &nodesList) -> bool {
+                        for (const auto& n : nodesList) {
+                            if (n.second == oldTerminal) {
+                                // Tell arnold to replace all links to the previous node with links to the new node
+                                AiNodeReplace(oldTerminal, node, false);
+                                return true;
+                            }
+                        }
+                        return false;
+                    };                        
+
+                    // Search for the node to be replaced in the previous nodes list, 
+                    // but also in the new one, in case the old is still part of the shading tree #2568
+                    if (!replaceOldTerminal(_previousNodes))
+                        replaceOldTerminal(_nodes);
                 }
             }
             // Loop through previous AtNodes that were created for this node graph.
@@ -284,7 +303,8 @@ AtNode* HdArnoldNodeGraph::GetOrCreateTerminal(HdSceneDelegate* sceneDelegate, c
                 AtNode* node = ReadMaterialNetwork(network, terminalName, terminals);
                 // UpdateTerminal assigns a given shader to a terminal name
                 if (node) {
-                    if (_nodeGraphCache.UpdateTerminal(terminalName, node)) {
+                    AtNode *oldTerminal = nullptr;
+                    if (_nodeGraphCache.UpdateTerminal(terminalName, node, oldTerminal)) {
                         return node;
                     } // else {should already be covered by _nodeGraphCache.GetTerminal(terminalName) }
                 }
@@ -472,8 +492,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
         AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
-        if (node.path == terminalPath)
+        if (node.path == terminalPath) {
             terminalNode = arnoldNode;
+            
+        }
+
     }
     // Return the root shader for this shading network
     return terminalNode;

@@ -3,6 +3,7 @@
 //
 
 #include "procedural_reader.h"
+#include "diagnostic_utils.h"
 #include <ai.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdUtils/stageCache.h>
@@ -17,6 +18,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 void ProceduralReader::Read(const std::string &filename, 
     AtArray *overrides, const std::string &path)
 {
+    // Install diagnostic delegate to capture USD composition errors
+    ArnoldUsdDiagnostic diagnostic;
+    
     // Nodes were already exported, should we skip here,
     // or should we just append the new nodes ?
     if (!GetNodes().empty()) {
@@ -81,6 +85,9 @@ void ProceduralReader::Read(const std::string &filename,
 
 bool ProceduralReader::Read(long int cacheId, const std::string &path)
 {
+    // Install diagnostic delegate to capture USD composition errors
+    ArnoldUsdDiagnostic diagnostic;
+    
     if (!GetNodes().empty()) {
         return true;
     }

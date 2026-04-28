@@ -22,6 +22,7 @@ source_files = [
     'basis_curves.cpp',
     'camera.cpp',
     'config.cpp',
+    'gaussian_splat.cpp',
     'instancer.cpp',
     'light.cpp',
     'mesh.cpp',
@@ -36,6 +37,7 @@ source_files = [
     'render_delegate.cpp',
     'render_param.cpp',
     'render_pass.cpp',
+    'render_settings.cpp',
     'shape.cpp',
     'shared_arrays.cpp',
     'utils.cpp',
@@ -55,6 +57,9 @@ if local_env['USD_HAS_FULLSCREEN_SHADER']:
 
 if local_env['ENABLE_SHARED_ARRAYS']:
     local_env.Append(CPPDEFINES = ['ENABLE_SHARED_ARRAYS'])
+
+if local_env['ENABLE_HYDRA2_RENDERSETTINGS']:
+    local_env.Append(CPPDEFINES = ['ENABLE_HYDRA2_RENDERSETTINGS'])
 
 if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])

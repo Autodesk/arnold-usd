@@ -41,11 +41,9 @@ HdArnoldShape::HdArnoldShape(
 HdArnoldShape::~HdArnoldShape()
 {
     if (_shape) {
-        _renderDelegate->UntrackRenderTag(_shape);
         _renderDelegate->DestroyArnoldNode(_shape);
     }
     for (auto &instancer : _instancers) {
-        _renderDelegate->UntrackRenderTag(instancer);
         _renderDelegate->DestroyArnoldNode(instancer);
     }
 }
@@ -53,7 +51,6 @@ HdArnoldShape::~HdArnoldShape()
 void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id) 
 {
     if (_shape != nullptr && !AiNodeIs(_shape, shapeType)) {
-        _renderDelegate->UntrackRenderTag(_shape);
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
@@ -137,11 +134,6 @@ void HdArnoldShape::SetVisibility(uint8_t visibility)
 static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, HdInstancer *instancer, AtNode *node)
 {
     if (!renderDelegate->SupportShapeInstancing())
-        return true;
-
-    // If we have a nested instancer configuration, we'll use an arnold instancer node.
-    HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
-    if (parentInstancer)
         return true;
 
     // Procedural nodes do not currently support shapes inner instancing
@@ -232,9 +224,12 @@ void HdArnoldShape::_SyncInstances(
     {
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-        instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape);
-        instancer->ComputeShapeInstancesPrimvars(_renderDelegate, id, _shape);
-        instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
+        if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
+            instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
+        } else {
+            // hide the source mesh if it doesn't have any instance #2557
+            AiNodeSetByte(_shape, str::visibility, 0);
+        }
     }
 }
 

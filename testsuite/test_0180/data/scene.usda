@@ -84,6 +84,7 @@ def Scope "Render"
         custom int arnold:global:GI_diffuse_depth = 1
         custom int arnold:global:GI_diffuse_samples = 3
         custom int arnold:global:GI_specular_depth = 0
+        custom bool arnold:abort_on_license_fail = 0
         
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
