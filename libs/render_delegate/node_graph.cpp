@@ -471,9 +471,10 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         inputAttrs.reserve(node.parameters.size() + ((connections) ? connections->size() : size_t(0)));
         // build the input attributes map, where they keys are the attribute names.
         for (const auto& p : node.parameters) {
+            // Store this attribute VtValue
             inputAttrs[p.first].value = p.second;
             if (isCameraProjection && p.first == str::t_camera) {
-                _renderDelegate->TrackDependencies(GetId(),
+                _renderDelegate->TrackDependencies(GetId(), 
                     HdArnoldRenderDelegate::PathSetWithDirtyBits {
                     {SdfPath(VtValueGetString(p.second)), HdChangeTracker::AllDirty}
                     });
