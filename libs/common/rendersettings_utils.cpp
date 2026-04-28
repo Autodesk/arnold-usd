@@ -18,6 +18,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 
 #include <ai.h>
 
@@ -202,6 +203,24 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     }
 }
 
+static void ReadPrimvarsAsUserData(const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context)
+{
+    UsdGeomPrimvarsAPI primvarsAPI(prim);
+    if (!primvarsAPI)
+        return;
+
+    for (const UsdGeomPrimvar &primvar : primvarsAPI.GetAuthoredPrimvars()) {
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::t_primvars_arnold.GetString()))
+            continue;
+
+        VtValue value;
+        if (!primvar.Get(&value, time.frame) || value.IsEmpty())
+            continue;
+
+        DeclareAndAssignParameter(node, primvar.GetPrimvarName(), str::t_constant, value, context);
+    }
+}
+
 // Encapsulate the logic to extract driver type and settings from a UsdProduct prim
 // The function can return nullptr if it wasn't able to find the driver
 AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, ArnoldAPIAdapter &context, const TimeSettings &time) {
@@ -254,6 +273,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
     }
     // Check if an imager is connected to this driver
     UsdArnoldNodeGraphConnection(driver, renderProductPrim, renderProductPrim.GetAttribute(TfToken(driverParamPrefix + std::string("input"))), "input", context, time);
+    ReadPrimvarsAsUserData(renderProductPrim, driver, time, context);
     return driver;
 }
 
@@ -312,6 +332,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
                         context, paramType, arrayType);
         }
     }
+    ReadPrimvarsAsUserData(renderProductPrim, driver, time, context);
     return driver;
 }
 
