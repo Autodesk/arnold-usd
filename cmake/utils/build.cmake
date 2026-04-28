@@ -138,6 +138,11 @@ endfunction()
 function(install_sceneindex_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
     # LIB_PATH is used in the plugInfo.json.in, do not rename
     set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    if (MTOA_BUILD)
+        set(MTOA_ENTRY ",\n                    \"HdArnoldMtoaSceneIndexPlugin\" : {\n                        \"bases\": [\"HdSceneIndexPlugin\"],\n                        \"loadWithRenderer\": \"Arnold\",\n                        \"priority\": 0,\n                        \"displayName\": \"Arnold: MtoA compatibility\"\n                    }")
+    else()
+        set(MTOA_ENTRY "")
+    endif()
     configure_file(
         "${SCENEINDEXARNOLD_PLUGINFO_SRC}"
         "${PLUGINFO}"

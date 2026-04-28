@@ -51,6 +51,11 @@ option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
 option(ENABLE_HYDRA2_RENDERSETTINGS "Enable using RenderSetting hydra prim" OFF)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
+option(MTOA_BUILD "Build MtoA-specific plugins (e.g. the ai<Name> primvar remap scene index)" OFF)
+if (MTOA_BUILD AND BUILD_BUNDLE)
+    # The MtoA primvar remap SIP is useful only if the scene index ships in the bundle.
+    set(ENABLE_SCENE_INDEX_IN_BUNDLE ON CACHE BOOL "Add the scene index filters in the bundle" FORCE)
+endif()
 option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
 
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
