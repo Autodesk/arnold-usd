@@ -451,29 +451,6 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         inputAttrs.reserve(node.parameters.size() + ((connections) ? connections->size() : size_t(0)));
         // build the input attributes map, where they keys are the attribute names.
         for (const auto& p : node.parameters) {
-            std::string val = VtValueGetString(p.second);
-            if (val.substr(0, 3) == "op:") {
-                // Strip any UDIM/tile suffix that Houdini's MaterialX system appends
-                // (e.g. "op:/stage/copnet2/OUT[1]" -> "op:/stage/copnet2/OUT").
-                auto bracket = val.rfind('[');
-                std::string cleanPath = (bracket != std::string::npos) ? val.substr(0, bracket) : val;
-                // Pre-register with OIIO so MaterialX/OSL shaders that bypass
-                // AiTextureHandleAccess can still find the creator.
-                AiTexturePreregisterSchemeFile(cleanPath.c_str());
-                inputAttrs[p.first].value = VtValue(cleanPath);
-                continue;
-            }
-            if (val.find("opdef:") != std::string::npos) {
-                // Strip any @...@ wrappers before storing so Arnold's prefix matching fires.
-                std::string cleanPath = val;
-                if (cleanPath.size() >= 2 && cleanPath.front() == '@' && cleanPath.back() == '@')
-                    cleanPath = cleanPath.substr(1, cleanPath.size() - 2);
-                // Pre-register with OIIO so MaterialX/OSL shaders that bypass
-                // AiTextureHandleAccess can still find the creator.
-                AiTexturePreregisterSchemeFile(cleanPath.c_str());
-                inputAttrs[p.first].value = VtValue(cleanPath);
-                continue;
-            }
             inputAttrs[p.first].value = p.second;
             if (isCameraProjection && p.first == str::t_camera) {
                 _renderDelegate->TrackDependencies(GetId(),
