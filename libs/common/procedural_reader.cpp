@@ -4,6 +4,7 @@
 
 #include "procedural_reader.h"
 #include "diagnostic_utils.h"
+#include "trace_utils.h"
 #include <ai.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdUtils/stageCache.h>
@@ -20,6 +21,7 @@ void ProceduralReader::Read(const std::string &filename,
 {
     // Install diagnostic delegate to capture USD composition errors
     ArnoldUsdDiagnostic diagnostic;
+    ArnoldUsdTraceDiagnostic traceDiagnostic;
     
     // Nodes were already exported, should we skip here,
     // or should we just append the new nodes ?
@@ -87,6 +89,7 @@ bool ProceduralReader::Read(long int cacheId, const std::string &path)
 {
     // Install diagnostic delegate to capture USD composition errors
     ArnoldUsdDiagnostic diagnostic;
+    ArnoldUsdTraceDiagnostic traceDiagnostic;
     
     if (!GetNodes().empty()) {
         return true;

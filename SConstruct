@@ -128,6 +128,7 @@ vars.AddVariables(
     BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', True),
     BoolVariable('ENABLE_SHARED_ARRAYS', 'Enable the use of shared arrays in hydra', False),
     BoolVariable('ENABLE_HYDRA2_RENDERSETTINGS', 'Enable the use of RenderSettings hydra prim', False),
+    BoolVariable('ENABLE_TRACING', 'Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE).', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
@@ -379,6 +380,9 @@ env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 
 if env['HYDRA_NORMALIZE_DEPTH']:
     env.Append(CPPDEFINES = Split('HYDRA_NORMALIZE_DEPTH'))
+
+if not env['ENABLE_TRACING']:
+    env.Append(CPPDEFINES = [{'TRACE_ENABLE': 0}])
 
 # Compiler settings
 if env['_COMPILER'] in ['gcc', 'clang']:

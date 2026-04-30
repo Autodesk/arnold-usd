@@ -31,6 +31,7 @@
 // limitations under the License.
 #include "mesh.h"
 #include "light.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
@@ -201,6 +202,8 @@ HdArnoldMesh::~HdArnoldMesh() {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:HdArnoldMesh:Sync"); 
+    TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
 

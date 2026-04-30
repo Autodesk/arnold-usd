@@ -32,6 +32,7 @@
 #include "light.h"
 #include "mesh.h"
 #include "instancer.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/usd/usdLux/tokens.h>
 #include <pxr/usd/usdLux/blackbody.h>
@@ -499,6 +500,8 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    AiProfileBlock("hydra_proc:HdArnoldGenericLight:Sync"); 
+    TRACE_FUNCTION();
 
     if (!_delegate->CanUpdateScene())
         return;

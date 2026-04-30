@@ -17,6 +17,7 @@
 // limitations under the License.
 #include "instancer.h"
 #include "shape_utils.h"
+#include <pxr/base/trace/trace.h>
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
@@ -81,6 +82,8 @@ HdArnoldInstancer::HdArnoldInstancer(
 
 void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    AiProfileBlock("hydra_proc:HdArnoldInstancer:Sync"); 
+    TRACE_FUNCTION();
     if (!_delegate->CanUpdateScene())
         return;
  
