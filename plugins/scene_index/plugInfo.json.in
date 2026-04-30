@@ -74,7 +74,7 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: render passes"
-                    }
+                    }${MTOA_ENTRY}
                 }
             },
             "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
