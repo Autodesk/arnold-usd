@@ -49,6 +49,7 @@ if (BUILD_SCENE_INDEX_PLUGIN)
         if (MTOA_BUILD)
             target_compile_definitions(sceneIndexArnold PRIVATE MTOA_BUILD=1)
         endif()
+		target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
 
         if (BUILD_HEADERS_AS_SOURCES)
             target_sources(sceneIndexArnold PRIVATE ${HDR})

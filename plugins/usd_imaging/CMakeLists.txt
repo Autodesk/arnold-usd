@@ -45,6 +45,9 @@ if (BUILD_USD_IMAGING_PLUGIN)
         if (BUILD_HEADERS_AS_SOURCES)
             target_sources(usdImagingArnold PRIVATE ${HDR})
         endif ()
+		if (BUILD_SCENE_INDEX_PLUGIN)
+			target_compile_definitions(usdImagingArnold PUBLIC ENABLE_SCENE_INDEX=1)
+		endif()
 
         set(USDIMAGING_LIBS ar;arch;plug;tf;trace;vt;gf;work;sdf;sdr;hf;hd;hdsi;usd;usdGeom;usdImaging;usdLux;usdShade)
 
