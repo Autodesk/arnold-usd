@@ -226,18 +226,19 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
 
 void* HdArnoldRenderBuffer::Map()
 {
-    _mutex.lock();
+    std::unique_lock<std::mutex> lock(_mutex);
     if (_buffer.empty()) {
-        _mutex.unlock();
         return nullptr;
     }
+    lock.release(); // ownership transferred to Unmap()
     return _buffer.data();
 }
 
 void HdArnoldRenderBuffer::Unmap()
 {
     if (!_buffer.empty()) {
-        _mutex.unlock();
+        // The mutex was acquired (and ownership released) by Map(); adopt it here so it is unlocked via RAII.
+        std::unique_lock<std::mutex> lock(_mutex, std::adopt_lock);
     }
 }
 

@@ -644,7 +644,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         for (const auto& renderVar : product.renderVars) {
             // Create filter (default to box_filter)
             std::string varName = renderVar.varPath.GetString();
-            std::string filterName = varName + "/filter";
+            std::string filterName;
+            filterName.reserve(varName.size() + 7);
+            filterName = varName;
+            filterName += "/filter";
             std::string filterType = "box_filter";
 
             // Check if arnold:filter is specified in the render var settings
@@ -805,14 +808,20 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 lpes.push_back(aovName + " " + sourceName);
             } else if (sourceType == UsdRenderTokens->primvar) {
                 // Primvar AOV - requires aov_write and user_data shaders
-                std::string aovShaderName = varName + "_shader";
+                std::string aovShaderName;
+                aovShaderName.reserve(varName.size() + 7);
+                aovShaderName = varName;
+                aovShaderName += "_shader";
                 AtNode* aovShader =
                     renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
 
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                    std::string userDataName = varName + "_user_data";
+                    std::string userDataName;
+                    userDataName.reserve(varName.size() + 10);
+                    userDataName = varName;
+                    userDataName += "_user_data";
                     AtNode* userData =
                         renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(userDataName.c_str()));
 
