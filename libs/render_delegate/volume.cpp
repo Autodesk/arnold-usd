@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "volume.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/base/tf/dl.h>
 
@@ -208,6 +209,8 @@ HdArnoldVolume::~HdArnoldVolume()
 void HdArnoldVolume::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:HdArnoldVolume:Sync");
+    TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;
  
