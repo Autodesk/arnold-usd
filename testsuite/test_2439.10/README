@@ -1,0 +1,6 @@
+Add cone effect on disk light
+ARNOLD-16949
+
+author: Libby O'Meara
+
+PARAMS: { 'scene': 'disk.usda', 'kick_params': '-frame 38'  }
