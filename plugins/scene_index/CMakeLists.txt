@@ -26,6 +26,11 @@ set(HDR
     meshLightResolvingSIP.h
 )
 
+if (MTOA_BUILD)
+    list(APPEND SRC mtoaSIP.cpp)
+    list(APPEND HDR mtoaSIP.h)
+endif()
+
 # Add objects for the hydra procedural
 add_library(sceneIndexArnoldObjects OBJECT ${SRC})
 target_compile_definitions(sceneIndexArnoldObjects PRIVATE "HDSCENEINDEX_EXPORTS=1")
@@ -33,11 +38,17 @@ add_common_includes(TARGET_NAME sceneIndexArnoldObjects DEPENDENCIES common)
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(sceneIndexArnoldObjects PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
+if (MTOA_BUILD)
+    target_compile_definitions(sceneIndexArnoldObjects PUBLIC MTOA_BUILD=1)
+endif()
 
 # If we want a sceneIndexArnold shared plugin
 if (BUILD_SCENE_INDEX_PLUGIN)
     if (NOT BUILD_WITH_USD_STATIC)
         add_library(sceneIndexArnold SHARED ${SRC})
+        if (MTOA_BUILD)
+            target_compile_definitions(sceneIndexArnold PRIVATE MTOA_BUILD=1)
+        endif()
 
         if (BUILD_HEADERS_AS_SOURCES)
             target_sources(sceneIndexArnold PRIVATE ${HDR})

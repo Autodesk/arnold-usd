@@ -4,6 +4,7 @@ set(SRC
     basis_curves.cpp
     camera.cpp
     config.cpp
+    gaussian_splat.cpp
     instancer.cpp
     light.cpp
     mesh.cpp

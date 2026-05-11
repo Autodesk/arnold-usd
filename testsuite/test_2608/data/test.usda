@@ -1,0 +1,169 @@
+#usda 1.0
+(
+    """Converted from PLY to USD using pySplatPly2Usd
+Source file: test_splats.ply"""
+    defaultPrim = "test_splats"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def ParticleField3DGaussianSplat "test_splats"
+{
+    float3[] extent = [(0, 0, 0), (1, 1, 1)]
+    float[] opacities = [0.9, 0.9, 0.9, 0.5, 0.8]
+    quatf[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
+    point3f[] positions = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0)]
+    float3[] radiance:sphericalHarmonicsCoefficients = [(1.7724539, -1.7724539, -1.7724539), (-1.7724539, 1.7724539, -1.7724539), (-1.7724539, -1.7724539, 1.7724539), (1.7724539, 1.7724539, 1.7724539), (1.7724539, 1.7724539, -1.7724539)] (
+        elementSize = 1
+        interpolation = "vertex"
+    )
+    uniform int radiance:sphericalHarmonicsDegree = 0
+    float3[] scales = [(0.1, 0.1, 0.1), (0.1, 0.2, 0.1), (0.1, 0.1, 0.2), (0.15, 0.15, 0.15), (0.2, 0.1, 0.1)]
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (1, 20000)
+        float2 clippingRange.timeSamples = {
+            1: (1, 20000),
+        }
+        float focalLength = 18.147562
+        float focalLength.timeSamples = {
+            1: 18.147562,
+        }
+        float focusDistance = 2.0731924
+        float focusDistance.timeSamples = {
+            1: 2.6047719,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 20.955
+        float horizontalAperture.timeSamples = {
+            1: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        float verticalAperture = 11.787188
+        float verticalAperture.timeSamples = {
+            1: 11.787188,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.5, 0.5, 2.5731923580169678, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.5, 0.5, 3.104771852493286, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "Beauty"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                custom float arnold:width = 2
+                uniform token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "rgba"
+                uniform string sourceName = "RGBA"
+                uniform token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "Beauty_product"
+        {
+            uniform token aspectRatioConformPolicy = "expandAperture"
+            uniform float4 dataWindowNDC = (0, 0, 1, 1)
+            custom string driver:parameters:artist = ""
+            custom string driver:parameters:comment = ""
+            custom string driver:parameters:hostname = ""
+            custom string driver:parameters:OpenEXR:compression = "zips"
+            uniform bool instantaneousShutter = 0
+            rel orderedVars = </Render/Products/Vars/Beauty>
+            uniform float pixelAspectRatio = 1
+            token productName = "Beauty_product"
+        }
+
+        def RenderProduct "default_product"
+        {
+            uniform token aspectRatioConformPolicy = "expandAperture"
+            uniform float4 dataWindowNDC = (0, 0, 1, 1)
+            custom string driver:parameters:artist = ""
+            custom string driver:parameters:comment = ""
+            custom string driver:parameters:hostname = ""
+            custom string driver:parameters:OpenEXR:compression = "zips"
+            uniform bool instantaneousShutter = 0
+            rel orderedVars = </Render/Products/Vars/Beauty>
+            uniform float pixelAspectRatio = 1
+            token productName = "testrender.tif"
+        }
+    }
+
+    def RenderSettings "render_settings"
+    {
+        custom int arnold:global:AA_samples = 9
+        custom bool arnold:global:abort_on_error = 1
+        custom bool arnold:global:abort_on_license_fail = 0
+        custom int arnold:global:auto_transparency_depth = 48
+        custom bool arnold:global:enable_progressive_render = 1
+        custom int arnold:global:GI_diffuse_depth = 4
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 4
+        custom int arnold:global:GI_specular_samples = 3
+        custom int arnold:global:GI_sss_samples = 2
+        custom int arnold:global:GI_total_depth = 15
+        custom int arnold:global:GI_transmission_depth = 4
+        custom int arnold:global:GI_transmission_samples = 2
+        custom int arnold:global:GI_volume_depth = 0
+        custom int arnold:global:GI_volume_samples = 0
+        custom int arnold:global:gpu_default_min_memory_MB = 512
+        custom string arnold:global:gpu_default_names = "*"
+        custom int arnold:global:gpu_max_texture_resolution = 0
+        custom float arnold:global:indirect_specular_blur = 1
+        custom float arnold:global:low_light_threshold = 0.001
+        custom bool arnold:global:parallel_node_init = 1
+        custom string arnold:global:pin_threads = "auto"
+        custom string arnold:global:render_device = "CPU"
+        custom string arnold:global:render_device_fallback = "error"
+        custom bool arnold:global:skip_license_check = 0
+        custom bool arnold:global:sss_use_autobump = 0
+        custom bool arnold:global:texture_accept_unmipped = 1
+        custom bool arnold:global:texture_accept_untiled = 1
+        custom bool arnold:global:texture_automip = 1
+        custom int arnold:global:texture_autotile = 0
+        custom float arnold:global:texture_max_memory_MB = 2048
+        custom int arnold:global:texture_max_open_files = 0
+        uniform token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/cameras_ctrl/lightset_cam>
+        uniform float4 dataWindowNDC = (0, 0, 1, 1)
+        uniform bool instantaneousShutter = 0
+        uniform float pixelAspectRatio = 1
+        rel products = </Render/Products/default_product>
+        uniform int2 resolution = (160, 120)
+    }
+}
+

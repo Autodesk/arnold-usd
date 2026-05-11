@@ -43,6 +43,9 @@ REGISTER_PRIM_READER(UsdArnoldReadCapsule, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadPointInstancer, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadVolume, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadProceduralCustom, AI_NODE_SHAPE);
+#if PXR_VERSION >= 2603
+REGISTER_PRIM_READER(UsdArnoldReadGaussianSplat, AI_NODE_SHAPE);
+#endif
 
 
 class UsdArnoldReadBounds : public UsdArnoldPrimReader {

@@ -57,6 +57,9 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("PointInstancer", new UsdArnoldReadPointInstancer());
     RegisterReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
     RegisterReader("Volume", new UsdArnoldReadVolume());
+#if PXR_VERSION >= 2603
+    RegisterReader("ParticleField3DGaussianSplat", new UsdArnoldReadGaussianSplat());
+#endif
 
     RegisterReader("DistantLight", new UsdArnoldReadDistantLight());
     RegisterReader("DomeLight", new UsdArnoldReadDomeLight());
@@ -167,12 +170,18 @@ void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
         RegisterReader("Cylinder", new UsdArnoldReadBounds(_params));
         RegisterReader("Cone", new UsdArnoldReadBounds(_params));
         RegisterReader("Capsule", new UsdArnoldReadBounds(_params));
+#if PXR_VERSION >= 2603
+        RegisterReader("ParticleField3DGaussianSplat", new UsdArnoldReadBounds(_params));
+#endif
     } else if (_mode == AI_PROC_POLYGONS) {
         RegisterReader("Mesh", new UsdArnoldReadGenericPolygons(_params));
     } else if (_mode == AI_PROC_POINTS) {
         RegisterReader("Mesh", new UsdArnoldReadGenericPoints(_params));
         RegisterReader("Curves", new UsdArnoldReadGenericPoints(_params));
         RegisterReader("Points", new UsdArnoldReadGenericPoints(_params));
+#if PXR_VERSION >= 2603
+        RegisterReader("ParticleField3DGaussianSplat", new UsdArnoldReadGenericPoints(_params));
+#endif
     }
 
     static AtString proceduralsOnlyStr("procedurals_only");

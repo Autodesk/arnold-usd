@@ -56,10 +56,23 @@ def configure_procedural_usd_imaging_plug_info(source, target, env):
         'REGISTER_ARNOLD_TYPES': register_arnold_types
     })
 
+_MTOA_ENTRY = (
+    ',\n                    "HdArnoldMtoaSceneIndexPlugin" : {\n'
+    '                        "bases": ["HdSceneIndexPlugin"],\n'
+    '                        "loadWithRenderer": "Arnold",\n'
+    '                        "priority": 0,\n'
+    '                        "displayName": "Arnold: MtoA compatibility"\n'
+    '                    }'
+)
+
+def _mtoa_entry(env):
+    return _MTOA_ENTRY if env.get('MTOA_BUILD') else ''
+
 def configure_scene_index_plug_info(source, target, env):
     configure(source, target, env, {
         'LIB_PATH' : '../sceneIndexArnold',
         'LIB_EXTENSION': system.LIB_EXTENSION,
+        'MTOA_ENTRY': _mtoa_entry(env),
     })
 
 def configure_procedural_scene_index_plug_info(source, target, env):
@@ -67,6 +80,7 @@ def configure_procedural_scene_index_plug_info(source, target, env):
     configure(source, target, env, {
         'LIB_PATH': '../../usd_proc',
         'LIB_EXTENSION': system.LIB_EXTENSION,
+        'MTOA_ENTRY': _mtoa_entry(env),
     })
 
 def configure_ndr_plug_info(source, target, env):
