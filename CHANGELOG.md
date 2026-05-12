@@ -1,7 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.1.1] (Unreleased)
+## [7.5.1.2] (Unreleased)
+
+- [usd#2635](https://github.com/Autodesk/arnold-usd/issues/2635) - Fix rounding issue with husk when overscan is used at certain resolutions
+
+## [7.5.1.1] 2026-04-22
 
 ### Bug Fixes
 
