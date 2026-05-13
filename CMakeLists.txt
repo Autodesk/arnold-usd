@@ -44,6 +44,11 @@ if (BUILD_USDGENSCHEMA_ARNOLD)
     add_subdirectory(tools/usdgenschema)
 endif()
 
+if (BUILD_TURNTABLE)
+    message(STATUS "Building turntable tool")
+    add_subdirectory(tools/turntable)
+endif()
+
 # Building the schemas
 if (BUILD_SCHEMAS)
     add_subdirectory(schemas)
