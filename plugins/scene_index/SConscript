@@ -32,6 +32,10 @@ source_files = [
     'renderPassSIP.cpp',
 ]
 
+if local_env.get('MTOA_BUILD'):
+    source_files.append('mtoaSIP.cpp')
+    local_env.Append(CPPDEFINES=['MTOA_BUILD'])
+
 if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
     local_env.Append(CXXFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))

@@ -638,6 +638,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     
+    int framingWidth = width;
+    int framingHeight = height;
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
         (delegateResolution[0] != width || delegateResolution[1] != height)) {
 
@@ -722,19 +724,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
 
             // return the min region in a given axis X or Y, provided the input data that we receive from hydra
-            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes) -> GfVec2i {
+            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes, int expectedFraming) -> GfVec2i {
                 // if an explicit render settings resolution was provided, we want to use it, otherwise we use the 
                 // render buffer resolution
                 float regionMinFlt = windowMin * (settingsRes > 0 ? settingsRes : bufferRes);
                 float regionMaxFlt = windowMax * (settingsRes > 0 ? settingsRes : bufferRes) - 1;
                 GfVec2i region(std::round(regionMinFlt), std::round(regionMaxFlt));
-
-                if (settingsRes <= 0) {
+                
+                // If we have a specific render settings resolution with a windowNDC, but applying it
+                // returns a 1-offset as compared to the expected buffer we had from the framing, then 
+                // we want to adjust the values to this offset
+                if (settingsRes <= 0 || std::abs(region[1] - region[0] + 1 - expectedFraming) == 1) {
                     // In the arnold options attributes, we need 
                     // region_max_x - region_min_x = width - 1
                     // region_max_y - region_min_y = height - 1
                     // so that the render buffer matches the expected output. 
-                    int mismatchDelta = region[1] - region[0] - bufferRes + 1;
+                    int usedBufferRes = (settingsRes <= 0) ? bufferRes : expectedFraming;
+                    int mismatchDelta = region[1] - region[0] - usedBufferRes + 1;
                     if (mismatchDelta != 0) {
                         // There could have been a precision issue, in that case we want to adjust either the region min or the max
                         float deltaMin = std::abs(regionMinFlt - region[0]);
@@ -746,7 +752,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         // if deltaMax is higher, then it's the regionMax that will automatically be tweaked,
                         // here we are just returning the region min
                     }
-                    region[1] = region[0] + bufferRes - 1;
+                    region[1] = region[0] + usedBufferRes - 1;
                 }
                 return region;
             };
@@ -773,8 +779,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }                
             }
             
-            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width);
-
+            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width, framingWidth);
+            
             AiNodeSetInt(options, str::region_min_x, regionX[0]);
             AiNodeSetInt(options, str::region_max_x, regionX[1]);
             
@@ -792,10 +798,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             
             } 
-            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height);
+            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height, framingHeight);
             AiNodeSetInt(options, str::region_min_y, regionY[0]);
             AiNodeSetInt(options, str::region_max_y, regionY[1]);
-
             clearBuffers(_renderBuffers, true, regionX[1] - regionX[0] + 1, regionY[1] - regionY[0] + 1);;
             
         } else {

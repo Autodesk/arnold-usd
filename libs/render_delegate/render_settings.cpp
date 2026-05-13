@@ -224,9 +224,15 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
 
 void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
+#if PXR_VERSION < 2605
     if (GetShutterInterval().IsHolding<GfVec2d>()) {
         // Set the shutter interval on the render delegate
         const GfVec2d shutterInterval = GetShutterInterval().UncheckedGet<GfVec2d>();
+#else
+    if (GetUnionedSamplingInterval().IsHolding<GfVec2d>()) {
+        // Set the shutter interval on the render delegate
+        const GfVec2d shutterInterval = GetUnionedSamplingInterval().UncheckedGet<GfVec2d>();
+#endif
         // The shutter is stored in
         //  * ArnoldRenderParams
         //  * ArnoldHydraReader when used with (kick)
@@ -453,7 +459,12 @@ void HdArnoldRenderSettings::_Sync(
     }
 
 #if PXR_VERSION >= 2311
-    if (*dirtyBits & HdRenderSettings::DirtyShutterInterval || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+#if PXR_VERSION < 2605
+	const auto DirtyShutter = HdRenderSettings::DirtyShutterInterval;
+#else
+	const auto DirtyShutter = HdRenderSettings::DirtyUnionedSamplingInterval;
+#endif
+    if (*dirtyBits & DirtyShutter || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         _UpdateShutterInterval(sceneDelegate, param);
     }
 #endif

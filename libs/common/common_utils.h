@@ -51,6 +51,13 @@ static const int AI_NODE_IMAGER = AI_NODE_DRIVER;
 ARCH_HIDDEN
 std::string ArnoldUsdMakeCamelCase(const std::string &in);
 
+// convert from "CamelCase" or "camelCase" to "snake_case"
+// an underscore is inserted before each uppercase letter (except at the very
+// start of the string) and the letter is lowercased.
+//
+ARCH_HIDDEN
+std::string ArnoldUsdMakeSnakeCase(const std::string &in);
+
 template <typename F>
 ARCH_HIDDEN
 void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)
