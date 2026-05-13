@@ -30,6 +30,7 @@ source_files = [
     'nurbsApproximatingSIP.cpp',
     'meshLightResolvingSIP.cpp',
     'renderPassSIP.cpp',
+    'instanceLightLinkingSIP.cpp',
 ]
 
 if local_env.get('MTOA_BUILD'):
