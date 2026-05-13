@@ -9,6 +9,7 @@
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 - [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
+- [usd#2626](https://github.com/Autodesk/arnold-usd/issues/2626) - Flush op: textures when cop_texture_changed is triggered
 
 ## [7.5.1.1] (Unreleased)
 
