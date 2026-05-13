@@ -720,7 +720,7 @@ private:
     /// Pointer to the shared Resource Registry.
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
-    using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+    using LightLinkingMap = std::unordered_map<TfToken, std::unordered_set<HdLight*>, TfToken::HashFunctor>;
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     

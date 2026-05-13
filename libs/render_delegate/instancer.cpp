@@ -217,10 +217,10 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
 
     AtArray* matrices = AiArrayAllocate(instanceCount, sampleArray.count, AI_TYPE_MATRIX);
     std::vector<AtMatrix> matrixVector;
+    matrixVector.reserve(instanceCount);
     for (size_t n = 0; n < sampleArray.count; ++n) {
         const auto& instanceMatrices = sampleArray.values[n];
         matrixVector.clear();
-        matrixVector.reserve(instanceMatrices.size());
         for (const auto& instanceMatrix : instanceMatrices) {
             AtMatrix arnoldMatrix;
             ConvertValue(arnoldMatrix, instanceMatrix);
