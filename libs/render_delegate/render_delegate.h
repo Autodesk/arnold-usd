@@ -639,6 +639,23 @@ public:
         _nodeNames[name] = node;
     }
 
+    // Register an ArnoldNodeGraph's original (source-file) name so that lookups
+    // by that name still resolve when the file is referenced and the runtime
+    // SdfPath is remapped. See HdArnoldNodeGraph::Sync, which reads
+    // primvars:arnold:name on the prim.
+    inline void AddNodeGraphName(const std::string &name, const SdfPath &path)
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        _nodeGraphNames[name] = path;
+    }
+
+    inline SdfPath LookupNodeGraphPath(const std::string &name) const
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        auto it = _nodeGraphNames.find(name);
+        return it == _nodeGraphNames.end() ? SdfPath() : it->second;
+    }
+
     /// Method used to lookup a node in the current universe.
     /// This method should always be called, instead of explicit AiNodeLookUpByName
     inline 
@@ -828,6 +845,8 @@ private:
     bool _supportShapeInstancing = true;
     bool _forceIgnoreMotionBlur = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+    mutable std::mutex _nodeGraphNamesMutex;
+    std::unordered_map<std::string, SdfPath> _nodeGraphNames;
 
     // We store a list of functions that must be run once all the prims are synced and have filled the 
     // vectors like 

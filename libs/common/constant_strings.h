@@ -63,6 +63,7 @@ ASTR2(arnold_filename, "arnold:filename");
 ASTR2(arnold_image, "arnold:image");
 ASTR2(arnold_light, "arnold:light");
 ASTR2(arnold_matte, "arnold:matte");
+ASTR2(arnold_name, "arnold:name");
 ASTR2(arnold_node_entry, "arnold:node_entry");
 ASTR2(arnold_prefix, "arnold:");
 ASTR2(arnold_relative_path, "arnold_relative_path");
