@@ -427,9 +427,6 @@ static std::string ResolveFilenameTokens(const std::string &in, float frameF)
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
-      _fallbackColor(SdfPath::EmptyPath()),
-      _fallbackDepth(SdfPath::EmptyPath()),
-      _fallbackPrimId(SdfPath::EmptyPath()),
       _renderDelegate(renderDelegate)
 {
     auto* universe = _renderDelegate->GetUniverse();
@@ -466,26 +463,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_primIdReader, str::attribute, str::hydraPrimId);
     AiNodeLink(_primIdReader, str::aov_input, _primIdWriter);
 
-    // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
-    // clang-format off
-    _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
-                        {HdAovTokens->depth, {&_fallbackDepth, {}}},
-                        {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
-    // clang-format on
-    _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
-    // Setting up the fallback outputs when no
-    const auto beautyString =
-        TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
-    const auto positionString =
-        TfStringPrintf("%s %s %s", _depthOutputValue, AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
-    const auto idString = TfStringPrintf(
-        "%s INT %s %s", str::hydraPrimId.c_str(), AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
-    AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
-    AiArraySetStr(_fallbackOutputs, 1, positionString.c_str());
-    AiArraySetStr(_fallbackOutputs, 2, idString.c_str());
-    _fallbackAovShaders = AiArrayAllocate(1, 1, AI_TYPE_POINTER);
-    AiArraySetPtr(_fallbackAovShaders, 0, _primIdWriter);
-
+    
     const auto& config = HdArnoldConfig::GetInstance();
     AiNodeSetFlt(_camera, str::shutter_start, config.shutter_start);
     AiNodeSetFlt(_camera, str::shutter_end, config.shutter_end);
@@ -500,9 +478,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     _renderDelegate->DestroyArnoldNode(_mainDriver);
     _renderDelegate->DestroyArnoldNode(_primIdWriter);
     _renderDelegate->DestroyArnoldNode(_primIdReader);
-    // We are not assigning this array to anything, so needs to be manually destroyed.
-    AiArrayDestroy(_fallbackOutputs);
-    AiArrayDestroy(_fallbackAovShaders);
     
     for (auto& customProduct : _customProducts) {
         if (customProduct.driver != nullptr) {
@@ -857,10 +832,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
-    // If AOV bindings are empty, we are only setting up color and depth for basic opengl composition. This should
-    // not happen often.
-    // TODO(pal): Remove bindings to P and RGBA. Those are used for other buffers. Or add support for writing to
-    //  these in the driver.
     HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
     // These buffers are not supported, but we still need to allocate and set them up for hydra.
     aovBindings.erase(
@@ -891,8 +862,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const bool needsDelegateProductsUpdate = _renderDelegate->NeedsDelegateProductsUpdate();
     
     if (_RenderBuffersChanged(aovBindings) || needsDelegateProductsUpdate ||
-        _usingFallbackBuffers || updateAovs || updateImagers) {
-        _usingFallbackBuffers = false;
+        updateAovs || updateImagers) {
+        
         renderParam->Interrupt();
         if (_mainDriver)
             AiNodeResetParameter(_mainDriver, str::render_outputs);
@@ -1317,7 +1288,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.second.buffer->SetConverged(_isConverged);
             }
         }
-        // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
     }
 }
 

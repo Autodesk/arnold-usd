@@ -199,7 +199,6 @@ WriteBucketFunctionMap writeBucketFunctions{
 
 HdArnoldRenderBuffer::HdArnoldRenderBuffer(const SdfPath& id) : HdRenderBuffer(id)
 {
-    _hasUpdates.store(false, std::memory_order_release);
 }
 
 bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, bool multiSampled)
@@ -274,7 +273,6 @@ void HdArnoldRenderBuffer::WriteBucket(
     if (ye == yo) {
         return;
     }
-    _hasUpdates.store(true, std::memory_order_release);
     const auto dataWidth = (xe - xo);
     // Single component formats can be:
     //  - HdFormatUNorm8
