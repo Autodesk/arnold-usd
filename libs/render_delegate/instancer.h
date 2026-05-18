@@ -37,6 +37,7 @@
 
 #include "render_delegate.h"
 #include "utils.h"
+#include "shared_arrays.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -120,6 +121,7 @@ private:
     int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
 
     GfVec2f _samplingInterval = {0.f, 0.f}; //< Keep track of the primvar sampling interval used 
+    ArrayHandler _arrayHandler; ///< Manages shared matrix array buffers to avoid extra copies in Arnold
 
 };
 

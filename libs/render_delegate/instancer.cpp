@@ -215,19 +215,21 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     if (instanceCount == 0)
         return false;
 
-    AtArray* matrices = AiArrayAllocate(instanceCount, sampleArray.count, AI_TYPE_MATRIX);
-    std::vector<AtMatrix> matrixVector;
+    // Convert GfMatrix4d samples to GfMatrix4f (identical layout to AtMatrix: row-major float[4][4])
+    // and fill the shared buffer directly, avoiding an extra copy inside Arnold.
+    HdArnoldSampledPrimvarType sampledMatrices;
+    sampledMatrices.Resize(sampleArray.count);
+    sampledMatrices.count = sampleArray.count;
     for (size_t n = 0; n < sampleArray.count; ++n) {
+        sampledMatrices.times[n] = sampleArray.times[n];
         const auto& instanceMatrices = sampleArray.values[n];
-        matrixVector.clear();
-        matrixVector.reserve(instanceMatrices.size());
-        for (const auto& instanceMatrix : instanceMatrices) {
-            AtMatrix arnoldMatrix;
-            ConvertValue(arnoldMatrix, instanceMatrix);
-            matrixVector.push_back(arnoldMatrix);
+        VtArray<GfMatrix4f> gfMatrices(instanceMatrices.size());
+        for (size_t i = 0; i < instanceMatrices.size(); ++i) {
+            gfMatrices[i] = GfMatrix4f(instanceMatrices[i]);
         }
-        AiArraySetKey(matrices, n, matrixVector.data());
+        sampledMatrices.values[n] = VtValue(std::move(gfMatrices));
     }
+    AtArray* matrices = _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfMatrix4f>>(sampledMatrices);
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
