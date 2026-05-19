@@ -7,19 +7,25 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec2i.h>
 #include <pxr/base/gf/vec3d.h>
+#include <pxr/base/gf/vec3f.h>
 #include <pxr/base/tf/pxrCLI11/CLI11.h>
 #include <pxr/base/tf/stringUtils.h>
+#include <pxr/base/vt/array.h>
 #include <pxr/usd/sdf/assetPath.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/timeCode.h>
 #include <pxr/usd/usdGeom/bboxCache.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/imageable.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/xformOp.h>
+#include <pxr/usd/usdShade/material.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/lightAPI.h>
 #include <pxr/usd/usdLux/tokens.h>
@@ -32,6 +38,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -53,6 +60,7 @@ struct Args {
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
+    std::vector<std::string> props;
 };
 
 enum class TurntableMode {
@@ -87,6 +95,28 @@ const char *_ModeToString(TurntableMode mode)
     case TurntableMode::RotateLight: return "light";
     }
     return "camera";
+}
+
+enum class PropType {
+    Ground
+};
+
+bool _ParseProp(const std::string &propString, PropType &out)
+{
+    const std::string prop = TfStringToLower(propString);
+    if (prop == "ground" || prop == "ground-floor" || prop == "floor") {
+        out = PropType::Ground;
+        return true;
+    }
+    return false;
+}
+
+const char *_PropToString(PropType prop)
+{
+    switch (prop) {
+    case PropType::Ground: return "ground";
+    }
+    return "ground";
 }
 
 GfMatrix4d _RotationMatrixForUpAxis(const TfToken &upAxis, double angleDegrees)
@@ -151,12 +181,17 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--mode", args.mode,
         "Animation mode: camera (default), object, or light")
         ->option_text("MODE");
+
+    app->add_option("--prop", args.props,
+        "Add a prop to the generated stage. Supported values: ground")
+        ->option_text("NAME");
 }
 
 struct AssetBounds {
     GfVec3d center;
     GfVec3d size;
     double  radius;  // half diagonal of the aligned bounding box
+    double  bottomFaceDiagonal;
     double  upMin;
     double  upMax;
     TfToken upAxis;
@@ -219,9 +254,67 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
     out.size   = range.GetSize();
     out.radius = range.GetSize().GetLength() * 0.5;
     const int upAxisIndex = _GetUpAxisIndex(out.upAxis);
+    const int axisAIndex  = 0;
+    const int axisBIndex  = upAxisIndex == 1 ? 2 : 1;
+    out.bottomFaceDiagonal = std::sqrt(
+        out.size[axisAIndex] * out.size[axisAIndex] + out.size[axisBIndex] * out.size[axisBIndex]);
     out.upMin = range.GetMin()[upAxisIndex];
     out.upMax = range.GetMax()[upAxisIndex];
     return true;
+}
+
+static UsdShadeMaterial _CreateGroundMaterial(const UsdStageRefPtr &stage)
+{
+    const SdfPath materialPath("/materials/ground");
+    UsdShadeMaterial material = UsdShadeMaterial::Define(stage, materialPath);
+    UsdShadeShader shader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("previewSurface")));
+    shader.CreateIdAttr(VtValue(TfToken("UsdPreviewSurface")));
+    shader.CreateInput(TfToken("diffuseColor"), SdfValueTypeNames->Color3f)
+        .Set(GfVec3f(0.18f, 0.18f, 0.18f));
+    shader.CreateInput(TfToken("specularColor"), SdfValueTypeNames->Color3f)
+        .Set(GfVec3f(0.0f, 0.0f, 0.0f));
+    shader.CreateInput(TfToken("roughness"), SdfValueTypeNames->Float)
+        .Set(1.0f);
+    shader.CreateInput(TfToken("metallic"), SdfValueTypeNames->Float)
+        .Set(0.0f);
+    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), TfToken("surface"));
+    return material;
+}
+
+static void _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType> &props,
+                        const AssetBounds &bounds)
+{
+    if (props.empty()) {
+        return;
+    }
+
+    UsdGeomXform sceneProps = UsdGeomXform::Define(stage, SdfPath("/props"));
+    (void)sceneProps;
+    const UsdShadeMaterial groundMaterial = _CreateGroundMaterial(stage);
+
+    for (const PropType prop : props) {
+        switch (prop) {
+        case PropType::Ground: {
+            const double thickness = std::max(bounds.bottomFaceDiagonal * 0.01, 0.001);
+            const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
+            const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
+
+            UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/ground"));
+            ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
+            ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
+            ground.CreateHeightAttr().Set(thickness);
+            ground.CreateDisplayColorAttr().Set(VtArray<GfVec3f>{GfVec3f(0.18f, 0.18f, 0.18f)});
+            UsdShadeMaterialBindingAPI(ground.GetPrim()).Bind(groundMaterial);
+
+            UsdGeomXformable xformable(ground.GetPrim());
+            UsdGeomXformOp translateOp = xformable.AddTranslateOp();
+            GfVec3d groundCenter = bounds.center;
+            groundCenter[_GetUpAxisIndex(bounds.upAxis)] = groundHeight;
+            translateOp.Set(groundCenter);
+            break;
+        }
+        }
+    }
 }
 
 // /asset  —  the input asset referenced in
@@ -372,6 +465,18 @@ int Run(const Args &args)
         return 1;
     }
 
+    std::vector<PropType> props;
+    props.reserve(args.props.size());
+    for (const std::string &propString : args.props) {
+        PropType prop;
+        if (!_ParseProp(propString, prop)) {
+            fprintf(stderr, "turntable: unknown --prop '%s' (expected ground)\n",
+                    propString.c_str());
+            return 1;
+        }
+        props.push_back(prop);
+    }
+
     AssetBounds bounds;
     if (!ComputeAssetBounds(args.input, args.upAxis, bounds)) {
         return 1;
@@ -392,6 +497,7 @@ int Run(const Args &args)
     UsdGeomSetStageUpAxis(stage, bounds.upAxis);
 
     _SetupAsset(stage, args.input, mode, bounds, args.frames);
+    _SetupProps(stage, props, bounds);
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
     _SetupDomeLight(stage, args.hdri, mode, bounds, args.frames);
     _SetupRenderSettings(stage, args, cameraPath);
@@ -402,12 +508,19 @@ int Run(const Args &args)
     printf("  Up axis   : %s\n", bounds.upAxis.GetText());
     printf("  BBox      : center (%.4g %.4g %.4g)  radius %.4g\n",
            bounds.center[0], bounds.center[1], bounds.center[2], bounds.radius);
-        printf("  Mode      : %s\n", _ModeToString(mode));
+    printf("  Mode      : %s\n", _ModeToString(mode));
     printf("  Cam height: %.3g (rel), %.4g (world)\n",
            args.cameraHeight, _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax));
     printf("  Aim height: %.3g (rel), %.4g (world)\n",
            args.targetHeight, _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax));
-        printf("  Cam zoom  : %.3g\n", args.cameraZoom);
+    printf("  Cam zoom  : %.3g\n", args.cameraZoom);
+    if (!props.empty()) {
+        printf("  Props     :");
+        for (const PropType prop : props) {
+            printf(" %s", _PropToString(prop));
+        }
+        printf("\n");
+    }
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  Resolution: %dx%d\n", args.width, args.height);
     if (!args.hdri.empty()) {

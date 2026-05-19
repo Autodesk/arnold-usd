@@ -82,6 +82,7 @@ else:
         'usdGeom',
         'usdLux',
         'usdRender',
+        'usdShade',
     ]
     usd_libs, _ = link_usd_libraries(local_env, usd_libs)
     usd_deps = [get_tbb_lib(local_env)]

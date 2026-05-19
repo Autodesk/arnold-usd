@@ -39,7 +39,7 @@ else () # USD shared lib build
         if (LINUX)
             target_link_libraries(turntable PRIVATE dl pthread)
         endif ()
-        target_link_libraries(turntable PRIVATE tf;sdf;usd;usdGeom;usdLux;usdRender)
+        target_link_libraries(turntable PRIVATE tf;sdf;usd;usdGeom;usdLux;usdRender;usdShade)
     endif ()
 endif ()
 
