@@ -48,6 +48,9 @@ struct Args {
     int         height    = 720;
     std::string hdri;
     std::string upAxis;   // empty = auto-detect from stage
+    double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
+    double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
+    double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
 };
 
 void Configure(CLI::App *app, Args &args)
@@ -79,14 +82,38 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--up", args.upAxis,
         "Up axis override: Y or Z (default: read from asset stage)")
         ->option_text("AXIS");
+
+    app->add_option("--camera-height", args.cameraHeight,
+        "Camera height relative to bbox up-axis extent (0=bottom, 1=top, values outside [0,1] allowed, default: 0.5)")
+        ->option_text("T");
+
+    app->add_option("--target-height", args.targetHeight,
+        "Camera target height relative to bbox up-axis extent (0=bottom, 1=top, values outside [0,1] allowed, default: 0.5)")
+        ->option_text("T");
+
+    app->add_option("--camera-zoom", args.cameraZoom,
+        "Camera zoom factor (default: 1.0, >1 zooms in, <1 zooms out, must be > 0)")
+        ->option_text("S");
 }
 
 struct AssetBounds {
     GfVec3d center;
     GfVec3d size;
     double  radius;  // half diagonal of the aligned bounding box
+    double  upMin;
+    double  upMax;
     TfToken upAxis;
 };
+
+int _GetUpAxisIndex(const TfToken &upAxis)
+{
+    return upAxis == UsdGeomTokens->z ? 2 : 1;
+}
+
+double _Lerp01(double t, double minValue, double maxValue)
+{
+    return minValue + t * (maxValue - minValue);
+}
 
 // Returns false and prints an error if the stage cannot be opened or the bbox
 // is empty / degenerate.
@@ -134,6 +161,9 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
     out.center = range.GetMidpoint();
     out.size   = range.GetSize();
     out.radius = range.GetSize().GetLength() * 0.5;
+    const int upAxisIndex = _GetUpAxisIndex(out.upAxis);
+    out.upMin = range.GetMin()[upAxisIndex];
+    out.upMax = range.GetMax()[upAxisIndex];
     return true;
 }
 
@@ -149,7 +179,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                             const AssetBounds &bounds)
 {
     const SdfPath cameraPath("/camera");
-    const double camDistance = bounds.radius * 3.0;
+    const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
     const double nearClip    = std::max(1.0, camDistance * 0.01);
     const double farClip     = camDistance * 10.0;
 
@@ -160,22 +190,29 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 
     const GfVec3d upVec = (bounds.upAxis == UsdGeomTokens->z)
         ? GfVec3d(0, 0, 1) : GfVec3d(0, 1, 0);
+    const double cameraHeight = _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax);
+    const double targetHeight = _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax);
 
     for (int i = 0; i < args.frames; ++i) {
         const double angle = 2.0 * _kPi * double(i) / double(args.frames);
 
         // Orbit in the plane perpendicular to the up axis.
         GfVec3d eye;
+        GfVec3d target;
         if (bounds.upAxis == UsdGeomTokens->z) {
-            eye = bounds.center + GfVec3d(camDistance * std::cos(angle),
-                                          camDistance * std::sin(angle), 0.0);
+            eye = GfVec3d(bounds.center[0] + camDistance * std::cos(angle),
+                          bounds.center[1] + camDistance * std::sin(angle),
+                          cameraHeight);
+            target = GfVec3d(bounds.center[0], bounds.center[1], targetHeight);
         } else { // Y-up
-            eye = bounds.center + GfVec3d(camDistance * std::sin(angle), 0.0,
-                                          camDistance * std::cos(angle));
+            eye = GfVec3d(bounds.center[0] + camDistance * std::sin(angle),
+                          cameraHeight,
+                          bounds.center[2] + camDistance * std::cos(angle));
+            target = GfVec3d(bounds.center[0], targetHeight, bounds.center[2]);
         }
 
-        // Look-at toward the asset center.
-        const GfVec3d forward = (bounds.center - eye).GetNormalized();
+        // Look-at toward a target at relative bbox height on the up axis.
+        const GfVec3d forward = (target - eye).GetNormalized();
         const GfVec3d right   = GfCross(forward, upVec).GetNormalized();
         const GfVec3d camUp   = GfCross(right, forward);
 
@@ -237,6 +274,11 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
 
 int Run(const Args &args)
 {
+    if (args.cameraZoom <= 0.0) {
+        fprintf(stderr, "turntable: --camera-zoom must be > 0 (got %.4g)\n", args.cameraZoom);
+        return 1;
+    }
+
     AssetBounds bounds;
     if (!ComputeAssetBounds(args.input, args.upAxis, bounds)) {
         return 1;
@@ -267,6 +309,11 @@ int Run(const Args &args)
     printf("  Up axis   : %s\n", bounds.upAxis.GetText());
     printf("  BBox      : center (%.4g %.4g %.4g)  radius %.4g\n",
            bounds.center[0], bounds.center[1], bounds.center[2], bounds.radius);
+    printf("  Cam height: %.3g (rel), %.4g (world)\n",
+           args.cameraHeight, _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax));
+    printf("  Aim height: %.3g (rel), %.4g (world)\n",
+           args.targetHeight, _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax));
+        printf("  Cam zoom  : %.3g\n", args.cameraZoom);
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  Resolution: %dx%d\n", args.width, args.height);
     if (!args.hdri.empty()) {
