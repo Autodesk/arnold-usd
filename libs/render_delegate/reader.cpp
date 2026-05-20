@@ -35,6 +35,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((hydraProcCamera, "/ArnoldHydraProceduralCamera"))
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
 );
 
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
@@ -307,6 +310,9 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             // We want to use the RenderSetting hydra prim only if we use the scene index system
             if (_useSceneIndex) {
                 // TODO set metadata only if it it not already set
+                VtValue val(_tokens->hydraSceneRenderSettingsSrc);
+                // Tell the arnold render delegate to use the hydra render settings
+                arnoldRenderDelegate->SetRenderSetting(_tokens->renderSettingsSrc, val);
                 stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, _renderSettings);
             } else {
                 UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
