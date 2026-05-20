@@ -4,6 +4,7 @@
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/range3d.h>
 #include <pxr/base/gf/rotation.h>
+#include <pxr/base/gf/vec2d.h>
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec2i.h>
 #include <pxr/base/gf/vec3d.h>
@@ -22,6 +23,7 @@
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/imageable.h>
+#include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xform.h>
@@ -120,14 +122,19 @@ const char *_ModeToString(TurntableMode mode)
 }
 
 enum class PropType {
-    Ground
+    Ground,
+    Cyclo
 };
 
 bool _ParseProp(const std::string &propString, PropType &out)
 {
     const std::string prop = TfStringToLower(propString);
-    if (prop == "ground" || prop == "ground-floor" || prop == "floor") {
+    if (prop == "pedestral") {
         out = PropType::Ground;
+        return true;
+    }
+    if (prop == "cyclo" || prop == "cyc" || prop == "cyclorama") {
+        out = PropType::Cyclo;
         return true;
     }
     return false;
@@ -136,9 +143,10 @@ bool _ParseProp(const std::string &propString, PropType &out)
 const char *_PropToString(PropType prop)
 {
     switch (prop) {
-    case PropType::Ground: return "ground";
+    case PropType::Ground: return "pedestral";
+    case PropType::Cyclo: return "cyclo";
     }
-    return "ground";
+    return "pedestral";
 }
 
 GfMatrix4d _RotationMatrixForUpAxis(const TfToken &upAxis, double angleDegrees)
@@ -212,7 +220,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("MODE");
 
     app->add_option("--prop", args.props,
-        "Add props to the generated stage. Supported values: ground (comma-separated)")
+        "Add props to the generated stage. Supported values: pedestral, cyclo (comma-separated)")
         ->option_text("NAME");
 
     app->add_option("input", args.input, "USD asset file to turntable")
@@ -491,7 +499,7 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
 
 static UsdShadeMaterial _CreateGroundMaterial(const UsdStageRefPtr &stage)
 {
-    const SdfPath materialPath("/materials/ground");
+    const SdfPath materialPath("/materials/pedestral");
     UsdShadeMaterial material = UsdShadeMaterial::Define(stage, materialPath);
     UsdShadeShader shader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("previewSurface")));
     shader.CreateIdAttr(VtValue(TfToken("UsdPreviewSurface")));
@@ -507,11 +515,237 @@ static UsdShadeMaterial _CreateGroundMaterial(const UsdStageRefPtr &stage)
     return material;
 }
 
-static void _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType> &props,
-                        const AssetBounds &bounds)
+static GfVec3f _MakeCycloPoint(const GfVec3d &center, const TfToken &upAxis,
+                               double angle, double radius, double upValue)
+{
+    const double c = std::cos(angle);
+    const double s = std::sin(angle);
+
+    if (upAxis == UsdGeomTokens->z) {
+        return GfVec3f(static_cast<float>(center[0] + radius * c),
+                       static_cast<float>(center[1] + radius * s),
+                       static_cast<float>(upValue));
+    }
+
+    return GfVec3f(static_cast<float>(center[0] + radius * c),
+                   static_cast<float>(upValue),
+                   static_cast<float>(center[2] + radius * s));
+}
+
+static bool _RayIntersectCycloRadius(const GfVec3d &origin, const GfVec3d &direction,
+                                     const TfToken &upAxis, const GfVec3d &center,
+                                     double radius, double &tHit)
+{
+    const int lateralA = 0;
+    const int lateralB = upAxis == UsdGeomTokens->z ? 1 : 2;
+
+    const double ox = origin[lateralA] - center[lateralA];
+    const double oy = origin[lateralB] - center[lateralB];
+    const double dx = direction[lateralA];
+    const double dy = direction[lateralB];
+
+    const double a = dx * dx + dy * dy;
+    if (a < 1e-12) {
+        return false;
+    }
+
+    const double b = 2.0 * (ox * dx + oy * dy);
+    const double c = ox * ox + oy * oy - radius * radius;
+    const double discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0.0) {
+        return false;
+    }
+
+    const double sqrtDisc = std::sqrt(discriminant);
+    const double invDenom = 1.0 / (2.0 * a);
+    const double t0 = (-b - sqrtDisc) * invDenom;
+    const double t1 = (-b + sqrtDisc) * invDenom;
+
+    const double eps = 1e-9;
+    const bool t0Valid = t0 > eps;
+    const bool t1Valid = t1 > eps;
+    if (!t0Valid && !t1Valid) {
+        return false;
+    }
+
+    tHit = t0Valid ? t0 : t1;
+    if (t1Valid) {
+        tHit = std::min(tHit, t1);
+    }
+    return true;
+}
+
+static double _ComputeCycloWallTopForCameraFrame(const AssetBounds &bounds, const Args &args,
+                                                  double cycloRadius, double minWallTop)
+{
+    GfVec3d eye;
+    GfVec3d target;
+    GfVec3d up;
+    _ComputeCameraEyeAndTarget(args, bounds, eye, target, up);
+
+    GfVec3d forward = target - eye;
+    if (forward.GetLengthSq() < 1e-12) {
+        forward = bounds.upAxis == UsdGeomTokens->z ? GfVec3d(0.0, 0.0, -1.0) : GfVec3d(0.0, 0.0, -1.0);
+    }
+    forward.Normalize();
+
+    GfVec3d right = GfCross(forward, up);
+    if (right.GetLengthSq() < 1e-12) {
+        right = GfVec3d(1.0, 0.0, 0.0);
+    }
+    right.Normalize();
+    const GfVec3d camUp = GfCross(right, forward).GetNormalized();
+
+    const double tanHalfH = (0.5 * 36.0) / 35.0;
+    const double tanHalfV = tanHalfH * (static_cast<double>(args.height) / static_cast<double>(args.width));
+    const double overscan = 1.2;
+    const double tanHalfHOverscan = tanHalfH * overscan;
+    const double tanHalfVOverscan = tanHalfV * overscan;
+
+    double maxHitUp = minWallTop;
+    const int upAxisIndex = _GetUpAxisIndex(bounds.upAxis);
+    const double cameraDistance = bounds.radius * 3.0 / args.cameraZoom;
+    const double wallTopMargin = std::max({(bounds.upMax - bounds.upMin) * 0.2, cameraDistance * 0.08, 0.001});
+    bool anyHit = false;
+
+    for (int sx = -1; sx <= 1; sx += 2) {
+        GfVec3d rayDir = forward + right * (tanHalfHOverscan * static_cast<double>(sx)) + camUp * tanHalfVOverscan;
+        if (rayDir.GetLengthSq() < 1e-12) {
+            continue;
+        }
+        rayDir.Normalize();
+
+        double tHit = 0.0;
+        if (!_RayIntersectCycloRadius(eye, rayDir, bounds.upAxis, bounds.center, cycloRadius, tHit)) {
+            continue;
+        }
+
+        const double hitUp = eye[upAxisIndex] + tHit * rayDir[upAxisIndex];
+        maxHitUp = std::max(maxHitUp, hitUp + wallTopMargin);
+        anyHit = true;
+    }
+
+    if (!anyHit) {
+        const double conservativeTop = eye[upAxisIndex] +
+            (cameraDistance + cycloRadius) * tanHalfVOverscan + wallTopMargin;
+        maxHitUp = std::max(maxHitUp, conservativeTop);
+    }
+
+    return maxHitUp;
+}
+
+static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
+                         const Args &args, const UsdShadeMaterial &material)
+{
+    const double assetHeight = std::max(bounds.upMax - bounds.upMin, 1e-4);
+    const double bboxRadius = bounds.bottomFaceDiagonal * 0.5;
+    const double bboxMargin = std::max({assetHeight * 0.05, bounds.bottomFaceDiagonal * 0.01, 0.001});
+    const double minBBoxRadius = bboxRadius + bboxMargin;
+
+    const double cameraDistance = bounds.radius * 3.0 / args.cameraZoom;
+    const double cameraClearance = std::max(cameraDistance * 0.05, 0.001);
+    const double minCameraRadius = cameraDistance + cameraClearance;
+
+    // Keep the cyclo larger than both the asset footprint and camera orbit
+    // so the wall remains behind the camera-to-asset line of sight.
+    const double cycloRadius = std::max(minBBoxRadius, minCameraRadius);
+    const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
+    const double floorLevel = bounds.upMin - gap;
+    const double minWallTop = bounds.upMax + std::max(assetHeight * 0.1, 0.001);
+    const double wallTop = _ComputeCycloWallTopForCameraFrame(bounds, args, cycloRadius, minWallTop);
+
+    const double coveRadius = std::max(
+        0.001,
+        std::min(std::max(assetHeight * 0.3, cycloRadius * 0.15), cycloRadius * 0.5));
+    const double floorToCoveRadius = std::max(0.001, cycloRadius - coveRadius);
+
+    const int radialSegments = 64;
+    const int coveSegments = 20;
+    const int wallSegments = 8;
+
+    std::vector<GfVec2d> profile;
+    profile.reserve(static_cast<size_t>(2 + coveSegments + wallSegments));
+    profile.push_back(GfVec2d(floorToCoveRadius, floorLevel));
+
+    for (int i = 1; i <= coveSegments; ++i) {
+        const double t = static_cast<double>(i) / static_cast<double>(coveSegments);
+        const double theta = t * (_kPi * 0.5);
+        const double r = floorToCoveRadius + coveRadius * std::sin(theta);
+        const double u = floorLevel + coveRadius * (1.0 - std::cos(theta));
+        profile.push_back(GfVec2d(r, u));
+    }
+
+    const double wallStart = floorLevel + coveRadius;
+    for (int i = 1; i <= wallSegments; ++i) {
+        const double t = static_cast<double>(i) / static_cast<double>(wallSegments);
+        const double u = wallStart + (wallTop - wallStart) * t;
+        profile.push_back(GfVec2d(cycloRadius, u));
+    }
+
+    const auto ringPointIndex = [radialSegments](size_t ring, int segment) -> int {
+        return 1 + static_cast<int>(ring) * radialSegments + segment;
+    };
+
+    VtArray<GfVec3f> points;
+    points.reserve(1 + profile.size() * static_cast<size_t>(radialSegments));
+    points.push_back(_MakeCycloPoint(bounds.center, bounds.upAxis, 0.0, 0.0, floorLevel));
+
+    for (size_t ring = 0; ring < profile.size(); ++ring) {
+        const double radius = profile[ring][0];
+        const double upValue = profile[ring][1];
+        for (int segment = 0; segment < radialSegments; ++segment) {
+            const double angle = (2.0 * _kPi * static_cast<double>(segment)) / static_cast<double>(radialSegments);
+            points.push_back(_MakeCycloPoint(bounds.center, bounds.upAxis, angle, radius, upValue));
+        }
+    }
+
+    VtArray<int> faceVertexCounts;
+    VtArray<int> faceVertexIndices;
+
+    for (int segment = 0; segment < radialSegments; ++segment) {
+        const int nextSegment = (segment + 1) % radialSegments;
+        faceVertexCounts.push_back(3);
+        faceVertexIndices.push_back(0);
+        faceVertexIndices.push_back(ringPointIndex(0, nextSegment));
+        faceVertexIndices.push_back(ringPointIndex(0, segment));
+    }
+
+    for (size_t ring = 0; ring + 1 < profile.size(); ++ring) {
+        for (int segment = 0; segment < radialSegments; ++segment) {
+            const int nextSegment = (segment + 1) % radialSegments;
+            const int a = ringPointIndex(ring, segment);
+            const int b = ringPointIndex(ring, nextSegment);
+            const int c = ringPointIndex(ring + 1, nextSegment);
+            const int d = ringPointIndex(ring + 1, segment);
+
+            faceVertexCounts.push_back(3);
+            faceVertexIndices.push_back(a);
+            faceVertexIndices.push_back(b);
+            faceVertexIndices.push_back(c);
+
+            faceVertexCounts.push_back(3);
+            faceVertexIndices.push_back(a);
+            faceVertexIndices.push_back(c);
+            faceVertexIndices.push_back(d);
+        }
+    }
+
+    UsdGeomMesh cyclo = UsdGeomMesh::Define(stage, SdfPath("/props/cyclo"));
+    cyclo.CreatePointsAttr().Set(points);
+    cyclo.CreateFaceVertexCountsAttr().Set(faceVertexCounts);
+    cyclo.CreateFaceVertexIndicesAttr().Set(faceVertexIndices);
+    cyclo.CreateSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
+    cyclo.CreateDoubleSidedAttr().Set(true);
+    cyclo.CreateDisplayColorAttr().Set(VtArray<GfVec3f>{GfVec3f(0.18f, 0.18f, 0.18f)});
+    UsdShadeMaterialBindingAPI::Apply(cyclo.GetPrim()).Bind(material);
+    return true;
+}
+
+static bool _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType> &props,
+                        const AssetBounds &bounds, const Args &args)
 {
     if (props.empty()) {
-        return;
+        return true;
     }
 
     UsdGeomXform sceneProps = UsdGeomXform::Define(stage, SdfPath("/props"));
@@ -525,7 +759,7 @@ static void _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType>
             const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
             const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
 
-            UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/ground"));
+            UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/pedestral"));
             ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
             ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
             ground.CreateHeightAttr().Set(thickness);
@@ -539,8 +773,16 @@ static void _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType>
             translateOp.Set(groundCenter);
             break;
         }
+        case PropType::Cyclo: {
+            if (!_CreateCyclo(stage, bounds, args, groundMaterial)) {
+                return false;
+            }
+            break;
+        }
         }
     }
+
+    return true;
 }
 
 // /asset  —  the input asset referenced in
@@ -803,7 +1045,7 @@ int Run(const Args &args)
         for (const std::string &propString : propNames) {
             PropType prop;
             if (!_ParseProp(propString, prop)) {
-                fprintf(stderr, "turntable: unknown --prop '%s' (expected ground)\n",
+                fprintf(stderr, "turntable: unknown --prop '%s' (expected pedestral or cyclo)\n",
                         propString.c_str());
                 return 1;
             }
@@ -865,7 +1107,9 @@ int Run(const Args &args)
     UsdGeomSetStageUpAxis(stage, bounds.upAxis);
 
     _SetupAsset(stage, args.input, mode, bounds, args.frames);
-    _SetupProps(stage, props, bounds);
+    if (!_SetupProps(stage, props, bounds, args)) {
+        return 1;
+    }
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
     _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
     _SetupRenderSettings(stage, args, cameraPath);
