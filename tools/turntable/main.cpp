@@ -744,43 +744,40 @@ static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
 static bool _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType> &props,
                         const AssetBounds &bounds, const Args &args)
 {
-    if (props.empty()) {
-        return true;
-    }
-
     UsdGeomXform sceneProps = UsdGeomXform::Define(stage, SdfPath("/props"));
     (void)sceneProps;
     const UsdShadeMaterial groundMaterial = _CreateGroundMaterial(stage);
+    const std::set<PropType> activeProps(props.begin(), props.end());
 
-    for (const PropType prop : props) {
-        switch (prop) {
-        case PropType::Ground: {
-            const double thickness = std::max(bounds.bottomFaceDiagonal * 0.01, 0.001);
-            const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
-            const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
+    const auto _IsPropActive = [&activeProps](PropType prop) {
+        return activeProps.find(prop) != activeProps.end();
+    };
 
-            UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/pedestral"));
-            ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
-            ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
-            ground.CreateHeightAttr().Set(thickness);
-            ground.CreateDisplayColorAttr().Set(VtArray<GfVec3f>{GfVec3f(0.18f, 0.18f, 0.18f)});
-            UsdShadeMaterialBindingAPI::Apply(ground.GetPrim()).Bind(groundMaterial);
+    {
+        const double thickness = std::max(bounds.bottomFaceDiagonal * 0.01, 0.001);
+        const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
+        const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
 
-            UsdGeomXformable xformable(ground.GetPrim());
-            UsdGeomXformOp translateOp = xformable.AddTranslateOp();
-            GfVec3d groundCenter = bounds.center;
-            groundCenter[_GetUpAxisIndex(bounds.upAxis)] = groundHeight;
-            translateOp.Set(groundCenter);
-            break;
-        }
-        case PropType::Cyclo: {
-            if (!_CreateCyclo(stage, bounds, args, groundMaterial)) {
-                return false;
-            }
-            break;
-        }
-        }
+        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/pedestral"));
+        ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
+        ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
+        ground.CreateHeightAttr().Set(thickness);
+        ground.CreateDisplayColorAttr().Set(VtArray<GfVec3f>{GfVec3f(0.18f, 0.18f, 0.18f)});
+        UsdShadeMaterialBindingAPI::Apply(ground.GetPrim()).Bind(groundMaterial);
+
+        UsdGeomXformable xformable(ground.GetPrim());
+        UsdGeomXformOp translateOp = xformable.AddTranslateOp();
+        GfVec3d groundCenter = bounds.center;
+        groundCenter[_GetUpAxisIndex(bounds.upAxis)] = groundHeight;
+        translateOp.Set(groundCenter);
+
+        ground.GetPrim().SetActive(_IsPropActive(PropType::Ground));
     }
+
+    if (!_CreateCyclo(stage, bounds, args, groundMaterial)) {
+        return false;
+    }
+    stage->GetPrimAtPath(SdfPath("/props/cyclo")).SetActive(_IsPropActive(PropType::Cyclo));
 
     return true;
 }
