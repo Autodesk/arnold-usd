@@ -182,8 +182,15 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
 
             if (_requiredShaders.find(node) != _requiredShaders.end()) {
                 unassignedShaders = _stage->GetPrimAtPath(unassignedShadersPath);
-                if (!unassignedShaders)
+                if (!unassignedShaders) {
                     unassignedShaders = _stage->DefinePrim(unassignedShadersPath, str::t_ArnoldNodeGraph);
+                    // Author the local path under primvars:arnold:name so the
+                    // prim can still be resolved when this file is referenced
+                    // and the runtime path gets remapped under a different
+                    // namespace.
+                    unassignedShaders.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+                        .Set(unassignedShadersStr);
+                }
 
                 std::string terminalName = TfStringPrintf("outputs:arnold:i%d", unassignedShadersIndex++);        
                 // Create the node graph terminal

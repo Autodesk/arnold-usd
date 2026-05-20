@@ -1920,15 +1920,15 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_background);
     return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere, this);
     if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_atmosphere);
     return nullptr;
@@ -1938,7 +1938,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     std::vector<AtNode *> nodes;
     for (const auto &materialPath: _aov_shaders) {
-        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath, this);
         if (nodeGraph) {
             const auto &terminals = nodeGraph->GetCachedTerminals(_tokens->aovShadersArray);
             std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
@@ -1949,7 +1949,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager, this);
     if (nodeGraph) {
         // Indicate to this node graph that it is an imager graph, so that 
         // it doesn't interrupt / restart the render when a node changes
@@ -1969,8 +1969,8 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
 
 AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_shader_override);
     return nullptr;
 }
