@@ -116,6 +116,10 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_asset_searchpath, "", "Asset search path.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures to TX");
 
+#ifdef FAST_VIEWPORT_SUPPORT
+TF_DEFINE_ENV_SETTING(HDARNOLD_fast_viewport, true, "Enable fast viewport");
+#endif
+
 HdArnoldConfig::HdArnoldConfig()
 {
     bucket_size = std::max(1, TfGetEnvSetting(HDARNOLD_bucket_size));
@@ -158,6 +162,10 @@ HdArnoldConfig::HdArnoldConfig()
 #endif
     osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
     auto_generate_tx = TfGetEnvSetting(HDARNOLD_auto_generate_tx);
+
+#ifdef FAST_VIEWPORT_SUPPORT
+    fast_viewport = TfGetEnvSetting(HDARNOLD_fast_viewport);
+#endif
 }
 
 const HdArnoldConfig& HdArnoldConfig::GetInstance() { return TfSingleton<HdArnoldConfig>::GetInstance(); }

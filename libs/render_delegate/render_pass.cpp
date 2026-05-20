@@ -627,6 +627,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 
     const bool framingChanged = newFraming != _framing;
+    const bool fastViewportChanged = _fastViewport != _renderDelegate->IsFastViewport();
+
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -643,17 +645,20 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage, bool allocate, int w, int h) {
         static std::vector<uint8_t> zeroData;
         zeroData.resize(w * h * 4);
+        
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
+                renderBuffer->SetHgi(_renderDelegate->IsFastViewport() ? _renderDelegate->GetHgi() : nullptr);
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
+                
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, zeroData.data());
             }
         }
     };
 
-    if (framingChanged) {
+    if (framingChanged || fastViewportChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _framing = newFraming;
@@ -661,6 +666,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::xres, width);
         AiNodeSetInt(options, str::yres, height);
 
+        _fastViewport = _renderDelegate->IsFastViewport();
         clearBuffers(_renderBuffers, true, width, height);
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
@@ -923,15 +929,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             if (isRaw && sourceName == HdAovTokens->color) {
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(_fastViewport ? str::t_final_output : str::t_RGBA);                
             } else if (isRaw && sourceName == HdAovTokens->depth) {
                 output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(str::t_Z);
             } else if (isRaw && sourceName == HdAovTokens->primId) {
                 aovShaders.push_back(_primIdWriter);
                 output =
                     AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
                                  .c_str()};
                 AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(str::t_id);
+                
             } else {
                 // Querying the data format from USD, with a default value of color3f.
                 TfToken format = _GetOptionalSetting<TfToken>(
@@ -1014,6 +1024,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         "%s %s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName, layerName.c_str())
                         .c_str()};
 
+                buffer.buffer->SetAovName(TfToken(layerName.c_str()));
             }
             outputs.push_back(output);
         }

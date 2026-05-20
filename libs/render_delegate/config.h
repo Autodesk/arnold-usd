@@ -197,6 +197,9 @@ struct HdArnoldConfig {
     ///
     bool auto_generate_tx;
 
+    /// Use HDARNOLD_fast_viewport to set the value.
+    ///
+    bool fast_viewport;
 
 private:
     /// Constructor for reading the values from the environment variables.

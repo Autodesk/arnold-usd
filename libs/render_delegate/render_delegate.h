@@ -43,9 +43,10 @@
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
+#include <pxr/imaging/hgi/hgi.h>
 
 #include <tbb/concurrent_queue.h>
-
+#include <functional>
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
@@ -56,7 +57,7 @@
 class HydraArnoldReader;
 
 PXR_NAMESPACE_OPEN_SCOPE
-
+class HdArnoldRenderBuffer;
 struct HdArnoldRenderVar {
     /// Settings for the RenderVar.
     HdAovSettingsMap settings;
@@ -548,6 +549,16 @@ public:
 
     bool IsBatchContext() const {return _isBatch;}
 
+    /// Receives the host application's Hgi instance via the standard
+    /// HdRenderDelegate driver interface. Stored as a borrowed pointer.
+    HDARNOLD_API
+    void SetDrivers(HdDriverVector const& drivers) override;
+
+    /// Returns the borrowed Hgi instance, or nullptr if the host application
+    /// did not provide one (e.g. batch / husk without a GL context).
+    Hgi* GetHgi() const { return _hgi; }
+
+
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
     /// @brief Get the procedural parent
@@ -700,6 +711,7 @@ public:
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
     bool IsUsingHydraRenderSettings() const;
+    bool IsFastViewport() const {return _fastViewport;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -828,6 +840,8 @@ private:
     bool _supportShapeInstancing = true;
     bool _forceIgnoreMotionBlur = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+    bool _fastViewport = false;
+    Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
 
     // We store a list of functions that must be run once all the prims are synced
     // They will be ran in HasPendingChanges

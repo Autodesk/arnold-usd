@@ -42,6 +42,9 @@
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
+#include <pxr/imaging/hd/driver.h>
+#include <pxr/imaging/hgi/tokens.h>
+
 #ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
@@ -397,6 +400,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
         {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
+        {str::t_fast_viewport, {"Enable fast viewport", config.fast_viewport}},
     };
     return data;
 }
@@ -724,10 +728,16 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
-        _CheckForBoolValue(value, [&](const bool b) {
-            AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
-            AiDeviceAutoSelect(GetRenderSession());
-        });
+
+        if (_fastViewport)
+            AiNodeSetStr(_options, str::render_device, str::GPU);
+        else
+        {
+            _CheckForBoolValue(value, [&](const bool b) {
+                AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
+                AiDeviceAutoSelect(GetRenderSession());
+            });
+        }
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
@@ -862,6 +872,17 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec2i>()) {
             _resolution = value.UncheckedGet<GfVec2i>();
         }
+    }
+    else if (key == str::t_fast_viewport) {
+#ifdef FAST_VIEWPORT_SUPPORT
+        if (value.IsHolding<bool>()) {
+            _fastViewport = value.UncheckedGet<bool>();
+            AiNodeSetBool(_options, str::viewport_rendering, _fastViewport);
+            if (_fastViewport) {
+                AiNodeSetStr(_options, str::render_device, str::GPU);
+            }
+        }    
+#endif
     } else if (key == _tokens->batchCommandLine) {
         // Solaris-specific command line, it can have an argument "-o output.exr" to override
         // the output image. We might end up using this for arnold drivers
@@ -1358,7 +1379,7 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 {
     // Neither of these will create Arnold nodes.
     if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(bprimId);
+        return new HdArnoldRenderBuffer(this, bprimId);
     }
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
@@ -1893,6 +1914,20 @@ void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
         if (!AiNodeLookUpUserParameter(node, str::usd_purpose)) 
             AiNodeDeclare(node, str::usd_purpose, str::constantString);
         AiNodeSetStr(node, str::usd_purpose, AtString(tag.GetText()));
+    }
+}
+
+void HdArnoldRenderDelegate::SetDrivers(HdDriverVector const& drivers)
+{
+    if (_isBatch)
+        return;
+
+    for (HdDriver* driver : drivers) {
+        if (driver != nullptr && driver->name == HgiTokens->renderDriver &&
+            driver->driver.IsHolding<Hgi*>()) {
+            _hgi = driver->driver.UncheckedGet<Hgi*>();
+            break;
+        }
     }
 }
 
