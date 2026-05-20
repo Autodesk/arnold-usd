@@ -827,13 +827,14 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
         const double angle = (mode == TurntableMode::RotateCamera)
             ? (2.0 * _kPi * double(i) / double(args.frames))
             : 0.0;
+        const double zUpAngle = angle - (_kPi * 0.5);
 
         // Orbit in the plane perpendicular to the up axis.
         GfVec3d eye;
         GfVec3d target;
         if (bounds.upAxis == UsdGeomTokens->z) {
-            eye = GfVec3d(bounds.center[0] + camDistance * std::cos(angle),
-                          bounds.center[1] + camDistance * std::sin(angle),
+            eye = GfVec3d(bounds.center[0] + camDistance * std::cos(zUpAngle),
+                          bounds.center[1] + camDistance * std::sin(zUpAngle),
                           cameraHeight);
             target = GfVec3d(bounds.center[0], bounds.center[1], targetHeight);
         } else { // Y-up
@@ -888,6 +889,11 @@ static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPat
     if (!hdri.empty()) {
         dome.CreateTextureFileAttr().Set(SdfAssetPath(hdri));
         dome.CreateTextureFormatAttr().Set(UsdLuxTokens->latlong);
+
+        // Match Arnold's latlong sampling orientation used by the turntable rigs.
+        UsdGeomXformable xformable(dome.GetPrim());
+        xformable.ClearXformOpOrder();
+        xformable.AddRotateXOp(UsdGeomXformOp::PrecisionFloat).Set(90.0f);
     }
 }
 
