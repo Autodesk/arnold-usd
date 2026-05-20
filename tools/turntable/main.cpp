@@ -8,13 +8,16 @@
 #include <pxr/base/gf/vec2i.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
+#include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/tf/pxrCLI11/CLI11.h>
 #include <pxr/base/tf/stringUtils.h>
 #include <pxr/base/vt/array.h>
 #include <pxr/usd/sdf/assetPath.h>
 #include <pxr/usd/sdf/path.h>
+#include <pxr/usd/usd/editContext.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/timeCode.h>
+#include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdGeom/bboxCache.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/cylinder.h>
@@ -28,6 +31,7 @@
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/lightAPI.h>
+#include <pxr/usd/usdLux/rectLight.h>
 #include <pxr/usd/usdLux/tokens.h>
 #include <pxr/usd/usdRender/product.h>
 #include <pxr/usd/usdRender/settings.h>
@@ -35,10 +39,19 @@
 #include <pxr/usd/usdRender/var.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <set>
 #include <string>
+#include <sys/stat.h>
 #include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dirent.h>
+#endif
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -51,16 +64,25 @@ static const double _kPi = 3.14159265358979323846;
 struct Args {
     std::string input;
     std::string output    = "turntable.usda";
-    int         frames    = 96;
+    int         frames    = 30;
     int         width     = 1280;
     int         height    = 720;
     std::string hdri;
+    std::string hdriDir   = "tools/turntable/hdri";
+    std::string lightRig  = "auto";
+    bool        listLightRigs = false;
     std::string upAxis;   // empty = auto-detect from stage
     double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
-    std::vector<std::string> props;
+    std::string props;  // Comma-separated prop names
+};
+
+struct LightRig {
+    std::string name;
+    std::string hdri;
+    bool        isTwoQuad = false;
 };
 
 enum class TurntableMode {
@@ -138,10 +160,6 @@ GfMatrix4d _RotationAroundPivot(const TfToken &upAxis, double angleDegrees, cons
 
 void Configure(CLI::App *app, Args &args)
 {
-    app->add_option("input", args.input, "USD asset file to turntable")
-        ->required()
-        ->option_text("FILE");
-
     app->add_option("-o,--output", args.output,
         "Output USD file for the turntable scene (default: turntable.usda)")
         ->option_text("FILE");
@@ -159,8 +177,19 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("PX");
 
     app->add_option("--hdri", args.hdri,
-        "Path to an HDRI texture for the dome light")
+        "Path to an HDRI texture for a single custom dome rig (overrides --hdri-dir discovery)")
         ->option_text("FILE");
+
+    app->add_option("--hdri-dir", args.hdriDir,
+        "Directory scanned for .exr environment maps to generate dome light rigs")
+        ->option_text("DIR");
+
+    app->add_option("--light-rig", args.lightRig,
+        "Light rig to select: auto, one discovered HDRI rig, or two_quad")
+        ->option_text("NAME");
+
+    app->add_flag("--list-light-rigs", args.listLightRigs,
+        "List discovered light rig names and exit");
 
     app->add_option("--up", args.upAxis,
         "Up axis override: Y or Z (default: read from asset stage)")
@@ -183,8 +212,11 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("MODE");
 
     app->add_option("--prop", args.props,
-        "Add a prop to the generated stage. Supported values: ground")
+        "Add props to the generated stage. Supported values: ground (comma-separated)")
         ->option_text("NAME");
+
+    app->add_option("input", args.input, "USD asset file to turntable")
+        ->option_text("FILE");
 }
 
 struct AssetBounds {
@@ -205,6 +237,200 @@ int _GetUpAxisIndex(const TfToken &upAxis)
 double _Lerp01(double t, double minValue, double maxValue)
 {
     return minValue + t * (maxValue - minValue);
+}
+
+bool _DirectoryExists(const std::string &path)
+{
+    struct stat info;
+    return stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR) != 0;
+}
+
+std::vector<std::string> _ListExrFiles(const std::string &directory)
+{
+    std::vector<std::string> files;
+
+#ifdef _WIN32
+    const std::string pattern = TfStringCatPaths(directory, "*.exr");
+    WIN32_FIND_DATAA fileData;
+    HANDLE handle = FindFirstFileA(pattern.c_str(), &fileData);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return files;
+    }
+
+    do {
+        if ((fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            continue;
+        }
+        const std::string fileName = fileData.cFileName;
+        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+            files.push_back(fileName);
+        }
+    } while (FindNextFileA(handle, &fileData) != 0);
+    FindClose(handle);
+#else
+    DIR *dir = opendir(directory.c_str());
+    if (!dir) {
+        return files;
+    }
+
+    while (const dirent *entry = readdir(dir)) {
+        const std::string fileName = entry->d_name;
+        if (fileName == "." || fileName == "..") {
+            continue;
+        }
+        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+            files.push_back(fileName);
+        }
+    }
+    closedir(dir);
+#endif
+
+    std::sort(files.begin(), files.end());
+    return files;
+}
+
+std::string _SanitizeRigName(const std::string &name)
+{
+    std::string out;
+    out.reserve(name.size());
+
+    bool prevUnderscore = false;
+    for (const char c : name) {
+        if (std::isalnum(static_cast<unsigned char>(c)) != 0) {
+            out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            prevUnderscore = false;
+        } else if (!prevUnderscore) {
+            out.push_back('_');
+            prevUnderscore = true;
+        }
+    }
+
+    while (!out.empty() && out.front() == '_') {
+        out.erase(out.begin());
+    }
+    while (!out.empty() && out.back() == '_') {
+        out.pop_back();
+    }
+
+    if (out.empty()) {
+        out = "rig";
+    }
+    if (std::isdigit(static_cast<unsigned char>(out.front())) != 0) {
+        out = "hdri_" + out;
+    }
+    return out;
+}
+
+std::vector<LightRig> _CollectLightRigs(const Args &args)
+{
+    std::vector<LightRig> rigs;
+    std::set<std::string> usedNames;
+
+    // Add white domelight as default
+    LightRig whiteDomeRig;
+    whiteDomeRig.name = "white_dome";
+    whiteDomeRig.hdri = "";  // No HDRI texture, use white color
+    whiteDomeRig.isTwoQuad = false;
+    rigs.push_back(whiteDomeRig);
+    usedNames.insert("white_dome");
+
+    if (!args.hdri.empty()) {
+        LightRig customRig;
+        customRig.name = "custom_hdri";
+        customRig.hdri = args.hdri;
+        customRig.isTwoQuad = false;
+        rigs.push_back(customRig);
+        usedNames.insert("custom_hdri");
+    } else if (_DirectoryExists(args.hdriDir)) {
+        const std::vector<std::string> files = _ListExrFiles(args.hdriDir);
+        for (const std::string &fileName : files) {
+            const std::string baseName = TfStringGetBeforeSuffix(fileName);
+            std::string rigName = _SanitizeRigName(baseName);
+            if (usedNames.find(rigName) != usedNames.end()) {
+                int suffix = 2;
+                while (usedNames.find(rigName + "_" + std::to_string(suffix)) != usedNames.end()) {
+                    ++suffix;
+                }
+                rigName = rigName + "_" + std::to_string(suffix);
+            }
+            LightRig hdriRig;
+            hdriRig.name = rigName;
+            hdriRig.hdri = TfStringCatPaths(args.hdriDir, fileName);
+            hdriRig.isTwoQuad = false;
+            rigs.push_back(hdriRig);
+            usedNames.insert(rigName);
+        }
+    }
+
+    LightRig twoQuadRig;
+    twoQuadRig.name = "two_quad";
+    twoQuadRig.isTwoQuad = true;
+    rigs.push_back(twoQuadRig);
+    return rigs;
+}
+
+const LightRig *_FindRigByName(const std::vector<LightRig> &rigs, const std::string &name)
+{
+    const std::string query = TfStringToLower(name);
+    for (const LightRig &rig : rigs) {
+        if (TfStringToLower(rig.name) == query) {
+            return &rig;
+        }
+    }
+    return nullptr;
+}
+
+void _ComputeCameraEyeAndTarget(const Args &args, const AssetBounds &bounds,
+                                GfVec3d &eye, GfVec3d &target, GfVec3d &up)
+{
+    const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
+    const double cameraHeight = _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax);
+    const double targetHeight = _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax);
+
+    up = bounds.upAxis == UsdGeomTokens->z ? GfVec3d(0.0, 0.0, 1.0) : GfVec3d(0.0, 1.0, 0.0);
+
+    if (bounds.upAxis == UsdGeomTokens->z) {
+        eye = GfVec3d(bounds.center[0] + camDistance, bounds.center[1], cameraHeight);
+        target = GfVec3d(bounds.center[0], bounds.center[1], targetHeight);
+    } else {
+        eye = GfVec3d(bounds.center[0], cameraHeight, bounds.center[2] + camDistance);
+        target = GfVec3d(bounds.center[0], targetHeight, bounds.center[2]);
+    }
+}
+
+void _SetLookAtTransform(UsdGeomXformable xformable, const GfVec3d &position,
+                         const GfVec3d &target, const GfVec3d &up)
+{
+    GfVec3d forward = target - position;
+    if (forward.GetLengthSq() < 1e-12) {
+        forward = GfVec3d(0.0, 0.0, -1.0);
+    }
+    forward.Normalize();
+
+    GfVec3d right = GfCross(forward, up);
+    if (right.GetLengthSq() < 1e-12) {
+        right = GfVec3d(1.0, 0.0, 0.0);
+    }
+    right.Normalize();
+    const GfVec3d lightUp = GfCross(right, forward).GetNormalized();
+
+    const GfMatrix4d xform(
+        right[0],       right[1],       right[2],       0.0,
+        lightUp[0],     lightUp[1],     lightUp[2],     0.0,
+        -forward[0],    -forward[1],    -forward[2],    0.0,
+        position[0],    position[1],    position[2],    1.0);
+
+    UsdGeomXformOp op = xformable.MakeMatrixXform();
+    op.Set(xform);
+}
+
+float _ComputeQuadLightIntensity(double distance, double width, double height)
+{
+    // Keep illuminance roughly stable across assets by scaling intensity with distance^2 / area.
+    const double area = std::max(width * height, 1e-6);
+    const double distanceSquared = std::max(distance * distance, 1e-6);
+    const double intensity = 10.0 * distanceSquared / area;
+    return static_cast<float>(std::max(0.001, std::min(intensity, 10000.0)));
 }
 
 // Returns false and prints an error if the stage cannot be opened or the bbox
@@ -304,7 +530,7 @@ static void _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType>
             ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
             ground.CreateHeightAttr().Set(thickness);
             ground.CreateDisplayColorAttr().Set(VtArray<GfVec3f>{GfVec3f(0.18f, 0.18f, 0.18f)});
-            UsdShadeMaterialBindingAPI(ground.GetPrim()).Bind(groundMaterial);
+            UsdShadeMaterialBindingAPI::Apply(ground.GetPrim()).Bind(groundMaterial);
 
             UsdGeomXformable xformable(ground.GetPrim());
             UsdGeomXformOp translateOp = xformable.AddTranslateOp();
@@ -406,27 +632,110 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     return cameraPath;
 }
 
-// /lights/dome  —  dome light, optionally driven by an HDRI texture
-static void _SetupDomeLight(const UsdStageRefPtr &stage, const std::string &hdri,
-                            TurntableMode mode, const AssetBounds &bounds, int frames)
+// /lights/dome  —  dome light, optionally driven by an HDRI texture or color
+static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
+                            const std::string &hdri, const GfVec3f &color = GfVec3f(1.0f))
 {
-    UsdGeomXform lights = UsdGeomXform::Define(stage, SdfPath("/lights"));
-    UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, SdfPath("/lights/dome"));
-    UsdLuxLightAPI::Apply(dome.GetPrim()).CreateIntensityAttr().Set(1.0f);
+    UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, lightPath);
+    UsdLuxLightAPI api = UsdLuxLightAPI::Apply(dome.GetPrim());
+    api.CreateIntensityAttr().Set(1.0f);
+    api.CreateColorAttr().Set(color);
+    dome.GetPrim()
+        .CreateAttribute(TfToken("primvars:arnold:camera"), SdfValueTypeNames->Float, true)
+        .Set(0.0f);
     if (!hdri.empty()) {
         dome.CreateTextureFileAttr().Set(SdfAssetPath(hdri));
         dome.CreateTextureFormatAttr().Set(UsdLuxTokens->latlong);
     }
+}
 
-    if (mode != TurntableMode::RotateLight) {
-        return;
+static void _SetupTwoQuadRig(const UsdStageRefPtr &stage, const AssetBounds &bounds,
+                             const Args &args)
+{
+    GfVec3d eye;
+    GfVec3d target;
+    GfVec3d up;
+    _ComputeCameraEyeAndTarget(args, bounds, eye, target, up);
+
+    GfVec3d forward = target - eye;
+    if (forward.GetLengthSq() < 1e-12) {
+        forward = GfVec3d(0.0, 0.0, -1.0);
+    }
+    forward.Normalize();
+
+    GfVec3d right = GfCross(forward, up);
+    if (right.GetLengthSq() < 1e-12) {
+        right = GfVec3d(1.0, 0.0, 0.0);
+    }
+    right.Normalize();
+
+    const int upAxisIndex = _GetUpAxisIndex(bounds.upAxis);
+    const int lateralAxisIndex = bounds.upAxis == UsdGeomTokens->z ? 1 : 0;
+    const double width = std::max(bounds.size[lateralAxisIndex] * 2.0, 0.001);
+    const double height = std::max(bounds.size[upAxisIndex] * 2.0, 0.001);
+    
+    // Position lights far enough from bbox to avoid intersection and shadow zones.
+    // Use camera distance as reference so offset scales with asset size.
+    const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
+    const double offset = camDistance * 0.6;
+
+    GfVec3d center = bounds.center;
+    center[upAxisIndex] = _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax);
+    const GfVec3d leftPos = center - right * offset;
+    const GfVec3d rightPos = center + right * offset;
+    const float leftIntensity = _ComputeQuadLightIntensity((target - leftPos).GetLength(), width, height);
+    const float rightIntensity = _ComputeQuadLightIntensity((target - rightPos).GetLength(), width, height);
+
+    UsdLuxRectLight left = UsdLuxRectLight::Define(stage, SdfPath("/lights/key_left"));
+    UsdLuxLightAPI leftApi = UsdLuxLightAPI::Apply(left.GetPrim());
+    leftApi.CreateIntensityAttr().Set(leftIntensity);
+    leftApi.CreateSpecularAttr().Set(0.0f);
+    left.CreateWidthAttr().Set(static_cast<float>(width));
+    left.CreateHeightAttr().Set(static_cast<float>(height));
+    _SetLookAtTransform(UsdGeomXformable(left.GetPrim()), leftPos, target, up);
+
+    UsdLuxRectLight rightLight = UsdLuxRectLight::Define(stage, SdfPath("/lights/key_right"));
+    UsdLuxLightAPI rightApi = UsdLuxLightAPI::Apply(rightLight.GetPrim());
+    rightApi.CreateIntensityAttr().Set(rightIntensity);
+    rightApi.CreateSpecularAttr().Set(0.0f);
+    rightLight.CreateWidthAttr().Set(static_cast<float>(width));
+    rightLight.CreateHeightAttr().Set(static_cast<float>(height));
+    _SetLookAtTransform(UsdGeomXformable(rightLight.GetPrim()), rightPos, target, up);
+}
+
+static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
+                         const AssetBounds &bounds, TurntableMode mode, int frames,
+                         const std::vector<LightRig> &rigs, const std::string &selectedRig)
+{
+    UsdGeomXform lights = UsdGeomXform::Define(stage, SdfPath("/lights"));
+
+    if (mode == TurntableMode::RotateLight) {
+        UsdGeomXformOp matOp = lights.AddTransformOp();
+        for (int i = 0; i < frames; ++i) {
+            const double angleDegrees = 360.0 * double(i) / double(frames);
+            matOp.Set(_RotationMatrixForUpAxis(bounds.upAxis, angleDegrees), UsdTimeCode(double(i)));
+        }
     }
 
-    UsdGeomXformOp matOp = lights.AddTransformOp();
-    for (int i = 0; i < frames; ++i) {
-        const double angleDegrees = 360.0 * double(i) / double(frames);
-        matOp.Set(_RotationMatrixForUpAxis(bounds.upAxis, angleDegrees), UsdTimeCode(double(i)));
+    UsdVariantSet rigVariantSet = lights.GetPrim().GetVariantSets().AddVariantSet("rig");
+    for (const LightRig &rig : rigs) {
+        rigVariantSet.AddVariant(rig.name);
+        rigVariantSet.SetVariantSelection(rig.name);
+        UsdEditContext variantContext(rigVariantSet.GetVariantEditContext());
+
+        if (rig.isTwoQuad) {
+            _SetupTwoQuadRig(stage, bounds, args);
+        } else {
+            // Use white color for white_dome rig, otherwise no color override
+            if (rig.name == "white_dome") {
+                _SetupDomeLight(stage, SdfPath("/lights/dome"), rig.hdri, GfVec3f(1.0f, 1.0f, 1.0f));
+            } else {
+                _SetupDomeLight(stage, SdfPath("/lights/dome"), rig.hdri);
+            }
+        }
     }
+
+    rigVariantSet.SetVariantSelection(selectedRig);
 }
 
 // /Render  —  UsdRenderSettings + product + beauty AOV
@@ -441,18 +750,24 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
     const std::string productPath = TfStringGetBeforeSuffix(args.output) + ".####.exr";
     UsdRenderProduct product = UsdRenderProduct::Define(stage, SdfPath("/Render/product"));
     product.GetProductNameAttr().Set(SdfAssetPath(productPath));
+    product.GetProductTypeAttr().Set(TfToken("arnold"));
     settings.GetProductsRel().AddTarget(SdfPath("/Render/product"));
 
-    // Beauty AOV (Ci — full spectral beauty).
+    // Beauty AOV (RGBA).
     UsdRenderVar beauty = UsdRenderVar::Define(stage, SdfPath("/Render/vars/beauty"));
-    beauty.GetDataTypeAttr().Set(TfToken("color3f"));
-    beauty.GetSourceNameAttr().Set(std::string("Ci"));
+    beauty.GetDataTypeAttr().Set(TfToken("color4f"));
+    beauty.GetSourceNameAttr().Set(std::string("RGBA"));
     beauty.GetSourceTypeAttr().Set(UsdRenderTokens->raw);
     product.GetOrderedVarsRel().AddTarget(SdfPath("/Render/vars/beauty"));
 }
 
 int Run(const Args &args)
 {
+    if (args.input.empty() && !args.listLightRigs) {
+        fprintf(stderr, "turntable: input is required unless --list-light-rigs is used\n");
+        return 1;
+    }
+
     if (args.cameraZoom <= 0.0) {
         fprintf(stderr, "turntable: --camera-zoom must be > 0 (got %.4g)\n", args.cameraZoom);
         return 1;
@@ -466,15 +781,68 @@ int Run(const Args &args)
     }
 
     std::vector<PropType> props;
-    props.reserve(args.props.size());
-    for (const std::string &propString : args.props) {
-        PropType prop;
-        if (!_ParseProp(propString, prop)) {
-            fprintf(stderr, "turntable: unknown --prop '%s' (expected ground)\n",
-                    propString.c_str());
+    if (!args.props.empty()) {
+        // Split comma-separated prop names
+        std::vector<std::string> propNames;
+        std::string current;
+        for (char c : args.props) {
+            if (c == ',') {
+                if (!current.empty()) {
+                    propNames.push_back(current);
+                    current.clear();
+                }
+            } else if (c != ' ') {  // Skip whitespace
+                current += c;
+            }
+        }
+        if (!current.empty()) {
+            propNames.push_back(current);
+        }
+        
+        props.reserve(propNames.size());
+        for (const std::string &propString : propNames) {
+            PropType prop;
+            if (!_ParseProp(propString, prop)) {
+                fprintf(stderr, "turntable: unknown --prop '%s' (expected ground)\n",
+                        propString.c_str());
+                return 1;
+            }
+            props.push_back(prop);
+        }
+    }
+
+    const std::vector<LightRig> rigs = _CollectLightRigs(args);
+    if (rigs.empty()) {
+        fprintf(stderr, "turntable: no light rigs available\n");
+        return 1;
+    }
+
+    if (args.listLightRigs) {
+        printf("Light rigs:\n");
+        for (const LightRig &rig : rigs) {
+            if (rig.isTwoQuad) {
+                printf("  %s (two rect lights)\n", rig.name.c_str());
+            } else {
+                printf("  %s (%s)\n", rig.name.c_str(), rig.hdri.c_str());
+            }
+        }
+        return 0;
+    }
+
+    std::string selectedRigName;
+    if (TfStringToLower(args.lightRig) == "auto") {
+        selectedRigName = rigs.front().name;
+    } else {
+        const LightRig *selectedRig = _FindRigByName(rigs, args.lightRig);
+        if (!selectedRig) {
+            fprintf(stderr, "turntable: unknown --light-rig '%s'\n", args.lightRig.c_str());
+            fprintf(stderr, "Available rigs:\n");
+            for (const LightRig &rig : rigs) {
+                fprintf(stderr, "  %s\n", rig.name.c_str());
+            }
             return 1;
         }
-        props.push_back(prop);
+        selectedRigName = selectedRig->name;
     }
 
     AssetBounds bounds;
@@ -499,7 +867,7 @@ int Run(const Args &args)
     _SetupAsset(stage, args.input, mode, bounds, args.frames);
     _SetupProps(stage, props, bounds);
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
-    _SetupDomeLight(stage, args.hdri, mode, bounds, args.frames);
+    _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
     _SetupRenderSettings(stage, args, cameraPath);
 
     stage->GetRootLayer()->Save();
@@ -523,9 +891,8 @@ int Run(const Args &args)
     }
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  Resolution: %dx%d\n", args.width, args.height);
-    if (!args.hdri.empty()) {
-        printf("  HDRI      : %s\n", args.hdri.c_str());
-    }
+    printf("  Light rig : %s\n", selectedRigName.c_str());
+    printf("  Light rigs: %zu available\n", rigs.size());
     return 0;
 }
 
@@ -536,7 +903,7 @@ int main(int argc, char const *argv[])
     CLI::App app(
         "turntable : Generate a USD turntable scene for lookdev.\n"
         "Creates a USD file with the asset as a reference, an orbiting\n"
-        "camera, a dome light, and UsdRender settings ready for kick.\n",
+        "camera, selectable light rigs, and UsdRender settings ready for kick.\n",
         "turntable");
 
     Args args;
