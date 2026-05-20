@@ -101,13 +101,7 @@ public:
     void WriteBucket(
         unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
         HdFormat format, const void* bucketData);
-
-    /// Return wether or not the buffer has any updates. The function also resets the internal counter tracking the
-    /// if there has been any updates.
-    ///
-    /// @return True if the buffer has any updates, false otherwise.
-    bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
-
+    
     /// Utility class for storing render buffers.
     struct BufferDefinition {
         HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
@@ -118,15 +112,7 @@ public:
 
         /// Default constructor.
         BufferDefinition() = default;
-
-        /// Constructor.
-        ///
-        /// @param _buffer Pointer to the HdArnoldRenderBuffer.
-        /// @param _settings Hash map storing the render settings.
-        BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
-            : settings(_settings), buffer(_buffer)
-        {
-        }
+        
     };
 
 private:
@@ -140,7 +126,6 @@ private:
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
     bool _converged = false;                         ///< Store if the render buffer has converged.
-    std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
 
 using HdArnoldRenderBufferStorage =

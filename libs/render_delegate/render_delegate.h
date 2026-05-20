@@ -848,9 +848,8 @@ private:
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;
 
-    // We store a list of functions that must be run once all the prims are synced and have filled the 
-    // vectors like 
-    // They will be ran in the _Execute function
+    // We store a list of functions that must be run once all the prims are synced
+    // They will be ran in HasPendingChanges
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
     HydraArnoldReader *_reader = nullptr;
