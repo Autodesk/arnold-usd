@@ -699,7 +699,7 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
-    bool IsUsingHydraRenderSettings() const;
+    bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -827,6 +827,7 @@ private:
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
     bool _forceIgnoreMotionBlur = false;
+    bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
     // We store a list of functions that must be run once all the prims are synced

@@ -299,12 +299,11 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             TRACE_SCOPE("ChooseRenderSettings");
             ChooseRenderSettings(stage, _renderSettings, _time);
         }
-// TODO HERE WE COULD CHECK IF WE WANT TO USE HYDRA2
+
         if (!_renderSettings.empty()) {
             TRACE_SCOPE("ReadRenderSettings");
             // Sets the default parameters on the Arnold option node (AA_samples, GI_diffuse_depth, ...)
             SetArnoldDefaultOptions(_universe);
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
             // We want to use the RenderSetting hydra prim only if we use the scene index system
             if (_useSceneIndex) {
                 // TODO set metadata only if it it not already set
@@ -313,10 +312,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                 UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
                 ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
             }
-#else
-            UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
-#endif
         }
     } 
 

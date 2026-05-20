@@ -47,9 +47,7 @@
 #include "nodes/nodes.h"
 #include "utils.h"
 #include "rendersettings_utils.h"
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 #include <regex>
 #include <cmath>
 #include <cstdio>
@@ -501,7 +499,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (_renderDelegate->IsUsingHydraRenderSettings()) {
         // If we are using the hydra render settings, we let the render settings prim handle the conversion.
         // We need to provide a camera pas
@@ -529,7 +526,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // We couldn't use the render settings, we fall back to the original code
     }
-#endif
 
     if (_renderDelegate->SetRenderTags(renderTags)) {
         // Render tags have changed, let's iterate through all the nodes
@@ -1341,7 +1337,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
     decltype(_renderBuffers){}.swap(_renderBuffers);
 }
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #if PXR_VERSION >= 2308
 HdArnoldRenderSettings*
 HdArnoldRenderPass::_GetHydraRenderSettingsPrim() const
@@ -1353,7 +1348,6 @@ HdArnoldRenderPass::_GetHydraRenderSettingsPrim() const
         GetRenderIndex()->GetBprim(HdPrimTypeTokens->renderSettings,
         renderParam->GetHydraRenderSettingsPrimPath()));
 }
-#endif
 #endif
 
 PXR_NAMESPACE_CLOSE_SCOPE

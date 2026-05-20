@@ -49,7 +49,6 @@ option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
 # Configurations:
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
-option(ENABLE_HYDRA2_RENDERSETTINGS "Enable using RenderSetting hydra prim" OFF)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
 option(ENABLE_TRACING "Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE)." OFF)
 option(MTOA_BUILD "Build MtoA-specific plugins (e.g. the ai<Name> primvar remap scene index)" OFF)
