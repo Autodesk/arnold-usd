@@ -177,7 +177,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("FILE");
 
     app->add_option("-n,--frames", args.frames,
-        "Number of frames for a full 360 rotation (default: 96)")
+        "Number of frames for a full 360 rotation (default: 30)")
         ->option_text("N");
 
     app->add_option("--width", args.width,
