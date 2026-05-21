@@ -2,6 +2,11 @@ set(SRC main.cpp)
 
 add_executable(turntable ${SRC})
 
+add_custom_command(TARGET turntable POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/hdri"
+            "$<TARGET_FILE_DIR:turntable>/hdri")
+
 target_include_directories(turntable PRIVATE
     "${USD_INCLUDE_DIR}"
     "${USD_TRANSITIVE_INCLUDE_DIRS}"
@@ -44,6 +49,8 @@ else () # USD shared lib build
 endif ()
 
 install(TARGETS turntable DESTINATION "${PREFIX_BIN}")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hdri"
+    DESTINATION "${PREFIX_BIN}")
 
 if (BUILD_WITH_USD_STATIC)
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"

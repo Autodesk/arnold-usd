@@ -642,6 +642,10 @@ else:
 if BUILD_TURNTABLE:
     TURNTABLE = env.SConscript(turntable_script, variant_dir = turntable_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
+    turntable_hdri_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(TURNTABLE[0]))), 'hdri')
+    turntable_hdri_source_folder = os.path.join('tools', 'turntable', 'hdri')
+    if os.path.exists(turntable_hdri_source_folder) and not os.path.exists(turntable_hdri_resource_folder):
+        shutil.copytree(turntable_hdri_source_folder, turntable_hdri_resource_folder)
     if env['USD_BUILD_MODE'] == 'static':
         # For static USD builds, copy the usd plugin config folder next to the binary.
         turntable_usd_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(TURNTABLE[0]))), 'usd')
@@ -933,6 +937,8 @@ if DOCS:
 
 if TURNTABLE:
     INSTALL_TURNTABLE = env.Install(PREFIX_BIN, TURNTABLE)
+    if os.path.exists(turntable_hdri_resource_folder):
+        INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_hdri_resource_folder)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_usd_resource_folder)
     env.Alias('turntable-install', INSTALL_TURNTABLE)

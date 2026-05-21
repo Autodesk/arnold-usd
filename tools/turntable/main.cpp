@@ -9,6 +9,9 @@
 #include <pxr/base/gf/vec2i.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
+#include <pxr/base/arch/defines.h>
+#include <pxr/base/arch/env.h>
+#include <pxr/base/arch/systemInfo.h>
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/tf/pxrCLI11/CLI11.h>
 #include <pxr/base/tf/stringUtils.h>
@@ -43,6 +46,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <set>
 #include <string>
@@ -70,7 +74,7 @@ struct Args {
     int         width     = 1280;
     int         height    = 720;
     std::string hdri;
-    std::string hdriDir   = "tools/turntable/hdri";
+    std::string hdriDir;
     std::string lightRig  = "auto";
     bool        listLightRigs = false;
     std::string upAxis;   // empty = auto-detect from stage
@@ -253,6 +257,52 @@ bool _DirectoryExists(const std::string &path)
     return stat(path.c_str(), &info) == 0 && (info.st_mode & S_IFDIR) != 0;
 }
 
+std::string _NormalizePath(const std::string &path)
+{
+    if (path.empty()) {
+        return path;
+    }
+    return TfNormPath(path);
+}
+
+std::string _GetExecutablePath()
+{
+    return _NormalizePath(ArchGetExecutablePath());
+}
+
+std::vector<std::string> _GetHdriSearchDirs(const Args &args)
+{
+    std::vector<std::string> directories;
+    std::set<std::string> seen;
+
+    const auto addDirectory = [&](const std::string &directory) {
+        if (directory.empty()) {
+            return;
+        }
+
+        const std::string normalized = _NormalizePath(directory);
+        if (seen.insert(normalized).second) {
+            directories.push_back(normalized);
+        }
+    };
+
+    if (!args.hdriDir.empty()) {
+        addDirectory(args.hdriDir);
+    } else {
+        addDirectory(TfStringCatPaths(TfGetPathName(_GetExecutablePath()), "hdri"));
+    }
+
+    const std::string envDirs = ArchGetEnv("ARNOLD_TURNABLE_HDRI_DIRS");
+    if (!envDirs.empty()) {
+        const std::vector<std::string> splitDirs = TfStringSplit(envDirs, ARCH_PATH_LIST_SEP);
+        for (const std::string &directory : splitDirs) {
+            addDirectory(directory);
+        }
+    }
+
+    return directories;
+}
+
 std::vector<std::string> _ListExrFiles(const std::string &directory)
 {
     std::vector<std::string> files;
@@ -349,24 +399,31 @@ std::vector<LightRig> _CollectLightRigs(const Args &args)
         customRig.isTwoQuad = false;
         rigs.push_back(customRig);
         usedNames.insert("custom_hdri");
-    } else if (_DirectoryExists(args.hdriDir)) {
-        const std::vector<std::string> files = _ListExrFiles(args.hdriDir);
-        for (const std::string &fileName : files) {
-            const std::string baseName = TfStringGetBeforeSuffix(fileName);
-            std::string rigName = _SanitizeRigName(baseName);
-            if (usedNames.find(rigName) != usedNames.end()) {
-                int suffix = 2;
-                while (usedNames.find(rigName + "_" + std::to_string(suffix)) != usedNames.end()) {
-                    ++suffix;
-                }
-                rigName = rigName + "_" + std::to_string(suffix);
+    } else {
+        const std::vector<std::string> hdriDirs = _GetHdriSearchDirs(args);
+        for (const std::string &hdriDir : hdriDirs) {
+            if (!_DirectoryExists(hdriDir)) {
+                continue;
             }
-            LightRig hdriRig;
-            hdriRig.name = rigName;
-            hdriRig.hdri = TfStringCatPaths(args.hdriDir, fileName);
-            hdriRig.isTwoQuad = false;
-            rigs.push_back(hdriRig);
-            usedNames.insert(rigName);
+
+            const std::vector<std::string> files = _ListExrFiles(hdriDir);
+            for (const std::string &fileName : files) {
+                const std::string baseName = TfStringGetBeforeSuffix(fileName);
+                std::string rigName = _SanitizeRigName(baseName);
+                if (usedNames.find(rigName) != usedNames.end()) {
+                    int suffix = 2;
+                    while (usedNames.find(rigName + "_" + std::to_string(suffix)) != usedNames.end()) {
+                        ++suffix;
+                    }
+                    rigName = rigName + "_" + std::to_string(suffix);
+                }
+                LightRig hdriRig;
+                hdriRig.name = rigName;
+                hdriRig.hdri = TfStringCatPaths(hdriDir, fileName);
+                hdriRig.isTwoQuad = false;
+                rigs.push_back(hdriRig);
+                usedNames.insert(rigName);
+            }
         }
     }
 
