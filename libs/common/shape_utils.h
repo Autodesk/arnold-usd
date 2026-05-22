@@ -261,7 +261,8 @@ public:
     bool IsHole(size_t face) const { return _isHole[face]; }
 
     /// Filter a per-face (uniform) array (one entry per face).
-    /// Returns true if filtering was applied (also when no-op due to size mismatch).
+    /// Returns true if filtering was applied; false on no-op (filter empty
+    /// or array size does not match the original face count).
     template <typename T>
     bool FilterUniformArray(VtArray<T>& arr) const
     {

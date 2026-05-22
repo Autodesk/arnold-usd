@@ -400,8 +400,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         // Filter nsides: exclude hole faces
         VtIntArray filteredNsides = originalNsides;
         holeFilter.FilterUniformArray(filteredNsides);
-        std::vector<unsigned int> nsides_uint(filteredNsides.begin(), filteredNsides.end());
-        AiNodeSetArray(node, str::nsides, AiArrayConvert(nsides_uint.size(), 1, AI_TYPE_UINT, nsides_uint.data()));
+        // Match the non-hole path which uses AI_TYPE_BYTE for nsides.
+        std::vector<uint8_t> nsides_byte(filteredNsides.begin(), filteredNsides.end());
+        AiNodeSetArray(node, str::nsides, AiArrayConvert(nsides_byte.size(), 1, AI_TYPE_BYTE, nsides_byte.data()));
 
         // Filter vidxs: exclude vertex indices belonging to hole faces
         VtIntArray allVidxs;
