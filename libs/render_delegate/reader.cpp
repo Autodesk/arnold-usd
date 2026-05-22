@@ -252,7 +252,11 @@ void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath
         _imagingDelegate->SetCameraForSampling(cameraPath);
     if (_renderIndex && _stageSceneIndex && stage) {
         UsdGeomCamera cameraPrim(stage->GetPrimAtPath(cameraPath));
-        double shutterOpen, shutterClose;
+        // Initialize with USD's defaults (UsdGeomCamera::GetShutterOpenAttr() / CloseAttr()
+        // default to 0). UsdAttribute::Get() returns false when the attribute has no
+        // authored or fallback value, and in that case leaves these locals uninitialized.
+        double shutterOpen = 0.0;
+        double shutterClose = 0.0;
         UsdTimeCode timeCode = _stageSceneIndex->GetTime();
         if (cameraPrim) {
             cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);

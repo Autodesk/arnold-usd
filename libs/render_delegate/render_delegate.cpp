@@ -1092,8 +1092,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
         return VtValue(v);
-    } else if (key == str::t_profile_file) {
-        return VtValue(std::string(AiProfileGetFileName().c_str()));
     } else if (key == str::t_background) {
         return VtValue(_background.GetString());
     } else if (key == str::t_atmosphere) {

@@ -556,7 +556,6 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
         const auto data = xf.Resample(timeSamples[i]);
         AiArraySetKey(arr, i, data.data());
     }
-    AiArrayUnmap(arr);
     AiNodeSetArray(node, arnoldAttr, arr);
 }
 

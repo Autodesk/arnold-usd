@@ -696,28 +696,32 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         if (!instancerId.IsEmpty()) {
             auto& renderIndex = sceneDelegate->GetRenderIndex();
             auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-            HdDirtyBits bits = HdChangeTracker::AllDirty;
-            // The Sync function seems to be called automatically for shapes, but 
-            // not for lights
-            instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
-            const TfToken renderTag = sceneDelegate->GetRenderTag(id);
-            float lightIntensity = AiNodeGetFlt(_light, str::intensity);
-            // For instance of lights, we need to disable the prototype light
-            // by setting its intensity to 0. The instancer can then have a user data
-            // instance_intensity with the actual intensity value to use for each instance, 
-            // and this will be applied to each instance
-            for (size_t i = 0; i < _instancers.size(); ++i) {
-                AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
-                _delegate->TrackRenderTag(_instancers[i], renderTag);
-                AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
-                // If the instance array has a single element, it will be applied to all instances,
-                // which is what we need to do here for the light intensity
-                AiNodeSetArray(_instancers[i], str::instance_intensity, 
-                    AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));                
+            // The instancer might not be registered yet (or might not be an HdArnoldInstancer);
+            // dereferencing it unconditionally would crash, so skip the instancer setup in that case.
+            if (instancer != nullptr) {
+                HdDirtyBits bits = HdChangeTracker::AllDirty;
+                // The Sync function seems to be called automatically for shapes, but
+                // not for lights
+                instancer->Sync(sceneDelegate, renderParam, &bits);
+                instancer->CreateArnoldInstancer(_delegate, id, _instancers);
+                const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+                float lightIntensity = AiNodeGetFlt(_light, str::intensity);
+                // For instance of lights, we need to disable the prototype light
+                // by setting its intensity to 0. The instancer can then have a user data
+                // instance_intensity with the actual intensity value to use for each instance,
+                // and this will be applied to each instance
+                for (size_t i = 0; i < _instancers.size(); ++i) {
+                    AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
+                    _delegate->TrackRenderTag(_instancers[i], renderTag);
+                    AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
+                    // If the instance array has a single element, it will be applied to all instances,
+                    // which is what we need to do here for the light intensity
+                    AiNodeSetArray(_instancers[i], str::instance_intensity,
+                        AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));
+                }
+                // Ensure the prototype light is hidden
+                AiNodeSetFlt(_light, str::intensity, 0.f);
             }
-            // Ensure the prototype light is hidden
-            AiNodeSetFlt(_light, str::intensity, 0.f);
         }
 
 
