@@ -156,11 +156,9 @@ driver_process_bucket
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     const auto pixelCount = bucket_size_x * bucket_size_y;
-    // We should almost always have depth and id.
     auto& ids = driverData->ids[tid];
     ids.clear();
     const void* colorData = nullptr;
-    const void* positionData = nullptr;
     const void* depthData = nullptr;
     // Apply an offset to the pixel coordinates based on the region_min,
     // since we don't own the render buffer, which just knows the output resolution
@@ -180,12 +178,8 @@ driver_process_bucket
         if (it != driverData->buffers.end()) {
             it->second->WriteBucket(
             bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
-        } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
-            positionData = bucketData;
         } else if (pixelType == AI_TYPE_FLOAT && checkOutputName(str::Z)) {
-#ifndef HYDRA_NORMALIZE_DEPTH
             depthData = bucketData;
-#endif
         } else if (pixelType == AI_TYPE_INT && checkOutputName(str::hydraPrimId)) {
             if (driverData->idBuffer) {
                 ids.resize(pixelCount, -1);
@@ -199,34 +193,21 @@ driver_process_bucket
         }
     }
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
-        const auto* in = static_cast<const float*>(depthData);
-        driverData->depthBuffer->WriteBucket(
-            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, in);
-    } else if (positionData != nullptr && driverData->depthBuffer != nullptr) {
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
-        const auto* in = static_cast<const GfVec3f*>(positionData);
-        if (ids.empty()) {
-            for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
+        const auto* in = static_cast<const float*>(depthData);
+        for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+            if (in[i] < AI_BIG) {
+                const auto p = driverData->projMtx.Transform(GfVec3f(0.f, 0.f, in[i]));
                 depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
             }
-        } else {
-            for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                if (ids[i] == -1) {
-                    depth[i] = 1.0f;
-                } else {
-                    const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
-                    depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
-                }
-            }
         }
-
         driverData->depthBuffer->WriteBucket(
             bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
     }
     if (colorData != nullptr && driverData->colorBuffer) {
-        if (ids.empty()) {
+        const auto* zIn = static_cast<const float*>(depthData);
+        if (zIn == nullptr && ids.empty()) {
             driverData->colorBuffer->WriteBucket(
                 bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, colorData);
         } else {
@@ -235,7 +216,8 @@ driver_process_bucket
             const auto* in = static_cast<const AtRGBA*>(colorData);
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                 color[i] = in[i];
-                if (ids[i] == -1) {
+                const bool isBackground = zIn ? (zIn[i] >= AI_BIG) : (ids[i] == -1);
+                if (isBackground) {
                     color[i].a = 0.0f;
                 }
             }

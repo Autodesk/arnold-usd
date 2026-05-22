@@ -109,11 +109,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter, "box_filter", "Default filter type for RenderVars.");
 TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter_attributes, "", "Default filter attributes for RenderVars.");
 
-#ifdef HYDRA_NORMALIZE_DEPTH
-    static const char* _depthOutputValue = "P VECTOR";
-#else
-    static const char* _depthOutputValue = "Z FLOAT";
-#endif
+static const char* _depthOutputValue = "Z FLOAT";
 
 namespace {
 
