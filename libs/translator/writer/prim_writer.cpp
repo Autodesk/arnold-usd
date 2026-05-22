@@ -752,7 +752,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->UCharArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_INT: {
@@ -791,7 +791,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->BoolArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_FLOAT: {
@@ -817,7 +817,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->Color3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_VECTOR: {
@@ -830,7 +830,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->Vector3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_RGBA: {
@@ -843,7 +843,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->Color4fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_VECTOR2: {
@@ -856,7 +856,7 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->Float2Array;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_STRING: {
@@ -887,7 +887,7 @@ static inline bool convertArnoldAttribute(
                     typeName = SdfValueTypeNames->Matrix4dArray;
                     attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
                 }
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
 
