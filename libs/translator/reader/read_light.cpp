@@ -210,7 +210,7 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     // If usdlux_version is enabled use a point light
     AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
     if (options && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::usdlux_version)) {
-        if (AiNodeGetByte(options, str::usdlux_version) != 0) {
+        if (AiNodeGetInt(options, str::usdlux_version) != 0) {
             return nullptr;
         }
     }

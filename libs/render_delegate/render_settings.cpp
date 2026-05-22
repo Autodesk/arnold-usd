@@ -701,8 +701,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 const std::string filterPrefix = "arnold:" + filterType + ":";
                 if (TfStringStartsWith(settingName, filterPrefix)) {
                     paramName = settingName.substr(filterPrefix.size());
-                } else if (TfStringStartsWith(settingName, "arnold:globals:")) {
-                    paramName = settingName.substr(15); // strlen("arnold:globals:")
+                } else if (TfStringStartsWith(settingName, "arnold:global:")) {
+                    paramName = settingName.substr(14); // strlen("arnold:global:")
                 } else if (TfStringStartsWith(settingName, "arnold:")) {
                     paramName = settingName.substr(7); // strlen("arnold:")
                 } else {
