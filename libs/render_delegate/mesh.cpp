@@ -36,8 +36,6 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
 
-#include <set>
-
 #include <constant_strings.h>
 #include <shape_utils.h>
 
@@ -56,93 +54,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // clang-format on
 
 namespace {
-
-// Filter face-varying indices (VtIntArray) to remove entries belonging to hole faces.
-static VtIntArray FilterFaceVaryingIndices(
-    const VtIntArray& indices, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces)
-{
-    VtIntArray filtered;
-    filtered.reserve(indices.size());
-    size_t offset = 0;
-    for (size_t i = 0; i < originalVertexCounts.size(); ++i) {
-        int count = originalVertexCounts[i];
-        if (holeFaces.count(i) == 0) {
-            for (int j = 0; j < count; ++j) {
-                if (offset + j < indices.size())
-                    filtered.push_back(indices[offset + j]);
-            }
-        }
-        offset += count;
-    }
-    return filtered;
-}
-
-// Helper templates to filter uniform (per-face) values from a VtValue.
-template <typename T>
-static bool _FilterUniformVtArray(VtValue& value, const std::set<int>& holeFaces) {
-    if (!value.IsHolding<VtArray<T>>())
-        return false;
-    const auto& arr = value.UncheckedGet<VtArray<T>>();
-    VtArray<T> filtered;
-    filtered.reserve(arr.size());
-    for (size_t i = 0; i < arr.size(); ++i) {
-        if (holeFaces.count(i) == 0)
-            filtered.push_back(arr[i]);
-    }
-    value = VtValue(std::move(filtered));
-    return true;
-}
-
-static bool FilterUniformVtValue(VtValue& value, const std::set<int>& holeFaces) {
-    return _FilterUniformVtArray<float>(value, holeFaces) ||
-           _FilterUniformVtArray<double>(value, holeFaces) ||
-           _FilterUniformVtArray<int>(value, holeFaces) ||
-           _FilterUniformVtArray<bool>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec2f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec3f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec4f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec2d>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec3d>(value, holeFaces) ||
-           _FilterUniformVtArray<TfToken>(value, holeFaces) ||
-           _FilterUniformVtArray<std::string>(value, holeFaces);
-}
-
-// Helper templates to filter face-varying values from a VtValue.
-template <typename T>
-static bool _FilterFaceVaryingVtArray(VtValue& value, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces) {
-    if (!value.IsHolding<VtArray<T>>())
-        return false;
-    const auto& arr = value.UncheckedGet<VtArray<T>>();
-    VtArray<T> filtered;
-    filtered.reserve(arr.size());
-    size_t offset = 0;
-    for (size_t i = 0; i < originalVertexCounts.size(); ++i) {
-        int count = originalVertexCounts[i];
-        if (holeFaces.count(i) == 0) {
-            for (int j = 0; j < count; ++j) {
-                if (offset + j < arr.size())
-                    filtered.push_back(arr[offset + j]);
-            }
-        }
-        offset += count;
-    }
-    value = VtValue(std::move(filtered));
-    return true;
-}
-
-static bool FilterFaceVaryingVtValue(VtValue& value, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces) {
-    return _FilterFaceVaryingVtArray<float>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<double>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<int>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<bool>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<GfVec2f>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<GfVec3f>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<GfVec4f>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<GfVec2d>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<GfVec3d>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<TfToken>(value, originalVertexCounts, holeFaces) ||
-           _FilterFaceVaryingVtArray<std::string>(value, originalVertexCounts, holeFaces);
-}
 
 int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
@@ -352,11 +263,10 @@ void HdArnoldMesh::Sync(
         // USD holeIndices marks faces as invisible — we remove them from the topology.
         const VtIntArray &holeIndices = topology.GetHoleIndices();
         const bool isSubdivided = topology.GetScheme() != PxOsdOpenSubdivTokens->none;
-        _holeFaces.clear();
-        _originalVertexCounts.clear();
         if (!isSubdivided && !holeIndices.empty()) {
-            _holeFaces.insert(holeIndices.begin(), holeIndices.end());
-            _originalVertexCounts = vertexCounts;
+            _holeFilter.Build(holeIndices, vertexCounts);
+        } else {
+            _holeFilter.Clear();
         }
 
         // Build filtered topology if there are holes
@@ -365,19 +275,11 @@ void HdArnoldMesh::Sync(
         const VtIntArray *activeCounts = &vertexCounts;
         const VtIntArray *activeIndices = &vertexIndices;
 
-        if (!_holeFaces.empty()) {
-            filteredCounts.reserve(vertexCounts.size());
-            filteredIndices.reserve(vertexIndices.size());
-            size_t vidxOffset = 0;
-            for (int i = 0; i < numFaces; ++i) {
-                int faceVertexCount = vertexCounts[i];
-                if (_holeFaces.count(i) == 0) {
-                    filteredCounts.push_back(faceVertexCount);
-                    for (int j = 0; j < faceVertexCount; ++j)
-                        filteredIndices.push_back(vertexIndices[vidxOffset + j]);
-                }
-                vidxOffset += faceVertexCount;
-            }
+        if (!_holeFilter.Empty()) {
+            filteredCounts = vertexCounts;
+            _holeFilter.FilterUniformArray(filteredCounts);
+            filteredIndices = vertexIndices;
+            _holeFilter.FilterFaceVaryingArray(filteredIndices);
             numFaces = static_cast<int>(filteredCounts.size());
             activeCounts = &filteredCounts;
             activeIndices = &filteredIndices;
@@ -431,18 +333,17 @@ void HdArnoldMesh::Sync(
         }
         // Build shidxs; if holes were removed we need to filter the result
         AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), topology.GetNumFaces(), _subsets));
-        if (!_holeFaces.empty()) {
+        if (!_holeFilter.Empty()) {
             AtArray* shidxsArray = AiNodeGetArray(node, str::shidxs);
             if (shidxsArray) {
-                uint32_t numElements = AiArrayGetNumElements(shidxsArray);
-                std::vector<uint8_t> filteredShidxs;
-                filteredShidxs.reserve(numElements);
-                for (uint32_t i = 0; i < numElements; ++i) {
-                    if (_holeFaces.count(i) == 0)
-                        filteredShidxs.push_back(AiArrayGetByte(shidxsArray, i));
+                const uint32_t numElements = AiArrayGetNumElements(shidxsArray);
+                std::vector<uint8_t> shidxs(numElements);
+                for (uint32_t i = 0; i < numElements; ++i)
+                    shidxs[i] = AiArrayGetByte(shidxsArray, i);
+                if (_holeFilter.FilterUniformArray(shidxs)) {
+                    AiNodeSetArray(node, str::shidxs,
+                        AiArrayConvert(shidxs.size(), 1, AI_TYPE_BYTE, shidxs.data()));
                 }
-                AiNodeSetArray(node, str::shidxs,
-                    AiArrayConvert(filteredShidxs.size(), 1, AI_TYPE_BYTE, filteredShidxs.data()));
             }
         }
     }
@@ -624,16 +525,11 @@ void HdArnoldMesh::Sync(
                 // Filter uniform primvar values/indices for hole faces
                 VtValue uniformValue = desc.value;
                 VtIntArray uniformIndices = desc.valueIndices;
-                if (!_holeFaces.empty()) {
+                if (!_holeFilter.Empty()) {
                     if (!uniformIndices.empty()) {
-                        VtIntArray filtered;
-                        for (size_t i = 0; i < uniformIndices.size(); ++i) {
-                            if (_holeFaces.count(i) == 0)
-                                filtered.push_back(uniformIndices[i]);
-                        }
-                        uniformIndices = std::move(filtered);
+                        _holeFilter.FilterUniformArray(uniformIndices);
                     } else {
-                        FilterUniformVtValue(uniformValue, _holeFaces);
+                        _holeFilter.FilterUniformValue(uniformValue);
                     }
                 }
                 HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, uniformValue, &uniformIndices, GetRenderDelegate());
@@ -641,11 +537,11 @@ void HdArnoldMesh::Sync(
                 // Filter face-varying primvar values/indices for hole faces
                 VtValue fvValue = desc.value;
                 VtIntArray fvIndices = desc.valueIndices;
-                if (!_holeFaces.empty()) {
+                if (!_holeFilter.Empty()) {
                     if (!fvIndices.empty()) {
-                        fvIndices = FilterFaceVaryingIndices(fvIndices, _originalVertexCounts, _holeFaces);
+                        _holeFilter.FilterFaceVaryingArray(fvIndices);
                     } else {
-                        FilterFaceVaryingVtValue(fvValue, _originalVertexCounts, _holeFaces);
+                        _holeFilter.FilterFaceVaryingValue(fvValue);
                     }
                 }
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {

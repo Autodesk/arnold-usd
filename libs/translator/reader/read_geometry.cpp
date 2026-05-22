@@ -51,8 +51,6 @@
 #include <pxr/usd/usdLux/lightAPI.h>
 #endif
 
-#include <set>
-
 #include <constant_strings.h>
 #include <shape_utils.h>
 #include <parameters_utils.h>
@@ -285,43 +283,12 @@ bool MeshOrientation::OrientFaceIndexAttribute(T& attr)
     return true;
 }
 
-// Helper templates to filter per-face (uniform) values from a VtValue,
-// removing entries at hole face indices.
-template <typename T>
-static bool _FilterUniformVtArray(VtValue& value, const std::set<int>& holeFaces) {
-    if (!value.IsHolding<VtArray<T>>())
-        return false;
-    const auto& arr = value.UncheckedGet<VtArray<T>>();
-    VtArray<T> filtered;
-    filtered.reserve(arr.size());
-    for (size_t i = 0; i < arr.size(); ++i) {
-        if (holeFaces.count(i) == 0)
-            filtered.push_back(arr[i]);
-    }
-    value = VtValue(std::move(filtered));
-    return true;
-}
-
-static bool FilterUniformVtValue(VtValue& value, const std::set<int>& holeFaces) {
-    return _FilterUniformVtArray<float>(value, holeFaces) ||
-           _FilterUniformVtArray<double>(value, holeFaces) ||
-           _FilterUniformVtArray<int>(value, holeFaces) ||
-           _FilterUniformVtArray<bool>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec2f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec3f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec4f>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec2d>(value, holeFaces) ||
-           _FilterUniformVtArray<GfVec3d>(value, holeFaces) ||
-           _FilterUniformVtArray<TfToken>(value, holeFaces) ||
-           _FilterUniformVtArray<std::string>(value, holeFaces);
-}
-
 class MeshPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
-    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation) {}
-    MeshPrimvarsRemapper(MeshOrientation &orientation, const std::set<int> &holeFaces, const VtIntArray &originalNsides) 
-        : _orientation(orientation), _holeFaces(holeFaces), _originalNsides(originalNsides) {}
+    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation), _holeFilter(nullptr) {}
+    MeshPrimvarsRemapper(MeshOrientation &orientation, const MeshHoleFilter *holeFilter)
+        : _orientation(orientation), _holeFilter(holeFilter) {}
     virtual ~MeshPrimvarsRemapper() {}
     bool ReadPrimvar(const TfToken& primvar) override;  
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
@@ -330,8 +297,7 @@ public:
         std::vector<unsigned int> &indexes) override;
 private:
     MeshOrientation &_orientation;
-    std::set<int> _holeFaces;
-    VtIntArray _originalNsides;
+    const MeshHoleFilter *_holeFilter;
 };
 bool MeshPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
 {
@@ -344,11 +310,11 @@ bool MeshPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
 bool MeshPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation,
         VtValue &value) 
 {
-    if (_holeFaces.empty())
+    if (_holeFilter == nullptr || _holeFilter->Empty())
         return false;
 
     if (interpolation == UsdGeomTokens->uniform) {
-        return FilterUniformVtValue(value, _holeFaces);
+        return _holeFilter->FilterUniformValue(value);
     }
     // Face-varying values are NOT filtered here — the index filtering in
     // RemapIndexes already skips hole-face entries, and the indices still
@@ -363,21 +329,8 @@ bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfT
         return false;
 
     // Filter hole faces from face-varying indices
-    if (!_holeFaces.empty()) {
-        std::vector<unsigned int> filtered;
-        filtered.reserve(indexes.size());
-        size_t offset = 0;
-        for (size_t i = 0; i < _originalNsides.size(); ++i) {
-            int count = _originalNsides[i];
-            if (_holeFaces.count(i) == 0) {
-                for (int j = 0; j < count; ++j) {
-                    if (offset + j < indexes.size())
-                        filtered.push_back(indexes[offset + j]);
-                }
-            }
-            offset += count;
-        }
-        indexes = std::move(filtered);
+    if (_holeFilter != nullptr && !_holeFilter->Empty()) {
+        _holeFilter->FilterFaceVaryingArray(indexes);
     }
 
     if (!_orientation.OrientFaceIndexAttribute(indexes)) {
@@ -432,51 +385,36 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Read holeIndices for non-subdivided meshes.
     // USD holeIndices marks faces as invisible (not rendered).
     // We handle this by removing hole faces from nsides/vidxs entirely.
-    VtIntArray holeIndices;
-    std::set<int> holeFaceSet;
-    VtIntArray originalNsides; // original nsides before hole filtering
+    MeshHoleFilter holeFilter;
+    VtIntArray originalNsides; // original nsides; only populated if there are holes
     if (subdiv == UsdGeomTokens->none) {
+        VtIntArray holeIndices;
         mesh.GetHoleIndicesAttr().Get(&holeIndices, frame);
         if (!holeIndices.empty()) {
-            holeFaceSet.insert(holeIndices.begin(), holeIndices.end());
             mesh.GetFaceVertexCountsAttr().Get(&originalNsides, frame);
+            holeFilter.Build(holeIndices, originalNsides);
         }
     }
 
-    if (!holeFaceSet.empty()) {
+    if (!holeFilter.Empty()) {
         // Filter nsides: exclude hole faces
-        VtIntArray filteredNsides;
-        filteredNsides.reserve(originalNsides.size());
-        for (size_t i = 0; i < originalNsides.size(); ++i) {
-            if (holeFaceSet.count(i) == 0)
-                filteredNsides.push_back(originalNsides[i]);
-        }
+        VtIntArray filteredNsides = originalNsides;
+        holeFilter.FilterUniformArray(filteredNsides);
         std::vector<unsigned int> nsides_uint(filteredNsides.begin(), filteredNsides.end());
         AiNodeSetArray(node, str::nsides, AiArrayConvert(nsides_uint.size(), 1, AI_TYPE_UINT, nsides_uint.data()));
 
         // Filter vidxs: exclude vertex indices belonging to hole faces
         VtIntArray allVidxs;
         mesh.GetFaceVertexIndicesAttr().Get(&allVidxs, frame);
-        VtIntArray filteredVidxs;
-        filteredVidxs.reserve(allVidxs.size());
-        size_t vidxOffset = 0;
-        for (size_t i = 0; i < originalNsides.size(); ++i) {
-            int faceVertexCount = originalNsides[i];
-            if (holeFaceSet.count(i) == 0) {
-                for (int j = 0; j < faceVertexCount; ++j)
-                    filteredVidxs.push_back(allVidxs[vidxOffset + j]);
-            }
-            vidxOffset += faceVertexCount;
-        }
+        holeFilter.FilterFaceVaryingArray(allVidxs);
 
         // Handle left-handed orientation
-        if (meshOrientation.reverse)
+        if (meshOrientation.reverse) {
             meshOrientation.nsidesArray = filteredNsides;
+            meshOrientation.OrientFaceIndexAttribute(allVidxs);
+        }
 
-        if (meshOrientation.reverse)
-            meshOrientation.OrientFaceIndexAttribute(filteredVidxs);
-
-        std::vector<unsigned int> vidxs_uint(filteredVidxs.begin(), filteredVidxs.end());
+        std::vector<unsigned int> vidxs_uint(allVidxs.begin(), allVidxs.end());
         AiNodeSetArray(node, str::vidxs, AiArrayConvert(vidxs_uint.size(), 1, AI_TYPE_UINT, vidxs_uint.data()));
     } else {
         // No holes: use standard attribute reading
@@ -585,21 +523,8 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                     std::iota(std::begin(nidxs), std::end(nidxs), 0);
                 }
                 // Filter out face-varying entries belonging to hole faces
-                if (!holeFaceSet.empty()) {
-                    std::vector<unsigned int> filteredNidxs;
-                    filteredNidxs.reserve(nidxs.size());
-                    size_t offset = 0;
-                    for (size_t faceIdx = 0; faceIdx < originalNsides.size(); ++faceIdx) {
-                        int count = originalNsides[faceIdx];
-                        if (holeFaceSet.count(faceIdx) == 0) {
-                            for (int j = 0; j < count; ++j) {
-                                if (offset + j < nidxs.size())
-                                    filteredNidxs.push_back(nidxs[offset + j]);
-                            }
-                        }
-                        offset += count;
-                    }
-                    nidxs = std::move(filteredNidxs);
+                if (!holeFilter.Empty()) {
+                    holeFilter.FilterFaceVaryingArray(nidxs);
                 }
                 // If the mesh is left handed we need to reorder the indices
                 if (meshOrientation.reverse) {
@@ -625,18 +550,17 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
         // If holes were removed, the shidxs array has entries for all original faces.
         // We need to filter it to match the reduced face count.
-        if (!holeFaceSet.empty()) {
+        if (!holeFilter.Empty()) {
             AtArray* shidxsArray = AiNodeGetArray(node, str::shidxs);
             if (shidxsArray) {
-                uint32_t numElements = AiArrayGetNumElements(shidxsArray);
-                std::vector<uint8_t> filteredShidxs;
-                filteredShidxs.reserve(numElements);
-                for (uint32_t i = 0; i < numElements; ++i) {
-                    if (holeFaceSet.count(i) == 0)
-                        filteredShidxs.push_back(AiArrayGetByte(shidxsArray, i));
+                const uint32_t numElements = AiArrayGetNumElements(shidxsArray);
+                std::vector<uint8_t> shidxs(numElements);
+                for (uint32_t i = 0; i < numElements; ++i)
+                    shidxs[i] = AiArrayGetByte(shidxsArray, i);
+                if (holeFilter.FilterUniformArray(shidxs)) {
+                    AiNodeSetArray(node, str::shidxs,
+                        AiArrayConvert(shidxs.size(), 1, AI_TYPE_BYTE, shidxs.data()));
                 }
-                AiNodeSetArray(node, str::shidxs,
-                    AiArrayConvert(filteredShidxs.size(), 1, AI_TYPE_BYTE, filteredShidxs.data()));
             }
         }
     } 
@@ -658,7 +582,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
-     MeshPrimvarsRemapper primvarsRemapper(meshOrientation, holeFaceSet, originalNsides);
+     MeshPrimvarsRemapper primvarsRemapper(meshOrientation, &holeFilter);
     _ReadGenericShape(prim, context, node, time, "primvars:arnold", &primvarsRemapper, subsets.empty());
 
     // Check if subdiv_iterations were set in ReadArnoldParameters,
