@@ -38,6 +38,8 @@
 
 #include <ai.h>
 #include <mutex>
+#include <set>
+
 #include <pxr/pxr.h>
 
 #include <pxr/imaging/hd/mesh.h>
@@ -93,6 +95,8 @@ protected:
     bool _useSubdiv = false;       ///< Whether the geometry use subdivision.
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
+    std::set<int> _holeFaces;          ///< Set of hole face indices for filtering.
+    VtIntArray _originalVertexCounts;  ///< Original face vertex counts before hole filtering.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
     ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays of the scene
 };

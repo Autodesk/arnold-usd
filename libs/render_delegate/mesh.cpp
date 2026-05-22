@@ -36,6 +36,8 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
 
+#include <set>
+
 #include <constant_strings.h>
 #include <shape_utils.h>
 
@@ -54,6 +56,93 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // clang-format on
 
 namespace {
+
+// Filter face-varying indices (VtIntArray) to remove entries belonging to hole faces.
+static VtIntArray FilterFaceVaryingIndices(
+    const VtIntArray& indices, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces)
+{
+    VtIntArray filtered;
+    filtered.reserve(indices.size());
+    size_t offset = 0;
+    for (size_t i = 0; i < originalVertexCounts.size(); ++i) {
+        int count = originalVertexCounts[i];
+        if (holeFaces.count(i) == 0) {
+            for (int j = 0; j < count; ++j) {
+                if (offset + j < indices.size())
+                    filtered.push_back(indices[offset + j]);
+            }
+        }
+        offset += count;
+    }
+    return filtered;
+}
+
+// Helper templates to filter uniform (per-face) values from a VtValue.
+template <typename T>
+static bool _FilterUniformVtArray(VtValue& value, const std::set<int>& holeFaces) {
+    if (!value.IsHolding<VtArray<T>>())
+        return false;
+    const auto& arr = value.UncheckedGet<VtArray<T>>();
+    VtArray<T> filtered;
+    filtered.reserve(arr.size());
+    for (size_t i = 0; i < arr.size(); ++i) {
+        if (holeFaces.count(i) == 0)
+            filtered.push_back(arr[i]);
+    }
+    value = VtValue(std::move(filtered));
+    return true;
+}
+
+static bool FilterUniformVtValue(VtValue& value, const std::set<int>& holeFaces) {
+    return _FilterUniformVtArray<float>(value, holeFaces) ||
+           _FilterUniformVtArray<double>(value, holeFaces) ||
+           _FilterUniformVtArray<int>(value, holeFaces) ||
+           _FilterUniformVtArray<bool>(value, holeFaces) ||
+           _FilterUniformVtArray<GfVec2f>(value, holeFaces) ||
+           _FilterUniformVtArray<GfVec3f>(value, holeFaces) ||
+           _FilterUniformVtArray<GfVec4f>(value, holeFaces) ||
+           _FilterUniformVtArray<GfVec2d>(value, holeFaces) ||
+           _FilterUniformVtArray<GfVec3d>(value, holeFaces) ||
+           _FilterUniformVtArray<TfToken>(value, holeFaces) ||
+           _FilterUniformVtArray<std::string>(value, holeFaces);
+}
+
+// Helper templates to filter face-varying values from a VtValue.
+template <typename T>
+static bool _FilterFaceVaryingVtArray(VtValue& value, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces) {
+    if (!value.IsHolding<VtArray<T>>())
+        return false;
+    const auto& arr = value.UncheckedGet<VtArray<T>>();
+    VtArray<T> filtered;
+    filtered.reserve(arr.size());
+    size_t offset = 0;
+    for (size_t i = 0; i < originalVertexCounts.size(); ++i) {
+        int count = originalVertexCounts[i];
+        if (holeFaces.count(i) == 0) {
+            for (int j = 0; j < count; ++j) {
+                if (offset + j < arr.size())
+                    filtered.push_back(arr[offset + j]);
+            }
+        }
+        offset += count;
+    }
+    value = VtValue(std::move(filtered));
+    return true;
+}
+
+static bool FilterFaceVaryingVtValue(VtValue& value, const VtIntArray& originalVertexCounts, const std::set<int>& holeFaces) {
+    return _FilterFaceVaryingVtArray<float>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<double>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<int>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<bool>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<GfVec2f>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<GfVec3f>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<GfVec4f>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<GfVec2d>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<GfVec3d>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<TfToken>(value, originalVertexCounts, holeFaces) ||
+           _FilterFaceVaryingVtArray<std::string>(value, originalVertexCounts, holeFaces);
+}
 
 int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
@@ -257,15 +346,50 @@ void HdArnoldMesh::Sync(
         const VtIntArray &vertexCounts = topology.GetFaceVertexCounts();
         const VtIntArray &vertexIndices = topology.GetFaceVertexIndices();
 
-        const auto numFaces = topology.GetNumFaces();
+        auto numFaces = topology.GetNumFaces();
+
+        // Determine hole faces for non-subdivided meshes.
+        // USD holeIndices marks faces as invisible — we remove them from the topology.
+        const VtIntArray &holeIndices = topology.GetHoleIndices();
+        const bool isSubdivided = topology.GetScheme() != PxOsdOpenSubdivTokens->none;
+        _holeFaces.clear();
+        _originalVertexCounts.clear();
+        if (!isSubdivided && !holeIndices.empty()) {
+            _holeFaces.insert(holeIndices.begin(), holeIndices.end());
+            _originalVertexCounts = vertexCounts;
+        }
+
+        // Build filtered topology if there are holes
+        VtIntArray filteredCounts;
+        VtIntArray filteredIndices;
+        const VtIntArray *activeCounts = &vertexCounts;
+        const VtIntArray *activeIndices = &vertexIndices;
+
+        if (!_holeFaces.empty()) {
+            filteredCounts.reserve(vertexCounts.size());
+            filteredIndices.reserve(vertexIndices.size());
+            size_t vidxOffset = 0;
+            for (int i = 0; i < numFaces; ++i) {
+                int faceVertexCount = vertexCounts[i];
+                if (_holeFaces.count(i) == 0) {
+                    filteredCounts.push_back(faceVertexCount);
+                    for (int j = 0; j < faceVertexCount; ++j)
+                        filteredIndices.push_back(vertexIndices[vidxOffset + j]);
+                }
+                vidxOffset += faceVertexCount;
+            }
+            numFaces = static_cast<int>(filteredCounts.size());
+            activeCounts = &filteredCounts;
+            activeIndices = &filteredIndices;
+        }
 
         // Check if the vertex count buffer contains negative value
-        const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
+        const bool hasNegativeValues = std::any_of(activeCounts->cbegin(), activeCounts->cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
         // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
         if (_isLeftHanded || hasNegativeValues) {
-            VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
-            VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
+            VtIntArray vertexCountsTmp = *activeCounts;
+            VtIntArray vertexIndicesTmp = *activeIndices;
             assert(vertexCountsTmp.size() == (size_t)numFaces);
             if (Ai_unlikely(hasNegativeValues)) {
                 std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
@@ -274,12 +398,12 @@ void HdArnoldMesh::Sync(
                 for (int i = 0; i < numFaces; ++i) {
                     const int vertexCount = vertexCountsTmp[i];
                     for (int vertexIdx = 0; vertexIdx < vertexCount; vertexIdx += 1) {
-                        vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = vertexIndices[_vertexCountSum + vertexIdx];
+                        vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = (*activeIndices)[_vertexCountSum + vertexIdx];
                     }
                     _vertexCountSum += vertexCount;
                 }
             } else {
-                _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+                _vertexCountSum = std::accumulate(activeCounts->cbegin(), activeCounts->cend(), 0);
             }
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCountsTmp);
@@ -287,11 +411,11 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
 
         } else {
-            _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+            _vertexCountSum = std::accumulate(activeCounts->cbegin(), activeCounts->cend(), 0);
             // Keep the buffers alive
-            _vertexCountsVtValue = VtValue(vertexCounts);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
+            _vertexCountsVtValue = VtValue(*activeCounts);
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(*activeCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(*activeIndices, AI_TYPE_UINT));
         }
 
         scheme = topology.GetScheme();
@@ -305,7 +429,22 @@ void HdArnoldMesh::Sync(
         } else {
             AiNodeSetStr(node, str::subdiv_type, str::none);
         }
-        AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
+        // Build shidxs; if holes were removed we need to filter the result
+        AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), topology.GetNumFaces(), _subsets));
+        if (!_holeFaces.empty()) {
+            AtArray* shidxsArray = AiNodeGetArray(node, str::shidxs);
+            if (shidxsArray) {
+                uint32_t numElements = AiArrayGetNumElements(shidxsArray);
+                std::vector<uint8_t> filteredShidxs;
+                filteredShidxs.reserve(numElements);
+                for (uint32_t i = 0; i < numElements; ++i) {
+                    if (_holeFaces.count(i) == 0)
+                        filteredShidxs.push_back(AiArrayGetByte(shidxsArray, i));
+                }
+                AiNodeSetArray(node, str::shidxs,
+                    AiArrayConvert(filteredShidxs.size(), 1, AI_TYPE_BYTE, filteredShidxs.data()));
+            }
+        }
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
@@ -482,12 +621,37 @@ void HdArnoldMesh::Sync(
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, &desc.valueIndices, GetRenderDelegate());
+                // Filter uniform primvar values/indices for hole faces
+                VtValue uniformValue = desc.value;
+                VtIntArray uniformIndices = desc.valueIndices;
+                if (!_holeFaces.empty()) {
+                    if (!uniformIndices.empty()) {
+                        VtIntArray filtered;
+                        for (size_t i = 0; i < uniformIndices.size(); ++i) {
+                            if (_holeFaces.count(i) == 0)
+                                filtered.push_back(uniformIndices[i]);
+                        }
+                        uniformIndices = std::move(filtered);
+                    } else {
+                        FilterUniformVtValue(uniformValue, _holeFaces);
+                    }
+                }
+                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, uniformValue, &uniformIndices, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
+                // Filter face-varying primvar values/indices for hole faces
+                VtValue fvValue = desc.value;
+                VtIntArray fvIndices = desc.valueIndices;
+                if (!_holeFaces.empty()) {
+                    if (!fvIndices.empty()) {
+                        fvIndices = FilterFaceVaryingIndices(fvIndices, _originalVertexCounts, _holeFaces);
+                    } else {
+                        FilterFaceVaryingVtValue(fvValue, _originalVertexCounts, _holeFaces);
+                    }
+                }
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
-                    if (!desc.valueIndices.empty()) {
-                       AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(fvValue));
+                    if (!fvIndices.empty()) {
+                       AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                     } else {
                         int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
                         AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
@@ -496,7 +660,7 @@ void HdArnoldMesh::Sync(
                     if (!_useSubdiv) {
                         // The number of motion keys has to be matched between points and normals, so if there are multiple
                         // position keys, so we are forcing the user to use the SamplePrimvars function.
-                        if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
+                        if (fvValue.IsEmpty() || _numberOfPositionKeys > 1) {
                             HdArnoldIndexedSampledPrimvarType sample;
                             SampleIndexedPrimvar(
                                 sceneDelegate, id, primvar.first, arnoldRenderParam->GetShutterRange(), &sample);
@@ -505,16 +669,16 @@ void HdArnoldMesh::Sync(
                             _RemapNormalKeys(_numberOfPositionKeys, sample);
                             }
                             AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfVec3f>>(sample));
-                            if (!desc.valueIndices.empty()) {
-                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                            if (!fvIndices.empty()) {
+                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                             } else {
                                 int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
                                 AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                             }
                         } else {
-                            AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(desc.value));
-                            if (!desc.valueIndices.empty()) {
-                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                            AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(fvValue));
+                            if (!fvIndices.empty()) {
+                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                             } else {
                                 int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
                                 AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
@@ -527,7 +691,7 @@ void HdArnoldMesh::Sync(
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
                         // TODO check leftHandedVertexCounts
-                        node, primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, leftHandedVertexCounts,
+                        node, primvar.first, desc.role, fvValue, GetRenderDelegate(), fvIndices, leftHandedVertexCounts,
                         &_vertexCountSum);
                 }
             }
