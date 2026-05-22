@@ -1783,7 +1783,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         PathSet newTargets;
         for (const auto &pathAndBits : newTargetsWithBits) {
             newTargets.insert(pathAndBits.first);
-            _dependencyToDirtyBitsMap.insert({{pathAndBits.first, source}, pathAndBits.second});
+            // Overwrite any prior bits for this (target, source) pair so updated
+            // dependencies actually take effect (insert() is a no-op on existing keys).
+            _dependencyToDirtyBitsMap[{pathAndBits.first, source}] = pathAndBits.second;
         }
         // Set the new targets for this source
         _sourceToTargetsMap[source] = newTargets;

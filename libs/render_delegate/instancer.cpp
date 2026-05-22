@@ -296,7 +296,7 @@ void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 
     VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
     if (!visVal.IsEmpty()) {
-        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+        AiNodeSetByte(node, str::visibility, static_cast<uint8_t>(VtValueGetInt(visVal)));
     } else {
         bool assignVisibility = false;
         HdArnoldRayFlags rayFlags{AI_RAY_ALL};

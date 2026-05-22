@@ -595,8 +595,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
         if (currentCamera && isOrtho) {  // TODO do it once, if proj or size has changed
             GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
-            AiNodeSetVec2(_camera, str::screen_window_min, screen[0], screen[1]);
-            AiNodeSetVec2(_camera, str::screen_window_max, screen[2], screen[3]);
+            AiNodeSetVec2(currentCamera, str::screen_window_min, screen[0], screen[1]);
+            AiNodeSetVec2(currentCamera, str::screen_window_max, screen[2], screen[3]);
         }
 
         if (useOwnedCamera) {
@@ -671,8 +671,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // Another option would be to keep an ortho camera on this class and update it ?
         if (currentCamera && isOrtho) {
             GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
-            AiNodeSetVec2(_camera, str::screen_window_min, screen[0], screen[1]);
-            AiNodeSetVec2(_camera, str::screen_window_max, screen[2], screen[3]);
+            AiNodeSetVec2(currentCamera, str::screen_window_min, screen[0], screen[1]);
+            AiNodeSetVec2(currentCamera, str::screen_window_max, screen[2], screen[3]);
         }
 
         // if we have a window, then we need to recompute it anyway
@@ -1122,7 +1122,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const auto halfPrecisionIt = renderVar.settings.find(_tokens->halfPrecision);
                     if (halfPrecisionIt != renderVar.settings.end() && halfPrecisionIt->second.IsHolding<bool>()) {
                         if (halfPrecision.empty())
-                            halfPrecision.assign(numRenderVars, AiNodeGetFlt(customProduct.driver, str::depth_half_precision));
+                            halfPrecision.assign(numRenderVars, AiNodeGetBool(customProduct.driver, str::depth_half_precision));
                         halfPrecision[renderVarIndex] = halfPrecisionIt->second.UncheckedGet<bool>();
                     }
 

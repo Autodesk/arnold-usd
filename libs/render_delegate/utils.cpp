@@ -114,9 +114,11 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         xf.values.resize(transformKeys);
         // If an amount of transform keys is provided, we must resample
         // the times & values to match the new amount
+        const float divisor = std::max(static_cast<float>(transformKeys) - 1.f, 1.f);
         for (int i = 0; i < transformKeys; ++i) {
-            xf.times[i] = timeStart + i * (timeEnd - timeStart) /
-                (static_cast<float>(transformKeys)-1.f);
+            xf.times[i] = (transformKeys == 1)
+                ? timeStart
+                : timeStart + i * (timeEnd - timeStart) / divisor;
             xf.values[i] = xfOrig.Resample(xf.times[i]);
         }
     }
