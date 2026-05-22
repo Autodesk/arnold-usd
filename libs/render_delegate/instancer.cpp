@@ -212,7 +212,7 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     
     HdArnoldSampledPrimvarType sampleArray;
     int instanceCount = ComputeSampleMatrixArrayRecursive(renderDelegate, sampleArray, prototypeId);
-    if (instanceCount == 0)
+    if (instanceCount == 0 || sampleArray.count == 0)
         return false;
 
     AtArray* matrices = _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfMatrix4f>>(sampleArray);
