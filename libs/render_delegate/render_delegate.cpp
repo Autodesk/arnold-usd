@@ -1758,9 +1758,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
-                }
-                if (sourceIt->second.empty()) {
-                    _sourceToTargetsMap.erase(sourceIt);
+                    if (sourceIt->second.empty()) {
+                        _sourceToTargetsMap.erase(sourceIt);
+                    }
                 }
                 // This source primitive needs to be updated
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
