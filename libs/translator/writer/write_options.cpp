@@ -143,9 +143,15 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
     // Create the ArnoldNodeGraph primitive
     UsdPrim nodeGraphPrim = stage->DefinePrim(SdfPath(nodeGraphName), _tokens->ArnoldNodeGraph);
 
+    // Author the local path under primvars:arnold:name so the prim can still
+    // be resolved when this file is referenced and the runtime path gets
+    // remapped under a different namespace.
+    nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+        .Set(nodeGraphName);
+
     // Reference the nodeGraph in our RenderSetting's attribute (e.g. arnold:global:background)
     TfToken terminal(arnoldPrefix + attrStr);
-    UsdAttribute nodeGraphTerminal = 
+    UsdAttribute nodeGraphTerminal =
         prim.CreateAttribute(terminal, SdfValueTypeNames->String, false);
     nodeGraphTerminal.Set(nodeGraphName);
 
@@ -557,6 +563,11 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
         SdfPath imagerNodeGraphPath(imagerGraphName);
         // Create the ArnoldNodeGraph primitive
         UsdPrim nodeGraphPrim = stage->DefinePrim(imagerNodeGraphPath, _tokens->ArnoldNodeGraph);
+        // Author the local path under primvars:arnold:name so the prim can
+        // still be resolved when this file is referenced and the runtime path
+        // gets remapped under a different namespace.
+        nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+            .Set(imagerGraphName);
         // Ensure the imager is authored
         writer.WritePrimitive(input);
         UsdPrim imagerPrim = stage->GetPrimAtPath(imagerPath);

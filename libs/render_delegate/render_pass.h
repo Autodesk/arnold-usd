@@ -106,12 +106,6 @@ protected:
 
 private:
     HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
-    HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackColor;          ///< Color render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackDepth;          ///< Depth render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
-    AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
-    AtArray* _fallbackAovShaders;                 ///< AtArray storing the fallback AOV shaders.
     std::vector<AtNode*> _aovShaders;             ///< Pointer to list of user aov shaders
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
@@ -152,7 +146,6 @@ private:
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
     bool _isConverged = false;          ///< State of the render convergence.
-    bool _usingFallbackBuffers = false; ///< If the render pass is using the fallback buffers.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
