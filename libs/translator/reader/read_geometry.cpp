@@ -395,7 +395,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         std::vector<GfVec3f> normalsArray;
         std::vector<unsigned int> nidxs; // Flattened array that we are going to pass to arnold
         normalsArray.reserve(vListKeys*AiArrayGetNumElements(vlistArray));
-        unsigned int normalsElemCount = -1;
+        unsigned int normalsElemCount = 0;
 
         UsdGeomPrimvar normalsPrimvar(normalsAttr);
         TfToken normalsInterp = GetNormalsInterpolation(mesh);
