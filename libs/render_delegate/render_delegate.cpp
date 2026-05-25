@@ -380,7 +380,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Search paths
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
 #if ARNOLD_VERSION_NUM <= 70403
-        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
 #else
         {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
@@ -1640,8 +1639,11 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
     // For batch renders, only update the scene if the render hasn't started yet,
-    // or if it's finished
-    const int status = AiRenderGetStatus(_renderSession);
+    // or if it's finished. We must use GetRenderSession() rather than _renderSession
+    // directly: when we don't own the universe (procedural / external) _renderSession
+    // is never assigned, and reading it via the accessor pulls the session out of the
+    // universe instead of dereferencing nullptr.
+    const int status = AiRenderGetStatus(GetRenderSession());
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
@@ -2013,7 +2015,9 @@ void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numIn
     std::vector<int> crypto_object_offsets(numInstances);
     for (size_t i = 0; i < numInstances; ++i)
         crypto_object_offsets[i] = i;
-    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+    // .data() is defined for empty vectors; &crypto_object_offsets[0] is UB when numInstances is 0
+    // (which the caller in SetHasCryptomatte can hit for instancers with no instance_matrix yet).
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, crypto_object_offsets.data()));
 }
 
 void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)

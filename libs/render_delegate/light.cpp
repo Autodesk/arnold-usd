@@ -679,7 +679,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 }
             }
             if (filters.empty()) {
-                AiNodeSetArray(_light, str::filters, AiArray(0, 0, AI_TYPE_NODE));
+                // Note: 0 keys is invalid for AtArray; use 1 key like the sibling disconnect at line 315.
+                AiNodeSetArray(_light, str::filters, AiArray(0, 1, AI_TYPE_NODE));
             } else {
                 AiNodeSetArray(_light, str::filters, AiArrayConvert(filters.size(), 1, AI_TYPE_NODE, filters.data()));
             }
@@ -695,7 +696,9 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
         if (!instancerId.IsEmpty()) {
             auto& renderIndex = sceneDelegate->GetRenderIndex();
-            auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+            // static_cast can't catch the wrong-type case (only null), so use dynamic_cast.
+            auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+
             HdDirtyBits bits = HdChangeTracker::AllDirty;
             // The Sync function seems to be called automatically for shapes, but 
             // not for lights
