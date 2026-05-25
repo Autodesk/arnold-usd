@@ -879,13 +879,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
-                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                if (commandLine[i] == "-o" && i + 1 < commandLine.size()) {
                     _outputOverride = commandLine[++i];
                     continue;
                 }
                 // husk argument for thread count (#1077)
-                if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
-                        && i < commandLine.size() - 2) {
+                if ((commandLine[i] == "-j" || commandLine[i] == "--threads")
+                        && i + 1 < commandLine.size()) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
