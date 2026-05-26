@@ -82,7 +82,7 @@ struct Args {
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
-    std::string props;  // Comma-separated prop names
+    std::string studioSets;  // Comma-separated studio set names
 };
 
 struct LightRig {
@@ -125,30 +125,30 @@ const char *_ModeToString(TurntableMode mode)
     return "camera";
 }
 
-enum class PropType {
+enum class StudioSetType {
     Ground,
     Cyclo
 };
 
-bool _ParseProp(const std::string &propString, PropType &out)
+bool _ParseStudioSet(const std::string &studioSetString, StudioSetType &out)
 {
-    const std::string prop = TfStringToLower(propString);
-    if (prop == "pedestral") {
-        out = PropType::Ground;
+    const std::string studioSet = TfStringToLower(studioSetString);
+    if (studioSet == "pedestral") {
+        out = StudioSetType::Ground;
         return true;
     }
-    if (prop == "cyclo" || prop == "cyc" || prop == "cyclorama") {
-        out = PropType::Cyclo;
+    if (studioSet == "cyclo" || studioSet == "cyc" || studioSet == "cyclorama") {
+        out = StudioSetType::Cyclo;
         return true;
     }
     return false;
 }
 
-const char *_PropToString(PropType prop)
+const char *_StudioSetToString(StudioSetType studioSet)
 {
-    switch (prop) {
-    case PropType::Ground: return "pedestral";
-    case PropType::Cyclo: return "cyclo";
+    switch (studioSet) {
+    case StudioSetType::Ground: return "pedestral";
+    case StudioSetType::Cyclo: return "cyclo";
     }
     return "pedestral";
 }
@@ -223,8 +223,8 @@ void Configure(CLI::App *app, Args &args)
         "Animation mode: camera (default), object, or light")
         ->option_text("MODE");
 
-    app->add_option("--prop", args.props,
-        "Add props to the generated stage. Supported values: pedestral, cyclo (comma-separated)")
+    app->add_option("--studio-set", args.studioSets,
+        "Add studio sets to the generated stage. Supported values: pedestral, cyclo (comma-separated)")
         ->option_text("NAME");
 
     app->add_option("input", args.input, "USD asset file to turntable")
@@ -787,7 +787,7 @@ static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
         }
     }
 
-    UsdGeomMesh cyclo = UsdGeomMesh::Define(stage, SdfPath("/props/cyclo"));
+    UsdGeomMesh cyclo = UsdGeomMesh::Define(stage, SdfPath("/studioSet/cyclo"));
     cyclo.CreatePointsAttr().Set(points);
     cyclo.CreateFaceVertexCountsAttr().Set(faceVertexCounts);
     cyclo.CreateFaceVertexIndicesAttr().Set(faceVertexIndices);
@@ -798,16 +798,16 @@ static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
     return true;
 }
 
-static bool _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType> &props,
+static bool _SetupStudioSets(const UsdStageRefPtr &stage, const std::vector<StudioSetType> &studioSets,
                         const AssetBounds &bounds, const Args &args)
 {
-    UsdGeomXform sceneProps = UsdGeomXform::Define(stage, SdfPath("/props"));
-    (void)sceneProps;
+    UsdGeomXform sceneStudioSet = UsdGeomXform::Define(stage, SdfPath("/studioSet"));
+    (void)sceneStudioSet;
     const UsdShadeMaterial groundMaterial = _CreateGroundMaterial(stage);
-    const std::set<PropType> activeProps(props.begin(), props.end());
+    const std::set<StudioSetType> activeStudioSets(studioSets.begin(), studioSets.end());
 
-    const auto _IsPropActive = [&activeProps](PropType prop) {
-        return activeProps.find(prop) != activeProps.end();
+    const auto _IsStudioSetActive = [&activeStudioSets](StudioSetType studioSet) {
+        return activeStudioSets.find(studioSet) != activeStudioSets.end();
     };
 
     {
@@ -815,7 +815,7 @@ static bool _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType>
         const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
         const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
 
-        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/props/pedestral"));
+        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/studioSet/pedestral"));
         ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
         ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
         ground.CreateHeightAttr().Set(thickness);
@@ -828,13 +828,13 @@ static bool _SetupProps(const UsdStageRefPtr &stage, const std::vector<PropType>
         groundCenter[_GetUpAxisIndex(bounds.upAxis)] = groundHeight;
         translateOp.Set(groundCenter);
 
-        ground.GetPrim().SetActive(_IsPropActive(PropType::Ground));
+        ground.GetPrim().SetActive(_IsStudioSetActive(StudioSetType::Ground));
     }
 
     if (!_CreateCyclo(stage, bounds, args, groundMaterial)) {
         return false;
     }
-    stage->GetPrimAtPath(SdfPath("/props/cyclo")).SetActive(_IsPropActive(PropType::Cyclo));
+    stage->GetPrimAtPath(SdfPath("/studioSet/cyclo")).SetActive(_IsStudioSetActive(StudioSetType::Cyclo));
 
     return true;
 }
@@ -1082,15 +1082,15 @@ int Run(const Args &args)
         return 1;
     }
 
-    std::vector<PropType> props;
-    if (!args.props.empty()) {
-        // Split comma-separated prop names
-        std::vector<std::string> propNames;
+    std::vector<StudioSetType> studioSets;
+    if (!args.studioSets.empty()) {
+        // Split comma-separated studio set names
+        std::vector<std::string> studioSetNames;
         std::string current;
-        for (char c : args.props) {
+        for (char c : args.studioSets) {
             if (c == ',') {
                 if (!current.empty()) {
-                    propNames.push_back(current);
+                    studioSetNames.push_back(current);
                     current.clear();
                 }
             } else if (c != ' ') {  // Skip whitespace
@@ -1098,18 +1098,18 @@ int Run(const Args &args)
             }
         }
         if (!current.empty()) {
-            propNames.push_back(current);
+            studioSetNames.push_back(current);
         }
         
-        props.reserve(propNames.size());
-        for (const std::string &propString : propNames) {
-            PropType prop;
-            if (!_ParseProp(propString, prop)) {
-                fprintf(stderr, "turntable: unknown --prop '%s' (expected pedestral or cyclo)\n",
-                        propString.c_str());
+        studioSets.reserve(studioSetNames.size());
+        for (const std::string &studioSetString : studioSetNames) {
+            StudioSetType studioSet;
+            if (!_ParseStudioSet(studioSetString, studioSet)) {
+                fprintf(stderr, "turntable: unknown --studio-set '%s' (expected pedestral or cyclo)\n",
+                        studioSetString.c_str());
                 return 1;
             }
-            props.push_back(prop);
+            studioSets.push_back(studioSet);
         }
     }
 
@@ -1167,7 +1167,7 @@ int Run(const Args &args)
     UsdGeomSetStageUpAxis(stage, bounds.upAxis);
 
     _SetupAsset(stage, args.input, mode, bounds, args.frames);
-    if (!_SetupProps(stage, props, bounds, args)) {
+    if (!_SetupStudioSets(stage, studioSets, bounds, args)) {
         return 1;
     }
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
@@ -1186,10 +1186,10 @@ int Run(const Args &args)
     printf("  Aim height: %.3g (rel), %.4g (world)\n",
            args.targetHeight, _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax));
     printf("  Cam zoom  : %.3g\n", args.cameraZoom);
-    if (!props.empty()) {
-        printf("  Props     :");
-        for (const PropType prop : props) {
-            printf(" %s", _PropToString(prop));
+    if (!studioSets.empty()) {
+        printf("  Studio Sets:");
+        for (const StudioSetType studioSet : studioSets) {
+            printf(" %s", _StudioSetToString(studioSet));
         }
         printf("\n");
     }
