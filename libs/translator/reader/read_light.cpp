@@ -184,19 +184,35 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     }
 
     // First, if we have a IES filename, let's export this light as a photometric light (#1316)
+    // Unless usdlux_version is set, in which case we use point_light
     if (!iesFile.empty()) {
+        // If usdlux_version is set (non-zero), default to point_light; otherwise use photometric_light
+        AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+        if (AiNodeGetInt(options, str::usdlux_version)) {
+            AtNode *node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
+            AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+            //Send iesNormalize and iesAngleScale to the node
+            VtValue iesNormalizeValue;
+            if (GET_LIGHT_ATTR(shapingAPI, ShapingIesNormalize).Get(&iesNormalizeValue, time.frame)) {
+                AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+            }
+            VtValue iesAngleScaleValue;
+            if (GET_LIGHT_ATTR(shapingAPI, ShapingIesAngleScale).Get(&iesAngleScaleValue, time.frame)) {
+                AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+            }
+            return node;
+        }
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
         AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
-        //Send iesNormalize and iesAngleScale to the node
-        VtValue iesNormalizeValue;
-        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesNormalize).Get(&iesNormalizeValue, time.frame)) {
-            AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
-        }
-        VtValue iesAngleScaleValue;
-        if (GET_LIGHT_ATTR(shapingAPI, ShapingIesAngleScale).Get(&iesAngleScaleValue, time.frame)) {
-            AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
-        }
+      
         return node;
+    }
+    // If usdlux_version is enabled use a point light
+    AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+    if (options && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::usdlux_version)) {
+        if (AiNodeGetByte(options, str::usdlux_version) != 0) {
+            return nullptr;
+        }
     }
     VtValue coneAngleValue;
     float coneAngle = 0;
@@ -232,8 +248,60 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
 }
 
-
 } // namespace
+
+// Read cone angle, softness, focus, and focus tint
+void ReadLightShapingParams(const UsdPrim& prim, AtNode* node, const TimeSettings& time, bool checkShaping)
+{
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (!shapingAPI && checkShaping)
+        return;
+
+    VtValue coneAngleValue;
+    UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
+    if (coneAngleAttr.HasAuthoredValue()) {
+        if (coneAngleAttr.Get(&coneAngleValue, time.frame)) {
+            AiNodeSetFlt(node, str::cone_angle, VtValueGetFloat(coneAngleValue));
+        }
+    } else {
+        UsdAttribute oldAttr = prim.GetAttribute(_tokens->ShapingConeAngle);
+        if (oldAttr.HasAuthoredValue() && oldAttr.Get(&coneAngleValue, time.frame)) {
+            AiNodeSetFlt(node, str::cone_angle, VtValueGetFloat(coneAngleValue));
+        }
+    }
+
+    VtValue coneSoftnessValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingConeSoftness).Get(&coneSoftnessValue, time.frame)) {
+        AiNodeSetFlt(node, str::cone_softness, VtValueGetFloat(coneSoftnessValue));
+    }
+
+    VtValue shapingFocusValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingFocus).Get(&shapingFocusValue, time.frame)) {
+        AiNodeSetFlt(node, str::shaping_focus, VtValueGetFloat(shapingFocusValue));
+    }
+
+    VtValue shapingFocusTintValue;
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingFocusTint).Get(&shapingFocusTintValue, time.frame)) {
+        GfVec3f rgb = VtValueGetVec3f(shapingFocusTintValue);
+        AiNodeSetRGB(node, str::shaping_focus_tint, rgb[0], rgb[1], rgb[2]);
+    }
+
+    VtValue iesFileValue;
+    if (shapingAPI.GetShapingIesFileAttr().Get(&iesFileValue, time.frame)) {
+        std::string iesFile = VtValueGetString(iesFileValue);
+        if (!iesFile.empty())
+            AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+    }
+    
+    // Send iesNormalize and iesAngleScale to the node
+    VtValue iesNormalizeValue;
+    if (shapingAPI.GetShapingIesNormalizeAttr().Get(&iesNormalizeValue, time.frame)) 
+        AiNodeSetBool(node, str::ies_normalize, VtValueGetBool(iesNormalizeValue));
+    VtValue iesAngleScaleValue;
+    if (shapingAPI.GetShapingIesAngleScaleAttr().Get(&iesAngleScaleValue, time.frame)) 
+        AiNodeSetFlt(node, str::angle_scale, VtValueGetFloat(iesAngleScaleValue));
+
+}
 
 
 void ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time)
@@ -437,6 +505,9 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+    // Apply shaping parameters
+    ReadLightShapingParams(prim, node, time);
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -476,6 +547,10 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
             }
         }
+    }
+    // Apply shaping parameters for point_light (IES, cone angle, focus, ...).
+    if (AiNodeIs(node, str::point_light)) {
+        ReadLightShapingParams(prim, node, time);
     }
 
     ReadMatrix(prim, node, time, context);
@@ -526,6 +601,9 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
+
+    // Apply shaping parameters
+    ReadLightShapingParams(prim, node, time);
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -588,6 +666,9 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
+    // Apply shaping parameters
+    ReadLightShapingParams(prim, node, time);
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
@@ -638,6 +719,10 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
             AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
         }
+
+        // Apply shaping parameters
+        ReadLightShapingParams(prim, node, time);
+
         // Special case, the attribute "color" can be linked to some shader
         _ReadLightColorLinks(prim, node, context);
 

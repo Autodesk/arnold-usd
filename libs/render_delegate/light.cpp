@@ -32,6 +32,7 @@
 #include "light.h"
 #include "mesh.h"
 #include "instancer.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/usd/usdLux/tokens.h>
 #include <pxr/usd/usdLux/blackbody.h>
@@ -96,7 +97,15 @@ std::vector<ParamDesc> genericParams = {
     {"shadow_color", UsdLuxTokens->inputsShadowColor},
 };
 
-std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> pointParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint},
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
 std::vector<ParamDesc> spotParams = {
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
@@ -109,9 +118,43 @@ std::vector<ParamDesc> photometricParams = {
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
-std::vector<ParamDesc> diskParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> diskParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint},
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
-std::vector<ParamDesc> cylinderParams = {{"radius", UsdLuxTokens->inputsRadius}};
+std::vector<ParamDesc> quadParams = {
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint},
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
+
+std::vector<ParamDesc> cylinderParams = {
+    {"radius", UsdLuxTokens->inputsRadius},
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint},
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
+
+std::vector<ParamDesc> meshParams = {
+    {"cone_angle", UsdLuxTokens->inputsShapingConeAngle},
+    {"cone_softness", UsdLuxTokens->inputsShapingConeSoftness},
+    {"shaping_focus", UsdLuxTokens->inputsShapingFocus},
+    {"shaping_focus_tint", UsdLuxTokens->inputsShapingFocusTint},
+    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"angle_scale", UsdLuxTokens->inputsShapingIesAngleScale},
+    {"ies_normalize", UsdLuxTokens->inputsShapingIesNormalize}};
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
@@ -146,7 +189,7 @@ void readUserData(
         }
     }
 }
-AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
+AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id, HdArnoldRenderDelegate* renderDelegate)
 {
     auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
         auto val = delegate->GetLightParamValue(id, paramName);
@@ -180,15 +223,26 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
     };
     // USD can have a light with spot shaping + photometric IES profile, but arnold 
     // doesn't support both together. Here we first check if a IES Path is set (#1316), 
-    // and if so we translate this as an arnold photometric light (which won't have any spot cone). 
-    if (hasIesFile())
+    // and if so we translate this as an arnold photometric light (which won't have any spot cone).
+    if (hasIesFile()) {
+        // If usdlux_version is set (non-zero), default to point_light; otherwise use photometric_light
+        AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
+        if (AiNodeGetInt(options, str::usdlux_version) != 0) {
+            return str::point_light;
+        }
         return str::photometric_light;
+    }
 
     // Then, if any of the shaping params exists or non-default we have a spot light.
     if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
-        return str::spot_light;
+        // If usdlux_version is enabled use a point light
+        AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
+        if (AiNodeGetByte(options, str::usdlux_version) != 0) 
+            return str::point_light;
+        else 
+            return str::spot_light;
     }
     // Finally, we default to a point light
     return str::point_light;
@@ -342,6 +396,7 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
             4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
             AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
 
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, quadParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
@@ -369,6 +424,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         AiNodeSetPtr(light, str::mesh, (void*)mesh);
     }
 #endif
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, meshParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
@@ -499,6 +555,8 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    AiProfileBlock("hydra_proc:HdArnoldGenericLight:Sync"); 
+    TRACE_FUNCTION();
 
     if (!_delegate->CanUpdateScene())
         return;
@@ -517,7 +575,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
         if (_light == nullptr || lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
-            const auto newLightType = getLightType(sceneDelegate, id);
+            const auto newLightType = getLightType(sceneDelegate, id, _delegate);
             if (newLightType != lightType) {
                 if (_light) {
                     AiNodeSetStr(_light, str::name, AtString());
@@ -606,7 +664,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             std::vector<AtNode*> filters;
             filters.reserve(filterPaths.size());
             for (const auto& filterPath : filterPaths) {
-                auto* filterMaterial = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), filterPath);
+                auto* filterMaterial = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), filterPath, _delegate);
                 if (filterMaterial == nullptr) {
                     continue;
                 }
@@ -814,7 +872,7 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
     AtNode *color = nullptr;
     std::vector<AtNode *> lightFilters;
     if (!lightShaderPath.IsEmpty()) {
-        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath, renderDelegate);
         if (nodeGraph) {
             color = nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_color);
             if (color) {

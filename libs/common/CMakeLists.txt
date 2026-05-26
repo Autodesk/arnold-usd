@@ -7,7 +7,8 @@ set(COMMON_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/parameters_utils.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/rendersettings_utils.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/procedural_reader.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/trace_utils.cpp")
 
 set(COMMON_HDR
     "${CMAKE_CURRENT_SOURCE_DIR}/api_adapter.h"
@@ -19,7 +20,8 @@ set(COMMON_HDR
     "${CMAKE_CURRENT_SOURCE_DIR}/parameters_utils.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/procedural_reader.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/rendersettings_utils.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.h")
+    "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/trace_utils.h")
 
 add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_SRC})
 

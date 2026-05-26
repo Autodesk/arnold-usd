@@ -68,10 +68,7 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
-
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -112,6 +109,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
     // are used for the conversion of HdFormat to TfToken.
@@ -294,11 +294,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-#else
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-#endif
         return r;
     }
 }
@@ -710,11 +706,27 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         // We want to restart a new render in that case.
         _renderParam->Restart();
     }
+    
+    // See the HDK hydra docs for more details
+    //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
+    if (_key == str::t_houdiniCopTextureChanged) {
+        // COP textures need updating, flush the texture cache to trigger a refresh
+        // of all the image_cop nodes
+        _renderParam->Pause();
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        _renderParam->Restart();
+    }
 
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
         return;
+    }
+    if (_key == _tokens->renderSettingsSrc) {
+        if (_value.IsHolding<TfToken>()) {
+            TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
+            _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
+        }
     }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
@@ -869,13 +881,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
-                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                if (commandLine[i] == "-o" && i + 1 < commandLine.size()) {
                     _outputOverride = commandLine[++i];
                     continue;
                 }
                 // husk argument for thread count (#1077)
-                if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
-                        && i < commandLine.size() - 2) {
+                if ((commandLine[i] == "-j" || commandLine[i] == "--threads")
+                        && i + 1 < commandLine.size()) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
@@ -1126,15 +1138,6 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
-// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
-bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-    return true; 
-#else
-    return false;
-#endif
-}
-
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1367,14 +1370,9 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2208
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
-        return new HdArnoldRenderSettings(bprimId);
+        return new HdArnoldRenderSettings(this, bprimId);
     }
-#else
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
 #endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
@@ -1748,9 +1746,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
-                }
-                if (sourceIt->second.empty()) {
-                    _sourceToTargetsMap.erase(sourceIt);
+                    if (sourceIt->second.empty()) {
+                        _sourceToTargetsMap.erase(sourceIt);
+                    }
                 }
                 // This source primitive needs to be updated
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
@@ -1920,15 +1918,15 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_background);
     return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere, this);
     if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_atmosphere);
     return nullptr;
@@ -1938,7 +1936,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     std::vector<AtNode *> nodes;
     for (const auto &materialPath: _aov_shaders) {
-        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath, this);
         if (nodeGraph) {
             const auto &terminals = nodeGraph->GetCachedTerminals(_tokens->aovShadersArray);
             std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
@@ -1949,7 +1947,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager, this);
     if (nodeGraph) {
         // Indicate to this node graph that it is an imager graph, so that 
         // it doesn't interrupt / restart the render when a node changes
@@ -1969,8 +1967,8 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
 
 AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_shader_override);
     return nullptr;
 }

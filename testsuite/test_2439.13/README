@@ -1,0 +1,8 @@
+USDLux: Add cone and shaping capabilities to mesh light
+
+ARNOLD-16949
+
+Author: Libby O'Meara
+
+
+PARAMS: {'scene':'test.usda', 'diff_hardfail': 0.35}

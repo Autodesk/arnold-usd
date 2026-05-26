@@ -108,7 +108,7 @@ void HdArnoldNativeRprim::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
                 AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader());

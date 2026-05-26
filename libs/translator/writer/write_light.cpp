@@ -44,14 +44,21 @@ namespace {
 UsdPrim _GetNodeGraph(UsdPrim& prim, UsdArnoldWriter &writer, const TfToken& lightShaderAttr)
 {
     std::string nodeGraphName = prim.GetPath().GetString() + "/light_shader";
-    SdfPath nodeGraphPath(nodeGraphName);        
+    SdfPath nodeGraphPath(nodeGraphName);
     UsdStageRefPtr stage = writer.GetUsdStage();
     UsdPrim nodeGraphPrim = stage->DefinePrim(nodeGraphPath, str::t_ArnoldNodeGraph);
 
-    UsdAttribute arnoldShaderAttr = 
-        prim.CreateAttribute(lightShaderAttr, 
+    UsdAttribute arnoldShaderAttr =
+        prim.CreateAttribute(lightShaderAttr,
         SdfValueTypeNames->String, false);
-    arnoldShaderAttr.Set(nodeGraphPrim.GetPath().GetString());
+    arnoldShaderAttr.Set(nodeGraphName);
+
+    // Author the local path under primvars:arnold:name so the prim can still
+    // be resolved when this file is referenced and the runtime path gets
+    // remapped under a different namespace (see HdArnoldRenderDelegate's
+    // node-graph name map).
+    nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+        .Set(nodeGraphName);
 
     return nodeGraphPrim;
 }

@@ -47,9 +47,7 @@
 #include "nodes/nodes.h"
 #include "utils.h"
 #include "rendersettings_utils.h"
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 #include <regex>
 #include <cmath>
 #include <cstdio>
@@ -427,9 +425,6 @@ static std::string ResolveFilenameTokens(const std::string &in, float frameF)
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
-      _fallbackColor(SdfPath::EmptyPath()),
-      _fallbackDepth(SdfPath::EmptyPath()),
-      _fallbackPrimId(SdfPath::EmptyPath()),
       _renderDelegate(renderDelegate)
 {
     auto* universe = _renderDelegate->GetUniverse();
@@ -466,26 +461,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_primIdReader, str::attribute, str::hydraPrimId);
     AiNodeLink(_primIdReader, str::aov_input, _primIdWriter);
 
-    // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
-    // clang-format off
-    _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
-                        {HdAovTokens->depth, {&_fallbackDepth, {}}},
-                        {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
-    // clang-format on
-    _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
-    // Setting up the fallback outputs when no
-    const auto beautyString =
-        TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
-    const auto positionString =
-        TfStringPrintf("%s %s %s", _depthOutputValue, AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
-    const auto idString = TfStringPrintf(
-        "%s INT %s %s", str::hydraPrimId.c_str(), AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
-    AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
-    AiArraySetStr(_fallbackOutputs, 1, positionString.c_str());
-    AiArraySetStr(_fallbackOutputs, 2, idString.c_str());
-    _fallbackAovShaders = AiArrayAllocate(1, 1, AI_TYPE_POINTER);
-    AiArraySetPtr(_fallbackAovShaders, 0, _primIdWriter);
-
+    
     const auto& config = HdArnoldConfig::GetInstance();
     AiNodeSetFlt(_camera, str::shutter_start, config.shutter_start);
     AiNodeSetFlt(_camera, str::shutter_end, config.shutter_end);
@@ -500,9 +476,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     _renderDelegate->DestroyArnoldNode(_mainDriver);
     _renderDelegate->DestroyArnoldNode(_primIdWriter);
     _renderDelegate->DestroyArnoldNode(_primIdReader);
-    // We are not assigning this array to anything, so needs to be manually destroyed.
-    AiArrayDestroy(_fallbackOutputs);
-    AiArrayDestroy(_fallbackAovShaders);
     
     for (auto& customProduct : _customProducts) {
         if (customProduct.driver != nullptr) {
@@ -526,7 +499,6 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (_renderDelegate->IsUsingHydraRenderSettings()) {
         // If we are using the hydra render settings, we let the render settings prim handle the conversion.
         // We need to provide a camera pas
@@ -554,7 +526,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // We couldn't use the render settings, we fall back to the original code
     }
-#endif
 
     if (_renderDelegate->SetRenderTags(renderTags)) {
         // Render tags have changed, let's iterate through all the nodes
@@ -638,6 +609,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
     
+    int framingWidth = width;
+    int framingHeight = height;
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
         (delegateResolution[0] != width || delegateResolution[1] != height)) {
 
@@ -722,19 +695,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
 
             // return the min region in a given axis X or Y, provided the input data that we receive from hydra
-            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes) -> GfVec2i {
+            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes, int expectedFraming) -> GfVec2i {
                 // if an explicit render settings resolution was provided, we want to use it, otherwise we use the 
                 // render buffer resolution
                 float regionMinFlt = windowMin * (settingsRes > 0 ? settingsRes : bufferRes);
                 float regionMaxFlt = windowMax * (settingsRes > 0 ? settingsRes : bufferRes) - 1;
                 GfVec2i region(std::round(regionMinFlt), std::round(regionMaxFlt));
-
-                if (settingsRes <= 0) {
+                
+                // If we have a specific render settings resolution with a windowNDC, but applying it
+                // returns a 1-offset as compared to the expected buffer we had from the framing, then 
+                // we want to adjust the values to this offset
+                if (settingsRes <= 0 || std::abs(region[1] - region[0] + 1 - expectedFraming) == 1) {
                     // In the arnold options attributes, we need 
                     // region_max_x - region_min_x = width - 1
                     // region_max_y - region_min_y = height - 1
                     // so that the render buffer matches the expected output. 
-                    int mismatchDelta = region[1] - region[0] - bufferRes + 1;
+                    int usedBufferRes = (settingsRes <= 0) ? bufferRes : expectedFraming;
+                    int mismatchDelta = region[1] - region[0] - usedBufferRes + 1;
                     if (mismatchDelta != 0) {
                         // There could have been a precision issue, in that case we want to adjust either the region min or the max
                         float deltaMin = std::abs(regionMinFlt - region[0]);
@@ -746,7 +723,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         // if deltaMax is higher, then it's the regionMax that will automatically be tweaked,
                         // here we are just returning the region min
                     }
-                    region[1] = region[0] + bufferRes - 1;
+                    region[1] = region[0] + usedBufferRes - 1;
                 }
                 return region;
             };
@@ -773,8 +750,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }                
             }
             
-            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width);
-
+            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width, framingWidth);
+            
             AiNodeSetInt(options, str::region_min_x, regionX[0]);
             AiNodeSetInt(options, str::region_max_x, regionX[1]);
             
@@ -792,10 +769,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             
             } 
-            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height);
+            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height, framingHeight);
             AiNodeSetInt(options, str::region_min_y, regionY[0]);
             AiNodeSetInt(options, str::region_max_y, regionY[1]);
-
             clearBuffers(_renderBuffers, true, regionX[1] - regionX[0] + 1, regionY[1] - regionY[0] + 1);;
             
         } else {
@@ -852,10 +828,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
-    // If AOV bindings are empty, we are only setting up color and depth for basic opengl composition. This should
-    // not happen often.
-    // TODO(pal): Remove bindings to P and RGBA. Those are used for other buffers. Or add support for writing to
-    //  these in the driver.
     HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
     // These buffers are not supported, but we still need to allocate and set them up for hydra.
     aovBindings.erase(
@@ -886,8 +858,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const bool needsDelegateProductsUpdate = _renderDelegate->NeedsDelegateProductsUpdate();
     
     if (_RenderBuffersChanged(aovBindings) || needsDelegateProductsUpdate ||
-        _usingFallbackBuffers || updateAovs || updateImagers) {
-        _usingFallbackBuffers = false;
+        updateAovs || updateImagers) {
+        
         renderParam->Interrupt();
         if (_mainDriver)
             AiNodeResetParameter(_mainDriver, str::render_outputs);
@@ -1312,7 +1284,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.second.buffer->SetConverged(_isConverged);
             }
         }
-        // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
     }
 }
 
@@ -1366,7 +1337,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
     decltype(_renderBuffers){}.swap(_renderBuffers);
 }
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #if PXR_VERSION >= 2308
 HdArnoldRenderSettings*
 HdArnoldRenderPass::_GetHydraRenderSettingsPrim() const
@@ -1378,7 +1348,6 @@ HdArnoldRenderPass::_GetHydraRenderSettingsPrim() const
         GetRenderIndex()->GetBprim(HdPrimTypeTokens->renderSettings,
         renderParam->GetHydraRenderSettingsPrimPath()));
 }
-#endif
 #endif
 
 PXR_NAMESPACE_CLOSE_SCOPE

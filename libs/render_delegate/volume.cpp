@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "volume.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/base/tf/dl.h>
 
@@ -208,6 +209,8 @@ HdArnoldVolume::~HdArnoldVolume()
 void HdArnoldVolume::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:HdArnoldVolume:Sync");
+    TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;
  
@@ -227,7 +230,7 @@ void HdArnoldVolume::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         auto* volumeShader =
             material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });

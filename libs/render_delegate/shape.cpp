@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "shape.h"
+#include <pxr/base/trace/trace.h>
 
 #ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/primOriginSchema.h>
@@ -63,6 +64,8 @@ void HdArnoldShape::Sync(
     HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
     bool force)
 {
+    AiProfileBlock("hydra_proc:HdArnoldShape:Sync");
+    TRACE_FUNCTION();
     if (_shape == nullptr)
         return;
 

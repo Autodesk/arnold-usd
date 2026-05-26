@@ -29,6 +29,8 @@ template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {retur
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec2f> &) {return AI_TYPE_VECTOR2;}
+// GfMatrix4f has the same memory layout as AtMatrix (row-major float[4][4])
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfMatrix4f> &) {return AI_TYPE_MATRIX;}
 
 // 
 template <typename DerivedT>
