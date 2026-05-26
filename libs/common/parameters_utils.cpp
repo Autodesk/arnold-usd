@@ -396,6 +396,9 @@ void ReadArrayLink(
 
     indexStr = indexStr.substr(1); // remove the first "i" character
 
+    if (indexStr.find_first_not_of("0123456789") != std::string::npos)
+        return;
+
     // get the index
     int index = std::stoi(indexStr);
     if (index < 0)
@@ -730,7 +733,7 @@ AtMatrix VtValueGetMatrix(const VtValue& value)
 {
     if (value.IsEmpty())
         return AiM4Identity();
-    AtMatrix result;
+    AtMatrix result = AiM4Identity();
     _VtValueGetRecursive<AtMatrix, GfMatrix4f, GfMatrix4d>(value, result);
     return result;
 }
@@ -780,7 +783,8 @@ inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arn
                 }
             }
         }
-        AiArrayUnmap(array);
+        if (array)
+            AiArrayUnmap(array);
         return array;
     }
     

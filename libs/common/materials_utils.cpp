@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <ai.h>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -541,12 +542,23 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
     if (!pxrMtlxPath.empty()) {
         shaderKey += pxrMtlxPath.c_str();
     }
+    // inputAttrs is an unordered_map, so iteration order is unspecified.
+    // Previously we appended connected attribute names to shaderKey in
+    // iteration order, so two semantically-identical shader inputs could hash
+    // to different cache keys, defeating the OSL code cache. Collect connected
+    // names into a sorted vector first to make the key deterministic.
+    std::vector<std::string> connectedAttrNames;
+    connectedAttrNames.reserve(inputAttrs.size());
     for (const auto& attrIt : inputAttrs) {
-        if(!attrIt.second.connection.IsEmpty()) {
-            // Only the key is used, so we set an empty string for the value
-            AiParamValueMapSetStr(params, AtString(attrIt.first.GetText()), AtString(""));
-            shaderKey += attrIt.first.GetString();
+        if (!attrIt.second.connection.IsEmpty()) {
+            connectedAttrNames.emplace_back(attrIt.first.GetString());
         }
+    }
+    std::sort(connectedAttrNames.begin(), connectedAttrNames.end());
+    for (const auto& name : connectedAttrNames) {
+        // Only the key is used, so we set an empty string for the value
+        AiParamValueMapSetStr(params, AtString(name.c_str()), AtString(""));
+        shaderKey += name;
     }
     oslCode = context.GetCachedOslCode(shaderKey, shaderId.GetText(), params);
 #elif ARNOLD_VERSION_NUM >= 70104
@@ -685,11 +697,12 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
         return nullptr;
 
     // First, we check if the shaderId starts with "arnold:", in which case
-    // we're expecting to read an arnold native shader with a 1:1 mapping 
+    // we're expecting to read an arnold native shader with a 1:1 mapping
     if (TfStringStartsWith(shaderId.GetString(), str::t_arnold_prefix.GetString())) {
-        TfToken arnoldShaderType(shaderId.GetString().substr(7).c_str());
+        TfToken arnoldShaderType(
+            shaderId.GetString().substr(str::t_arnold_prefix.GetString().size()).c_str());
         return ReadArnoldShader(nodeName, arnoldShaderType, inputAttrs, context, time, materialReader);
-    } 
+    }
 
     // Check if there is a specific conversion function defined for this shader.
     // This is used for usd builtin shaders, like UsdPreviewSurface, UsdUvTexture, etc...
@@ -730,13 +743,16 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
 #endif
     if (shaderNodeEntry) {
         AtString shaderNodeEntryName = AiNodeEntryGetNameAtString(shaderNodeEntry);
+        AtNode* result = nullptr;
         if (shaderNodeEntryName == str::osl) {
             // This mtlx shader can be rendered by arnold as an OSL shader
-            return ReadMtlxOslShader(nodeName, inputAttrs, shaderId, context, time, materialReader, params);
+            result = ReadMtlxOslShader(nodeName, inputAttrs, shaderId, context, time, materialReader, params);
         } else {
             // This mtlx shader can be rendered by arnold as a native shader
-            return ReadArnoldShader(nodeName, TfToken(shaderNodeEntryName.c_str()), inputAttrs, context, time, materialReader);
+            result = ReadArnoldShader(nodeName, TfToken(shaderNodeEntryName.c_str()), inputAttrs, context, time, materialReader);
         }
+        AiParamValueMapDestroy(params);
+        return result;
     }
     AiParamValueMapDestroy(params);
     return nullptr;

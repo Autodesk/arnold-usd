@@ -37,6 +37,7 @@ void ProceduralReader::Read(const std::string &filename,
         // Only open the usd file as a root layer
         if (rootLayer == nullptr) {
             AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
+            _filename = "";
             _overrides = nullptr;
             return;
         }
