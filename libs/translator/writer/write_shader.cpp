@@ -89,14 +89,20 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
                 UsdPrim inputOpPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(inputOpName));
                 if (inputOpPrim) {
                     TfToken inputsIndexAttrName(TfStringPrintf("inputs:inputs:i%d", index));
-                    UsdAttribute arnoldInputAttr = 
+                    UsdAttribute arnoldInputAttr =
                         prim.CreateAttribute(inputsIndexAttrName, SdfValueTypeNames->String, false);
 
                     SdfPath opOutput(inputOpName + std::string(".outputs:out"));
                     arnoldInputAttr.AddConnection(opOutput);
+                    // Only advance the inputs:iN counter when we actually
+                    // authored that slot. Bumping it on every loop iteration
+                    // (including when the prim couldn't be resolved) used to
+                    // produce holes like inputs:i1, inputs:i3, inputs:i4 —
+                    // the reader iterates :i1, :i2, … and stops at the first
+                    // missing slot, dropping every subsequent input.
+                    index++;
                 }
             }
-            index++;
         }
         _exportedAttrs.insert("inputs");
 

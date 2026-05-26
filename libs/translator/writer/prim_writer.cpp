@@ -748,7 +748,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned char>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
                 }
                 typeName = SdfValueTypeNames->UCharArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -761,7 +762,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
                 }
                 typeName = SdfValueTypeNames->IntArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -774,7 +776,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
                 }
                 typeName = SdfValueTypeNames->UIntArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -787,7 +790,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<bool>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
                 }
                 typeName = SdfValueTypeNames->BoolArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -800,7 +804,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<float>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
                 }
                 typeName = SdfValueTypeNames->FloatArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -813,7 +818,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Color3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -826,7 +832,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Vector3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -839,7 +846,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec4f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
                 }
                 typeName = SdfValueTypeNames->Color4fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -852,7 +860,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec2f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
                 }
                 typeName = SdfValueTypeNames->Float2Array;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -1203,8 +1212,11 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         }
     }
     // Identity matrix, nothing to write
-    if (!hasMatrix)
+    if (!hasMatrix) {
+        if (matrices)
+            AiArrayUnmapConst(array);
         return;
+    }
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
     UsdAttribute attr = xformOp.GetAttr();
@@ -1389,11 +1401,13 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
 
             unsigned int numSubsets = AiMax(numShaders, numDisp);
             if (writer.GetAppendFile()) {
-                // If we are in append mode, we want to check if the subsets already exist, in which case 
+                // If we are in append mode, we want to check if the subsets already exist, in which case
                 // we don't want to create them again
                 std::vector<UsdGeomSubset> prevSubsets = UsdGeomSubset::GetGeomSubsets(geom, _tokens->face);
-                if (prevSubsets.size() >= numSubsets)
-                   return; 
+                if (prevSubsets.size() >= numSubsets) {
+                    AiArrayUnmap(shidxsArray);
+                    return;
+                }
             }
             for (unsigned int i = 0; i < numSubsets; ++i) {
                 AtNode* shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
