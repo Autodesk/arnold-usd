@@ -176,7 +176,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
             // Get the node graph referenced by this attribute and assign its terminal node
             // to the arnold options
             SdfPath nodeGraphPath(VtValueGetString(value));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath, renderDelegate);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, TfToken(name)) : nullptr;
             AiNodeSetPtr(options, nameStr, target);
         } else if (nameStr == str::aov_shaders) {
@@ -186,7 +186,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
             std::string aovShadersStr = VtValueGetString(value);
             for (const auto &shader: TfStringTokenize(aovShadersStr)) {
                 SdfPath path(shader);
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path, renderDelegate);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path, _renderDelegate);
                 if (nodeGraph) {                
                     for (int i = 1; ; ++i ) {
                         std::stringstream ss;
@@ -600,7 +600,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
             if (paramName == "input") {
                 SdfPath imagerPath(VtValueGetString(pair.second));
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, renderDelegate);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
                 driverImager = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
                 AiNodeSetPtr(driver, str::input, driverImager);
                 continue;
@@ -622,7 +622,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         if (driverImager == nullptr && imagerIt != namespacedSettings.end()) {
             const VtValue& imagerValue = imagerIt->second;
             SdfPath imagerPath(VtValueGetString(imagerValue));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, renderDelegate);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
             AiNodeSetPtr(driver, str::input, target);
                 
