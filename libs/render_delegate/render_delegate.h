@@ -716,7 +716,7 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
-    bool IsUsingHydraRenderSettings() const;
+    bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -844,6 +844,7 @@ private:
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
     bool _forceIgnoreMotionBlur = false;
+    bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;
