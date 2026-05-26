@@ -225,19 +225,26 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
 
 void* HdArnoldRenderBuffer::Map()
 {
-    std::unique_lock<std::mutex> lock(_mutex);
+    _mutex.lock();
     if (_buffer.empty()) {
+        // Leaving the mutex unlocked here means a subsequent Unmap() must NOT
+        // try to release it. Track the locked-ness in _mapped (guarded by the
+        // mutex while we still hold it) so Unmap doesn't read _buffer.empty()
+        // racily — a concurrent Allocate() can flip that between Map and Unmap
+        // and would otherwise lead us to unlock a mutex we don't hold (UB).
+        _mapped = false;
+        _mutex.unlock();
         return nullptr;
     }
-    lock.release(); // ownership transferred to Unmap()
+    _mapped = true;
     return _buffer.data();
 }
 
 void HdArnoldRenderBuffer::Unmap()
 {
-    if (!_buffer.empty()) {
-        // The mutex was acquired (and ownership released) by Map(); adopt it here so it is unlocked via RAII.
-        std::unique_lock<std::mutex> lock(_mutex, std::adopt_lock);
+    if (_mapped) {
+        _mapped = false;
+        _mutex.unlock();
     }
 }
 
