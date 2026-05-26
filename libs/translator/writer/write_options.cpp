@@ -478,7 +478,15 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                     renderVarPrim.CreateAttribute(_tokens->aovSettingName, SdfValueTypeNames->String), output.layerName);
             }
             if (output.camera) {
-                std::string cameraName = UsdArnoldPrimWriter::GetArnoldNodeName(output.camera, writer);
+                // Use the raw Arnold node name so the value matches what the
+                // node will be called after readback (when primvars:arnold:name
+                // is round-tripped). Arnold core parses this string directly
+                // when resolving the AOV output line, bypassing the reader's
+                // path-to-node remapping map. Fall back to the sanitized USD
+                // path only if the node has no name (#2654).
+                std::string cameraName = AiNodeGetName(output.camera);
+                if (cameraName.empty())
+                    cameraName = UsdArnoldPrimWriter::GetArnoldNodeName(output.camera, writer);
                 writer.SetAttribute(
                     renderVarPrim.CreateAttribute(_tokens->aovSettingCamera, SdfValueTypeNames->String), cameraName);
             }
