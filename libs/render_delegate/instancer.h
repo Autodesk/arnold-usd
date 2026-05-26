@@ -37,6 +37,7 @@
 
 #include "render_delegate.h"
 #include "utils.h"
+#include "shared_arrays.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -117,9 +118,14 @@ protected:
 
 private:
     void ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray);
-    int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
+    // Internal helper: returns combined matrices in double precision for recursive combination.
+    int ComputeSampleMatrixArrayRecursiveInternal(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
+    // Public entry point: outputs VtArray<GfMatrix4f> values (same layout as AtMatrix) for direct
+    // sharing with Arnold, avoiding a separate double-precision allocation at the call site.
+    int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledPrimvarType &sampleArray, const SdfPath& prototypeId);
 
     GfVec2f _samplingInterval = {0.f, 0.f}; //< Keep track of the primvar sampling interval used 
+    ArrayHandler _arrayHandler; ///< Manages shared matrix array buffers to avoid extra copies in Arnold
 
 };
 

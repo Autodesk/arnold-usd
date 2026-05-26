@@ -230,7 +230,7 @@ void HdArnoldVolume::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         auto* volumeShader =
             material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
