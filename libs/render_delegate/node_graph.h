@@ -123,13 +123,13 @@ public:
     ///
     /// @param renderIndex  Pointer to the Hydra render index
     /// @param id  Path of the node graph primitive
-    /// @return Pointer to the requested HdArnoldNodeGraph 
+    /// @return Pointer to the requested HdArnoldNodeGraph
     HDARNOLD_API
-    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id, const HdArnoldRenderDelegate* renderDelegate);
 
     HDARNOLD_API
-    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id);
-
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id, const HdArnoldRenderDelegate* renderDelegate);
+    
     /// Create an Arnold shader node for this node graph. 
     /// We need to store the list of shaders created for this node graph,
     /// so that they can be properly deleted later on

@@ -609,7 +609,8 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
         }
     } else if (matrixNumKeys >= parentMatrixNumKeys) {
         for (unsigned int i = 0; i < matrixNumKeys; ++i) {
-            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
+            const float t = (float)i / AiMax(float(matrixNumKeys - 1), 1.f);
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, t, 0));
             AiArraySetMtx(matrices, i, m);
         }
     } else { // The number of matrices of the parent is greater than the child, it can happen on instances, we resize the current matrix
@@ -623,7 +624,34 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
     }
 }
 
-bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &attr, 
+// Walk the stage and register every ArnoldNodeGraph whose authored
+// primvars:arnold:name differs from its current path. The map allows
+// ReadNodeGraphAttr to resolve a source-file string path (e.g.
+// "/root/mtl/light_shader") to the prim's runtime path
+// ("/light/mtl/light_shader") when the file has been referenced and remapped.
+static void _PopulateNodeGraphNameMap(UsdArnoldReader *reader)
+{
+    if (!reader)
+        return;
+    UsdStageRefPtr stage = reader->GetStage();
+    if (!stage)
+        return;
+    for (const UsdPrim &p : stage->Traverse()) {
+        if (p.GetTypeName() != _tokens->ArnoldNodeGraph)
+            continue;
+        UsdAttribute nameAttr = p.GetAttribute(str::t_primvars_arnold_name);
+        if (!nameAttr || !nameAttr.HasAuthoredValue())
+            continue;
+        VtValue nameValue;
+        if (!nameAttr.Get(&nameValue) || !nameValue.IsHolding<std::string>())
+            continue;
+        const std::string &nameStr = nameValue.UncheckedGet<std::string>();
+        if (!nameStr.empty() && nameStr != p.GetPath().GetString())
+            reader->AddNodeGraphName(nameStr, p.GetPath());
+    }
+}
+
+bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &attr,
                                     const std::string &attrName, UsdArnoldReaderContext &context,
                                     UsdArnoldReaderContext::ConnectionType cType) {
 
@@ -635,11 +663,23 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
         std::string valStr = VtValueGetString(value);
-        
+
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
             UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
+            // If the prim isn't at that exact path it might have been remapped by
+            // a reference/payload composition. Consult the node-graph name map,
+            // built from the authored primvars:arnold:name attributes.
+            if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
+                SdfPath remapped = context.GetReader()->LookupNodeGraphPath(valStr);
+                if (remapped.IsEmpty()) {
+                    _PopulateNodeGraphNameMap(context.GetReader());
+                    remapped = context.GetReader()->LookupNodeGraphPath(valStr);
+                }
+                if (!remapped.IsEmpty())
+                    ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(remapped);
+            }
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                 // We can use a UsdShadeShader schema in order to read connections

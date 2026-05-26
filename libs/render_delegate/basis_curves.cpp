@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "basis_curves.h"
+#include <pxr/base/trace/trace.h>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -86,6 +87,8 @@ HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:sync:HdArnoldBasisCurves"); 
+    TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
  
@@ -203,7 +206,7 @@ void HdArnoldBasisCurves::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
             AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader());
         } else {
