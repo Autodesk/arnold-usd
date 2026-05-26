@@ -78,10 +78,8 @@ public:
                     return false; // node is missing, we don't process the connection
                 vecNodes.push_back(target);
             }
-            if (vecNodes.empty()) {
-                AiNodeResetParameter(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
+            if (vecNodes.empty())
                 return false;
-            }
             AiNodeSetArray(
                 connection.sourceNode, AtString(connection.sourceAttr.c_str()),
                 AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
