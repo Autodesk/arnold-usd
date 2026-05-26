@@ -530,6 +530,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     auto* out = static_cast<float*>(AiArrayMap(arr));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
+    AiArrayUnmap(arr);
     AiNodeSetArray(node, str::radius, arr);
 }
 

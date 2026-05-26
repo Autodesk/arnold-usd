@@ -179,7 +179,7 @@ void readUserData(
     HdArnoldGetPrimvars(delegate, id, dirtyBits, primvars, &interpolations);
     for (const auto &p : primvars) {
         // Get the parameter name, removing the arnold:prefix if any
-        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold_prefix.c_str()) ? p.first.GetString().substr(str::arnold_prefix.length()) : p.first.GetString());
         const auto* pentry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), AtString(paramName.c_str()));
         if (pentry) {
             HdArnoldSetParameter(light, pentry, p.second.value, renderDelegate);
@@ -239,9 +239,9 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id, HdArnoldRend
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
         // If usdlux_version is enabled use a point light
         AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
-        if (AiNodeGetByte(options, str::usdlux_version) != 0) 
+        if (AiNodeGetInt(options, str::usdlux_version) != 0)
             return str::point_light;
-        else 
+        else
             return str::spot_light;
     }
     // Finally, we default to a point light
@@ -592,7 +592,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                     _syncParams = photometricLightSync;
                 }
                 if (_lightLink != _tokens->emptyLink) {
-                    _delegate->DeregisterLightLinking(_shadowLink, this, false);
+                    _delegate->DeregisterLightLinking(_lightLink, this, false);
                     _lightLink = _tokens->emptyLink;
                 }
                 if (_shadowLink != _tokens->emptyLink) {
