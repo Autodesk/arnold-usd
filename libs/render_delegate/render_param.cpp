@@ -251,11 +251,12 @@ void HdArnoldRenderParam::RestartRenderMsgLog()
 
 std::string HdArnoldRenderParam::GetRenderStatusString() const
 {
-    if (cachedLogMutex.try_lock()) {
-        const std::string result = std::string(cachedLogMsg);
-        cachedLogMutex.unlock();
-
-        return result;
+    // Use unique_lock + try_to_lock so the mutex is always released — including
+    // when the std::string copy below throws (e.g., bad_alloc). The previous
+    // manual lock/unlock would deadlock all future callers if the copy threw.
+    std::unique_lock<std::mutex> lock(cachedLogMutex, std::try_to_lock);
+    if (lock.owns_lock()) {
+        return cachedLogMsg;
     }
     return "";
 }

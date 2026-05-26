@@ -977,8 +977,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
                         AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                     } else {
-                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
-                            AtString(sourceName.c_str()));
+                        // Mirror _CreateAOV: use the dedicated readerName and explicitly set the
+                        // `attribute` parameter so user_data_* knows which primvar to read.
+                        // Previously this was created with the bare sourceName as the node name and
+                        // no attribute set, so the reader would emit nothing.
+                        buffer.reader = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData,
+                            readerName);
+                        AiNodeSetStr(buffer.reader, str::attribute, AtString(sourceName.c_str()));
                     }
                     
                     AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
