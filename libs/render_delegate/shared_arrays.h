@@ -151,7 +151,9 @@ struct ArrayHolder : public ArrayOperations<ArrayHolder> {
             const auto& val = unboxed.values[i];
             ptrsToSamples.push_back(val.data());
         }
-        const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
+        if (ptrsToSamples.empty() || unboxed.values[0].empty())
+            return nullptr;
+        const uint32_t nelements = unboxed.values[0].size();
         const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
         const uint32_t nkeys = ptrsToSamples.size();
         const void** samples = ptrsToSamples.data();

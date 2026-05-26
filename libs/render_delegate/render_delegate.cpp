@@ -569,7 +569,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
-        _resourceRegistry.reset(new HdResourceRegistry());
+        _resourceRegistry = std::make_shared<HdResourceRegistry>();
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
@@ -621,7 +621,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
-    _renderParam.reset(new HdArnoldRenderParam(this));
+    _renderParam = std::make_unique<HdArnoldRenderParam>(this);
     // To set the default value.
     _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
@@ -894,12 +894,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
-        std::string cmParam = key.GetString().substr(_tokens->colorManagerNamespace.GetString().length());
+        const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
         AtNode* colorManager = getOrCreateColorManager(this, _options);
-        AtString cmParamStr(cmParam.c_str());
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), 
-            AtString(cmParam.c_str())) != nullptr) {
-            _SetNodeParam(colorManager, TfToken(cmParam), value);
+        AtString cmParamStr(cmParamCStr);
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
+            _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
         }
     } 
     else {
@@ -1491,15 +1490,14 @@ void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* 
         if (!name.IsEmpty() || !links.empty()) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        links.emplace(name, std::vector<HdLight*>{light});
+        links.emplace(name, std::unordered_set<HdLight*>{light});
     } else {
-        if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+        if (it->second.insert(light).second) {
             // We only trigger the change if we are registering a non-empty collection, or there are more than one
             // collections.
             if (!name.IsEmpty() || links.size() > 1) {
                 _lightLinkingChanged.store(true, std::memory_order_release);
             }
-            it->second.push_back(light);
         }
     }
 }
@@ -1515,7 +1513,7 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
         if (!name.IsEmpty() || links.size() > 1) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
+        it->second.erase(light);
         if (it->second.empty()) {
             links.erase(name);
         }
