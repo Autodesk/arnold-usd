@@ -1092,8 +1092,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
         return VtValue(v);
-    } else if (key == str::t_profile_file) {
-        return VtValue(std::string(AiProfileGetFileName().c_str()));
     } else if (key == str::t_background) {
         return VtValue(_background.GetString());
     } else if (key == str::t_atmosphere) {
@@ -1771,7 +1769,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         PathSet newTargets;
         for (const auto &pathAndBits : newTargetsWithBits) {
             newTargets.insert(pathAndBits.first);
-            _dependencyToDirtyBitsMap.insert({{pathAndBits.first, source}, pathAndBits.second});
+            // Overwrite any prior bits for this (target, source) pair so updated
+            // dependencies actually take effect (insert() is a no-op on existing keys).
+            _dependencyToDirtyBitsMap[{pathAndBits.first, source}] = pathAndBits.second;
         }
         // Set the new targets for this source
         _sourceToTargetsMap[source] = newTargets;
