@@ -5,6 +5,8 @@
 
 ### Features
 
+- [usd#2632](https://github.com/Autodesk/arnold-usd/issues/2632) - Support holeIndices in UsdGeomMesh for non-subdivided meshes
+- [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
 - [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
 - [usd#2650](https://github.com/Autodesk/arnold-usd/issues/2650) - Optionally use Hydra Render Settings primitive instead of settings map
 - [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
