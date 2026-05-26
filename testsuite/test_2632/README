@@ -1,0 +1,7 @@
+Support holeIndices in UsdGeomMesh
+
+Fixes #2632
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'scene.usda'}

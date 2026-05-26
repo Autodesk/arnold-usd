@@ -50,9 +50,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 class HdArnoldRenderSettings;
-#endif
 
 /// Utility class for handling Render Passes.
 class HdArnoldRenderPass : public HdRenderPass {
@@ -95,13 +93,11 @@ protected:
     HDARNOLD_API
     void _ClearRenderBuffers();
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #if PXR_VERSION >= 2308
     /// Gets the driving hydra render settings prim.
     ///
     /// @return Pointer to the HdArnoldRenderSettings prim.
     HdArnoldRenderSettings* _GetHydraRenderSettingsPrim() const;
-#endif
 #endif
 
 private:

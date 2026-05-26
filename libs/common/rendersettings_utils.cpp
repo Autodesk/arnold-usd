@@ -89,7 +89,8 @@ ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
         return {"FLOAT", str::aov_write_float, str::user_data_float, true};
     } else if (type == _tokens->_float) {
         return {"FLOAT", str::aov_write_float, str::user_data_float, false};
-    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
+    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->int8 ||
+               type == _tokens->ui8 || type == _tokens->uint8) {
         return {"INT", str::aov_write_int, str::user_data_int, false};
     } else if (type == _tokens->half2 || type == _tokens->color2h) {
         return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, true};
@@ -309,7 +310,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
     }
 
     // Get the proper driver type based on the file extension
-    if (extension == "tif")
+    if (extension == "tif" || extension == "tiff")
         driverType = "driver_tiff";
     else if (extension == "jpg" || extension == "jpeg")
         driverType = "driver_jpeg";

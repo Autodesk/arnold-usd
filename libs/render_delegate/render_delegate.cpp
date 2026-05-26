@@ -68,10 +68,7 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
-
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -112,6 +109,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
     // are used for the conversion of HdFormat to TfToken.
@@ -294,11 +294,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-#else
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-#endif
         return r;
     }
 }
@@ -380,7 +376,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Search paths
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
 #if ARNOLD_VERSION_NUM <= 70403
-        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
 #else
         {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
@@ -726,6 +721,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _ParseDelegateRenderProducts(_value);
         return;
     }
+    if (_key == _tokens->renderSettingsSrc) {
+        if (_value.IsHolding<TfToken>()) {
+            TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
+            _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
+        }
+    }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
 
@@ -879,13 +880,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
-                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                if (commandLine[i] == "-o" && i + 1 < commandLine.size()) {
                     _outputOverride = commandLine[++i];
                     continue;
                 }
                 // husk argument for thread count (#1077)
-                if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
-                        && i < commandLine.size() - 2) {
+                if ((commandLine[i] == "-j" || commandLine[i] == "--threads")
+                        && i + 1 < commandLine.size()) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
@@ -1134,15 +1135,6 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
-// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
-bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-    return true; 
-#else
-    return false;
-#endif
-}
-
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1375,14 +1367,9 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2208
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
-        return new HdArnoldRenderSettings(bprimId);
+        return new HdArnoldRenderSettings(this, bprimId);
     }
-#else
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
 #endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
@@ -1638,8 +1625,11 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
     // For batch renders, only update the scene if the render hasn't started yet,
-    // or if it's finished
-    const int status = AiRenderGetStatus(_renderSession);
+    // or if it's finished. We must use GetRenderSession() rather than _renderSession
+    // directly: when we don't own the universe (procedural / external) _renderSession
+    // is never assigned, and reading it via the accessor pulls the session out of the
+    // universe instead of dereferencing nullptr.
+    const int status = AiRenderGetStatus(GetRenderSession());
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
@@ -1756,9 +1746,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
-                }
-                if (sourceIt->second.empty()) {
-                    _sourceToTargetsMap.erase(sourceIt);
+                    if (sourceIt->second.empty()) {
+                        _sourceToTargetsMap.erase(sourceIt);
+                    }
                 }
                 // This source primitive needs to be updated
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
@@ -2013,7 +2003,9 @@ void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numIn
     std::vector<int> crypto_object_offsets(numInstances);
     for (size_t i = 0; i < numInstances; ++i)
         crypto_object_offsets[i] = i;
-    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+    // .data() is defined for empty vectors; &crypto_object_offsets[0] is UB when numInstances is 0
+    // (which the caller in SetHasCryptomatte can hit for instancers with no instance_matrix yet).
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, crypto_object_offsets.data()));
 }
 
 void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)

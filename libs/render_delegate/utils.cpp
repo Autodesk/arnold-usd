@@ -171,7 +171,10 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
     HdArnoldEnsureSamplesCount(samplingInterval, xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
-        for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
+        // The normal path below explicitly handles nodes[0] outside the loop; the
+        // fallback must do the same or nodes[0] would keep its stale matrix while
+        // every other node was reset to identity.
+        for (auto i = decltype(nodeCount){0}; i < nodeCount; ++i) {
             AiNodeSetArray(nodes[i], str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
             AiNodeResetParameter(nodes[i], str::motion_start);
             AiNodeResetParameter(nodes[i], str::motion_end);
@@ -532,6 +535,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     auto* out = static_cast<float*>(AiArrayMap(arr));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
+    AiArrayUnmap(arr);
     AiNodeSetArray(node, str::radius, arr);
 }
 

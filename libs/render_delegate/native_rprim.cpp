@@ -133,7 +133,7 @@ void HdArnoldNativeRprim::Sync(
                 continue;
 
             // Get the parameter name, removing the arnold:prefix if any
-            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold_prefix.c_str()) ? p.first.GetString().substr(str::arnold_prefix.length()) : p.first.GetString());
             HdArnoldSetConstantPrimvar(node, TfToken(paramName), p.second.role, p.second.value, &_visibilityFlags,
                     nullptr, nullptr, _renderDelegate);
         }

@@ -609,7 +609,8 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
         }
     } else if (matrixNumKeys >= parentMatrixNumKeys) {
         for (unsigned int i = 0; i < matrixNumKeys; ++i) {
-            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
+            const float t = (float)i / AiMax(float(matrixNumKeys - 1), 1.f);
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, t, 0));
             AiArraySetMtx(matrices, i, m);
         }
     } else { // The number of matrices of the parent is greater than the child, it can happen on instances, we resize the current matrix

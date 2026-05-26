@@ -197,9 +197,12 @@ void HdArnoldShape::_SyncInstances(
         // We need to hide the source mesh.
         AiNodeSetByte(_shape, str::visibility, 0);
 
-        // Get the hydra instancer and rebuild the arnold instancer
+        // Get the hydra instancer and rebuild the arnold instancer.
+        // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.
         auto& renderIndex = sceneDelegate->GetRenderIndex();
-        auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        auto* hydraInstancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        if (hydraInstancer == nullptr)
+            return;
         hydraInstancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
 
         const TfToken renderTag = sceneDelegate->GetRenderTag(id);
@@ -226,7 +229,10 @@ void HdArnoldShape::_SyncInstances(
     } else
     {
         auto& renderIndex = sceneDelegate->GetRenderIndex();
-        auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.
+        auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        if (instancer == nullptr)
+            return;
         if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
             instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
         } else {
