@@ -68,10 +68,7 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
-
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -112,6 +109,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
     // are used for the conversion of HdFormat to TfToken.
@@ -294,11 +294,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-#else
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-#endif
         return r;
     }
 }
@@ -726,6 +722,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _ParseDelegateRenderProducts(_value);
         return;
     }
+    if (_key == _tokens->renderSettingsSrc) {
+        if (_value.IsHolding<TfToken>()) {
+            TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
+            _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
+        }
+    }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
 
@@ -1136,15 +1138,6 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
-// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
-bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-    return true; 
-#else
-    return false;
-#endif
-}
-
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1377,14 +1370,9 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2208
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
-        return new HdArnoldRenderSettings(bprimId);
+        return new HdArnoldRenderSettings(this, bprimId);
     }
-#else
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
 #endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
