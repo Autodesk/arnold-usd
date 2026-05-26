@@ -308,7 +308,9 @@ public:
         out.reserve(expected); // upper bound; actual is expected - holeVertexCount
         for (size_t i = 0; i < _isHole.size(); ++i) {
             if (_isHole[i]) continue;
-            out.insert(out.end(), src + _offsets[i], src + _offsets[i + 1]);
+            for (size_t j = _offsets[i]; j < _offsets[i + 1]; ++j) {
+                out.push_back(src[j]);
+            }
         }
         arr = std::move(out);
         return true;
