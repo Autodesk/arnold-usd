@@ -26,6 +26,7 @@
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/base/vt/dictionary.h>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -79,6 +80,17 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     }
     // clear the list of nodes that were exported to usd
     _exportedNodes.clear();
+    _exportedShaders.clear();
+    _requiredShaders.clear();
+    // _authoredFrames / _nearestFrames were only refreshed inside the
+    // "specific time" branch below, so a second Write() with a default time
+    // (after one with a real frame) would keep the previous run's lists.
+    // _UsdArnoldGeomIsNewborn then trips on the stale GetAuthoredFrames(),
+    // and _UsdArnoldGeomSetupNewborn authors visibility=0 at frames that
+    // belong to a different universe. Reset both up front so the default-
+    // time branch behaves like a clean writer.
+    _authoredFrames.clear();
+    _nearestFrames.clear();
 
     // If we've explicitely set a scope, we want to use it as a defaultPrim
     if (_defaultPrim.empty() && !_scope.empty())
@@ -92,9 +104,20 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
 
     AtNode *options = AiUniverseGetOptions(universe);
     if (options) {
-        const float fps = AiNodeGetFlt(options, AtString("fps"));
-        _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
-        _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
+        // Only stamp the layer's fps when Arnold actually has a meaningful
+        // value: older Arnold builds don't define an "fps" parameter at
+        // all (AiNodeGetFlt then returns 0 plus a warning), and a fps of
+        // 0 / negative / NaN turns into a degenerate USD layer that
+        // divides by zero in playback math. Guard on both existence and
+        // a positive finite value before writing.
+        const AtNodeEntry* optionsEntry = AiNodeGetNodeEntry(options);
+        if (optionsEntry && AiNodeEntryLookUpParameter(optionsEntry, AtString("fps"))) {
+            const float fps = AiNodeGetFlt(options, AtString("fps"));
+            if (std::isfinite(fps) && fps > 0.f) {
+                _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
+                _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
+            }
+        }
     }
 
     // If a specific time was requested, we want to check if some data was already written 

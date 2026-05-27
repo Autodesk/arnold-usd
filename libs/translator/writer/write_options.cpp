@@ -156,6 +156,13 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
     nodeGraphTerminal.Set(nodeGraphName);
 
     std::string idSuffix;
+    // For array attributes (aov_shaders) the ":iN" suffix used to be derived
+    // from the loop index directly. That meant a null entry in the source
+    // array — or an entry whose USD prim couldn't be resolved — produced
+    // outputs:aov_shaders:i2 with no i1, and the reader walks i1, i2, … and
+    // stops at the first missing slot. Track our own contiguous counter and
+    // only bump it when an entry is actually authored.
+    int outputIndex = 1;
     // Loop through each of the nodes to write
     for (size_t i = 0; i < nodesArray.size(); ++i) {
         AtNode* target = nodesArray[i];
@@ -166,19 +173,23 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
         std::string hierarchyPath = TfGetPathName(targetName);
         if (hierarchyPath != "/")
             writer.SetStripHierarchy(hierarchyPath);
-        
+
         // Author the target shader, under the nodeGraph scope
         writer.WritePrimitive(target);
         UsdPrim targetPrim = stage->GetPrimAtPath(SdfPath(targetName));
-        
-        // For array attributes (aov_shaders) we need add the index, starting at 1
+        if (!targetPrim) {
+            if (hierarchyPath != "/")
+                writer.SetStripHierarchy(stripHierarchy);
+            continue;
+        }
+
         // e.g. outputs:aov_shaders:i1
         if (attrType == AI_TYPE_ARRAY)
-            idSuffix = TfStringPrintf(":i%d", (int)i+1);
-        
+            idSuffix = TfStringPrintf(":i%d", outputIndex);
+
         // Create the node graph terminal
         TfToken outputGraphAttr(outputPrefix + attrStr + idSuffix);
-        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(outputGraphAttr, 
+        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(outputGraphAttr,
             SdfValueTypeNames->Token, false);
 
         // Ensure the target shader has an output attribute (outputs:out)
@@ -189,6 +200,7 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
         // Eventually restore the previous stripHierarchy
         if (hierarchyPath != "/")
             writer.SetStripHierarchy(stripHierarchy);
+        outputIndex++;
     }
     // Restore the previous scope
     writer.SetScope(prevScope);
@@ -248,6 +260,9 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
         cropRegion[1] = 1.f - cropRegion[1];
         cropRegion[3] = 1.f - cropRegion[3];
 
+        if (cropRegion[1] > cropRegion[3])
+            std::swap(cropRegion[1], cropRegion[3]);
+        
         writer.SetAttribute(renderSettings.CreateDataWindowNDCAttr(), cropRegion);
     }
     _exportedAttrs.insert("region_min_x");
@@ -510,6 +525,14 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                 writer.SetAttribute(
                     renderVarPrim.CreateAttribute(_tokens->aovSettingWidth, SdfValueTypeNames->Float),
                     AiNodeGetFlt(output.filter, str::width));
+                // _exportedAttrs was cleared at the top of this iteration, so
+                // _WriteArnoldParameters below will iterate every filter
+                // parameter including "width" and re-author it as
+                // arnold:<filterType>:width — leaving two competing values
+                // for the same logical setting on the RenderVar. The canonical
+                // form is arnold:width (just authored above), so mark "width"
+                // exported to suppress the duplicate.
+                _exportedAttrs.insert("width");
             }
             // Author the filter attributes with the arnold:{filterType}: prefix
             std::string filterAttrPrefix = std::string("arnold:") + filterType;
