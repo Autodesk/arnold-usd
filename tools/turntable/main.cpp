@@ -19,6 +19,7 @@
 #include <pxr/usd/sdf/assetPath.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/editContext.h>
+#include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/timeCode.h>
 #include <pxr/usd/usd/variantSets.h>
@@ -28,6 +29,7 @@
 #include <pxr/usd/usdGeom/imageable.h>
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/metrics.h>
+#include <pxr/usd/usdGeom/scope.h>
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/xformOp.h>
@@ -562,7 +564,7 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
 
 static UsdShadeMaterial _CreateGroundMaterial(const UsdStageRefPtr &stage)
 {
-    const SdfPath materialPath("/materials/pedestral");
+    const SdfPath materialPath("/__turntable/materials/pedestral");
     UsdShadeMaterial material = UsdShadeMaterial::Define(stage, materialPath);
     UsdShadeShader shader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("previewSurface")));
     shader.CreateIdAttr(VtValue(TfToken("UsdPreviewSurface")));
@@ -793,7 +795,7 @@ static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
         }
     }
 
-    UsdGeomMesh cyclo = UsdGeomMesh::Define(stage, SdfPath("/studioSet/cyclo"));
+    UsdGeomMesh cyclo = UsdGeomMesh::Define(stage, SdfPath("/__turntable/studioSet/cyclo"));
     cyclo.CreatePointsAttr().Set(points);
     cyclo.CreateFaceVertexCountsAttr().Set(faceVertexCounts);
     cyclo.CreateFaceVertexIndicesAttr().Set(faceVertexIndices);
@@ -807,7 +809,7 @@ static bool _CreateCyclo(const UsdStageRefPtr &stage, const AssetBounds &bounds,
 static bool _SetupStudioSets(const UsdStageRefPtr &stage, const std::vector<StudioSetType> &studioSets,
                         const AssetBounds &bounds, const Args &args)
 {
-    UsdGeomXform sceneStudioSet = UsdGeomXform::Define(stage, SdfPath("/studioSet"));
+    UsdGeomXform sceneStudioSet = UsdGeomXform::Define(stage, SdfPath("/__turntable/studioSet"));
     (void)sceneStudioSet;
     const UsdShadeMaterial groundMaterial = _CreateGroundMaterial(stage);
     const std::set<StudioSetType> activeStudioSets(studioSets.begin(), studioSets.end());
@@ -821,7 +823,7 @@ static bool _SetupStudioSets(const UsdStageRefPtr &stage, const std::vector<Stud
         const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
         const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
 
-        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/studioSet/pedestral"));
+        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/__turntable/studioSet/pedestral"));
         ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
         ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
         ground.CreateHeightAttr().Set(thickness);
@@ -840,25 +842,38 @@ static bool _SetupStudioSets(const UsdStageRefPtr &stage, const std::vector<Stud
     if (!_CreateCyclo(stage, bounds, args, groundMaterial)) {
         return false;
     }
-    stage->GetPrimAtPath(SdfPath("/studioSet/cyclo")).SetActive(_IsStudioSetActive(StudioSetType::Cyclo));
+    stage->GetPrimAtPath(SdfPath("/__turntable/studioSet/cyclo")).SetActive(_IsStudioSetActive(StudioSetType::Cyclo));
 
     return true;
 }
 
-// /asset  —  the input asset referenced in
-static void _SetupAsset(const UsdStageRefPtr &stage, const std::string &assetPath,
-                        TurntableMode mode, const AssetBounds &bounds, int frames)
+// Sublayer the input asset into the root layer. Unlike a reference, a sublayer
+// composes the asset's full root hierarchy even when it declares no default prim
+// (and never goes stale against a renamed default prim). It is appended as the
+// weakest sublayer so the turntable prims authored in the root layer win.
+static void _SetupAsset(const UsdStageRefPtr &stage, const std::string &assetPath)
 {
-    UsdGeomXform asset = UsdGeomXform::Define(stage, SdfPath("/asset"));
-    asset.GetPrim().GetReferences().AddReference(assetPath);
+    stage->GetRootLayer()->InsertSubLayerPath(TfAbsPath(assetPath));
+}
+
+// /__turntable  —  scaffolding root grouping the camera, lights and studio sets.
+// The unlikely-to-clash name keeps these prims namespaced away from the
+// sublayered asset's root prims. In object mode the asset stays fixed and this
+// group counter-rotates, which is visually identical to spinning the asset: the
+// camera and lights orbit together, so the lighting sweeps across the asset
+// exactly as it did when the asset itself was rotated.
+static void _SetupTurntableRoot(const UsdStageRefPtr &stage, TurntableMode mode,
+                                const AssetBounds &bounds, int frames)
+{
+    UsdGeomXform root = UsdGeomXform::Define(stage, SdfPath("/__turntable"));
 
     if (mode != TurntableMode::RotateObject) {
         return;
     }
 
-    UsdGeomXformOp matOp = asset.AddTransformOp();
+    UsdGeomXformOp matOp = root.AddTransformOp();
     for (int i = 0; i < frames; ++i) {
-        const double angleDegrees = 360.0 * double(i) / double(frames);
+        const double angleDegrees = -360.0 * double(i) / double(frames);
         matOp.Set(_RotationAroundPivot(bounds.upAxis, angleDegrees, bounds.center), UsdTimeCode(double(i)));
     }
 }
@@ -867,7 +882,7 @@ static void _SetupAsset(const UsdStageRefPtr &stage, const std::string &assetPat
 static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                             const AssetBounds &bounds, TurntableMode mode)
 {
-    const SdfPath cameraPath("/camera");
+    const SdfPath cameraPath("/__turntable/camera");
     const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
     const double nearClip    = std::max(1.0, camDistance * 0.01);
     const double farClip     = camDistance * 10.0;
@@ -994,7 +1009,7 @@ static void _SetupTwoQuadRig(const UsdStageRefPtr &stage, const AssetBounds &bou
     const float leftIntensity = _ComputeQuadLightIntensity((target - leftPos).GetLength(), width, height);
     const float rightIntensity = _ComputeQuadLightIntensity((target - rightPos).GetLength(), width, height);
 
-    UsdLuxRectLight left = UsdLuxRectLight::Define(stage, SdfPath("/lights/key_left"));
+    UsdLuxRectLight left = UsdLuxRectLight::Define(stage, SdfPath("/__turntable/lights/key_left"));
     UsdLuxLightAPI leftApi = UsdLuxLightAPI::Apply(left.GetPrim());
     leftApi.CreateIntensityAttr().Set(leftIntensity);
     leftApi.CreateSpecularAttr().Set(0.0f);
@@ -1002,7 +1017,7 @@ static void _SetupTwoQuadRig(const UsdStageRefPtr &stage, const AssetBounds &bou
     left.CreateHeightAttr().Set(static_cast<float>(height));
     _SetLookAtTransform(UsdGeomXformable(left.GetPrim()), leftPos, target, up);
 
-    UsdLuxRectLight rightLight = UsdLuxRectLight::Define(stage, SdfPath("/lights/key_right"));
+    UsdLuxRectLight rightLight = UsdLuxRectLight::Define(stage, SdfPath("/__turntable/lights/key_right"));
     UsdLuxLightAPI rightApi = UsdLuxLightAPI::Apply(rightLight.GetPrim());
     rightApi.CreateIntensityAttr().Set(rightIntensity);
     rightApi.CreateSpecularAttr().Set(0.0f);
@@ -1011,11 +1026,35 @@ static void _SetupTwoQuadRig(const UsdStageRefPtr &stage, const AssetBounds &bou
     _SetLookAtTransform(UsdGeomXformable(rightLight.GetPrim()), rightPos, target, up);
 }
 
+// Deactivate any lights authored in the sublayered asset so the turntable's own
+// rig is the only illumination. The turntable's lights live under /__turntable
+// and are left untouched. Mesh lights are deactivated too, which also prunes
+// their emissive geometry. Returns the number of asset lights deactivated.
+static int _DeactivateAssetLights(const UsdStageRefPtr &stage)
+{
+    static const SdfPath turntableRoot("/__turntable");
+
+    std::vector<UsdPrim> assetLights;
+    for (const UsdPrim &prim : stage->Traverse()) {
+        if (prim.GetPath().HasPrefix(turntableRoot)) {
+            continue;
+        }
+        if (prim.HasAPI<UsdLuxLightAPI>()) {
+            assetLights.push_back(prim);
+        }
+    }
+
+    for (const UsdPrim &light : assetLights) {
+        light.SetActive(false);
+    }
+    return static_cast<int>(assetLights.size());
+}
+
 static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
                          const AssetBounds &bounds, TurntableMode mode, int frames,
                          const std::vector<LightRig> &rigs, const std::string &selectedRig)
 {
-    UsdGeomXform lights = UsdGeomXform::Define(stage, SdfPath("/lights"));
+    UsdGeomXform lights = UsdGeomXform::Define(stage, SdfPath("/__turntable/lights"));
 
     if (mode == TurntableMode::RotateLight) {
         UsdGeomXformOp matOp = lights.AddTransformOp();
@@ -1038,9 +1077,9 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
         } else {
             // Use white color for white_dome rig, otherwise no color override
             if (rig.name == "white_dome") {
-                _SetupDomeLight(stage, SdfPath("/lights/dome"), rig.hdri, GfVec3f(1.0f, 1.0f, 1.0f));
+                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, GfVec3f(1.0f, 1.0f, 1.0f));
             } else {
-                _SetupDomeLight(stage, SdfPath("/lights/dome"), rig.hdri);
+                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri);
             }
         }
     }
@@ -1052,23 +1091,24 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
 static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
                                   const SdfPath &cameraPath)
 {
-    UsdRenderSettings settings = UsdRenderSettings::Define(stage, SdfPath("/Render/settings"));
+    UsdGeomScope::Define(stage, SdfPath("/Render"));
+    UsdRenderSettings settings = UsdRenderSettings::Define(stage, SdfPath("/Render/TurntableSettings"));
     settings.GetResolutionAttr().Set(GfVec2i(args.width, args.height));
     settings.GetCameraRel().SetTargets({cameraPath});
 
     // Output image sequence: strip the .usda extension and append frame pattern.
     const std::string productPath = TfStringGetBeforeSuffix(args.output) + ".####.exr";
-    UsdRenderProduct product = UsdRenderProduct::Define(stage, SdfPath("/Render/product"));
+    UsdRenderProduct product = UsdRenderProduct::Define(stage, SdfPath("/Render/TurntableProduct"));
     product.GetProductNameAttr().Set(SdfAssetPath(productPath));
     product.GetProductTypeAttr().Set(TfToken("arnold"));
-    settings.GetProductsRel().AddTarget(SdfPath("/Render/product"));
+    settings.GetProductsRel().AddTarget(SdfPath("/Render/TurntableProduct"));
 
     // Beauty AOV (RGBA).
-    UsdRenderVar beauty = UsdRenderVar::Define(stage, SdfPath("/Render/vars/beauty"));
+    UsdRenderVar beauty = UsdRenderVar::Define(stage, SdfPath("/Render/TurntableVars/beauty"));
     beauty.GetDataTypeAttr().Set(TfToken("color4f"));
     beauty.GetSourceNameAttr().Set(std::string("RGBA"));
     beauty.GetSourceTypeAttr().Set(UsdRenderTokens->raw);
-    product.GetOrderedVarsRel().AddTarget(SdfPath("/Render/vars/beauty"));
+    product.GetOrderedVarsRel().AddTarget(SdfPath("/Render/TurntableVars/beauty"));
 }
 
 int Run(const Args &args)
@@ -1176,13 +1216,27 @@ int Run(const Args &args)
     stage->SetTimeCodesPerSecond(24.0);
     UsdGeomSetStageUpAxis(stage, bounds.upAxis);
 
-    _SetupAsset(stage, args.input, mode, bounds, args.frames);
+    _SetupAsset(stage, args.input);
+    _SetupTurntableRoot(stage, mode, bounds, args.frames);
     if (!_SetupStudioSets(stage, studioSets, bounds, args)) {
         return 1;
     }
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
     _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
+
+    // Unless the no_light rig was chosen, deactivate the asset's own lights so the
+    // turntable rig is the only illumination.
+    const LightRig *chosenRig = _FindRigByName(rigs, selectedRigName);
+    int deactivatedAssetLights = 0;
+    if (chosenRig && !chosenRig->isNoLight) {
+        deactivatedAssetLights = _DeactivateAssetLights(stage);
+    }
+
     _SetupRenderSettings(stage, args, cameraPath);
+
+    // Point tools (husk, kick, usdview) at our render settings by path so
+    // discovery does not depend on the prim name or sublayered asset content.
+    stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, std::string("/Render/TurntableSettings"));
 
     stage->GetRootLayer()->Save();
 
@@ -1207,6 +1261,11 @@ int Run(const Args &args)
     printf("  Resolution: %dx%d\n", args.width, args.height);
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light rigs: %zu available\n", rigs.size());
+    if (chosenRig && chosenRig->isNoLight) {
+        printf("  Asset lights: kept (no_light rig)\n");
+    } else {
+        printf("  Asset lights: %d deactivated\n", deactivatedAssetLights);
+    }
     return 0;
 }
 
@@ -1216,7 +1275,7 @@ int main(int argc, char const *argv[])
 {
     CLI::App app(
         "turntable : Generate a USD turntable scene for lookdev.\n"
-        "Creates a USD file with the asset as a reference, an orbiting\n"
+        "Creates a USD file that sublayers the asset, with an orbiting\n"
         "camera, selectable light rigs, and UsdRender settings ready for kick.\n",
         "turntable");
 
