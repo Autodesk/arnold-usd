@@ -81,15 +81,22 @@ TfToken _RemapMtoaAiName(const TfToken& name)
 // primvar value without double-wrapping (unlike HdRetainedTypedSampledDataSource<VtValue>).
 class _VtValueDataSource : public HdSampledDataSource {
 public:
+    // HdSampledDataSourceHandle switched from TfRefPtr to std::shared_ptr in
+    // USD 25.11.  Constructor is public so std::make_shared can reach it.
+    _VtValueDataSource(VtValue v) : _value(std::move(v)) {}
+
     static HdSampledDataSourceHandle New(const VtValue& v)
     {
+#if PXR_VERSION >= 2511
+        return std::make_shared<_VtValueDataSource>(v);
+#else
         return TfCreateRefPtr(new _VtValueDataSource(v));
+#endif
     }
     bool GetContributingSampleTimesForInterval(float, float, std::vector<float>*) override { return false; }
     VtValue GetValue(float) override { return _value; }
 
 private:
-    _VtValueDataSource(VtValue v) : _value(std::move(v)) {}
     VtValue _value;
 };
 
@@ -161,18 +168,34 @@ HdSceneIndexPrim _TranslatePhotometricLight(
     HdSceneIndexPrim result;
     result.primType = HdPrimTypeTokens->sphereLight;
 
-    auto lightDs = HdRetainedContainerDataSource::New(
-        UsdLuxTokens->inputsIntensity,    HdRetainedTypedSampledDataSource<float>::New(intensity),
-        UsdLuxTokens->inputsColor,        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
-        UsdLuxTokens->inputsExposure,     HdRetainedTypedSampledDataSource<float>::New(exposure),
+    // Use the array form of HdRetainedContainerDataSource::New — the fixed-arity
+    // overloads were capped at 3 pairs starting with USD 25.11.
+    const TfToken lightDsNames[] = {
+        UsdLuxTokens->inputsIntensity,
+        UsdLuxTokens->inputsColor,
+        UsdLuxTokens->inputsExposure,
         UsdLuxTokens->inputsShapingIesFile,
-                                          HdRetainedTypedSampledDataSource<SdfAssetPath>::New(SdfAssetPath(iesFile)),
-        UsdLuxTokens->inputsRadius,       HdRetainedTypedSampledDataSource<float>::New(radius),
-        UsdLuxTokens->inputsNormalize,    HdRetainedTypedSampledDataSource<bool>::New(normalize),
-        UsdLuxTokens->inputsDiffuse,      HdRetainedTypedSampledDataSource<float>::New(diffuse),
-        UsdLuxTokens->inputsSpecular,     HdRetainedTypedSampledDataSource<float>::New(specular),
-        UsdLuxTokens->inputsShadowEnable, HdRetainedTypedSampledDataSource<bool>::New(castShadows),
-        UsdLuxTokens->inputsShadowColor,  HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor));
+        UsdLuxTokens->inputsRadius,
+        UsdLuxTokens->inputsNormalize,
+        UsdLuxTokens->inputsDiffuse,
+        UsdLuxTokens->inputsSpecular,
+        UsdLuxTokens->inputsShadowEnable,
+        UsdLuxTokens->inputsShadowColor,
+    };
+    const HdDataSourceBaseHandle lightDsSources[] = {
+        HdRetainedTypedSampledDataSource<float>::New(intensity),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
+        HdRetainedTypedSampledDataSource<float>::New(exposure),
+        HdRetainedTypedSampledDataSource<SdfAssetPath>::New(SdfAssetPath(iesFile)),
+        HdRetainedTypedSampledDataSource<float>::New(radius),
+        HdRetainedTypedSampledDataSource<bool>::New(normalize),
+        HdRetainedTypedSampledDataSource<float>::New(diffuse),
+        HdRetainedTypedSampledDataSource<float>::New(specular),
+        HdRetainedTypedSampledDataSource<bool>::New(castShadows),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor),
+    };
+    auto lightDs = HdRetainedContainerDataSource::New(
+        std::size(lightDsNames), lightDsNames, lightDsSources);
 
     result.dataSource = HdOverlayContainerDataSource::New(lightDs, inputPrim.dataSource);
 
@@ -217,15 +240,28 @@ HdSceneIndexPrim _TranslateSkyDomeLight(
     HdSceneIndexPrim result;
     result.primType = HdPrimTypeTokens->domeLight;
 
+    const TfToken domeLightDsNames[] = {
+        UsdLuxTokens->inputsIntensity,
+        UsdLuxTokens->inputsColor,
+        UsdLuxTokens->inputsExposure,
+        UsdLuxTokens->inputsNormalize,
+        UsdLuxTokens->inputsDiffuse,
+        UsdLuxTokens->inputsSpecular,
+        UsdLuxTokens->inputsShadowEnable,
+        UsdLuxTokens->inputsShadowColor,
+    };
+    const HdDataSourceBaseHandle domeLightDsSources[] = {
+        HdRetainedTypedSampledDataSource<float>::New(intensity),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
+        HdRetainedTypedSampledDataSource<float>::New(exposure),
+        HdRetainedTypedSampledDataSource<bool>::New(normalize),
+        HdRetainedTypedSampledDataSource<float>::New(diffuse),
+        HdRetainedTypedSampledDataSource<float>::New(specular),
+        HdRetainedTypedSampledDataSource<bool>::New(castShadows),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor),
+    };
     auto lightDs = HdRetainedContainerDataSource::New(
-        UsdLuxTokens->inputsIntensity,    HdRetainedTypedSampledDataSource<float>::New(intensity),
-        UsdLuxTokens->inputsColor,        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
-        UsdLuxTokens->inputsExposure,     HdRetainedTypedSampledDataSource<float>::New(exposure),
-        UsdLuxTokens->inputsNormalize,    HdRetainedTypedSampledDataSource<bool>::New(normalize),
-        UsdLuxTokens->inputsDiffuse,      HdRetainedTypedSampledDataSource<float>::New(diffuse),
-        UsdLuxTokens->inputsSpecular,     HdRetainedTypedSampledDataSource<float>::New(specular),
-        UsdLuxTokens->inputsShadowEnable, HdRetainedTypedSampledDataSource<bool>::New(castShadows),
-        UsdLuxTokens->inputsShadowColor,  HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor));
+        std::size(domeLightDsNames), domeLightDsNames, domeLightDsSources);
 
     result.dataSource = HdOverlayContainerDataSource::New(lightDs, inputPrim.dataSource);
 
@@ -279,15 +315,28 @@ HdSceneIndexPrim _TranslateAreaLight(
     else
         return inputPrim;
 
+    const TfToken areaLightDsNames[] = {
+        UsdLuxTokens->inputsIntensity,
+        UsdLuxTokens->inputsColor,
+        UsdLuxTokens->inputsExposure,
+        UsdLuxTokens->inputsNormalize,
+        UsdLuxTokens->inputsDiffuse,
+        UsdLuxTokens->inputsSpecular,
+        UsdLuxTokens->inputsShadowEnable,
+        UsdLuxTokens->inputsShadowColor,
+    };
+    const HdDataSourceBaseHandle areaLightDsSources[] = {
+        HdRetainedTypedSampledDataSource<float>::New(intensity),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
+        HdRetainedTypedSampledDataSource<float>::New(exposure),
+        HdRetainedTypedSampledDataSource<bool>::New(normalize),
+        HdRetainedTypedSampledDataSource<float>::New(diffuse),
+        HdRetainedTypedSampledDataSource<float>::New(specular),
+        HdRetainedTypedSampledDataSource<bool>::New(castShadows),
+        HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor),
+    };
     auto lightDs = HdRetainedContainerDataSource::New(
-        UsdLuxTokens->inputsIntensity,    HdRetainedTypedSampledDataSource<float>::New(intensity),
-        UsdLuxTokens->inputsColor,        HdRetainedTypedSampledDataSource<GfVec3f>::New(color),
-        UsdLuxTokens->inputsExposure,     HdRetainedTypedSampledDataSource<float>::New(exposure),
-        UsdLuxTokens->inputsNormalize,    HdRetainedTypedSampledDataSource<bool>::New(normalize),
-        UsdLuxTokens->inputsDiffuse,      HdRetainedTypedSampledDataSource<float>::New(diffuse),
-        UsdLuxTokens->inputsSpecular,     HdRetainedTypedSampledDataSource<float>::New(specular),
-        UsdLuxTokens->inputsShadowEnable, HdRetainedTypedSampledDataSource<bool>::New(castShadows),
-        UsdLuxTokens->inputsShadowColor,  HdRetainedTypedSampledDataSource<GfVec3f>::New(shadowColor));
+        std::size(areaLightDsNames), areaLightDsNames, areaLightDsSources);
 
     result.dataSource = HdOverlayContainerDataSource::New(lightDs, inputPrim.dataSource);
 
