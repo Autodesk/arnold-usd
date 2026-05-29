@@ -35,6 +35,7 @@
 #include <pxr/usd/usdGeom/xformOp.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/lightAPI.h>
@@ -85,6 +86,7 @@ struct Args {
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
     std::string studioSets;  // Comma-separated studio set names
+    std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
 };
 
 struct LightRig {
@@ -229,6 +231,10 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--studio-set", args.studioSets,
         "Add studio sets to the generated stage. Supported values: pedestral, cyclo (comma-separated)")
         ->option_text("NAME");
+
+    app->add_option("--background-color", args.backgroundColor,
+        "Solid background color as 3 linear floats: R G B (default: no background)")
+        ->expected(3)->option_text("R G B");
 
     app->add_option("input", args.input, "USD asset file to turntable")
         ->option_text("FILE");
@@ -1087,6 +1093,33 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
     rigVariantSet.SetVariantSelection(selectedRig);
 }
 
+// /Render/TurntableBackground  —  ArnoldNodeGraph wrapping a flat-color shader,
+// referenced from the render settings via arnold:global:background. Camera rays
+// that miss geometry return this flat color.
+static void _SetupBackground(const UsdStageRefPtr &stage, const UsdRenderSettings &settings,
+                             const GfVec3f &color)
+{
+    const SdfPath graphPath("/Render/TurntableBackground");
+    UsdPrim graphPrim = stage->DefinePrim(graphPath, TfToken("ArnoldNodeGraph"));
+    // Belt-and-suspenders for the reader's node-graph lookup, which falls back to
+    // matching primvars:arnold:name when the literal path does not resolve.
+    graphPrim.CreateAttribute(TfToken("primvars:arnold:name"), SdfValueTypeNames->String, false)
+        .Set(graphPath.GetString());
+
+    UsdShadeShader flat = UsdShadeShader::Define(stage, graphPath.AppendChild(TfToken("flat")));
+    flat.CreateIdAttr(VtValue(TfToken("arnold:flat")));
+    flat.CreateInput(TfToken("color"), SdfValueTypeNames->Color3f).Set(color);
+    UsdShadeOutput flatOut = flat.CreateOutput(TfToken("out"), SdfValueTypeNames->Token);
+
+    UsdShadeNodeGraph graph(graphPrim);
+    UsdShadeOutput backgroundOut = graph.CreateOutput(TfToken("background"), SdfValueTypeNames->Token);
+    backgroundOut.ConnectToSource(flatOut);
+
+    settings.GetPrim()
+        .CreateAttribute(TfToken("arnold:global:background"), SdfValueTypeNames->String, /*custom=*/true)
+        .Set(graphPath.GetString());
+}
+
 // /Render  —  UsdRenderSettings + product + beauty AOV
 static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
                                   const SdfPath &cameraPath)
@@ -1109,6 +1142,11 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
     beauty.GetSourceNameAttr().Set(std::string("RGBA"));
     beauty.GetSourceTypeAttr().Set(UsdRenderTokens->raw);
     product.GetOrderedVarsRel().AddTarget(SdfPath("/Render/TurntableVars/beauty"));
+
+    if (args.backgroundColor.size() == 3) {
+        _SetupBackground(stage, settings,
+            GfVec3f(args.backgroundColor[0], args.backgroundColor[1], args.backgroundColor[2]));
+    }
 }
 
 int Run(const Args &args)
@@ -1265,6 +1303,10 @@ int Run(const Args &args)
         printf("  Asset lights: kept (no_light rig)\n");
     } else {
         printf("  Asset lights: %d deactivated\n", deactivatedAssetLights);
+    }
+    if (args.backgroundColor.size() == 3) {
+        printf("  Background : %.3g %.3g %.3g\n",
+               args.backgroundColor[0], args.backgroundColor[1], args.backgroundColor[2]);
     }
     return 0;
 }
