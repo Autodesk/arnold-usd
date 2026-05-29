@@ -89,6 +89,7 @@ struct LightRig {
     std::string name;
     std::string hdri;
     bool        isTwoQuad = false;
+    bool        isNoLight = false;
 };
 
 enum class TurntableMode {
@@ -197,7 +198,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("DIR");
 
     app->add_option("--light-rig", args.lightRig,
-        "Light rig to select: auto, one discovered HDRI rig, or two_quad")
+        "Light rig to select: auto, one discovered HDRI rig, two_quad, or no_light")
         ->option_text("NAME");
 
     app->add_flag("--list-light-rigs", args.listLightRigs,
@@ -431,6 +432,11 @@ std::vector<LightRig> _CollectLightRigs(const Args &args)
     twoQuadRig.name = "two_quad";
     twoQuadRig.isTwoQuad = true;
     rigs.push_back(twoQuadRig);
+
+    LightRig noLightRig;
+    noLightRig.name = "no_light";
+    noLightRig.isNoLight = true;
+    rigs.push_back(noLightRig);
     return rigs;
 }
 
@@ -1025,7 +1031,9 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
         rigVariantSet.SetVariantSelection(rig.name);
         UsdEditContext variantContext(rigVariantSet.GetVariantEditContext());
 
-        if (rig.isTwoQuad) {
+        if (rig.isNoLight) {
+            // Empty variant: no lights authored, user provides their own.
+        } else if (rig.isTwoQuad) {
             _SetupTwoQuadRig(stage, bounds, args);
         } else {
             // Use white color for white_dome rig, otherwise no color override
@@ -1122,7 +1130,9 @@ int Run(const Args &args)
     if (args.listLightRigs) {
         printf("Light rigs:\n");
         for (const LightRig &rig : rigs) {
-            if (rig.isTwoQuad) {
+            if (rig.isNoLight) {
+                printf("  %s (no lights)\n", rig.name.c_str());
+            } else if (rig.isTwoQuad) {
                 printf("  %s (two rect lights)\n", rig.name.c_str());
             } else {
                 printf("  %s (%s)\n", rig.name.c_str(), rig.hdri.c_str());
