@@ -717,14 +717,25 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                // Create a user data shader that will read the desired primvar, its type depends on the AOV type
-                std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData, userDataName.c_str());
-                // Link the user_data to the aov_write
-                AiNodeLink(userData, "aov_input", aovShader);
-                // Set the user data (primvar) to read
-                AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
-                // We need to add the aov shaders to options.aov_shaders. 
+                // The reader is normally a user_data_* shader that looks up a primvar.
+                // "st" and "uv" are special: UVs are stored as built-in geometry data in
+                // arnold rather than as user data, so user_data_* would return zeros.
+                // Use a utility shader in uv color_mode instead, matching the Hydra render
+                // pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                std::string readerName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
+                AtNode *reader = nullptr;
+                if (sourceName == "st" || sourceName == "uv") {
+                    reader = context.CreateArnoldNode(str::utility.c_str(), readerName.c_str());
+                    AiNodeSetStr(reader, str::color_mode, str::uv);
+                    AiNodeSetStr(reader, str::shade_mode, str::flat);
+                } else {
+                    reader = context.CreateArnoldNode(arnoldTypes.userData, readerName.c_str());
+                    // Set the user data (primvar) to read
+                    AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                }
+                // Link the reader to the aov_write
+                AiNodeLink(reader, "aov_input", aovShader);
+                // We need to add the aov shaders to options.aov_shaders.
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);
             }

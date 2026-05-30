@@ -808,7 +808,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 aovName = layerName;
                 lpes.push_back(aovName + " " + sourceName);
             } else if (sourceType == UsdRenderTokens->primvar) {
-                // Primvar AOV - requires aov_write and user_data shaders
+                // Primvar AOV - requires aov_write and a reader shader
                 std::string aovShaderName;
                 aovShaderName.reserve(varName.size() + 7);
                 aovShaderName = varName;
@@ -819,16 +819,32 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                    std::string userDataName;
-                    userDataName.reserve(varName.size() + 10);
-                    userDataName = varName;
-                    userDataName += "_user_data";
-                    AtNode* userData =
-                        _renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(userDataName.c_str()));
+                    std::string readerName;
+                    readerName.reserve(varName.size() + 10);
+                    readerName = varName;
+                    readerName += "_user_data";
 
-                    if (userData) {
-                        AiNodeLink(userData, "aov_input", aovShader);
-                        AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
+                    // "st" and "uv" are special: UVs are stored as built-in geometry data
+                    // in arnold rather than user data, so user_data_* returns zeros.
+                    // Use a utility shader in uv color_mode instead, matching the Hydra
+                    // render pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                    
+                    AtNode* reader = nullptr;
+                    if (sourceName == "st" || sourceName == "uv") {
+                        reader = _renderDelegate->CreateArnoldNode(str::utility, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::color_mode, str::uv);
+                            AiNodeSetStr(reader, str::shade_mode, str::flat);
+                        }
+                    } else {
+                        reader = _renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                        }
+                    }
+
+                    if (reader) {
+                        AiNodeLink(reader, "aov_input", aovShader);
                         aovShaders.push_back(aovShader);
                     }
                 }
