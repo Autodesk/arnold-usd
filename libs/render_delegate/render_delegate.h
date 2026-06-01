@@ -650,6 +650,23 @@ public:
         _nodeNames[name] = node;
     }
 
+    // Register an ArnoldNodeGraph's original (source-file) name so that lookups
+    // by that name still resolve when the file is referenced and the runtime
+    // SdfPath is remapped. See HdArnoldNodeGraph::Sync, which reads
+    // primvars:arnold:name on the prim.
+    inline void AddNodeGraphName(const std::string &name, const SdfPath &path)
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        _nodeGraphNames[name] = path;
+    }
+
+    inline SdfPath LookupNodeGraphPath(const std::string &name) const
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        auto it = _nodeGraphNames.find(name);
+        return it == _nodeGraphNames.end() ? SdfPath() : it->second;
+    }
+
     /// Method used to lookup a node in the current universe.
     /// This method should always be called, instead of explicit AiNodeLookUpByName
     inline 
@@ -710,8 +727,8 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
-    bool IsUsingHydraRenderSettings() const;
     bool IsFastViewport() const {return _fastViewport;}
+    bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -732,7 +749,7 @@ private:
     /// Pointer to the shared Resource Registry.
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
-    using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+    using LightLinkingMap = std::unordered_map<TfToken, std::unordered_set<HdLight*>, TfToken::HashFunctor>;
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     
@@ -839,9 +856,14 @@ private:
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
     bool _forceIgnoreMotionBlur = false;
+    bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     bool _fastViewport = false;
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+
+    mutable std::mutex _nodeGraphNamesMutex;
+    std::unordered_map<std::string, SdfPath> _nodeGraphNames;
+
 
     // We store a list of functions that must be run once all the prims are synced
     // They will be ran in HasPendingChanges

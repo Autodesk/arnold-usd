@@ -210,24 +210,12 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     if (UpdateSamplingInterval(renderParam->GetShutterRange()))
         ResampleInstancePrimvars();
     
-    HdArnoldSampledMatrixArrayType sampleArray;
+    HdArnoldSampledPrimvarType sampleArray;
     int instanceCount = ComputeSampleMatrixArrayRecursive(renderDelegate, sampleArray, prototypeId);
-    if (instanceCount == 0)
+    if (instanceCount == 0 || sampleArray.count == 0)
         return false;
 
-    AtArray* matrices = AiArrayAllocate(instanceCount, sampleArray.count, AI_TYPE_MATRIX);
-    std::vector<AtMatrix> matrixVector;
-    for (size_t n = 0; n < sampleArray.count; ++n) {
-        const auto& instanceMatrices = sampleArray.values[n];
-        matrixVector.clear();
-        matrixVector.reserve(instanceMatrices.size());
-        for (const auto& instanceMatrix : instanceMatrices) {
-            AtMatrix arnoldMatrix;
-            ConvertValue(arnoldMatrix, instanceMatrix);
-            matrixVector.push_back(arnoldMatrix);
-        }
-        AiArraySetKey(matrices, n, matrixVector.data());
-    }
+    AtArray* matrices = _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfMatrix4f>>(sampleArray);
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
@@ -308,7 +296,7 @@ void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 
     VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
     if (!visVal.IsEmpty()) {
-        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+        AiNodeSetByte(node, str::visibility, static_cast<uint8_t>(VtValueGetInt(visVal)));
     } else {
         bool assignVisibility = false;
         HdArnoldRayFlags rayFlags{AI_RAY_ALL};
@@ -376,15 +364,23 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
 
 
     // By default _deformKeys will take over sample counts
-    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) { 
+    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) {
         sampleArray.Resize(1);
         sampleArray.times[0] = 0.0;
     } else if (_deformKeys > 1 /*&& _deformKeys > sampleArray.times.size()*/) {
-        const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
-        const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
-        sampleArray.Resize(_deformKeys);
-        for(int i = 0; i < _deformKeys; ++i) {
-            sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);   
+        // If none of the _AccumulateSampleTimes calls above pushed any sample times into
+        // sampleArray, min/max_element would return end() and we'd UB on dereference.
+        // Fall back to a single key at t=0 in that case.
+        if (sampleArray.times.empty()) {
+            sampleArray.Resize(1);
+            sampleArray.times[0] = 0.0;
+        } else {
+            const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
+            const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
+            sampleArray.Resize(_deformKeys);
+            for(int i = 0; i < _deformKeys; ++i) {
+                sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);
+            }
         }
     }
     const auto numSamples = sampleArray.count;
@@ -472,7 +468,7 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
     }
 }
 
-int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId)
+int HdArnoldInstancer::ComputeSampleMatrixArrayRecursiveInternal(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId)
 {
     const auto parentId = GetParentId();
     HdArnoldSampledMatrixArrayType parentSampleArray;
@@ -480,12 +476,12 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
     if (!parentId.IsEmpty()) {
         auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
         if (parentInstancer) {
-            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursive(renderDelegate, parentSampleArray, GetId());
+            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursiveInternal(renderDelegate, parentSampleArray, GetId());
             if (parentInstanceCount == 0)
                 return 0;
         }
     }
-    
+
     const SdfPath& instancerId = GetId();
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     const int instanceCount = static_cast<int>(instanceIndices.size());
@@ -500,13 +496,13 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
 
     // Use the sample times that have the biggest amount of keys. The time samples
     // should be regular so we don't need to consider the union of both time steps.
-    auto samples = sampleArray.count >= parentSampleArray.count ? 
+    const auto & samples = sampleArray.count >= parentSampleArray.count ?
         sampleArray : parentSampleArray;
     const size_t numSamples = samples.count;
     if (numSamples == 0) {
         return 0;
     }
-    auto &sampleTimes = samples.times;
+    const auto &sampleTimes = samples.times;
     const int totalInstanceCount = parentInstanceCount * instanceCount;
     HdArnoldSampledMatrixArrayType outArray;
     outArray.Resize(static_cast<int>(numSamples));
@@ -526,6 +522,33 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
     }
     sampleArray = std::move(outArray);
     return totalInstanceCount;
+}
+
+int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledPrimvarType &sampleArray, const SdfPath& prototypeId)
+{
+    // Compute combined matrices in double precision (needed for accurate matrix multiplication
+    // across nesting levels), then convert to GfMatrix4f for the output. GfMatrix4f has the same
+    // memory layout as AtMatrix so the resulting VtArray can be shared directly with Arnold.
+    HdArnoldSampledMatrixArrayType doubleSamples;
+    const int instanceCount = ComputeSampleMatrixArrayRecursiveInternal(renderDelegate, doubleSamples, prototypeId);
+    if (instanceCount == 0)
+        return 0;
+
+    sampleArray.Resize(doubleSamples.count);
+    sampleArray.count = doubleSamples.count;
+    for (size_t n = 0; n < doubleSamples.count; ++n) {
+        sampleArray.times[n] = doubleSamples.times[n];
+        const auto& src = doubleSamples.values[n];
+        VtArray<GfMatrix4f> dst(src.size());
+        for (size_t i = 0; i < src.size(); ++i) {
+            dst[i] = GfMatrix4f(src[i]);
+        }
+        // Release the double-precision sample immediately after conversion to avoid
+        // holding both representations in memory simultaneously.
+        doubleSamples.values[n] = VtMatrix4dArray();
+        sampleArray.values[n] = VtValue(std::move(dst));
+    }
+    return instanceCount;
 }
 
 void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 

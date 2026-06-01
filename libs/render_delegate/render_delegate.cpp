@@ -71,10 +71,7 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
-
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -115,6 +112,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
     // are used for the conversion of HdFormat to TfToken.
@@ -297,11 +297,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-#else
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-#endif
         return r;
     }
 }
@@ -383,7 +379,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Search paths
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
 #if ARNOLD_VERSION_NUM <= 70403
-        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
 #else
         {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
@@ -578,7 +573,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
-        _resourceRegistry.reset(new HdResourceRegistry());
+        _resourceRegistry = std::make_shared<HdResourceRegistry>();
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
@@ -630,7 +625,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
-    _renderParam.reset(new HdArnoldRenderParam(this));
+    _renderParam = std::make_unique<HdArnoldRenderParam>(this);
     // To set the default value.
     _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
@@ -714,11 +709,27 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         // We want to restart a new render in that case.
         _renderParam->Restart();
     }
+    
+    // See the HDK hydra docs for more details
+    //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
+    if (_key == str::t_houdiniCopTextureChanged) {
+        // COP textures need updating, flush the texture cache to trigger a refresh
+        // of all the image_cop nodes
+        _renderParam->Pause();
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        _renderParam->Restart();
+    }
 
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
         return;
+    }
+    if (_key == _tokens->renderSettingsSrc) {
+        if (_value.IsHolding<TfToken>()) {
+            TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
+            _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
+        }
     }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
@@ -890,13 +901,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
-                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                if (commandLine[i] == "-o" && i + 1 < commandLine.size()) {
                     _outputOverride = commandLine[++i];
                     continue;
                 }
                 // husk argument for thread count (#1077)
-                if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
-                        && i < commandLine.size() - 2) {
+                if ((commandLine[i] == "-j" || commandLine[i] == "--threads")
+                        && i + 1 < commandLine.size()) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
@@ -904,12 +915,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
-        std::string cmParam = key.GetString().substr(_tokens->colorManagerNamespace.GetString().length());
+        const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
         AtNode* colorManager = getOrCreateColorManager(this, _options);
-        AtString cmParamStr(cmParam.c_str());
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), 
-            AtString(cmParam.c_str())) != nullptr) {
-            _SetNodeParam(colorManager, TfToken(cmParam), value);
+        AtString cmParamStr(cmParamCStr);
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
+            _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
         }
     } 
     else {
@@ -1103,8 +1113,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
         return VtValue(v);
-    } else if (key == str::t_profile_file) {
-        return VtValue(std::string(AiProfileGetFileName().c_str()));
     } else if (key == str::t_background) {
         return VtValue(_background.GetString());
     } else if (key == str::t_atmosphere) {
@@ -1145,15 +1153,6 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         ret.emplace_back(std::move(desc));
     }
     return ret;
-}
-
-// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
-bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-    return true; 
-#else
-    return false;
-#endif
 }
 
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
@@ -1388,14 +1387,9 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2208
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
-        return new HdArnoldRenderSettings(bprimId);
+        return new HdArnoldRenderSettings(this, bprimId);
     }
-#else
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
 #endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
@@ -1515,15 +1509,14 @@ void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* 
         if (!name.IsEmpty() || !links.empty()) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        links.emplace(name, std::vector<HdLight*>{light});
+        links.emplace(name, std::unordered_set<HdLight*>{light});
     } else {
-        if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+        if (it->second.insert(light).second) {
             // We only trigger the change if we are registering a non-empty collection, or there are more than one
             // collections.
             if (!name.IsEmpty() || links.size() > 1) {
                 _lightLinkingChanged.store(true, std::memory_order_release);
             }
-            it->second.push_back(light);
         }
     }
 }
@@ -1539,7 +1532,7 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
         if (!name.IsEmpty() || links.size() > 1) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
+        it->second.erase(light);
         if (it->second.empty()) {
             links.erase(name);
         }
@@ -1651,8 +1644,11 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
     // For batch renders, only update the scene if the render hasn't started yet,
-    // or if it's finished
-    const int status = AiRenderGetStatus(_renderSession);
+    // or if it's finished. We must use GetRenderSession() rather than _renderSession
+    // directly: when we don't own the universe (procedural / external) _renderSession
+    // is never assigned, and reading it via the accessor pulls the session out of the
+    // universe instead of dereferencing nullptr.
+    const int status = AiRenderGetStatus(GetRenderSession());
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
@@ -1769,9 +1765,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
-                }
-                if (sourceIt->second.empty()) {
-                    _sourceToTargetsMap.erase(sourceIt);
+                    if (sourceIt->second.empty()) {
+                        _sourceToTargetsMap.erase(sourceIt);
+                    }
                 }
                 // This source primitive needs to be updated
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
@@ -1794,7 +1790,9 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         PathSet newTargets;
         for (const auto &pathAndBits : newTargetsWithBits) {
             newTargets.insert(pathAndBits.first);
-            _dependencyToDirtyBitsMap.insert({{pathAndBits.first, source}, pathAndBits.second});
+            // Overwrite any prior bits for this (target, source) pair so updated
+            // dependencies actually take effect (insert() is a no-op on existing keys).
+            _dependencyToDirtyBitsMap[{pathAndBits.first, source}] = pathAndBits.second;
         }
         // Set the new targets for this source
         _sourceToTargetsMap[source] = newTargets;
@@ -1955,15 +1953,15 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_background);
     return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere, this);
     if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_atmosphere);
     return nullptr;
@@ -1973,7 +1971,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     std::vector<AtNode *> nodes;
     for (const auto &materialPath: _aov_shaders) {
-        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath, this);
         if (nodeGraph) {
             const auto &terminals = nodeGraph->GetCachedTerminals(_tokens->aovShadersArray);
             std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
@@ -1984,7 +1982,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager, this);
     if (nodeGraph) {
         // Indicate to this node graph that it is an imager graph, so that 
         // it doesn't interrupt / restart the render when a node changes
@@ -2004,8 +2002,8 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
 
 AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_shader_override);
     return nullptr;
 }
@@ -2038,7 +2036,9 @@ void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numIn
     std::vector<int> crypto_object_offsets(numInstances);
     for (size_t i = 0; i < numInstances; ++i)
         crypto_object_offsets[i] = i;
-    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+    // .data() is defined for empty vectors; &crypto_object_offsets[0] is UB when numInstances is 0
+    // (which the caller in SetHasCryptomatte can hit for instancers with no instance_matrix yet).
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, crypto_object_offsets.data()));
 }
 
 void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)

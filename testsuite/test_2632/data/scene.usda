@@ -1,0 +1,114 @@
+#usda 1.0
+(
+    defaultPrim = "mesh"
+    framesPerSecond = 24
+    metersPerUnit = 0.01
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "root"
+{
+    def Xform "Light"
+    {
+        float3 xformOp:rotateXYZ = (37.26105, 3.1637092, 106.936325)
+        float3 xformOp:scale = (1, 0.99999994, 1)
+        double3 xformOp:translate = (4.076245307922363, 1.0054539442062378, 5.903861999511719)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        def SphereLight "Light"
+        {
+            float3[] extent = [(-0.1, -0.1, -0.1), (0.1, 0.1, 0.1)]
+            color3f inputs:color = (1, 1, 1)
+            float inputs:diffuse = 1
+            float inputs:exposure = 0
+            float inputs:intensity = 318.30988
+            bool inputs:normalize = 1
+            float inputs:radius = 0.1
+            float inputs:specular = 1
+        }
+    }
+
+    def Xform "Camera"
+    {
+        custom string userProperties:blender:object_name = "Camera"
+        float3 xformOp:rotateXYZ = (63.559296, 2.2983238e-7, 46.691944)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (7.358891487121582, -6.925790786743164, 4.958309173583984)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+        def Camera "Camera"
+        {
+            float4[] clippingPlanes.timeSamples = {
+                1: [],
+            }
+            float2 clippingRange = (0.1, 100)
+            float2 clippingRange.timeSamples = {
+                1: (0.1, 100),
+            }
+            float focalLength = 0.5
+            float focalLength.timeSamples = {
+                1: 0.5,
+            }
+            float focusDistance.timeSamples = {
+                1: 11.104272,
+            }
+            float fStop.timeSamples = {
+                1: 0,
+            }
+            float horizontalAperture = 0.36
+            float horizontalAperture.timeSamples = {
+                1: 0.36,
+            }
+            float horizontalApertureOffset = 0
+            float horizontalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            token projection = "perspective"
+            token projection.timeSamples = {
+                1: "perspective",
+            }
+            float verticalAperture = 0.2025
+            float verticalAperture.timeSamples = {
+                1: 0.2025,
+            }
+            float verticalApertureOffset = 0
+            float verticalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            matrix4d xformOp:transform.timeSamples = {
+                1: ( (0.9945218953682822, -0.04654353190192557, 0.09359433354201305, 0), (0.08076188510256035, 0.9105928607612667, -0.40533709408995955, 0), (-0.06636051196125604, 0.41067546988918924, 0.909363481168852, 0), (-1.1441716157600632, 4.249561497887273, -2.2001382729180516, 0.9999999999999998) ),
+            }
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Xform "Plane"
+    {
+        custom string userProperties:blender:object_name = "Plane"
+
+        def Mesh "Mesh" (
+            active = true
+        )
+        {
+            float3[] extent = [(-1, -1, 0), (1, 1, 0)]
+            int[] faceVertexCounts = [4, 4, 4, 4]
+            int[] faceVertexIndices = [8, 6, 3, 7, 4, 8, 7, 2, 0, 5, 8, 4, 5, 1, 6, 8]
+            int[] holeIndices.timeSamples = {
+                1: [0],
+            }
+            normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)] (
+                interpolation = "faceVarying"
+            )
+            point3f[] points = [(-1, -1, 0), (1, -1, 0), (-1, 1, 0), (1, 1, 0), (-1, 0, 0), (0, -1, 0), (1, 0, 0), (0, 1, 0), (0, 0, 0)]
+            bool[] primvars:sharp_face = [1, 1, 1, 1] (
+                interpolation = "uniform"
+            )
+            texCoord2f[] primvars:st = [(0.5, 0.5), (1, 0.5), (1, 1), (0.5, 1), (0, 0.5), (0.5, 0.5), (0.5, 1), (0, 1), (0, 0), (0.5, 0), (0.5, 0.5), (0, 0.5), (0.5, 0), (1, 0), (1, 0.5), (0.5, 0.5)] (
+                interpolation = "faceVarying"
+            )
+            uniform token subdivisionScheme = "none"
+        }
+    }
+}
+

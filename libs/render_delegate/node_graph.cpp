@@ -148,17 +148,37 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
 
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
-{    
+{
     AiProfileBlock("hydra_proc:HdArnoldNodeGraph:Sync");
     TRACE_FUNCTION();
     if (!_renderDelegate->CanUpdateScene())
         return;
- 
+
     const auto id = GetId();
+
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
         const VtValue value = sceneDelegate->GetMaterialResource(GetId());
         bool nodeGraphChanged = false;
+
+        // If primvars:arnold:name is authored and differs from the prim's current
+        // path, register the original name so lookups by that string still resolve
+        // when the file is referenced and the runtime path was remapped under a
+        // different namespace. The token differs by mode: Hydra 1 sees the full
+        // attribute name (primvars:arnold:name), Hydra 2 exposes primvars stripped
+        // of the "primvars:" prefix (arnold:name). We only do this the first time 
+        // this primitive is Synced, which is why we check if nodes were already created
+        if (_nodes.empty()) {
+            VtValue nameValue = sceneDelegate->Get(id, str::t_primvars_arnold_name);
+            if (nameValue.IsEmpty())
+                nameValue = sceneDelegate->Get(id, str::t_arnold_name);
+            if (nameValue.IsHolding<std::string>()) {
+                const std::string &nameStr = nameValue.UncheckedGet<std::string>();
+                if (!nameStr.empty() && nameStr != id.GetString()) {
+                    _renderDelegate->AddNodeGraphName(nameStr, id);
+                }
+            }
+        }
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             // Do not interrupt the render if this is an imager graph, as imagers
@@ -508,21 +528,27 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     return terminalNode;
 }
 
-HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id)
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id, const HdArnoldRenderDelegate* renderDelegate)
 {
-    if (id.IsEmpty()) {
-        return nullptr;
-    }
     // Since and HdArnoldNodeGraph is used for Material and ArnoldNodeGraph, we need to query both.
     HdArnoldNodeGraph *material = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
     HdArnoldNodeGraph *arnoldNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(str::t_ArnoldNodeGraph, id));
-    return arnoldNodeGraph ? arnoldNodeGraph : material;
+    HdArnoldNodeGraph *nodeGraph = arnoldNodeGraph ? arnoldNodeGraph : material;
+
+    if (nodeGraph || renderDelegate == nullptr || id.IsEmpty())
+        return nodeGraph;
+    // Fall back to the render delegate's name map: an ArnoldNodeGraph may have
+    // been authored with a source-file path that has since been remapped.
+    const SdfPath remapped = renderDelegate->LookupNodeGraphPath(id.GetString());
+    if (remapped.IsEmpty() || remapped == id)
+        return nullptr;
+    return GetNodeGraph(renderIndex, remapped, nullptr);
 }
 
-HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id)
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id, const HdArnoldRenderDelegate* renderDelegate)
 {
     if (renderIndex) {
-        return GetNodeGraph(*renderIndex, id);
+        return GetNodeGraph(*renderIndex, id, renderDelegate);
     }
     return nullptr;
 }

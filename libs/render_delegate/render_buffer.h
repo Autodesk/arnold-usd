@@ -168,6 +168,7 @@ private:
     HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
     TfToken _aovName;                                ///< AOV name passed to AiQueryAOV.
+    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
 };
 
 using HdArnoldRenderBufferStorage =

@@ -230,7 +230,7 @@ void HdArnoldVolume::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         auto* volumeShader =
             material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
@@ -300,6 +300,9 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
 {
     std::unordered_map<std::string, std::vector<VdbFieldData>> openvdb_fields;
     std::unordered_map<std::string, std::vector<VdbFieldData>> houvdb_fields;
+    // Per-path sets to detect duplicate field names in O(1) instead of O(n) linear scan
+    std::unordered_map<std::string, std::unordered_set<TfToken, TfToken::HashFunctor>> openvdb_seen;
+    std::unordered_map<std::string, std::unordered_set<TfToken, TfToken::HashFunctor>> houvdb_seen;
 
     const auto fieldDescriptors = sceneDelegate->GetVolumeFieldDescriptors(id);
     for (const auto& field : fieldDescriptors) {
@@ -333,19 +336,14 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             // op: paths denote a live reference to a VDB in the Houdini session
             if (TfStringStartsWith(path, "op:")) {
                 auto& fields = houvdb_fields[path];
-
-                if (std::find_if(fields.begin(), fields.end(), [&](const VdbFieldData& data) {
-                        return data.field == fieldName;
-                    }) == fields.end()) {
+                if (houvdb_seen[path].insert(fieldName).second) {
                     fields.push_back({fieldName, fieldIndex});
                 }
                 continue;
             }
 
             auto& fields = openvdb_fields[path];
-            if (std::find_if(fields.begin(), fields.end(), [&](const VdbFieldData& data) {
-                    return data.field == fieldName;
-                }) == fields.end()) {
+            if (openvdb_seen[path].insert(fieldName).second) {
                 fields.push_back({fieldName, fieldIndex});
             }
         }
@@ -355,7 +353,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         std::remove_if(
             _volumes.begin(), _volumes.end(),
             [&openvdb_fields](HdArnoldShape* shape) -> bool {
-                if (openvdb_fields.find(std::string(AiNodeGetStr(shape->GetShape(), str::filename).c_str())) ==
+                if (openvdb_fields.find(AiNodeGetStr(shape->GetShape(), str::filename).c_str()) ==
                     openvdb_fields.end()) {
                     delete shape;
                     return true;

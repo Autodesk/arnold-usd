@@ -558,15 +558,23 @@ void* HdArnoldRenderBuffer::Map()
 {
     _mutex.lock();
     if (_buffer.empty()) {
+        // Leaving the mutex unlocked here means a subsequent Unmap() must NOT
+        // try to release it. Track the locked-ness in _mapped (guarded by the
+        // mutex while we still hold it) so Unmap doesn't read _buffer.empty()
+        // racily — a concurrent Allocate() can flip that between Map and Unmap
+        // and would otherwise lead us to unlock a mutex we don't hold (UB).
+        _mapped = false;
         _mutex.unlock();
         return nullptr;
     }
+    _mapped = true;
     return _buffer.data();
 }
 
 void HdArnoldRenderBuffer::Unmap()
 {
-    if (!_buffer.empty()) {
+    if (_mapped) {
+        _mapped = false;
         _mutex.unlock();
     }
 }

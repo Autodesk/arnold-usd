@@ -108,7 +108,7 @@ void HdArnoldNativeRprim::Sync(
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
                 AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader());
@@ -133,7 +133,7 @@ void HdArnoldNativeRprim::Sync(
                 continue;
 
             // Get the parameter name, removing the arnold:prefix if any
-            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold_prefix.c_str()) ? p.first.GetString().substr(str::arnold_prefix.length()) : p.first.GetString());
             HdArnoldSetConstantPrimvar(node, TfToken(paramName), p.second.role, p.second.value, &_visibilityFlags,
                     nullptr, nullptr, _renderDelegate);
         }

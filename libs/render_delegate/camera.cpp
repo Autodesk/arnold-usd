@@ -54,7 +54,7 @@ AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRend
         return nullptr;
 
     SdfPath shaderPath(shaderStr.c_str());
-    auto* shaderNodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), shaderPath);
+    auto* shaderNodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), shaderPath, _delegate);
     HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
     pathSet.insert({shaderPath, HdChangeTracker::DirtyMaterialId});
     _delegate->TrackDependencies(GetId(), pathSet);
@@ -67,12 +67,16 @@ AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRend
 
 
 GfVec4f HdArnoldCamera::GetScreenWindowFromOrthoProjection(const GfMatrix4d &orthoProj) {
-    if (orthoProj[0][0] == 0.0) {
+    if (orthoProj[0][0] == 0.0 || orthoProj[1][1] == 0.0) {
         return {-1.f, 1.f, -1.f, 1.f};
     }
+    // The ortho projection encodes the X half-extent in M[0][0] (= 2/(r-l)) and the Y
+    // half-extent in M[1][1] (= 2/(t-b)); using unitX for the Y axis produced wrong
+    // screen window mins/maxes for any non-square ortho projection.
     const float unitX = 1.f / orthoProj[0][0];
-    return { static_cast<float>(-unitX - orthoProj[3][0] * unitX), static_cast<float>(-unitX - orthoProj[3][1] * unitX), 
-             static_cast<float>( unitX - orthoProj[3][0] * unitX), static_cast<float>( unitX - orthoProj[3][1] * unitX) };
+    const float unitY = 1.f / orthoProj[1][1];
+    return { static_cast<float>(-unitX - orthoProj[3][0] * unitX), static_cast<float>(-unitY - orthoProj[3][1] * unitY),
+             static_cast<float>( unitX - orthoProj[3][0] * unitX), static_cast<float>( unitY - orthoProj[3][1] * unitY) };
 }
 
 void HdArnoldCamera::SetClippingPlanes(HdSceneDelegate* sceneDelegate) {
@@ -183,11 +187,15 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
 
     // TODO(pal): Investigate how horizontalAperture, verticalAperture, horizontalApertureOffset and
     //  verticalApertureOffset should be used.
-    float horizontalApertureOffset = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalApertureOffset).Get<float>();
-    float verticalApertureOffset = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalApertureOffset).Get<float>();
-    const float horizontalAperture = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalAperture).Get<float>();
-    const float verticalAperture = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalAperture).Get<float>();
-    if (horizontalApertureOffset!=0.f || verticalApertureOffset!=0.f) {
+    // USD camera attributes can be authored as float or double; use the getFloat helper above so we
+    // don't silently get 0.f (and a Tf coding error) for the double case. If the apertures come back
+    // as 0 we'd otherwise divide by zero below and feed NaN/Inf into the screen window.
+    float horizontalApertureOffset = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalApertureOffset), 0.0f);
+    float verticalApertureOffset = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalApertureOffset), 0.0f);
+    const float horizontalAperture = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalAperture), 0.0f);
+    const float verticalAperture = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalAperture), 0.0f);
+    if ((horizontalApertureOffset != 0.f || verticalApertureOffset != 0.f) &&
+        horizontalAperture > AI_EPSILON && verticalAperture > AI_EPSILON) {
         horizontalApertureOffset = 2.f*horizontalApertureOffset/horizontalAperture;
         verticalApertureOffset = 2.f*verticalApertureOffset/verticalAperture;
         AiNodeSetVec2(_camera, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);

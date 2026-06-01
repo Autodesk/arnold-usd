@@ -29,6 +29,8 @@ template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {retur
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec2f> &) {return AI_TYPE_VECTOR2;}
+// GfMatrix4f has the same memory layout as AtMatrix (row-major float[4][4])
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfMatrix4f> &) {return AI_TYPE_MATRIX;}
 
 // 
 template <typename DerivedT>
@@ -149,7 +151,9 @@ struct ArrayHolder : public ArrayOperations<ArrayHolder> {
             const auto& val = unboxed.values[i];
             ptrsToSamples.push_back(val.data());
         }
-        const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
+        if (ptrsToSamples.empty() || unboxed.values[0].empty())
+            return nullptr;
+        const uint32_t nelements = unboxed.values[0].size();
         const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
         const uint32_t nkeys = ptrsToSamples.size();
         const void** samples = ptrsToSamples.data();

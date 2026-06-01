@@ -89,7 +89,8 @@ ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
         return {"FLOAT", str::aov_write_float, str::user_data_float, true};
     } else if (type == _tokens->_float) {
         return {"FLOAT", str::aov_write_float, str::user_data_float, false};
-    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
+    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->int8 ||
+               type == _tokens->ui8 || type == _tokens->uint8) {
         return {"INT", str::aov_write_int, str::user_data_int, false};
     } else if (type == _tokens->half2 || type == _tokens->color2h) {
         return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, true};
@@ -106,6 +107,35 @@ ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
     }
 }
 
+// Locate an ArnoldNodeGraph prim by the string path stored on a referring
+// attribute. If the literal path doesn't resolve (which happens when the file
+// has been referenced and the runtime SdfPath is remapped), scan the stage for
+// an ArnoldNodeGraph whose primvars:arnold:name attribute matches.
+static UsdPrim _FindNodeGraphPrim(const UsdStageRefPtr &stage, const std::string &valStr)
+{
+    if (!stage || valStr.empty())
+        return UsdPrim();
+    UsdPrim ngPrim = stage->GetPrimAtPath(SdfPath(valStr));
+    if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph)
+        return ngPrim;
+    // The writer always authors primvars:arnold:name on ArnoldNodeGraph prims;
+    // scan the stage for a match. This is O(N) per miss but happens only at
+    // render-settings parse time, which is one-shot per render.
+    for (const UsdPrim &p : stage->Traverse()) {
+        if (p.GetTypeName() != _tokens->ArnoldNodeGraph)
+            continue;
+        UsdAttribute nameAttr = p.GetAttribute(str::t_primvars_arnold_name);
+        if (!nameAttr || !nameAttr.HasAuthoredValue())
+            continue;
+        VtValue nameValue;
+        if (!nameAttr.Get(&nameValue) || !nameValue.IsHolding<std::string>())
+            continue;
+        if (nameValue.UncheckedGet<std::string>() == valStr)
+            return p;
+    }
+    return UsdPrim();
+}
+
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
 static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &prim, const UsdAttribute &attr,
                                                 const std::string &attrName, ArnoldAPIAdapter &context, const TimeSettings &time)
@@ -116,8 +146,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
         std::string valStr = VtValueGetString(value);
         if (!valStr.empty()) {
             SdfPath path(valStr);
-            // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = prim.GetStage()->GetPrimAtPath(SdfPath(valStr));
+            UsdPrim ngPrim = _FindNodeGraphPrim(prim.GetStage(), valStr);
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                 // We can use a UsdShadeShader schema in order to read connections
@@ -169,8 +198,7 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
             unsigned numElements = AiArrayGetNumElements(aovShadersArray);
             for(const auto &nodeGraphPrimName: TfStringTokenize(valStr)) {
                 SdfPath nodeGraphPrimPath(nodeGraphPrimName);
-                // We check if there is a primitive at the path of this string
-                UsdPrim nodeGraphPrim = prim.GetStage()->GetPrimAtPath(nodeGraphPrimPath);
+                UsdPrim nodeGraphPrim = _FindNodeGraphPrim(prim.GetStage(), nodeGraphPrimName);
 
                 if (nodeGraphPrim && nodeGraphPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                     // We can use a UsdShadeShader schema in order to read connections
@@ -282,7 +310,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
     }
 
     // Get the proper driver type based on the file extension
-    if (extension == "tif")
+    if (extension == "tif" || extension == "tiff")
         driverType = "driver_tiff";
     else if (extension == "jpg" || extension == "jpeg")
         driverType = "driver_jpeg";
@@ -689,14 +717,25 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                // Create a user data shader that will read the desired primvar, its type depends on the AOV type
-                std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData, userDataName.c_str());
-                // Link the user_data to the aov_write
-                AiNodeLink(userData, "aov_input", aovShader);
-                // Set the user data (primvar) to read
-                AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
-                // We need to add the aov shaders to options.aov_shaders. 
+                // The reader is normally a user_data_* shader that looks up a primvar.
+                // "st" and "uv" are special: UVs are stored as built-in geometry data in
+                // arnold rather than as user data, so user_data_* would return zeros.
+                // Use a utility shader in uv color_mode instead, matching the Hydra render
+                // pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                std::string readerName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
+                AtNode *reader = nullptr;
+                if (sourceName == "st" || sourceName == "uv") {
+                    reader = context.CreateArnoldNode(str::utility.c_str(), readerName.c_str());
+                    AiNodeSetStr(reader, str::color_mode, str::uv);
+                    AiNodeSetStr(reader, str::shade_mode, str::flat);
+                } else {
+                    reader = context.CreateArnoldNode(arnoldTypes.userData, readerName.c_str());
+                    // Set the user data (primvar) to read
+                    AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                }
+                // Link the reader to the aov_write
+                AiNodeLink(reader, "aov_input", aovShader);
+                // We need to add the aov shaders to options.aov_shaders.
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);
             }
