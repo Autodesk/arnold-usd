@@ -889,6 +889,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<bool>()) {
             _fastViewport = value.UncheckedGet<bool>();
             AiNodeSetBool(_options, str::viewport_rendering, _fastViewport);
+            AiNodeSetBool(_options, AtString("ignore_dlss"), true);
             if (_fastViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
             }
