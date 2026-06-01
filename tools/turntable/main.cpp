@@ -79,6 +79,7 @@ struct Args {
     std::string hdri;
     std::string hdriDir;
     std::string lightRig  = "auto";
+    double      lightIntensity = 1.0; // Multiplier applied to every rig's light intensity.
     bool        listLightRigs = false;
     std::string upAxis;   // empty = auto-detect from stage
     double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
@@ -204,6 +205,10 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--light-rig", args.lightRig,
         "Light rig to select: auto, one discovered HDRI rig, two_quad, or no_light")
         ->option_text("NAME");
+
+    app->add_option("--light-intensity", args.lightIntensity,
+        "Multiplier applied to the selected light rig's intensity (default: 1.0, must be >= 0)")
+        ->option_text("MULT");
 
     app->add_flag("--list-light-rigs", args.listLightRigs,
         "List discovered light rig names and exit");
@@ -958,11 +963,12 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 
 // /lights/dome  —  dome light, optionally driven by an HDRI texture or color
 static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
-                            const std::string &hdri, const GfVec3f &color = GfVec3f(1.0f))
+                            const std::string &hdri, float intensity = 1.0f,
+                            const GfVec3f &color = GfVec3f(1.0f))
 {
     UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, lightPath);
     UsdLuxLightAPI api = UsdLuxLightAPI::Apply(dome.GetPrim());
-    api.CreateIntensityAttr().Set(1.0f);
+    api.CreateIntensityAttr().Set(intensity);
     api.CreateColorAttr().Set(color);
     dome.GetPrim()
         .CreateAttribute(TfToken("primvars:arnold:camera"), SdfValueTypeNames->Float, true)
@@ -1012,8 +1018,9 @@ static void _SetupTwoQuadRig(const UsdStageRefPtr &stage, const AssetBounds &bou
     center[upAxisIndex] = _Lerp01(args.cameraHeight, bounds.upMin, bounds.upMax);
     const GfVec3d leftPos = center - right * offset;
     const GfVec3d rightPos = center + right * offset;
-    const float leftIntensity = _ComputeQuadLightIntensity((target - leftPos).GetLength(), width, height);
-    const float rightIntensity = _ComputeQuadLightIntensity((target - rightPos).GetLength(), width, height);
+    const float multiplier = static_cast<float>(args.lightIntensity);
+    const float leftIntensity = multiplier * _ComputeQuadLightIntensity((target - leftPos).GetLength(), width, height);
+    const float rightIntensity = multiplier * _ComputeQuadLightIntensity((target - rightPos).GetLength(), width, height);
 
     UsdLuxRectLight left = UsdLuxRectLight::Define(stage, SdfPath("/__turntable/lights/key_left"));
     UsdLuxLightAPI leftApi = UsdLuxLightAPI::Apply(left.GetPrim());
@@ -1081,11 +1088,13 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
         } else if (rig.isTwoQuad) {
             _SetupTwoQuadRig(stage, bounds, args);
         } else {
+            const float intensity = static_cast<float>(args.lightIntensity);
             // Use white color for white_dome rig, otherwise no color override
             if (rig.name == "white_dome") {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, GfVec3f(1.0f, 1.0f, 1.0f));
+                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity,
+                                GfVec3f(1.0f, 1.0f, 1.0f));
             } else {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri);
+                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity);
             }
         }
     }
@@ -1158,6 +1167,11 @@ int Run(const Args &args)
 
     if (args.cameraZoom <= 0.0) {
         fprintf(stderr, "turntable: --camera-zoom must be > 0 (got %.4g)\n", args.cameraZoom);
+        return 1;
+    }
+
+    if (args.lightIntensity < 0.0) {
+        fprintf(stderr, "turntable: --light-intensity must be >= 0 (got %.4g)\n", args.lightIntensity);
         return 1;
     }
 
@@ -1298,6 +1312,7 @@ int Run(const Args &args)
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  Resolution: %dx%d\n", args.width, args.height);
     printf("  Light rig : %s\n", selectedRigName.c_str());
+    printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());
     if (chosenRig && chosenRig->isNoLight) {
         printf("  Asset lights: kept (no_light rig)\n");
