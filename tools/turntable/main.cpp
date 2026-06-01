@@ -139,7 +139,7 @@ enum class StudioSetType {
 bool _ParseStudioSet(const std::string &studioSetString, StudioSetType &out)
 {
     const std::string studioSet = TfStringToLower(studioSetString);
-    if (studioSet == "pedestral") {
+    if (studioSet == "pedestal") {
         out = StudioSetType::Ground;
         return true;
     }
@@ -153,10 +153,10 @@ bool _ParseStudioSet(const std::string &studioSetString, StudioSetType &out)
 const char *_StudioSetToString(StudioSetType studioSet)
 {
     switch (studioSet) {
-    case StudioSetType::Ground: return "pedestral";
+    case StudioSetType::Ground: return "pedestal";
     case StudioSetType::Cyclo: return "cyclo";
     }
-    return "pedestral";
+    return "pedestal";
 }
 
 GfMatrix4d _RotationMatrixForUpAxis(const TfToken &upAxis, double angleDegrees)
@@ -234,7 +234,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("MODE");
 
     app->add_option("--studio-set", args.studioSets,
-        "Add studio sets to the generated stage. Supported values: pedestral, cyclo (comma-separated)")
+        "Add studio sets to the generated stage. Supported values: pedestal, cyclo (comma-separated)")
         ->option_text("NAME");
 
     app->add_option("--background-color", args.backgroundColor,
@@ -306,7 +306,7 @@ std::vector<std::string> _GetHdriSearchDirs(const Args &args)
         addDirectory(TfStringCatPaths(TfGetPathName(_GetExecutablePath()), "hdri"));
     }
 
-    const std::string envDirs = ArchGetEnv("ARNOLD_TURNABLE_HDRI_DIRS");
+    const std::string envDirs = ArchGetEnv("ARNOLD_TURNTABLE_HDRI_DIRS");
     if (!envDirs.empty()) {
         const std::vector<std::string> splitDirs = TfStringSplit(envDirs, ARCH_PATH_LIST_SEP);
         for (const std::string &directory : splitDirs) {
@@ -575,7 +575,7 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
 
 static UsdShadeMaterial _CreateGroundMaterial(const UsdStageRefPtr &stage)
 {
-    const SdfPath materialPath("/__turntable/materials/pedestral");
+    const SdfPath materialPath("/__turntable/materials/pedestal");
     UsdShadeMaterial material = UsdShadeMaterial::Define(stage, materialPath);
     UsdShadeShader shader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("previewSurface")));
     shader.CreateIdAttr(VtValue(TfToken("UsdPreviewSurface")));
@@ -834,7 +834,7 @@ static bool _SetupStudioSets(const UsdStageRefPtr &stage, const std::vector<Stud
         const double gap = std::max(bounds.bottomFaceDiagonal * 0.001, 0.0001);
         const double groundHeight = bounds.upMin - gap - (thickness * 0.5);
 
-        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/__turntable/studioSet/pedestral"));
+        UsdGeomCylinder ground = UsdGeomCylinder::Define(stage, SdfPath("/__turntable/studioSet/pedestal"));
         ground.CreateAxisAttr().Set(bounds.upAxis == UsdGeomTokens->z ? UsdGeomTokens->z : UsdGeomTokens->y);
         ground.CreateRadiusAttr().Set(bounds.bottomFaceDiagonal);
         ground.CreateHeightAttr().Set(thickness);
@@ -1170,6 +1170,21 @@ int Run(const Args &args)
         return 1;
     }
 
+    if (args.width <= 0) {
+        fprintf(stderr, "turntable: --width must be > 0 (got %d)\n", args.width);
+        return 1;
+    }
+
+    if (args.height <= 0) {
+        fprintf(stderr, "turntable: --height must be > 0 (got %d)\n", args.height);
+        return 1;
+    }
+
+    if (args.frames <= 0) {
+        fprintf(stderr, "turntable: --frames must be > 0 (got %d)\n", args.frames);
+        return 1;
+    }
+
     if (args.lightIntensity < 0.0) {
         fprintf(stderr, "turntable: --light-intensity must be >= 0 (got %.4g)\n", args.lightIntensity);
         return 1;
@@ -1205,7 +1220,7 @@ int Run(const Args &args)
         for (const std::string &studioSetString : studioSetNames) {
             StudioSetType studioSet;
             if (!_ParseStudioSet(studioSetString, studioSet)) {
-                fprintf(stderr, "turntable: unknown --studio-set '%s' (expected pedestral or cyclo)\n",
+                fprintf(stderr, "turntable: unknown --studio-set '%s' (expected pedestal or cyclo)\n",
                         studioSetString.c_str());
                 return 1;
             }
