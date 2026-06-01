@@ -75,9 +75,11 @@ public:
             while (std::getline(ss, token, ' ')) {
                 AtNode *target = LookupTargetNode(token.c_str(), connection.sourceNode, connection.type);
                 if (target == nullptr)
-                    return false; // node is missing, we don't process the connection                
+                    return false; // node is missing, we don't process the connection
                 vecNodes.push_back(target);
             }
+            if (vecNodes.empty())
+                return false;
             AiNodeSetArray(
                 connection.sourceNode, AtString(connection.sourceAttr.c_str()),
                 AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
@@ -91,6 +93,9 @@ public:
                     std::stringstream ss(connection.sourceAttr);
                     std::string arrayAttr, arrayIndexStr;
                     if (std::getline(ss, arrayAttr, '[') && std::getline(ss, arrayIndexStr, ']')) {
+                        if (arrayIndexStr.empty() ||
+                            arrayIndexStr.find_first_not_of("0123456789") != std::string::npos)
+                            return false;
                         int arrayIndex = std::stoi(arrayIndexStr);
                         AtArray *array = AiNodeGetArray(connection.sourceNode,
                                                 AtString(arrayAttr.c_str()));
@@ -99,7 +104,7 @@ public:
                             for (unsigned i=0; i<(unsigned) arrayIndex; i++)
                                 AiArraySetPtr(array, i, nullptr);
                             AiArraySetPtr(array, arrayIndex, (void *) target);
-                            AiNodeSetArray(connection.sourceNode, AtString(connection.sourceAttr.c_str()), array);
+                            AiNodeSetArray(connection.sourceNode, AtString(arrayAttr.c_str()), array);
                         }
                         else if (arrayIndex >= (int) AiArrayGetNumElements(array)) {
                             unsigned numElements = AiArrayGetNumElements(array);

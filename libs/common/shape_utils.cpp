@@ -91,6 +91,9 @@ void ArnoldUsdReadCreases(
         ll += 1;
     }
 
+    AiArrayUnmap(creaseIdxsArray);
+    AiArrayUnmap(creaseSharpnessArray);
+
     AiNodeSetArray(node, str::crease_idxs, creaseIdxsArray);
     AiNodeSetArray(node, str::crease_sharpness, creaseSharpnessArray);
 }
@@ -301,6 +304,8 @@ inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtVal
         return false;
 
     const VtArray<T>& inArray = in.UncheckedGet<VtArray<T>>();
+    if (inArray.empty())
+        return false;
 
     VtArray<T> outArray;
     outArray.resize(idx.size());
@@ -331,4 +336,104 @@ bool FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
                 TfToken, GfHalf, GfVec2h, GfVec3h, GfVec4h, GfMatrix4f, GfMatrix4d>(in, idx, out);
 
 }
+
+// ---------------------------------------------------------------------------
+// MeshHoleFilter
+// ---------------------------------------------------------------------------
+
+void MeshHoleFilter::Clear()
+{
+    _isHole.clear();
+    _offsets.clear();
+    _holeCount = 0;
+}
+
+void MeshHoleFilter::Build(const VtIntArray& holeIndices, const VtIntArray& originalFaceVertexCounts)
+{
+    Clear();
+    if (holeIndices.empty() || originalFaceVertexCounts.empty())
+        return;
+
+    const size_t numFaces = originalFaceVertexCounts.size();
+    _isHole.assign(numFaces, false);
+    for (int idx : holeIndices) {
+        if (idx >= 0 && static_cast<size_t>(idx) < numFaces && !_isHole[idx]) {
+            _isHole[idx] = true;
+            ++_holeCount;
+        }
+    }
+    if (_holeCount == 0) {
+        _isHole.clear();
+        return;
+    }
+
+    // Prefix sum of face vertex counts so face-varying ranges can be copied directly.
+    _offsets.resize(numFaces + 1);
+    _offsets[0] = 0;
+    for (size_t i = 0; i < numFaces; ++i) {
+        const int count = originalFaceVertexCounts[i];
+        _offsets[i + 1] = _offsets[i] + (count > 0 ? static_cast<size_t>(count) : 0);
+    }
+}
+
+namespace {
+
+template <typename T>
+inline bool _TryFilterUniform(const MeshHoleFilter& f, VtValue& value)
+{
+    if (!value.IsHolding<VtArray<T>>())
+        return false;
+    VtArray<T> arr = value.UncheckedGet<VtArray<T>>();
+    if (f.FilterUniformArray(arr))
+        value = VtValue(std::move(arr));
+    return true;
+}
+
+template <typename T>
+inline bool _TryFilterFaceVarying(const MeshHoleFilter& f, VtValue& value)
+{
+    if (!value.IsHolding<VtArray<T>>())
+        return false;
+    VtArray<T> arr = value.UncheckedGet<VtArray<T>>();
+    if (f.FilterFaceVaryingArray(arr))
+        value = VtValue(std::move(arr));
+    return true;
+}
+
+} // namespace
+
+bool MeshHoleFilter::FilterUniformValue(VtValue& value) const
+{
+    if (Empty())
+        return false;
+    return _TryFilterUniform<float>(*this, value) ||
+           _TryFilterUniform<double>(*this, value) ||
+           _TryFilterUniform<int>(*this, value) ||
+           _TryFilterUniform<bool>(*this, value) ||
+           _TryFilterUniform<GfVec2f>(*this, value) ||
+           _TryFilterUniform<GfVec3f>(*this, value) ||
+           _TryFilterUniform<GfVec4f>(*this, value) ||
+           _TryFilterUniform<GfVec2d>(*this, value) ||
+           _TryFilterUniform<GfVec3d>(*this, value) ||
+           _TryFilterUniform<TfToken>(*this, value) ||
+           _TryFilterUniform<std::string>(*this, value);
+}
+
+bool MeshHoleFilter::FilterFaceVaryingValue(VtValue& value) const
+{
+    if (Empty())
+        return false;
+    return _TryFilterFaceVarying<float>(*this, value) ||
+           _TryFilterFaceVarying<double>(*this, value) ||
+           _TryFilterFaceVarying<int>(*this, value) ||
+           _TryFilterFaceVarying<bool>(*this, value) ||
+           _TryFilterFaceVarying<GfVec2f>(*this, value) ||
+           _TryFilterFaceVarying<GfVec3f>(*this, value) ||
+           _TryFilterFaceVarying<GfVec4f>(*this, value) ||
+           _TryFilterFaceVarying<GfVec2d>(*this, value) ||
+           _TryFilterFaceVarying<GfVec3d>(*this, value) ||
+           _TryFilterFaceVarying<TfToken>(*this, value) ||
+           _TryFilterFaceVarying<std::string>(*this, value);
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

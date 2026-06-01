@@ -18,6 +18,8 @@
 /// @file common_bits.h
 ///
 /// Common bits for Hydra and Usd Imaging Adapters.
+#pragma once
+
 #include <pxr/pxr.h>
 
 #include <pxr/imaging/hd/changeTracker.h>
