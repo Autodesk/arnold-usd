@@ -7,6 +7,9 @@
 
 - [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
 
+### Bug Fixes
+
+- [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
 
 ## [7.5.2.0] (Unreleased)
 
@@ -14,9 +17,8 @@
 
 - [usd#2632](https://github.com/Autodesk/arnold-usd/issues/2632) - Support holeIndices in UsdGeomMesh for non-subdivided meshes
 - [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
-- [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
-- [usd#2650](https://github.com/Autodesk/arnold-usd/issues/2650) - Optionally use Hydra Render Settings primitive instead of settings map
 - [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
+- [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 - [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.

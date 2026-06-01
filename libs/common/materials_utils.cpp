@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <unordered_set>
 #include <vector>
 #include <numeric>
 #include <pxr/base/tf/token.h>
@@ -498,9 +499,20 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
                 materialReader.ConnectShader(node, baseAttrName, attr.connection, connectionType);
                 continue;
             }
-            AiMsgWarning(
-                "Arnold attribute %s not recognized in %s for %s", 
-                attrName.GetText(), AiNodeEntryGetName(nentry), AiNodeGetName(node));
+            // Silently skip channel-component attributes authored by the
+            // application (e.g. "r", "g", "b", "a", "x", "y", "z", "rgb",
+            // "rgba", "xyz"). They are valid USD outputs but have no
+            // corresponding Arnold parameter.
+            static const std::unordered_set<TfToken, TfToken::HashFunctor> kChannelAttrs{
+                TfToken("r"), TfToken("g"), TfToken("b"), TfToken("a"),
+                TfToken("x"), TfToken("y"), TfToken("z"),
+                TfToken("rgb"), TfToken("rgba"), TfToken("xyz")
+            };
+            if (!kChannelAttrs.count(attrName)) {
+                AiMsgWarning(
+                    "Arnold attribute %s not recognized in %s for %s",
+                    attrName.GetText(), AiNodeEntryGetName(nentry), AiNodeGetName(node));
+            }
             continue;
         }
 
