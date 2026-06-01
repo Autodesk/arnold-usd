@@ -3,6 +3,10 @@
 
 ## [7.5.3.0] (Unreleased)
 
+### Features
+
+- [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
+
 ### Bug Fixes
 
 - [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
