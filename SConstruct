@@ -239,6 +239,17 @@ ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
 ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
 
 
+## To be removed : if AiQueryAOV is defined in ai_render.h, then we enable fast viewport in this build
+ai_render_h = os.path.join(ARNOLD_API_INCLUDES, 'ai_render.h')
+try:
+    with open(ai_render_h) as f:
+        if 'AiQueryAOV' in f.read():
+            env.Append(CPPDEFINES=['FAST_VIEWPORT_SUPPORT'])
+            print('AiQueryAOV found: enabling FAST_VIEWPORT_SUPPORT')
+except IOError:
+    pass
+
+
 if not is_windows and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
 

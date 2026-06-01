@@ -226,7 +226,7 @@ if (HOUDINI_LOCATION)
         message(STATUS "USD version: ${USD_VERSION}")
 
         # List of usd libraries we need for this project
-        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL)
         if (${USD_VERSION} VERSION_LESS "0.25.05")
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
@@ -412,7 +412,7 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
+set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;hgi;hgiGL;js;usd_ms)
 if (${USD_VERSION} VERSION_LESS "0.25.05")
     list(APPEND USD_LIBS ndr)
 endif()
