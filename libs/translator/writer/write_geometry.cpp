@@ -254,6 +254,9 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             break;
     }
     writer.SetAttribute(curves.GetTypeAttr(), curveType);
+    // Track whether the curves are cubic so we can pick the right widths
+    // interpolation below — see the radius/widths block.
+    const bool curvesAreCubic = (curveType == UsdGeomTokens->cubic);
 
     WriteAttribute(node, "points", prim, curves.GetPointsAttr(), writer);
 
@@ -284,10 +287,20 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
         writer.SetAttribute(curves.GetWidthsAttr(), widthArray);
         AiArrayUnmapConst(radiusArray);
 
-        if (radiusCount == 1)
+        if (radiusCount == 1) {
             curves.SetWidthsInterpolation(UsdGeomTokens->constant);
-        else
+        } else if (curvesAreCubic) {
+            // Arnold's radius array is one value per CV (per control point).
+            // For cubic basis curves UsdGeomBasisCurves expects "vertex"
+            // interpolation when there is one value per CV — "varying" has a
+            // *different* element count for cubic curves (one per segment +
+            // 1 / per-wrap, not per CV), so the previous unconditional
+            // "varying" silently produced a size-mismatched primvar. Linear
+            // curves keep "varying" since varying == vertex for them.
+            curves.SetWidthsInterpolation(UsdGeomTokens->vertex);
+        } else {
             curves.SetWidthsInterpolation(UsdGeomTokens->varying);
+        }
     }
     _exportedAttrs.insert("radius");
 

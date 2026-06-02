@@ -157,8 +157,9 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
         // If shapes are not exported and a material is specified for this shader, let's create it
         AtString materialName;
         bool isDisplacement = false;
-        // material_surface / material_displacement / material_volume are user data 
-        // authored by the arnold plugins when a shader library is exported, so that 
+        bool isVolume = false;
+        // material_surface / material_displacement / material_volume are user data
+        // authored by the arnold plugins when a shader library is exported, so that
         // materials can be restored at import. We can use this to create the
         // USD material primitives #2047
         if (AiNodeLookUpUserParameter(node, str::material_surface)) {
@@ -167,9 +168,15 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
             materialName = AiNodeGetStr(node, str::material_displacement);
             isDisplacement = true;
         } else if (AiNodeLookUpUserParameter(node, str::material_volume)) {
-            // Note that volume assignments are treated the same way as
-            // surface shader assignments in our usd support
+            // Volume shaders need a Volume output on the material, not a
+            // Surface output. Without distinguishing them, downstream USD
+            // tools see a volume shader wired into the surface slot and
+            // either render the volume as a surface or skip it entirely.
+            // processMaterialBinding (the shape-write path) already uses
+            // CreateVolumeOutput for volume nodes — keep this path
+            // consistent.
             materialName = AiNodeGetStr(node, str::material_volume);
+            isVolume = true;
         }
 
         if (!materialName.empty()) {
@@ -181,9 +188,13 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
             UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(matName));
             const TfToken arnoldContext("arnold");
             std::string shaderOutput = prim.GetPath().GetString() + std::string(".outputs:out");
-            UsdShadeOutput matOutput = (isDisplacement) ? 
-                mat.CreateDisplacementOutput(arnoldContext) : 
-                mat.CreateSurfaceOutput(arnoldContext);
+            UsdShadeOutput matOutput;
+            if (isDisplacement)
+                matOutput = mat.CreateDisplacementOutput(arnoldContext);
+            else if (isVolume)
+                matOutput = mat.CreateVolumeOutput(arnoldContext);
+            else
+                matOutput = mat.CreateSurfaceOutput(arnoldContext);
 
             matOutput.ConnectToSource(SdfPath(shaderOutput));
         }
