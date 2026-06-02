@@ -889,9 +889,61 @@ static void _SetupTurntableRoot(const UsdStageRefPtr &stage, TurntableMode mode,
     }
 }
 
+// Returns false if the asset has no UsdRenderSettings prims.
+// On success, outSettingsPath is the scene path of the chosen prim and
+// outResolution is its authored resolution (defaulting to 0,0 if not set).
+static bool _FindAssetRenderSettings(const std::string &assetPath,
+                                     SdfPath &outSettingsPath,
+                                     GfVec2i &outResolution)
+{
+    UsdStageRefPtr assetStage = UsdStage::Open(assetPath);
+    if (!assetStage) {
+        return false;
+    }
+
+    std::vector<UsdPrim> allSettings;
+    for (const UsdPrim &prim : assetStage->Traverse()) {
+        if (prim.IsA<UsdRenderSettings>()) {
+            allSettings.push_back(prim);
+        }
+    }
+
+    if (allSettings.empty()) {
+        return false;
+    }
+
+    // Prefer the prim named in the asset's renderSettingsPrimPath metadata.
+    UsdPrim chosen = allSettings.front();
+    VtValue metaVal;
+    if (assetStage->HasMetadata(UsdRenderTokens->renderSettingsPrimPath) &&
+        assetStage->GetMetadata(UsdRenderTokens->renderSettingsPrimPath, &metaVal)) {
+        const std::string metaPath = metaVal.IsHolding<std::string>()
+            ? metaVal.UncheckedGet<std::string>()
+            : metaVal.UncheckedGet<SdfPath>().GetString();
+        for (const UsdPrim &prim : allSettings) {
+            if (prim.GetPath().GetString() == metaPath) {
+                chosen = prim;
+                break;
+            }
+        }
+    }
+
+    printf("turntable: using asset render settings '%s'", chosen.GetPath().GetText());
+    if (allSettings.size() > 1) {
+        printf(" (%zu settings found in asset)", allSettings.size());
+    }
+    printf("\n");
+
+    UsdRenderSettings settings(chosen);
+    outSettingsPath = chosen.GetPath();
+    settings.GetResolutionAttr().Get(&outResolution);
+    return true;
+}
+
 // /camera  —  camera with a time-sampled look-at matrix that orbits the asset center
 static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
-                            const AssetBounds &bounds, TurntableMode mode)
+                            const AssetBounds &bounds, TurntableMode mode,
+                            int effectiveWidth, int effectiveHeight)
 {
     const SdfPath cameraPath("/__turntable/camera");
     const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
@@ -952,7 +1004,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 
     // 35 mm lens on a 36 mm horizontal gate — a neutral lookdev focal length.
     const float haperture = 36.0f;
-    const float vaperture = haperture * float(args.height) / float(args.width);
+    const float vaperture = haperture * float(effectiveHeight) / float(effectiveWidth);
     cam.GetHorizontalApertureAttr().Set(haperture);
     cam.GetVerticalApertureAttr().Set(vaperture);
     cam.GetFocalLengthAttr().Set(35.0f);
@@ -1129,6 +1181,24 @@ static void _SetupBackground(const UsdStageRefPtr &stage, const UsdRenderSetting
         .Set(graphPath.GetString());
 }
 
+// Override an existing asset render settings prim with turntable values:
+// camera and optionally background. The prim itself is already authored
+// in the sublayered asset; we author an over to change only what we need.
+static void _OverrideAssetRenderSettings(const UsdStageRefPtr &stage,
+                                         const SdfPath &settingsPath,
+                                         const SdfPath &cameraPath,
+                                         const Args &args)
+{
+    UsdPrim settingsPrim = stage->OverridePrim(settingsPath);
+    UsdRenderSettings settings(settingsPrim);
+    settings.GetCameraRel().SetTargets({cameraPath});
+
+    if (args.backgroundColor.size() == 3) {
+        _SetupBackground(stage, settings,
+            GfVec3f(args.backgroundColor[0], args.backgroundColor[1], args.backgroundColor[2]));
+    }
+}
+
 // /Render  —  UsdRenderSettings + product + beauty AOV
 static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
                                   const SdfPath &cameraPath)
@@ -1269,6 +1339,14 @@ int Run(const Args &args)
         return 1;
     }
 
+    // Check for render settings in the asset.
+    SdfPath   assetSettingsPath;
+    GfVec2i   assetResolution(args.width, args.height);
+    bool      hasAssetSettings = _FindAssetRenderSettings(args.input, assetSettingsPath, assetResolution);
+
+    int effectiveWidth  = hasAssetSettings ? assetResolution[0] : args.width;
+    int effectiveHeight = hasAssetSettings ? assetResolution[1] : args.height;
+
     // CreateNew fails if the file already exists.
     std::remove(args.output.c_str());
     UsdStageRefPtr stage = UsdStage::CreateNew(args.output);
@@ -1288,7 +1366,7 @@ int Run(const Args &args)
     if (!_SetupStudioSets(stage, studioSets, bounds, args)) {
         return 1;
     }
-    const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode);
+    const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode, effectiveWidth, effectiveHeight);
     _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
 
     // Unless the no_light rig was chosen, deactivate the asset's own lights so the
@@ -1299,11 +1377,13 @@ int Run(const Args &args)
         deactivatedAssetLights = _DeactivateAssetLights(stage);
     }
 
-    _SetupRenderSettings(stage, args, cameraPath);
-
-    // Point tools (husk, kick, usdview) at our render settings by path so
-    // discovery does not depend on the prim name or sublayered asset content.
-    stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, std::string("/Render/TurntableSettings"));
+    if (hasAssetSettings) {
+        _OverrideAssetRenderSettings(stage, assetSettingsPath, cameraPath, args);
+        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, assetSettingsPath.GetString());
+    } else {
+        _SetupRenderSettings(stage, args, cameraPath);
+        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, std::string("/Render/TurntableSettings"));
+    }
 
     stage->GetRootLayer()->Save();
 
@@ -1325,7 +1405,10 @@ int Run(const Args &args)
         printf("\n");
     }
     printf("  Frames    : 0..%d\n", args.frames - 1);
-    printf("  Resolution: %dx%d\n", args.width, args.height);
+    printf("  RenderSettings: %s (%s)\n",
+           hasAssetSettings ? assetSettingsPath.GetText() : "/Render/TurntableSettings",
+           hasAssetSettings ? "asset" : "generated");
+    printf("  Resolution: %dx%d\n", effectiveWidth, effectiveHeight);
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());
