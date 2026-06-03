@@ -625,7 +625,12 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             if (filterAttr) {
                 VtValue filterValue;
                 if (filterAttr.Get(&filterValue, time.frame)) {
-                    filterType = VtValueGetString(filterValue);
+                    // Only override the default filter type if a non-empty value
+                    // was authored. An empty "arnold:filter" would otherwise clobber
+                    // the box_filter fallback and create an invalid node.
+                    std::string filterStr = VtValueGetString(filterValue);
+                    if (!filterStr.empty())
+                        filterType = filterStr;
                 }
             }
 
@@ -633,7 +638,11 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             AtNode *filter = AiNodeLookUpByName(universe, AtString(filterName.c_str()));
             if (filter == nullptr)
                 filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
-            
+            // An unknown/invalid filter type returns a null node. Skip this
+            // RenderVar rather than dereferencing it below.
+            if (filter == nullptr)
+                continue;
+
             // Set the filter width if the attribute exists in this filter type
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
                 // An eventual attribute "arnold:width" will determine the filter width attribute
