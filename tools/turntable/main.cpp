@@ -1221,9 +1221,54 @@ static void _SetupBackground(const UsdStageRefPtr &stage, const UsdRenderSetting
         .Set(graphPath.GetString());
 }
 
+// Build a product name with the frame number baked in. A run of '#' is replaced
+// by the zero-padded frame (one digit per '#'); otherwise a 4-digit number is
+// inserted before the extension. ("output.jpg", 0) -> "output.0000.jpg".
+static std::string _ProductNameForFrame(const std::string &productName, int frame)
+{
+    const size_t hashStart = productName.find('#');
+    if (hashStart != std::string::npos) {
+        size_t hashEnd = hashStart;
+        while (hashEnd < productName.size() && productName[hashEnd] == '#') {
+            ++hashEnd;
+        }
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%0*d", static_cast<int>(hashEnd - hashStart), frame);
+        return productName.substr(0, hashStart) + buffer + productName.substr(hashEnd);
+    }
+
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%04d", frame);
+    const std::string extension = TfGetExtension(productName);
+    if (extension.empty()) {
+        return productName + "." + buffer;
+    }
+    // Strip the extension and its dot, then re-append after the frame number.
+    const std::string base = productName.substr(0, productName.size() - extension.size() - 1);
+    return base + "." + buffer + "." + extension;
+}
+
+// Time-sample productName so each frame writes a distinct file. USD does not
+// expand frame patterns (e.g. "####") in productName at render time, so we bake
+// the frame number into a value authored at every timecode. The renderer reads
+// productName at the timecode it renders and gets that frame's filename. The
+// frame number matches the timecode (timecode 0 -> base.0000.ext).
+static void _AuthorPerFrameProductName(const UsdRenderProduct &product,
+                                       const std::string &baseName, int frames)
+{
+    UsdAttribute nameAttr = product.CreateProductNameAttr();
+    // Default value (used by Default-time reads) plus a sample per frame; at a
+    // given timecode the time sample wins over the default.
+    nameAttr.Set(TfToken(_ProductNameForFrame(baseName, 0)));
+    for (int i = 0; i < frames; ++i) {
+        nameAttr.Set(TfToken(_ProductNameForFrame(baseName, i)), UsdTimeCode(double(i)));
+    }
+}
+
 // Override an existing asset render settings prim with turntable values:
-// camera and optionally background. The prim itself is already authored
-// in the sublayered asset; we author an over to change only what we need.
+// camera, per-frame product names, and optionally background. The prim itself
+// is already authored in the sublayered asset; we author an over to change only
+// what we need.
 static void _OverrideAssetRenderSettings(const UsdStageRefPtr &stage,
                                          const SdfPath &settingsPath,
                                          const SdfPath &cameraPath,
@@ -1232,6 +1277,24 @@ static void _OverrideAssetRenderSettings(const UsdStageRefPtr &stage,
     UsdPrim settingsPrim = stage->OverridePrim(settingsPath);
     UsdRenderSettings settings(settingsPrim);
     settings.GetCameraRel().SetTargets({cameraPath});
+
+    // The asset's render products keep their authored productName, a fixed
+    // filename, so without per-frame names every frame overwrites the same file.
+    // Re-author each product's name as a time sample per frame.
+    SdfPathVector productTargets;
+    settings.GetProductsRel().GetTargets(&productTargets);
+    for (const SdfPath &productPath : productTargets) {
+        UsdRenderProduct product(stage->GetPrimAtPath(productPath));
+        if (!product) {
+            continue;
+        }
+        TfToken productName;
+        if (!product.GetProductNameAttr().Get(&productName) || productName.IsEmpty()) {
+            continue;
+        }
+        // Authors time samples on the product in the root layer (the edit target).
+        _AuthorPerFrameProductName(product, productName.GetString(), args.frames);
+    }
 
     if (args.backgroundColor.size() == 3) {
         _SetupBackground(stage, settings,
@@ -1248,10 +1311,12 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
     settings.GetResolutionAttr().Set(GfVec2i(args.width, args.height));
     settings.GetCameraRel().SetTargets({cameraPath});
 
-    // Output image sequence: strip the .usda extension and append frame pattern.
-    const std::string productPath = TfStringGetBeforeSuffix(args.output) + ".####.exr";
+    // Output image sequence: strip the .usda extension and use a .exr base. USD
+    // does not expand frame patterns in productName, so the name is time-sampled
+    // per frame by _AuthorPerFrameProductName (e.g. turntable.0001.exr).
+    const std::string productBase = TfStringGetBeforeSuffix(args.output) + ".exr";
     UsdRenderProduct product = UsdRenderProduct::Define(stage, SdfPath("/Render/TurntableProduct"));
-    product.GetProductNameAttr().Set(SdfAssetPath(productPath));
+    _AuthorPerFrameProductName(product, productBase, args.frames);
     product.GetProductTypeAttr().Set(TfToken("arnold"));
     settings.GetProductsRel().AddTarget(SdfPath("/Render/TurntableProduct"));
 
