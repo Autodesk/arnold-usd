@@ -285,7 +285,11 @@ const std::string _CreateAOV(
         AiNodeSetStr(writer, str::aov_name, AtString(name.c_str()));
         _DisableBlendOpacity(writer);
         AiNodeLink(reader, str::aov_input, writer);
-        aovShaders.push_back(writer);
+        // Note: do NOT push `writer` into aovShaders here. The sole caller (the
+        // custom-product rebuild path) iterates _customProducts after this loop
+        // and already pushes every non-null renderVar.writer to aovShaders. The
+        // previous in-helper push caused every primvar RenderVar's writer to be
+        // listed twice on the options node's aov_shaders array.
         return name;
     } else {
         return sourceName;
@@ -470,6 +474,15 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 HdArnoldRenderPass::~HdArnoldRenderPass()
 {
     reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam())->Interrupt();
+    // The constructor wrote `_camera` into the universe options' camera slot.
+    // If we destroy `_camera` without clearing that slot, the universe is left
+    // holding a dangling pointer that subsequent code (other render passes,
+    // delegate teardown) may dereference. Clear it first when it still matches.
+    if (AtNode* universeOptions = AiUniverseGetOptions(_renderDelegate->GetUniverse())) {
+        if (static_cast<AtNode*>(AiNodeGetPtr(universeOptions, str::camera)) == _camera) {
+            AiNodeSetPtr(universeOptions, str::camera, nullptr);
+        }
+    }
     _renderDelegate->DestroyArnoldNode(_camera);
     _renderDelegate->DestroyArnoldNode(_defaultFilter);
     _renderDelegate->DestroyArnoldNode(_closestFilter);
@@ -491,6 +504,9 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
             if (renderVar.reader != nullptr) {
                 _renderDelegate->DestroyArnoldNode(renderVar.reader);
             }
+            if (renderVar.filter != nullptr) {
+                _renderDelegate->DestroyArnoldNode(renderVar.filter);
+            }
         }
     }
     _ClearRenderBuffers();
@@ -499,6 +515,11 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+#if PXR_VERSION >= 2308
+    // _GetHydraRenderSettingsPrim and HdArnoldRenderSettings (the Bprim
+    // subclass used below) are only available when building against USD 23.08+.
+    // Without this guard the call below fails to compile on older USD because
+    // the declaration in the header is itself gated on PXR_VERSION >= 2308.
     if (_renderDelegate->IsUsingHydraRenderSettings()) {
         // If we are using the hydra render settings, we let the render settings prim handle the conversion.
         // We need to provide a camera pas
@@ -526,6 +547,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // We couldn't use the render settings, we fall back to the original code
     }
+#endif
 
     if (_renderDelegate->SetRenderTags(renderTags)) {
         // Render tags have changed, let's iterate through all the nodes
@@ -637,14 +659,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
     auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage, bool allocate, int w, int h) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(w * h * 4);
+        // Use a per-instance scratch vector instead of a function-local static.
+        // A static vector would be shared across all HdArnoldRenderPass instances
+        // in the process, which makes the resize() call a data race when multiple
+        // render passes drive their own viewports.
+        _zeroData.resize(static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
-                renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, zeroData.data());
+                renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, _zeroData.data());
             }
         }
     };
@@ -817,6 +842,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     AtNode* imager = _renderDelegate->GetImager(GetRenderIndex());
     if (imager != static_cast<AtNode*>(AiNodeGetPtr(_mainDriver, str::input)))
         updateImagers = true;
+    // Custom-product drivers also feed from the imager (see below) but they are
+    // only refreshed when needsDelegateProductsUpdate is true. If the imager
+    // changes interactively without a product change, they would otherwise be
+    // left pointing at the previous imager node, so detect that case here.
+    if (!updateImagers) {
+        for (const auto& customProduct : _customProducts) {
+            if (customProduct.driver != nullptr &&
+                imager != static_cast<AtNode*>(AiNodeGetPtr(customProduct.driver, str::input))) {
+                updateImagers = true;
+                break;
+            }
+        }
+    }
 
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
@@ -875,6 +913,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         outputs.reserve(numBindings);
         std::vector<AtString> lightPathExpressions;
         std::vector<AtNode*> aovShaders;
+        // `_primIdWriter` is a single shared shader created in the constructor.
+        // Both the AOV-binding primId branch and every custom-product primId
+        // RenderVar push it onto `aovShaders` unconditionally — so any scene that
+        // has more than one primId output ends up with the writer listed two or
+        // more times, making Arnold execute the same shader repeatedly per surface
+        // for no benefit. Push it at most once and reuse the flag from both paths.
+        bool primIdWriterPushed = false;
         // When creating the outputs array we follow this logic:
         // - color -> RGBA RGBA for the beauty box filter by default
         // - depth -> Z FLOAT closest filter by default
@@ -923,7 +968,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
             } else if (isRaw && sourceName == HdAovTokens->primId) {
-                aovShaders.push_back(_primIdWriter);
+                if (!primIdWriterPushed) {
+                    aovShaders.push_back(_primIdWriter);
+                    primIdWriterPushed = true;
+                }
                 output =
                     AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
                                  .c_str()};
@@ -998,14 +1046,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 layerName = _GetOptionalSetting<std::string>(
                     binding.aovSettings, _tokens->aovDriverName, layerName);
 
-                // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
-                // cryptomatte metadatas through the user data "custom_attributes". We want to store 
+                // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the
+                // cryptomatte metadatas through the user data "custom_attributes". We want to store
                 // the driver node names in the render delegate, so that we can lookup this user data
-                // during GetRenderStats
-                if (binding.aovName == str::t_crypto_asset || 
+                // during GetRenderStats. We also flip the _hasCryptomatte flag — the custom-product
+                // code path below already did so for product RenderVars but the AOV-bindings path
+                // here didn't, leaving the render delegate believing no cryptomatte AOV was active
+                // when the user only configured cryptomatte via HdAovBindings.
+                if (binding.aovName == str::t_crypto_asset ||
                     binding.aovName == str::t_crypto_material ||
-                    binding.aovName == str::t_crypto_object)
+                    binding.aovName == str::t_crypto_object) {
                     _renderDelegate->RegisterCryptomatteDriver(AtString(mainDriverName));
+                    _renderDelegate->SetHasCryptomatte(true);
+                }
                 
                 buffer_pointers.push_back((void*)buffer.buffer);
                 buffer_names.push_back(AtString(layerName.c_str()));                
@@ -1031,6 +1084,30 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // delegate render products are only set when rendering in husk.
         if (needsDelegateProductsUpdate) {
             const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
+            // Destroy any Arnold nodes owned by previously created custom products
+            // before clearing the vector. Otherwise the drivers, filters and primvar
+            // writer/reader shaders are leaked on every rebuild and will only ever
+            // be released when this render pass is destroyed. The cleanup mirrors
+            // the destructor (see ~HdArnoldRenderPass).
+            for (auto& customProduct : _customProducts) {
+                if (customProduct.driver != nullptr) {
+                    _renderDelegate->DestroyArnoldNode(customProduct.driver);
+                }
+                if (customProduct.filter != nullptr) {
+                    _renderDelegate->DestroyArnoldNode(customProduct.filter);
+                }
+                for (auto& renderVar : customProduct.renderVars) {
+                    if (renderVar.writer != nullptr) {
+                        _renderDelegate->DestroyArnoldNode(renderVar.writer);
+                    }
+                    if (renderVar.reader != nullptr) {
+                        _renderDelegate->DestroyArnoldNode(renderVar.reader);
+                    }
+                    if (renderVar.filter != nullptr) {
+                        _renderDelegate->DestroyArnoldNode(renderVar.filter);
+                    }
+                }
+            }
             _customProducts.clear();
             _customProducts.reserve(delegateRenderProducts.size());
             // Get an eventual output override string. We only want to use it if no outputs 
@@ -1084,6 +1161,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
                 const auto* filterName =
                     customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
+                // For geometric AOVs (depth, primId) we want a closest filter rather than
+                // the box default — box-filtering discontinuous geometric values produces
+                // wrong results. The AOV-bindings code path uses filterGeoName for the
+                // same reason; mirror that here for the custom-product depth/primId outputs.
+                const auto* filterGeoName =
+                    customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : closestName;
                 // Applying custom parameters to the driver.
                 // First we read parameters simply prefixed with arnold: (do we still need this ?)
                 _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings, _renderDelegate);
@@ -1132,21 +1215,51 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         customRenderVar.output =
                             AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, customDriverName.c_str()).c_str()};
                     } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
+                        // Use _depthOutputValue so HYDRA_NORMALIZE_DEPTH builds correctly emit
+                        // "P VECTOR" instead of "Z FLOAT" — previously the custom-product path
+                        // hardcoded "Z FLOAT" and silently ignored the macro that the
+                        // AOV-bindings path honors. Also use the geometric (closest) filter.
                         customRenderVar.output =
-                            AtString{TfStringPrintf("Z FLOAT %s %s", filterName, customDriverName.c_str()).c_str()};
+                            AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, customDriverName.c_str()).c_str()};
                     } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
-                        aovShaders.push_back(_primIdWriter);
+                        if (!primIdWriterPushed) {
+                            aovShaders.push_back(_primIdWriter);
+                            primIdWriterPushed = true;
+                        }
+                        // primId is a discontinuous geometric value, so it needs the closest
+                        // filter (filterGeoName), not the default box filter the previous
+                        // code was using.
                         customRenderVar.output = AtString{
                             TfStringPrintf(
-                                "%s INT %s %s", str::hydraPrimId.c_str(), filterName, customDriverName.c_str())
+                                "%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, customDriverName.c_str())
                                 .c_str()};
                     } else {
                         // Querying the data format from USD, with a default value of color3f.
-                        // If we have arnold:format defined, we use its value for the format
-                        const TfToken hydraFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
-                        const TfToken arnoldFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->arnoldFormat, TfToken(""));
-                        const TfToken driverAovFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->aovDriverFormat, TfToken(""));
-                        const TfToken format = arnoldFormat != TfToken("") ? arnoldFormat : (driverAovFormat != TfToken("") ? driverAovFormat : hydraFormat);
+                        // If we have arnold:format defined, we use its value for the format.
+                        // The setting may be stored either as a TfToken or as a plain std::string,
+                        // so we need to check both representations. Previously only TfToken was
+                        // honored, which caused string-typed arnold:format / driver:parameters:aov:format
+                        // settings to be silently dropped on RenderProducts (unlike the AOV binding
+                        // code path above which already handles both types).
+                        const TfToken hydraFormat = _GetOptionalSetting<TfToken>(
+                            renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
+                        auto _readFormatToken = [](const HdAovSettingsMap& settings, const TfToken& key) {
+                            const auto it = settings.find(key);
+                            if (it == settings.end()) {
+                                return TfToken();
+                            }
+                            if (it->second.IsHolding<TfToken>()) {
+                                return it->second.UncheckedGet<TfToken>();
+                            }
+                            if (it->second.IsHolding<std::string>()) {
+                                return TfToken(it->second.UncheckedGet<std::string>());
+                            }
+                            return TfToken();
+                        };
+                        const TfToken arnoldFormat = _readFormatToken(renderVar.settings, _tokens->arnoldFormat);
+                        const TfToken driverAovFormat = _readFormatToken(renderVar.settings, _tokens->aovDriverFormat);
+                        const TfToken format = !arnoldFormat.IsEmpty() ? arnoldFormat
+                                              : (!driverAovFormat.IsEmpty() ? driverAovFormat : hydraFormat);
                         const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
 
                         const auto aovName = _CreateAOV(
@@ -1157,11 +1270,20 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         if (aovName == "crypto_object" || aovName == "crypto_asset"
                             || aovName == "crypto_material") {
                             _renderDelegate->SetHasCryptomatte(true);
+                            // Mirror the AOV-bindings path: also register the driver so that
+                            // cryptomatte metadata (custom_attributes user data) can be looked
+                            // up on it during GetRenderStats. Without this, custom-product
+                            // cryptomatte drivers were silently dropped from the metadata pass.
+                            _renderDelegate->RegisterCryptomatteDriver(customDriverName);
                         }
                         
                         // Check if the AOV has a specific filter
                         const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                         AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
+                        // Track the per-RenderVar filter on the CustomRenderVar so it can be
+                        // destroyed when the render pass rebuilds or shuts down. Without this,
+                        // each interactive product update leaked one Arnold filter per RenderVar.
+                        customRenderVar.filter = aovFilterNode;
                         std::string output = TfStringPrintf(
                                          "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
                                          customDriverName.c_str());
@@ -1234,11 +1356,25 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
         // add the imager to the main driver
         AiNodeSetPtr(_mainDriver, str::input, imager);
+        // Custom-product drivers also consume the imager. When only the imager
+        // changed (needsDelegateProductsUpdate == false) the loop above did not
+        // touch them, so propagate the new imager here.
+        for (const auto& customProduct : _customProducts) {
+            if (customProduct.driver != nullptr) {
+                AiNodeSetPtr(customProduct.driver, str::input, imager);
+            }
+        }
 
+        // Always set the outputs array (even if empty), otherwise a previous
+        // frame's outputs remain on the options node and Arnold continues to write
+        // to stale render buffers. We mirror the handling used below for
+        // light_path_expressions and aov_shaders.
         if (!outputs.empty()) {
             AiNodeSetArray(
                 _renderDelegate->GetOptions(), str::outputs,
                 AiArrayConvert(static_cast<uint32_t>(outputs.size()), 1, AI_TYPE_STRING, outputs.data()));
+        } else {
+            AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, AiArray(0, 1, AI_TYPE_STRING));
         }
         AiNodeSetArray(
             _renderDelegate->GetOptions(), str::light_path_expressions,
@@ -1258,10 +1394,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             int regionMaxX = AiNodeGetInt(options, str::region_max_x);
             int regionMinY = AiNodeGetInt(options, str::region_min_y);
             int regionMaxY = AiNodeGetInt(options, str::region_max_y);
-            if (regionMaxX - regionMinX > 0 && regionMaxY - regionMinY > 0) {
+            // Arnold's region attributes use inclusive max coordinates, so a single
+            // pixel region has regionMax == regionMin (size = max - min + 1 = 1).
+            // The previous check `> 0` rejected such valid 1-pixel regions and fell
+            // back to the framing width/height, causing the render buffer to be
+            // allocated at the wrong size.
+            if (regionMaxX >= regionMinX && regionMaxY >= regionMinY) {
                 bufferWidth = regionMaxX - regionMinX + 1;
                 bufferHeight = regionMaxY - regionMinY + 1;
-            }                
+            }
         }
         clearBuffers(_renderBuffers, true, bufferWidth, bufferHeight);
     }
@@ -1282,7 +1423,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (!aovBindings.empty()) {
         // Clearing all AOVs if render was aborted.
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
-            clearBuffers(_renderBuffers, false, width, height);
+            // When a windowNDC is active the actual render buffers are sized to
+            // the data region, not to `width`/`height`. Using width/height here
+            // would tell clearBuffers to wipe a window of the wrong dimensions,
+            // leaving part of the buffer uncleared on abort.
+            int abortWidth = width;
+            int abortHeight = height;
+            if (hasWindowNDC) {
+                const int regionMinX = AiNodeGetInt(options, str::region_min_x);
+                const int regionMaxX = AiNodeGetInt(options, str::region_max_x);
+                const int regionMinY = AiNodeGetInt(options, str::region_min_y);
+                const int regionMaxY = AiNodeGetInt(options, str::region_max_y);
+                if (regionMaxX >= regionMinX && regionMaxY >= regionMinY) {
+                    abortWidth = regionMaxX - regionMinX + 1;
+                    abortHeight = regionMaxY - regionMinY + 1;
+                }
+            }
+            clearBuffers(_renderBuffers, false, abortWidth, abortHeight);
         }
         for (auto& buffer : _renderBuffers) {
             if (buffer.second.buffer != nullptr) {
