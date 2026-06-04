@@ -24,6 +24,7 @@
 #include <pxr/usd/usd/timeCode.h>
 #include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdGeom/bboxCache.h>
+#include <pxr/usd/usdGeom/boundable.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/imageable.h>
@@ -87,6 +88,7 @@ struct Args {
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
     std::string studioSets;  // Comma-separated studio set names
+    bool        listStudioSets = false;
     std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
 };
 
@@ -157,6 +159,24 @@ const char *_StudioSetToString(StudioSetType studioSet)
     case StudioSetType::Cyclo: return "cyclo";
     }
     return "pedestal";
+}
+
+struct StudioSetInfo {
+    StudioSetType type;
+    const char   *aliases;
+    const char   *description;
+};
+
+// Studio sets selectable through --studio-set, in display order.
+const std::vector<StudioSetInfo> &_AvailableStudioSets()
+{
+    static const std::vector<StudioSetInfo> studioSets = {
+        {StudioSetType::Ground, "pedestal",
+         "Cylindrical pedestal under the asset"},
+        {StudioSetType::Cyclo, "cyclo, cyc, cyclorama",
+         "Curved cyclorama wall and floor enclosing the asset"},
+    };
+    return studioSets;
 }
 
 GfMatrix4d _RotationMatrixForUpAxis(const TfToken &upAxis, double angleDegrees)
@@ -236,6 +256,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--studio-set", args.studioSets,
         "Add studio sets to the generated stage. Supported values: pedestal, cyclo (comma-separated)")
         ->option_text("NAME");
+
+    app->add_flag("--list-studio-sets", args.listStudioSets,
+        "List available studio set names and exit");
 
     app->add_option("--background-color", args.backgroundColor,
         "Solid background color as 3 linear floats: R G B (default: no background)")
@@ -551,8 +574,25 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
         {UsdGeomTokens->default_, UsdGeomTokens->render},
         /*useExtentsHint=*/true);
 
-    const GfBBox3d worldBBox = bboxCache.ComputeWorldBound(stage->GetPseudoRoot());
-    const GfRange3d range    = worldBBox.ComputeAlignedRange();
+    // Union the world bound of every Boundable prim individually rather than
+    // querying ComputeWorldBound() once on the pseudo-root. UsdGeomBBoxCache
+    // treats a Boundable gprim as a leaf: it returns that prim's authored extent
+    // and does not descend into any Boundable children it may have. Some DCC
+    // exports (e.g. Cinema 4D) author geometry as nested Mesh-in-Mesh
+    // hierarchies, so a single root-level query collapses the whole asset down to
+    // the topmost mesh's extent — yielding a far-too-small bbox that makes
+    // --camera-height appear to have no effect. Visiting each Boundable (instance
+    // proxies included) and unioning their bounds captures the full hierarchy.
+    GfRange3d range;
+    for (const UsdPrim &prim : stage->Traverse(UsdTraverseInstanceProxies(UsdPrimDefaultPredicate))) {
+        if (!prim.IsA<UsdGeomBoundable>()) {
+            continue;
+        }
+        const GfRange3d primRange = bboxCache.ComputeWorldBound(prim).ComputeAlignedRange();
+        if (!primRange.IsEmpty()) {
+            range.UnionWith(primRange);
+        }
+    }
 
     if (range.IsEmpty()) {
         fprintf(stderr, "turntable: bounding box of '%s' is empty — "
@@ -1230,9 +1270,18 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
 
 int Run(const Args &args)
 {
-    if (args.input.empty() && !args.listLightRigs) {
-        fprintf(stderr, "turntable: input is required unless --list-light-rigs is used\n");
+    if (args.input.empty() && !args.listLightRigs && !args.listStudioSets) {
+        fprintf(stderr, "turntable: input is required unless --list-light-rigs "
+                "or --list-studio-sets is used\n");
         return 1;
+    }
+
+    if (args.listStudioSets) {
+        printf("Studio sets:\n");
+        for (const StudioSetInfo &info : _AvailableStudioSets()) {
+            printf("  %s [%s] — %s\n", _StudioSetToString(info.type), info.aliases, info.description);
+        }
+        return 0;
     }
 
     if (args.cameraZoom <= 0.0) {
