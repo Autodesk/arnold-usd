@@ -74,6 +74,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: render passes"
+                    },
+                    "HdArnoldInstanceLightLinkingSplitSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: per-instance light linking split"
                     }${MTOA_ENTRY}
                 }
             },
