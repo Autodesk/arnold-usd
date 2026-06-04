@@ -131,6 +131,7 @@ vars.AddVariables(
     BoolVariable('ENABLE_TRACING', 'Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE).', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),
+    BoolVariable('BUILD_TURNTABLE', 'Whether or not to build the turntable tool', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
@@ -190,6 +191,7 @@ def get_optional_env_path(env_name):
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_USDGENSCHEMA_ARNOLD    = env['BUILD_USDGENSCHEMA_ARNOLD']
+BUILD_TURNTABLE              = env['BUILD_TURNTABLE']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' or env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
@@ -558,6 +560,8 @@ else:
 #
 usdgenschema_script = os.path.join('tools', 'usdgenschema', 'SConscript')
 usdgenschema_build = os.path.join(BUILD_BASE_DIR, 'usdgenschema')
+turntable_script = os.path.join('tools', 'turntable', 'SConscript')
+turntable_build = os.path.join(BUILD_BASE_DIR, 'turntable')
 
 # common 
 env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], 'libs', 'common')])
@@ -636,9 +640,38 @@ if BUILD_USDGENSCHEMA_ARNOLD:
                     shutil.copytree(source_dir, target_dir)
                 # Also copy the plugInfo.
     shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
-else: 
+else:
     USDGENSCHEMA_ARNOLD = None
 
+if BUILD_TURNTABLE:
+    TURNTABLE = env.SConscript(turntable_script, variant_dir = turntable_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    turntable_hdri_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(TURNTABLE[0]))), 'hdri')
+    turntable_hdri_source_folder = os.path.join('tools', 'turntable', 'hdri')
+    if os.path.exists(turntable_hdri_source_folder) and not os.path.exists(turntable_hdri_resource_folder):
+        shutil.copytree(turntable_hdri_source_folder, turntable_hdri_resource_folder)
+    if env['USD_BUILD_MODE'] == 'static':
+        # For static USD builds, copy the usd plugin config folder next to the binary.
+        turntable_usd_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(TURNTABLE[0]))), 'usd')
+        usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(turntable_build, 'usd')]
+        for usd_input_resource_folder in usd_input_resource_folders:
+            if os.path.exists(usd_input_resource_folder):
+                for entry in os.listdir(usd_input_resource_folder):
+                    source_dir = os.path.join(usd_input_resource_folder, entry)
+                    target_dir = os.path.join(turntable_usd_resource_folder, entry)
+                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                        shutil.copytree(source_dir, target_dir)
+                shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), turntable_usd_resource_folder)
+        # Also copy USD_PATH/plugin/usd (contains adskAssetResolver and other USD-distribution plugins).
+        usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
+        if os.path.exists(usd_plugin_resource_folder):
+            for entry in os.listdir(usd_plugin_resource_folder):
+                source_dir = os.path.join(usd_plugin_resource_folder, entry)
+                target_dir = os.path.join(turntable_usd_resource_folder, entry)
+                if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                    shutil.copytree(source_dir, target_dir)
+else:
+    TURNTABLE = None
 
 if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
@@ -905,6 +938,14 @@ if SCHEMAS:
 if DOCS:
     INSTALL_DOCS = env.Install(PREFIX_DOCS, DOCS)
     env.Alias('docs-install', INSTALL_DOCS)
+
+if TURNTABLE:
+    INSTALL_TURNTABLE = env.Install(PREFIX_BIN, TURNTABLE)
+    if os.path.exists(turntable_hdri_resource_folder):
+        INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_hdri_resource_folder)
+    if env['USD_BUILD_MODE'] == 'static':
+        INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_usd_resource_folder)
+    env.Alias('turntable-install', INSTALL_TURNTABLE)
 
 # We don't need to install the license if the prefix is left to its default #553
 if PREFIX != '.':

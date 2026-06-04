@@ -1,0 +1,13 @@
+Crash rendering a RenderSettings scene with an empty arnold:filter on a RenderVar
+
+An empty "arnold:filter" attribute on a RenderVar used to override the
+box_filter default with an empty filter type, creating a null filter node that
+was then dereferenced, crashing Arnold.
+
+Repro scene reduced from a customer file (BUG_251128).
+
+See #2677
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
