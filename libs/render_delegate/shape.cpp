@@ -18,6 +18,8 @@
 #include "shape.h"
 #include <pxr/base/trace/trace.h>
 
+#include <exception>
+
 #ifdef ENABLE_SCENE_INDEX // Hydra2
 #include <pxr/imaging/hd/primOriginSchema.h>
 #include <pxr/imaging/hd/instancedBySchema.h>
@@ -188,51 +190,77 @@ void HdArnoldShape::_SyncInstances(
     param.Interrupt();
 
     if (UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
-        // First destroy the arnold parent instancers to this mesh
-        for (auto &instancerNode : _instancers) {
-            _renderDelegate->DestroyArnoldNode(instancerNode);
-        }
-        _instancers.clear();
-
-        // We need to hide the source mesh.
-        AiNodeSetByte(_shape, str::visibility, 0);
-
-        // Get the hydra instancer and rebuild the arnold instancer
-        auto& renderIndex = sceneDelegate->GetRenderIndex();
-        auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-        hydraInstancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
-
-        const TfToken renderTag = sceneDelegate->GetRenderTag(id);
-
-        for (size_t i = 0; i < _instancers.size(); ++i) {
-            AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
-            renderDelegate->TrackRenderTag(_instancers[i], renderTag);
-
-            // At this point the instancers might have set their instance visibilities.
-            // In this case we want to apply the proto shape visibility on top of it. 
-            // Otherwise we just set the shape visibility as its instance_visibility
-            AtArray *instanceVisibility = AiNodeGetArray(_instancers[i], str::instance_visibility);
-            unsigned int instanceVisibilityCount = (instanceVisibility) ? AiArrayGetNumElements(instanceVisibility) : 0;
-            if (instanceVisibilityCount  > 0) {
-                unsigned char* instVisArray = static_cast<unsigned char*>(AiArrayMap(instanceVisibility));
-                for (unsigned int j = 0; j < instanceVisibilityCount; ++j) {
-                    instVisArray[j] &= _visibility;
-                }
-                AiArrayUnmap(instanceVisibility);
-                AiNodeSetArray(_instancers[i], str::instance_visibility, instanceVisibility);
-            } else
-                AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
-        }
+        _CreateArnoldInstancerChain(renderDelegate, sceneDelegate, id, instancerId);
     } else
     {
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-        if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
+        bool shapeInstancesComputed = false;
+        try {
+            shapeInstancesComputed = instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape);
+        } catch (const std::exception& e) {
+            // The shape-instancing path flattens the full nested instance matrix list on the
+            // shape, which is multiplicative in the per-level instance counts and can exhaust
+            // memory on deeply nested instancers. Fall back to the Arnold instancer node chain,
+            // which only stores each level's own instances and lets Arnold resolve the nesting
+            // natively -- the exact same result as HDARNOLD_SHAPE_INSTANCING=0.
+            AiMsgWarning(
+                "[hdArnold] Shape instancing failed for %s (%s), falling back to Arnold instancer nodes",
+                id.GetText(), e.what());
+            // ComputeShapeInstancesTransforms may have partially declared/set instance_matrix on
+            // the shape before throwing. Reset it so the shape is a clean prototype for the chain.
+            if (AiNodeLookUpUserParameter(_shape, str::instance_matrix) != nullptr)
+                AiNodeResetParameter(_shape, str::instance_matrix);
+            _CreateArnoldInstancerChain(renderDelegate, sceneDelegate, id, instancerId);
+            return;
+        }
+        if (shapeInstancesComputed) {
             instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
         } else {
             // hide the source mesh if it doesn't have any instance #2557
             AiNodeSetByte(_shape, str::visibility, 0);
         }
+    }
+}
+
+void HdArnoldShape::_CreateArnoldInstancerChain(
+    HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
+    const SdfPath& instancerId)
+{
+    // First destroy the arnold parent instancers to this mesh
+    for (auto &instancerNode : _instancers) {
+        _renderDelegate->DestroyArnoldNode(instancerNode);
+    }
+    _instancers.clear();
+
+    // We need to hide the source mesh.
+    AiNodeSetByte(_shape, str::visibility, 0);
+
+    // Get the hydra instancer and rebuild the arnold instancer
+    auto& renderIndex = sceneDelegate->GetRenderIndex();
+    auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+    hydraInstancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
+
+    const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+
+    for (size_t i = 0; i < _instancers.size(); ++i) {
+        AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
+        renderDelegate->TrackRenderTag(_instancers[i], renderTag);
+
+        // At this point the instancers might have set their instance visibilities.
+        // In this case we want to apply the proto shape visibility on top of it.
+        // Otherwise we just set the shape visibility as its instance_visibility
+        AtArray *instanceVisibility = AiNodeGetArray(_instancers[i], str::instance_visibility);
+        unsigned int instanceVisibilityCount = (instanceVisibility) ? AiArrayGetNumElements(instanceVisibility) : 0;
+        if (instanceVisibilityCount  > 0) {
+            unsigned char* instVisArray = static_cast<unsigned char*>(AiArrayMap(instanceVisibility));
+            for (unsigned int j = 0; j < instanceVisibilityCount; ++j) {
+                instVisArray[j] &= _visibility;
+            }
+            AiArrayUnmap(instanceVisibility);
+            AiNodeSetArray(_instancers[i], str::instance_visibility, instanceVisibility);
+        } else
+            AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
     }
 }
 
