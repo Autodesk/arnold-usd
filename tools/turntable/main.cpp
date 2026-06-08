@@ -52,6 +52,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <map>
 #include <set>
 #include <string>
 #include <sys/stat.h>
@@ -348,6 +349,27 @@ bool _IsHdriFile(const std::string &fileName)
     return suffix == "exr" || suffix == "hdr" || suffix == "tif" || suffix == "tiff" || suffix == "tx";
 }
 
+// True if the file is a tiled/mip-mapped .tx texture.
+bool _IsTxFile(const std::string &fileName)
+{
+    return TfStringToLower(TfStringGetSuffix(fileName)) == "tx";
+}
+
+// Reduces a file name to a stem shared by a source map and its .tx counterpart
+// when the .tx was produced by simply appending ".tx" (e.g. "env.exr" and
+// "env.exr.tx" both yield "env"). Stems are compared exactly: colorspace or
+// other naming differences (e.g. "env_acescg_raw.exr.tx") do not match the
+// source and are kept as distinct rigs.
+std::string _HdriStem(const std::string &fileName)
+{
+    std::string stem = fileName;
+    if (_IsTxFile(stem)) {
+        stem = TfStringGetBeforeSuffix(stem);
+    }
+    stem = TfStringGetBeforeSuffix(stem);  // drop the image extension (.exr/.hdr/.tif)
+    return stem;
+}
+
 std::vector<std::string> _ListHdriFiles(const std::string &directory)
 {
     std::vector<std::string> files;
@@ -452,9 +474,27 @@ std::vector<LightRig> _CollectLightRigs(const Args &args)
             }
 
             const std::vector<std::string> files = _ListHdriFiles(hdriDir);
+
+            // Group files by their stem so a source map (e.g. env.exr) and its
+            // optimized .tx counterpart (env.exr.tx) collapse into a single rig.
+            // Prefer the .tx variant: it is generally generated from the source
+            // map and loads faster in Arnold. Files whose stems differ (e.g. a
+            // colorspace-tagged env_acescg_raw.exr.tx) stay as separate rigs.
+            std::map<std::string, std::string> chosenByStem;
             for (const std::string &fileName : files) {
-                const std::string baseName = TfStringGetBeforeSuffix(fileName);
-                std::string rigName = _SanitizeRigName(baseName);
+                const std::string stem = _HdriStem(fileName);
+                auto it = chosenByStem.find(stem);
+                if (it == chosenByStem.end()) {
+                    chosenByStem[stem] = fileName;
+                } else if (_IsTxFile(fileName) && !_IsTxFile(it->second)) {
+                    it->second = fileName;
+                }
+            }
+
+            for (const auto &entry : chosenByStem) {
+                const std::string &stem = entry.first;
+                const std::string &fileName = entry.second;
+                std::string rigName = _SanitizeRigName(stem);
                 if (usedNames.find(rigName) != usedNames.end()) {
                     int suffix = 2;
                     while (usedNames.find(rigName + "_" + std::to_string(suffix)) != usedNames.end()) {
