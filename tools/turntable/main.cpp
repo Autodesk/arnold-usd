@@ -219,7 +219,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("FILE");
 
     app->add_option("--hdri-dir", args.hdriDir,
-        "Directory scanned for .exr environment maps to generate dome light rigs")
+        "Directory scanned for .exr, .hdr and .tif environment maps to generate dome light rigs")
         ->option_text("DIR");
 
     app->add_option("--light-rig", args.lightRig,
@@ -340,12 +340,20 @@ std::vector<std::string> _GetHdriSearchDirs(const Args &args)
     return directories;
 }
 
-std::vector<std::string> _ListExrFiles(const std::string &directory)
+// Returns true if the file name has an extension we recognize as an HDRI
+// environment map (.exr, .hdr, .tif, .tiff). Comparison is case-insensitive.
+bool _IsHdriFile(const std::string &fileName)
+{
+    const std::string suffix = TfStringToLower(TfStringGetSuffix(fileName));
+    return suffix == "exr" || suffix == "hdr" || suffix == "tif" || suffix == "tiff";
+}
+
+std::vector<std::string> _ListHdriFiles(const std::string &directory)
 {
     std::vector<std::string> files;
 
 #ifdef _WIN32
-    const std::string pattern = TfStringCatPaths(directory, "*.exr");
+    const std::string pattern = TfStringCatPaths(directory, "*.*");
     WIN32_FIND_DATAA fileData;
     HANDLE handle = FindFirstFileA(pattern.c_str(), &fileData);
     if (handle == INVALID_HANDLE_VALUE) {
@@ -357,7 +365,7 @@ std::vector<std::string> _ListExrFiles(const std::string &directory)
             continue;
         }
         const std::string fileName = fileData.cFileName;
-        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+        if (_IsHdriFile(fileName)) {
             files.push_back(fileName);
         }
     } while (FindNextFileA(handle, &fileData) != 0);
@@ -373,7 +381,7 @@ std::vector<std::string> _ListExrFiles(const std::string &directory)
         if (fileName == "." || fileName == "..") {
             continue;
         }
-        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+        if (_IsHdriFile(fileName)) {
             files.push_back(fileName);
         }
     }
@@ -443,7 +451,7 @@ std::vector<LightRig> _CollectLightRigs(const Args &args)
                 continue;
             }
 
-            const std::vector<std::string> files = _ListExrFiles(hdriDir);
+            const std::vector<std::string> files = _ListHdriFiles(hdriDir);
             for (const std::string &fileName : files) {
                 const std::string baseName = TfStringGetBeforeSuffix(fileName);
                 std::string rigName = _SanitizeRigName(baseName);
