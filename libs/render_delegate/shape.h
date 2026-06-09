@@ -133,24 +133,6 @@ protected:
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
         HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force);
-    /// Builds the Arnold instancer node chain for this shape.
-    ///
-    /// This is the same path used when shape instancing is disabled
-    /// (HDARNOLD_SHAPE_INSTANCING=0): instead of flattening the full nested
-    /// instance matrix list on the shape, it creates one Arnold instancer node
-    /// per nesting level and lets Arnold resolve the nesting natively. It is
-    /// also used as a fallback when the shape-instancing path fails (e.g. it
-    /// runs out of memory on deeply nested instancers, where the flattened
-    /// matrix count is multiplicative).
-    ///
-    /// @param renderDelegate Pointer to the Arnold render delegate.
-    /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param id Path to the primitive.
-    /// @param instancerId Path to the Point Instancer.
-    HDARNOLD_API
-    void _CreateArnoldInstancerChain(
-        HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
-        const SdfPath& instancerId);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
     /// @param param Reference to HdArnoldRenderParamInterrupt.
