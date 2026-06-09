@@ -1766,14 +1766,41 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         changes = true;
     }
     SdfPath id;
+#ifdef ENABLE_SCENE_INDEX
+    // Under scene index emulation (Hydra 2) the change tracker's MarkRprimDirty / MarkSprimDirty
+    // must not be called directly: they raise "requires emulation" coding errors and the dirtiness
+    // is dropped. We instead push the dirtiness through the terminal scene index, the same way the
+    // bulk Rprim dirtying above does. Resolve the terminal scene index once for the lambda to use.
+    HdSceneIndexBaseRefPtr terminalSceneIndex =
+        HdRenderIndex::IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
+#endif
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
-        // Marking a primitive as being dirty. But the function to invoke
-        // depends on the prim type. For now we're checking first if a Rprim
-        // exists with this name, to choose between Rprims and Sprims.
-        if (renderIndex->HasRprim(source)) {
-            changeTracker.MarkRprimDirty(source, bits);
+        // Marking a primitive as being dirty. The conversion to data source locators and the
+        // function to invoke depend on the prim type, so we check first whether an Rprim exists
+        // with this name to choose between Rprims and Sprims.
+        const bool isRprim = renderIndex->HasRprim(source);
+#ifdef ENABLE_SCENE_INDEX
+        if (terminalSceneIndex) {
+            const HdSceneIndexPrim prim = terminalSceneIndex->GetPrim(source);
+            HdDataSourceLocatorSet locators;
+            if (isRprim) {
+                HdDirtyBitsTranslator::RprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            } else {
+                HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            }
+            if (!locators.IsEmpty()) {
+                TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash> dirtyEntries;
+                dirtyEntries.insert({source, locators});
+                auto dataSource = HdRetainedTypedSampledDataSource<
+                    TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
+                terminalSceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
+            }
+            return;
         }
-        else {
+#endif
+        if (isRprim) {
+            changeTracker.MarkRprimDirty(source, bits);
+        } else {
             // Depending on the Sprim type, the dirty bits must be different. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
             changeTracker.MarkSprimDirty(source, bits);
         }
@@ -1865,7 +1892,26 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
             _targetToSourcesMap[target].insert(source);
         }
     }
-    
+
+    // Instanced lights are Sprims, and Hydra does not propagate a Point Instancer's dirtiness to
+    // them the way it does for instanced Rprims: when an instancer's prototypes are only lights,
+    // nothing carries the dirty notification to the light Sprim, so after the first frame the
+    // instanced lights stay frozen while the instancer animates (issue #2641). The light registers
+    // a dependency on its instancer (see HdArnoldGenericLight::Sync); here we look for instancers
+    // that prims depend on and that are still dirty in the change tracker - because no Rprim caused
+    // Hydra to sync and clean them - and propagate that dirtiness to the dependent prims so they
+    // re-sync and rebuild their Arnold instancer. The light's re-sync calls the instancer's Sync,
+    // which clears the instancer's dirty bits and prevents this from looping every frame.
+    for (const auto& targetAndSources : _targetToSourcesMap) {
+        const SdfPath& target = targetAndSources.first;
+        if (renderIndex->GetInstancer(target) == nullptr) {
+            continue;
+        }
+        if (changeTracker.GetInstancerDirtyBits(target) != HdChangeTracker::Clean) {
+            DirtyDependency(target);
+        }
+    }
+
     // Finally, we're processing all the dependencies that were marked as dirty.
     // For each of them, we need to update all the sources pointing at it
     while (_dependencyDirtyQueue.try_pop(id)) {
