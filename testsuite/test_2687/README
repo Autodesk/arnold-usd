@@ -1,0 +1,9 @@
+Double-precision primvars
+
+author: sebastien.ortega
+
+Verifies that double-precision primvar arrays (color3d, double2, double)
+are accepted and silently converted to float before being passed to Arnold.
+The rendered result must be identical to the equivalent float-precision scene.
+
+PARAMS: {'scene': 'test.usda'}
