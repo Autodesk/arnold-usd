@@ -252,7 +252,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
 
 void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
-#if PXR_VERSION < 2605
+#if PXR_VERSION >= 2605
     if (GetShutterInterval().IsHolding<GfVec2d>()) {
         // Set the shutter interval on the render delegate
         const GfVec2d shutterInterval = GetShutterInterval().UncheckedGet<GfVec2d>();
@@ -481,7 +481,7 @@ void HdArnoldRenderSettings::_Sync(
     }
 
 #if PXR_VERSION >= 2311
-#if PXR_VERSION < 2605
+#if PXR_VERSION >= 2605
 	const auto DirtyShutter = HdRenderSettings::DirtyShutterInterval;
 #else
 	const auto DirtyShutter = HdRenderSettings::DirtyUnionedSamplingInterval;
