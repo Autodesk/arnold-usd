@@ -252,6 +252,10 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
 
 void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
+// HdRenderSettings::GetShutterInterval was introduced in USD 23.11 and replaced by
+// GetUnionedSamplingInterval in USD 25.05 (PXR_VERSION 2605). Earlier USD versions
+// (e.g. Houdini 20.0 / USD 23.08) expose neither, so there is nothing to update.
+#if PXR_VERSION >= 2311
 #if PXR_VERSION < 2605
     if (GetShutterInterval().IsHolding<GfVec2d>()) {
         // Set the shutter interval on the render delegate
@@ -284,6 +288,7 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
             }
         }
     }
+#endif
 }
 
 void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
