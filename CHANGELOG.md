@@ -17,6 +17,9 @@
 - [usd#2439](https://github.com/Autodesk/arnold-usd/issues/2439) - Support shaping attributes in all lights
 - [usd#2477](https://github.com/Autodesk/arnold-usd/issues/2477) - Support IES profiles on any light
 
+### Bug Fixes
+
+- [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
 
 ## [7.5.1.2] (Unreleased)
 

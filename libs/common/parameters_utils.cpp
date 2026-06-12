@@ -653,7 +653,7 @@ unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue)
 int VtValueGetInt(const VtValue& value, int defaultValue)
 {
     if (!value.IsEmpty())
-        VtValueGet<int, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
+        VtValueGet<int, bool, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
 
     return defaultValue;
 }
