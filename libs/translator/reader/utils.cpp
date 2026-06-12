@@ -957,7 +957,9 @@ void ReadPrimvars(
             declaration = "uniform";
 
         if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
-            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
+            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray ||
+            typeName == SdfValueTypeNames->Double2 || typeName == SdfValueTypeNames->Double2Array ||
+            typeName == SdfValueTypeNames->TexCoord2d || typeName == SdfValueTypeNames->TexCoord2dArray) {
             primvarType = AI_TYPE_VECTOR2;
 
             // A special case for UVs
@@ -979,13 +981,21 @@ void ReadPrimvars(
             typeName == SdfValueTypeNames->Point3f || typeName == SdfValueTypeNames->Point3fArray ||
             typeName == SdfValueTypeNames->Normal3f || typeName == SdfValueTypeNames->Normal3fArray ||
             typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
-            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
+            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray ||
+            typeName == SdfValueTypeNames->Vector3d || typeName == SdfValueTypeNames->Vector3dArray ||
+            typeName == SdfValueTypeNames->Point3d || typeName == SdfValueTypeNames->Point3dArray ||
+            typeName == SdfValueTypeNames->Normal3d || typeName == SdfValueTypeNames->Normal3dArray ||
+            typeName == SdfValueTypeNames->Double3 || typeName == SdfValueTypeNames->Double3Array ||
+            typeName == SdfValueTypeNames->TexCoord3d || typeName == SdfValueTypeNames->TexCoord3dArray) {
             primvarType = AI_TYPE_VECTOR;
-        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
+        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray ||
+            typeName == SdfValueTypeNames->Color3d || typeName == SdfValueTypeNames->Color3dArray)
             primvarType = AI_TYPE_RGB;
         else if (
             typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
-            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
+            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array ||
+            typeName == SdfValueTypeNames->Color4d || typeName == SdfValueTypeNames->Color4dArray ||
+            typeName == SdfValueTypeNames->Double4 || typeName == SdfValueTypeNames->Double4Array)
             primvarType = AI_TYPE_RGBA;
         else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray || 
             typeName == SdfValueTypeNames->Double || typeName == SdfValueTypeNames->DoubleArray)

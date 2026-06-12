@@ -505,10 +505,12 @@ size_t HdArnoldSetPositionFromPrimvar(
 
 void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value)
 {
-    if (!value.IsHolding<VtVec3fArray>()) {
+    // Accept both VtVec3fArray and VtVec3dArray; the helper does the
+    // double->float per-element conversion when needed. (issue #480)
+    VtVec3fArray values;
+    if (!HdArnoldUnboxArrayValue(value, values)) {
         return;
     }
-    const auto& values = value.UncheckedGet<VtVec3fArray>();
     AiNodeSetArray(node, paramName, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
 }
 
