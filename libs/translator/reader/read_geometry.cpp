@@ -998,6 +998,7 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // C0 = 0.28209479177387814 (the l=0 SH basis constant).
     // USD radiance:sphericalHarmonicsCoefficients stores raw coefficients;
     // apply the transformation here before building the Arnold atarray.
+    bool gsShSet = false;
     {
         UsdAttribute shAttr;
         bool isFloat = gs.UsesFloatRadianceCoefficients(&shAttr);
@@ -1034,7 +1035,25 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
                 }
                 AiNodeSetArray(node, str::gs_sh,
                     AiArrayConvert(shCoeffs.size(), 1, AI_TYPE_RGB, shCoeffs.data()));
+                gsShSet = true;
             }
+        }
+    }
+
+    // --- Spherical harmonics fallback: primvars:displayColor ----------------
+    // When Houdini's Bake GSplat SOP creates a ParticleField3DGaussianSplat prim,
+    // it stores the degree-0 splat color in primvars:displayColor instead of
+    // radiance coefficients. When no coefficients are present, use displayColor
+    // as the degree-0 DC term. The values are already the final DC color
+    // (raw_f_dc * C0 + 0.5), so they are passed through directly without normalization.
+    if (!gsShSet) {
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        UsdGeomPrimvar displayColorPv = primvarsAPI.GetPrimvar(TfToken("displayColor"));
+        if (displayColorPv) {
+            VtArray<GfVec3f> displayColor;
+            if (displayColorPv.Get(&displayColor, frame) && !displayColor.empty())
+                AiNodeSetArray(node, str::gs_sh,
+                    AiArrayConvert(displayColor.size(), 1, AI_TYPE_RGB, displayColor.cdata()));
         }
     }
 
