@@ -59,10 +59,36 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (uisoftmax)
     (enumValues)
     (attrsOrder)
+    (nodeType)
+    (usdSchema)
+    (light)
 );
 // clang-format on
 
 namespace {
+
+// Maps an Arnold light node entry name to the corresponding stock USD light
+// prim type (UsdLux / UsdImaging). Recorded as the "usdSchema" node-level
+// metadata on the registered SdrShaderNode so DCC-agnostic tools can write
+// arnold lights to USD layers without guessing. Lights not in this table
+// (e.g. third-party lights surfaced via AI_NODE_LIGHT) are still registered
+// under context "light" but without a usdSchema hint.
+const std::unordered_map<std::string, std::string>& _GetArnoldLightToUsdPrimType()
+{
+    static const std::unordered_map<std::string, std::string> ret = {
+        {"distant_light",     "DistantLight"},
+        {"disk_light",        "DiskLight"},
+        {"quad_light",        "RectLight"},
+        {"cylinder_light",    "CylinderLight"},
+        {"skydome_light",     "DomeLight"},
+        {"point_light",       "SphereLight"},
+        {"spot_light",        "SphereLight"},
+        {"photometric_light", "SphereLight"},
+        {"mesh_light",        "GeometryLight"},
+        {"portal_light",      "PortalLight"},
+    };
+    return ret;
+}
 
 // TODO(pal): All this should be moved to a schema API.
 
@@ -411,6 +437,16 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     } else if (nodeEntryType == AI_NODE_IMAGER || nodeEntryType == AI_NODE_OPERATOR) {
         // create an output type for imagers
         prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
+    } else if (nodeEntryType == AI_NODE_LIGHT) {
+        // Tag the prim so the parser registers it under SdrNodeContext->Light
+        // and record the corresponding stock USD light prim type, if any.
+        primCustomData[_tokens->nodeType] = _tokens->light.GetString();
+        const auto& usdPrimTypeMap = _GetArnoldLightToUsdPrimType();
+        const std::string nodeName = AiNodeEntryGetName(nodeEntry);
+        auto it = usdPrimTypeMap.find(nodeName);
+        if (it != usdPrimTypeMap.end()) {
+            primCustomData[_tokens->usdSchema] = it->second;
+        }
     }
 
     VtArray<std::string> attrsOrder;
@@ -567,7 +603,8 @@ UsdStageRefPtr NodeRegistryArnoldGetShaderDefs()
 #endif
         }
 
-        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_IMAGER | AI_NODE_OPERATOR);
+        auto* nodeIter = AiUniverseGetNodeEntryIterator(
+            AI_NODE_SHADER | AI_NODE_IMAGER | AI_NODE_OPERATOR | AI_NODE_LIGHT);
 
         while (!AiNodeEntryIteratorFinished(nodeIter)) {
             _ReadArnoldShaderDef(stage, AiNodeEntryIteratorGetNext(nodeIter));
