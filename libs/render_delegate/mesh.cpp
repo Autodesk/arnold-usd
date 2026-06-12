@@ -216,8 +216,11 @@ void HdArnoldMesh::Sync(
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
     HdArnoldSampledPrimvarType _pointsSample;
+    // DirtyNormals must also trigger the primvar refresh below: when a deforming mesh advances in
+    // time, Hydra reports authored normal changes as DirtyNormals (not DirtyPrimvar), so gating only
+    // on DirtyPrimvar leaves the Arnold nlist stale relative to the updated points.
     bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
-                               (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+                               (*dirtyBits & (HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyNormals));
 
     // We need to set the deform keys first if it is specified
     VtValue deformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
@@ -622,9 +625,10 @@ void HdArnoldMesh::Sync(
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyPoints |
-           HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtySubdivTags |
-           HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId |
-           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided |
+           HdChangeTracker::DirtySubdivTags | HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform |
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility |
+           HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 
