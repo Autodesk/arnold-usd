@@ -24,6 +24,7 @@
 #include <pxr/usd/usd/timeCode.h>
 #include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usdGeom/bboxCache.h>
+#include <pxr/usd/usdGeom/boundable.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/imageable.h>
@@ -51,6 +52,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <map>
 #include <set>
 #include <string>
 #include <sys/stat.h>
@@ -87,6 +89,7 @@ struct Args {
     double      cameraZoom   = 1.0; // Multiplicative factor for camera orbit distance.
     std::string mode         = "camera"; // camera (default), object, or light
     std::string studioSets;  // Comma-separated studio set names
+    bool        listStudioSets = false;
     std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
 };
 
@@ -159,6 +162,24 @@ const char *_StudioSetToString(StudioSetType studioSet)
     return "pedestal";
 }
 
+struct StudioSetInfo {
+    StudioSetType type;
+    const char   *aliases;
+    const char   *description;
+};
+
+// Studio sets selectable through --studio-set, in display order.
+const std::vector<StudioSetInfo> &_AvailableStudioSets()
+{
+    static const std::vector<StudioSetInfo> studioSets = {
+        {StudioSetType::Ground, "pedestal",
+         "Cylindrical pedestal under the asset"},
+        {StudioSetType::Cyclo, "cyclo, cyc, cyclorama",
+         "Curved cyclorama wall and floor enclosing the asset"},
+    };
+    return studioSets;
+}
+
 GfMatrix4d _RotationMatrixForUpAxis(const TfToken &upAxis, double angleDegrees)
 {
     const GfVec3d axis = (upAxis == UsdGeomTokens->z) ? GfVec3d(0.0, 0.0, 1.0) : GfVec3d(0.0, 1.0, 0.0);
@@ -199,7 +220,7 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("FILE");
 
     app->add_option("--hdri-dir", args.hdriDir,
-        "Directory scanned for .exr environment maps to generate dome light rigs")
+        "Directory scanned for .exr, .hdr, .tif and .tx environment maps to generate dome light rigs")
         ->option_text("DIR");
 
     app->add_option("--light-rig", args.lightRig,
@@ -236,6 +257,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--studio-set", args.studioSets,
         "Add studio sets to the generated stage. Supported values: pedestal, cyclo (comma-separated)")
         ->option_text("NAME");
+
+    app->add_flag("--list-studio-sets", args.listStudioSets,
+        "List available studio set names and exit");
 
     app->add_option("--background-color", args.backgroundColor,
         "Solid background color as 3 linear floats: R G B (default: no background)")
@@ -317,12 +341,41 @@ std::vector<std::string> _GetHdriSearchDirs(const Args &args)
     return directories;
 }
 
-std::vector<std::string> _ListExrFiles(const std::string &directory)
+// Returns true if the file name has an extension we recognize as an HDRI
+// environment map (.exr, .hdr, .tif, .tiff, .tx). Comparison is case-insensitive.
+bool _IsHdriFile(const std::string &fileName)
+{
+    const std::string suffix = TfStringToLower(TfStringGetSuffix(fileName));
+    return suffix == "exr" || suffix == "hdr" || suffix == "tif" || suffix == "tiff" || suffix == "tx";
+}
+
+// True if the file is a tiled/mip-mapped .tx texture.
+bool _IsTxFile(const std::string &fileName)
+{
+    return TfStringToLower(TfStringGetSuffix(fileName)) == "tx";
+}
+
+// Reduces a file name to a stem shared by a source map and its .tx counterpart
+// when the .tx was produced by simply appending ".tx" (e.g. "env.exr" and
+// "env.exr.tx" both yield "env"). Stems are compared exactly: colorspace or
+// other naming differences (e.g. "env_acescg_raw.exr.tx") do not match the
+// source and are kept as distinct rigs.
+std::string _HdriStem(const std::string &fileName)
+{
+    std::string stem = fileName;
+    if (_IsTxFile(stem)) {
+        stem = TfStringGetBeforeSuffix(stem);
+    }
+    stem = TfStringGetBeforeSuffix(stem);  // drop the image extension (.exr/.hdr/.tif)
+    return stem;
+}
+
+std::vector<std::string> _ListHdriFiles(const std::string &directory)
 {
     std::vector<std::string> files;
 
 #ifdef _WIN32
-    const std::string pattern = TfStringCatPaths(directory, "*.exr");
+    const std::string pattern = TfStringCatPaths(directory, "*.*");
     WIN32_FIND_DATAA fileData;
     HANDLE handle = FindFirstFileA(pattern.c_str(), &fileData);
     if (handle == INVALID_HANDLE_VALUE) {
@@ -334,7 +387,7 @@ std::vector<std::string> _ListExrFiles(const std::string &directory)
             continue;
         }
         const std::string fileName = fileData.cFileName;
-        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+        if (_IsHdriFile(fileName)) {
             files.push_back(fileName);
         }
     } while (FindNextFileA(handle, &fileData) != 0);
@@ -350,7 +403,7 @@ std::vector<std::string> _ListExrFiles(const std::string &directory)
         if (fileName == "." || fileName == "..") {
             continue;
         }
-        if (TfStringGetSuffix(TfStringToLower(fileName)) == "exr") {
+        if (_IsHdriFile(fileName)) {
             files.push_back(fileName);
         }
     }
@@ -420,10 +473,28 @@ std::vector<LightRig> _CollectLightRigs(const Args &args)
                 continue;
             }
 
-            const std::vector<std::string> files = _ListExrFiles(hdriDir);
+            const std::vector<std::string> files = _ListHdriFiles(hdriDir);
+
+            // Group files by their stem so a source map (e.g. env.exr) and its
+            // optimized .tx counterpart (env.exr.tx) collapse into a single rig.
+            // Prefer the .tx variant: it is generally generated from the source
+            // map and loads faster in Arnold. Files whose stems differ (e.g. a
+            // colorspace-tagged env_acescg_raw.exr.tx) stay as separate rigs.
+            std::map<std::string, std::string> chosenByStem;
             for (const std::string &fileName : files) {
-                const std::string baseName = TfStringGetBeforeSuffix(fileName);
-                std::string rigName = _SanitizeRigName(baseName);
+                const std::string stem = _HdriStem(fileName);
+                auto it = chosenByStem.find(stem);
+                if (it == chosenByStem.end()) {
+                    chosenByStem[stem] = fileName;
+                } else if (_IsTxFile(fileName) && !_IsTxFile(it->second)) {
+                    it->second = fileName;
+                }
+            }
+
+            for (const auto &entry : chosenByStem) {
+                const std::string &stem = entry.first;
+                const std::string &fileName = entry.second;
+                std::string rigName = _SanitizeRigName(stem);
                 if (usedNames.find(rigName) != usedNames.end()) {
                     int suffix = 2;
                     while (usedNames.find(rigName + "_" + std::to_string(suffix)) != usedNames.end()) {
@@ -551,8 +622,25 @@ bool ComputeAssetBounds(const std::string &assetPath, const std::string &upAxisO
         {UsdGeomTokens->default_, UsdGeomTokens->render},
         /*useExtentsHint=*/true);
 
-    const GfBBox3d worldBBox = bboxCache.ComputeWorldBound(stage->GetPseudoRoot());
-    const GfRange3d range    = worldBBox.ComputeAlignedRange();
+    // Union the world bound of every Boundable prim individually rather than
+    // querying ComputeWorldBound() once on the pseudo-root. UsdGeomBBoxCache
+    // treats a Boundable gprim as a leaf: it returns that prim's authored extent
+    // and does not descend into any Boundable children it may have. Some DCC
+    // exports (e.g. Cinema 4D) author geometry as nested Mesh-in-Mesh
+    // hierarchies, so a single root-level query collapses the whole asset down to
+    // the topmost mesh's extent — yielding a far-too-small bbox that makes
+    // --camera-height appear to have no effect. Visiting each Boundable (instance
+    // proxies included) and unioning their bounds captures the full hierarchy.
+    GfRange3d range;
+    for (const UsdPrim &prim : stage->Traverse(UsdTraverseInstanceProxies(UsdPrimDefaultPredicate))) {
+        if (!prim.IsA<UsdGeomBoundable>()) {
+            continue;
+        }
+        const GfRange3d primRange = bboxCache.ComputeWorldBound(prim).ComputeAlignedRange();
+        if (!primRange.IsEmpty()) {
+            range.UnionWith(primRange);
+        }
+    }
 
     if (range.IsEmpty()) {
         fprintf(stderr, "turntable: bounding box of '%s' is empty — "
@@ -1181,9 +1269,54 @@ static void _SetupBackground(const UsdStageRefPtr &stage, const UsdRenderSetting
         .Set(graphPath.GetString());
 }
 
+// Build a product name with the frame number baked in. A run of '#' is replaced
+// by the zero-padded frame (one digit per '#'); otherwise a 4-digit number is
+// inserted before the extension. ("output.jpg", 0) -> "output.0000.jpg".
+static std::string _ProductNameForFrame(const std::string &productName, int frame)
+{
+    const size_t hashStart = productName.find('#');
+    if (hashStart != std::string::npos) {
+        size_t hashEnd = hashStart;
+        while (hashEnd < productName.size() && productName[hashEnd] == '#') {
+            ++hashEnd;
+        }
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%0*d", static_cast<int>(hashEnd - hashStart), frame);
+        return productName.substr(0, hashStart) + buffer + productName.substr(hashEnd);
+    }
+
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%04d", frame);
+    const std::string extension = TfGetExtension(productName);
+    if (extension.empty()) {
+        return productName + "." + buffer;
+    }
+    // Strip the extension and its dot, then re-append after the frame number.
+    const std::string base = productName.substr(0, productName.size() - extension.size() - 1);
+    return base + "." + buffer + "." + extension;
+}
+
+// Time-sample productName so each frame writes a distinct file. USD does not
+// expand frame patterns (e.g. "####") in productName at render time, so we bake
+// the frame number into a value authored at every timecode. The renderer reads
+// productName at the timecode it renders and gets that frame's filename. The
+// frame number matches the timecode (timecode 0 -> base.0000.ext).
+static void _AuthorPerFrameProductName(const UsdRenderProduct &product,
+                                       const std::string &baseName, int frames)
+{
+    UsdAttribute nameAttr = product.CreateProductNameAttr();
+    // Default value (used by Default-time reads) plus a sample per frame; at a
+    // given timecode the time sample wins over the default.
+    nameAttr.Set(TfToken(_ProductNameForFrame(baseName, 0)));
+    for (int i = 0; i < frames; ++i) {
+        nameAttr.Set(TfToken(_ProductNameForFrame(baseName, i)), UsdTimeCode(double(i)));
+    }
+}
+
 // Override an existing asset render settings prim with turntable values:
-// camera and optionally background. The prim itself is already authored
-// in the sublayered asset; we author an over to change only what we need.
+// camera, per-frame product names, and optionally background. The prim itself
+// is already authored in the sublayered asset; we author an over to change only
+// what we need.
 static void _OverrideAssetRenderSettings(const UsdStageRefPtr &stage,
                                          const SdfPath &settingsPath,
                                          const SdfPath &cameraPath,
@@ -1192,6 +1325,24 @@ static void _OverrideAssetRenderSettings(const UsdStageRefPtr &stage,
     UsdPrim settingsPrim = stage->OverridePrim(settingsPath);
     UsdRenderSettings settings(settingsPrim);
     settings.GetCameraRel().SetTargets({cameraPath});
+
+    // The asset's render products keep their authored productName, a fixed
+    // filename, so without per-frame names every frame overwrites the same file.
+    // Re-author each product's name as a time sample per frame.
+    SdfPathVector productTargets;
+    settings.GetProductsRel().GetTargets(&productTargets);
+    for (const SdfPath &productPath : productTargets) {
+        UsdRenderProduct product(stage->GetPrimAtPath(productPath));
+        if (!product) {
+            continue;
+        }
+        TfToken productName;
+        if (!product.GetProductNameAttr().Get(&productName) || productName.IsEmpty()) {
+            continue;
+        }
+        // Authors time samples on the product in the root layer (the edit target).
+        _AuthorPerFrameProductName(product, productName.GetString(), args.frames);
+    }
 
     if (args.backgroundColor.size() == 3) {
         _SetupBackground(stage, settings,
@@ -1208,10 +1359,12 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
     settings.GetResolutionAttr().Set(GfVec2i(args.width, args.height));
     settings.GetCameraRel().SetTargets({cameraPath});
 
-    // Output image sequence: strip the .usda extension and append frame pattern.
-    const std::string productPath = TfStringGetBeforeSuffix(args.output) + ".####.exr";
+    // Output image sequence: strip the .usda extension and use a .exr base. USD
+    // does not expand frame patterns in productName, so the name is time-sampled
+    // per frame by _AuthorPerFrameProductName (e.g. turntable.0001.exr).
+    const std::string productBase = TfStringGetBeforeSuffix(args.output) + ".exr";
     UsdRenderProduct product = UsdRenderProduct::Define(stage, SdfPath("/Render/TurntableProduct"));
-    product.GetProductNameAttr().Set(SdfAssetPath(productPath));
+    _AuthorPerFrameProductName(product, productBase, args.frames);
     product.GetProductTypeAttr().Set(TfToken("arnold"));
     settings.GetProductsRel().AddTarget(SdfPath("/Render/TurntableProduct"));
 
@@ -1230,9 +1383,18 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
 
 int Run(const Args &args)
 {
-    if (args.input.empty() && !args.listLightRigs) {
-        fprintf(stderr, "turntable: input is required unless --list-light-rigs is used\n");
+    if (args.input.empty() && !args.listLightRigs && !args.listStudioSets) {
+        fprintf(stderr, "turntable: input is required unless --list-light-rigs "
+                "or --list-studio-sets is used\n");
         return 1;
+    }
+
+    if (args.listStudioSets) {
+        printf("Studio sets:\n");
+        for (const StudioSetInfo &info : _AvailableStudioSets()) {
+            printf("  %s [%s] — %s\n", _StudioSetToString(info.type), info.aliases, info.description);
+        }
+        return 0;
     }
 
     if (args.cameraZoom <= 0.0) {
