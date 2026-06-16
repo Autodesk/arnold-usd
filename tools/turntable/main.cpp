@@ -1392,7 +1392,7 @@ int Run(const Args &args)
     if (args.listStudioSets) {
         printf("Studio sets:\n");
         for (const StudioSetInfo &info : _AvailableStudioSets()) {
-            printf("  %s [%s] — %s\n", _StudioSetToString(info.type), info.aliases, info.description);
+            printf("  %s [%s] - %s\n", _StudioSetToString(info.type), info.aliases, info.description);
         }
         return 0;
     }
