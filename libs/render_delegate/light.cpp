@@ -165,8 +165,14 @@ void iterateParams(
         if (pentry == nullptr) {
             continue;
         }
-
-        HdArnoldSetParameter(light, pentry, delegate->GetLightParamValue(id, param.hdName), renderDelegate);
+        // Reset the parameter to its default when Hydra reports no value, so that
+        // attributes removed since the previous Sync don't leak across renders.
+        const VtValue value = delegate->GetLightParamValue(id, param.hdName);
+        if (value.IsEmpty()) {
+            AiNodeResetParameter(light, param.arnoldName);
+        } else {
+            HdArnoldSetParameter(light, pentry, value, renderDelegate);
+        }
     }
 }
 
@@ -179,7 +185,7 @@ void readUserData(
     HdArnoldGetPrimvars(delegate, id, dirtyBits, primvars, &interpolations);
     for (const auto &p : primvars) {
         // Get the parameter name, removing the arnold:prefix if any
-        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold_prefix.c_str()) ? p.first.GetString().substr(str::arnold_prefix.length()) : p.first.GetString());
         const auto* pentry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), AtString(paramName.c_str()));
         if (pentry) {
             HdArnoldSetParameter(light, pentry, p.second.value, renderDelegate);
@@ -239,9 +245,9 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id, HdArnoldRend
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
         // If usdlux_version is enabled use a point light
         AtNode* options = AiUniverseGetOptions(renderDelegate->GetUniverse());
-        if (AiNodeGetByte(options, str::usdlux_version) != 0) 
+        if (AiNodeGetInt(options, str::usdlux_version) != 0)
             return str::point_light;
-        else 
+        else
             return str::spot_light;
     }
     // Finally, we default to a point light
@@ -592,7 +598,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                     _syncParams = photometricLightSync;
                 }
                 if (_lightLink != _tokens->emptyLink) {
-                    _delegate->DeregisterLightLinking(_shadowLink, this, false);
+                    _delegate->DeregisterLightLinking(_lightLink, this, false);
                     _lightLink = _tokens->emptyLink;
                 }
                 if (_shadowLink != _tokens->emptyLink) {
@@ -601,10 +607,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 }
             }
         }
-        // We need to force dirtying the transform, because AiNodeReset resets the transformation.
-        *dirtyBits |= HdLight::DirtyTransform;
-        AiNodeReset(_light);
-                
+        // Clear any incoming connections on parameters that can be driven by a node
+        // graph (color, filters). The subsequent value writes and shader/texture
+        // links below depend on starting from a disconnected state, and Arnold's
+        // AiNodeSetRGB/SetArray do not implicitly remove existing links.
+        AiNodeResetParameter(_light, str::color);
+        AiNodeResetParameter(_light, str::filters);
+
         // convert the generic lights parameters
         iterateParams(_light, nentry, id, sceneDelegate, _delegate, genericParams);
         // convert the light specific attributes
@@ -679,7 +688,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 }
             }
             if (filters.empty()) {
-                AiNodeSetArray(_light, str::filters, AiArray(0, 0, AI_TYPE_NODE));
+                // Note: 0 keys is invalid for AtArray; use 1 key like the sibling disconnect at line 315.
+                AiNodeSetArray(_light, str::filters, AiArray(0, 1, AI_TYPE_NODE));
             } else {
                 AiNodeSetArray(_light, str::filters, AiArrayConvert(filters.size(), 1, AI_TYPE_NODE, filters.data()));
             }
@@ -695,35 +705,48 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
         if (!instancerId.IsEmpty()) {
             auto& renderIndex = sceneDelegate->GetRenderIndex();
-            auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-            HdDirtyBits bits = HdChangeTracker::AllDirty;
-            // The Sync function seems to be called automatically for shapes, but 
-            // not for lights
-            instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
-            const TfToken renderTag = sceneDelegate->GetRenderTag(id);
-            float lightIntensity = AiNodeGetFlt(_light, str::intensity);
-            // For instance of lights, we need to disable the prototype light
-            // by setting its intensity to 0. The instancer can then have a user data
-            // instance_intensity with the actual intensity value to use for each instance, 
-            // and this will be applied to each instance
-            for (size_t i = 0; i < _instancers.size(); ++i) {
-                AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
-                _delegate->TrackRenderTag(_instancers[i], renderTag);
-                AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
-                // If the instance array has a single element, it will be applied to all instances,
-                // which is what we need to do here for the light intensity
-                AiNodeSetArray(_instancers[i], str::instance_intensity, 
-                    AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));                
+            // static_cast can't catch the wrong-type case (only null), so use dynamic_cast.
+            auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+            if (instancer != nullptr) {
+
+                HdDirtyBits bits = HdChangeTracker::AllDirty;
+                // The Sync function seems to be called automatically for shapes, but 
+                // not for lights
+                instancer->Sync(sceneDelegate, renderParam, &bits);
+                instancer->CreateArnoldInstancer(_delegate, id, _instancers);
+                const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+                float lightIntensity = AiNodeGetFlt(_light, str::intensity);
+                // For instance of lights, we need to disable the prototype light
+                // by setting its intensity to 0. The instancer can then have a user data
+                // instance_intensity with the actual intensity value to use for each instance, 
+                // and this will be applied to each instance
+                for (size_t i = 0; i < _instancers.size(); ++i) {
+                    AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
+                    _delegate->TrackRenderTag(_instancers[i], renderTag);
+                    AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
+                    // If the instance array has a single element, it will be applied to all instances,
+                    // which is what we need to do here for the light intensity
+                    AiNodeSetArray(_instancers[i], str::instance_intensity, 
+                        AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));                
+                }
+                // Ensure the prototype light is hidden
+                AiNodeSetFlt(_light, str::intensity, 0.f);
             }
-            // Ensure the prototype light is hidden
-            AiNodeSetFlt(_light, str::intensity, 0.f);
         }
 
 
         HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
         if (!lightShaderPath.IsEmpty())
             pathSet.insert({lightShaderPath, HdLight::DirtyParams});
+
+        // Instanced lights are Sprims, and Hydra does not re-sync them when only their Point
+        // Instancer animates - the instancer's prototype chain has no Rprim to carry the dirty
+        // notification, so the light's Sync is never called again after the first frame and the
+        // instanced lights stay frozen. Depend on the instancer here so that the render delegate
+        // (HasPendingChanges) can re-dirty this light whenever the instancer changes, letting the
+        // instanced lights animate. See issue #2641.
+        if (!instancerId.IsEmpty())
+            pathSet.insert({instancerId, HdLight::DirtyParams});
 
         // If we previously had node graph connected, we need to call TrackDependencies
         // even if our list is empty. This is needed to clear the previous dependencies

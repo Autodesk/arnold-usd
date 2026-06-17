@@ -35,6 +35,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((hydraProcCamera, "/ArnoldHydraProceduralCamera"))
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+
 );
 
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
@@ -252,7 +255,11 @@ void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath
         _imagingDelegate->SetCameraForSampling(cameraPath);
     if (_renderIndex && _stageSceneIndex && stage) {
         UsdGeomCamera cameraPrim(stage->GetPrimAtPath(cameraPath));
-        double shutterOpen, shutterClose;
+        // Initialize with USD's defaults (UsdGeomCamera::GetShutterOpenAttr() / CloseAttr()
+        // default to 0). UsdAttribute::Get() returns false when the attribute has no
+        // authored or fallback value, and in that case leaves these locals uninitialized.
+        double shutterOpen = 0.0;
+        double shutterClose = 0.0;
         UsdTimeCode timeCode = _stageSceneIndex->GetTime();
         if (cameraPrim) {
             cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);
@@ -299,24 +306,22 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             TRACE_SCOPE("ChooseRenderSettings");
             ChooseRenderSettings(stage, _renderSettings, _time);
         }
-// TODO HERE WE COULD CHECK IF WE WANT TO USE HYDRA2
+
         if (!_renderSettings.empty()) {
             TRACE_SCOPE("ReadRenderSettings");
             // Sets the default parameters on the Arnold option node (AA_samples, GI_diffuse_depth, ...)
             SetArnoldDefaultOptions(_universe);
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
             // We want to use the RenderSetting hydra prim only if we use the scene index system
             if (_useSceneIndex) {
                 // TODO set metadata only if it it not already set
+                VtValue val(_tokens->hydraSceneRenderSettingsSrc);
+                // Tell the arnold render delegate to use the hydra render settings
+                arnoldRenderDelegate->SetRenderSetting(_tokens->renderSettingsSrc, val);
                 stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, _renderSettings);
             } else {
                 UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
                 ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
             }
-#else
-            UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), this, _time, _universe, _renderCameraPath);
-#endif
         }
     } 
 

@@ -106,7 +106,7 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(cam, node, writer);
 
     AtArray* matrices = AiNodeGetArray(node, AtString("matrix"));
-    unsigned int numKeys = matrices ? AiArrayGetNumKeys(matrices) : 1;
+    unsigned int numKeys = matrices ? AiArrayGetNumKeys(matrices) : 0;
     bool hasMatrix = false;
     for (unsigned int i = 0; i < numKeys; ++i) {
         if (!AiM4IsIdentity(AiArrayGetMtx(matrices, i))) {

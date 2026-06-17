@@ -114,9 +114,11 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         xf.values.resize(transformKeys);
         // If an amount of transform keys is provided, we must resample
         // the times & values to match the new amount
+        const float divisor = std::max(static_cast<float>(transformKeys) - 1.f, 1.f);
         for (int i = 0; i < transformKeys; ++i) {
-            xf.times[i] = timeStart + i * (timeEnd - timeStart) /
-                (static_cast<float>(transformKeys)-1.f);
+            xf.times[i] = (transformKeys == 1)
+                ? timeStart
+                : timeStart + i * (timeEnd - timeStart) / divisor;
             xf.values[i] = xfOrig.Resample(xf.times[i]);
         }
     }
@@ -169,7 +171,10 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
     HdArnoldEnsureSamplesCount(samplingInterval, xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
-        for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
+        // The normal path below explicitly handles nodes[0] outside the loop; the
+        // fallback must do the same or nodes[0] would keep its stale matrix while
+        // every other node was reset to identity.
+        for (auto i = decltype(nodeCount){0}; i < nodeCount; ++i) {
             AiNodeSetArray(nodes[i], str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
             AiNodeResetParameter(nodes[i], str::motion_start);
             AiNodeResetParameter(nodes[i], str::motion_end);
@@ -530,6 +535,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     auto* out = static_cast<float*>(AiArrayMap(arr));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
+    AiArrayUnmap(arr);
     AiNodeSetArray(node, str::radius, arr);
 }
 
@@ -554,7 +560,6 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
         const auto data = xf.Resample(timeSamples[i]);
         AiArraySetKey(arr, i, data.data());
     }
-    AiArrayUnmap(arr);
     AiNodeSetArray(node, arnoldAttr, arr);
 }
 

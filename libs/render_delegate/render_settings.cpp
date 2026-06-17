@@ -18,9 +18,8 @@
 /// @file render_settings.cpp
 ///
 /// Hydra 2.0 Render Settings Prim for Arnold.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-
 #include "render_settings.h"
+#include "render_delegate.h"
 
 #if PXR_VERSION >= 2308
 
@@ -41,6 +40,7 @@
 #include <pxr/usdImaging/usdImaging/renderSettingsAdapter.h>
 #include <pxr/usdImaging/usdImaging/usdRenderSettingsSchema.h>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include "../common/rendersettings_utils.h"
@@ -130,11 +130,42 @@ VtDictionary _GenerateArnoldOptions(VtDictionary const& settings)
     return options;
 }
 
+// Append `newShaders` to options.aov_shaders, preserving any existing entries
+// and skipping pointers that are already present. _UpdateArnoldOptions (driven
+// by DirtyNamespacedSettings) and _UpdateRenderProducts (driven by
+// DirtyRenderProducts) both contribute aov_shaders; they can fire in either
+// order, so each must merge rather than overwrite.
+void _MergeAovShaders(AtNode* options, const std::vector<AtNode*>& newShaders)
+{
+    if (newShaders.empty())
+        return;
+
+    std::vector<AtNode*> merged;
+    AtArray* existing = AiNodeGetArray(options, str::aov_shaders);
+    if (existing) {
+        const uint32_t n = AiArrayGetNumElements(existing);
+        merged.reserve(n + newShaders.size());
+        for (uint32_t i = 0; i < n; ++i) {
+            AtNode* node = static_cast<AtNode*>(AiArrayGetPtr(existing, i));
+            if (node)
+                merged.push_back(node);
+        }
+    }
+    for (AtNode* node : newShaders) {
+        if (node && std::find(merged.begin(), merged.end(), node) == merged.end())
+            merged.push_back(node);
+    }
+
+    AiNodeSetArray(options, str::aov_shaders,
+        AiArrayConvert(merged.size(), 1, AI_TYPE_NODE, merged.data()));
+}
+
 } // end anonymous namespace
 
 // ----------------------------------------------------------------------------
 
-HdArnoldRenderSettings::HdArnoldRenderSettings(SdfPath const& id) : HdRenderSettings(id) {}
+HdArnoldRenderSettings::HdArnoldRenderSettings(HdArnoldRenderDelegate* renderDelegate, 
+    SdfPath const& id) : HdRenderSettings(id), _renderDelegate(renderDelegate) {}
 
 HdArnoldRenderSettings::~HdArnoldRenderSettings()
 { 
@@ -161,13 +192,11 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
     const VtDictionary& namespacedSettings = GetNamespacedSettings();
     const VtDictionary arnoldOptions = _GenerateArnoldOptions(namespacedSettings);
 
-    if (arnoldOptions.empty()) {
+    if (arnoldOptions.empty() || _renderDelegate == nullptr) {
         return;
     }
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
 
     // Set Arnold options from the render settings
     for (auto const& pair : arnoldOptions) {
@@ -178,7 +207,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
             // Get the node graph referenced by this attribute and assign its terminal node
             // to the arnold options
             SdfPath nodeGraphPath(VtValueGetString(value));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath, renderDelegate);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, TfToken(name)) : nullptr;
             AiNodeSetPtr(options, nameStr, target);
         } else if (nameStr == str::aov_shaders) {
@@ -188,7 +217,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
             std::string aovShadersStr = VtValueGetString(value);
             for (const auto &shader: TfStringTokenize(aovShadersStr)) {
                 SdfPath path(shader);
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path, renderDelegate);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path, _renderDelegate);
                 if (nodeGraph) {                
                     for (int i = 1; ; ++i ) {
                         std::stringstream ss;
@@ -200,8 +229,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
                     }                
                 }
             }
-            if (!aovShaders.empty())
-                AiNodeSetArray(options, str::aov_shaders, AiArrayConvert(aovShaders.size(), 1, AI_TYPE_NODE, aovShaders.data()));
+            _MergeAovShaders(options, aovShaders);
 
         } else {
 
@@ -215,7 +243,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
                 continue;
             }
 
-            HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
+            HdArnoldSetParameter(options, paramEntry, value, _renderDelegate);
         }
     }
 
@@ -224,6 +252,10 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
 
 void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
+// HdRenderSettings::GetShutterInterval was introduced in USD 23.11 and replaced by
+// GetUnionedSamplingInterval in USD 25.05 (PXR_VERSION 2605). Earlier USD versions
+// (e.g. Houdini 20.0 / USD 23.08) expose neither, so there is nothing to update.
+#if PXR_VERSION >= 2311
 #if PXR_VERSION < 2605
     if (GetShutterInterval().IsHolding<GfVec2d>()) {
         // Set the shutter interval on the render delegate
@@ -245,11 +277,8 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
 
         // The next call to _Execute will replace param->_shutter with the value of the universe
         // We also update Arnold directly
-        HdArnoldRenderDelegate* renderDelegate =
-            static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-
-        if (renderDelegate) {
-            AtNode* options = renderDelegate->GetOptions();
+        if (_renderDelegate) {
+            AtNode* options = _renderDelegate->GetOptions();
             if (options) {
                 AiNodeSetFlt(options, AtString("shutter_start"), static_cast<float>(shutterInterval[0]));
                 AiNodeSetFlt(options, AtString("shutter_end"), static_cast<float>(shutterInterval[1]));
@@ -259,6 +288,7 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
             }
         }
     }
+#endif
 }
 
 void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
@@ -266,14 +296,11 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
 #if PXR_VERSION >= 2211
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating rendering color space for %s\n", GetId().GetText());
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-
-    if (!renderDelegate) {
+    if (!_renderDelegate) {
         return;
     }
 
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
     if (!options) {
         return;
     }
@@ -296,7 +323,7 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
     AtNode* colorManager = nullptr;
     const char* ocio_path = std::getenv("OCIO");
     if (ocio_path) {
-        colorManager = renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
+        colorManager = _renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
         if (colorManager) {
             AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
         }
@@ -349,7 +376,7 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
             }
             
             // Set the parameter value using HdArnoldSetParameter
-            HdArnoldSetParameter(colorManager, paramEntry, pair.second, renderDelegate);
+            HdArnoldSetParameter(colorManager, paramEntry, pair.second, _renderDelegate);
             
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                 .Msg("Set color manager parameter %s on %s\n", paramName.c_str(), AiNodeGetName(colorManager));
@@ -363,14 +390,12 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
 void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate)
 {
     HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-    if (terminalSi) {
+    if (terminalSi && _renderDelegate) {
         HdSceneIndexPrim prim = terminalSi->GetPrim(GetId());
         if (prim.dataSource) {
-            HdArnoldRenderDelegate* renderDelegate =
-                static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
             UsdImagingUsdRenderSettingsSchema usdRss =
                 UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
-            AtNode* options = renderDelegate->GetOptions();
+            AtNode* options = _renderDelegate->GetOptions();
             if (!options) return;
             HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio();
             if (parHandle) {
@@ -404,7 +429,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
             if (camHandle) {
                 _hydraCameraPath = SdfPath(camHandle->GetTypedValue(0));
                 const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::camera);
-                HdArnoldSetParameter(options, paramEntry, VtValue(_hydraCameraPath.GetString()), renderDelegate);
+                HdArnoldSetParameter(options, paramEntry, VtValue(_hydraCameraPath.GetString()), _renderDelegate);
             } else {
                 // Should we reset the camera ? In batch mode it's not necessary but we might want to do it in interactive mode
                 _hydraCameraPath = SdfPath();
@@ -417,6 +442,10 @@ void HdArnoldRenderSettings::_Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
 {
     if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
+        return;
+
+    // If we're not using the hydra render settings, we shouldn't do anything here
+    if (_renderDelegate == nullptr || !_renderDelegate->IsUsingHydraRenderSettings())
         return;
 
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
@@ -434,9 +463,7 @@ void HdArnoldRenderSettings::_Sync(
         // in that case we don't want to use those render settings
         return;
     }
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    if (renderDelegate->GetProceduralParent())
+    if (_renderDelegate == nullptr || _renderDelegate->GetProceduralParent())
         return;
 
     // We register this render setting as the one to use for the render.
@@ -502,13 +529,11 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating render products for %s\n", GetId().GetText());
 
     const RenderProducts& products = GetRenderProducts();
-    if (products.empty()) {
+    if (products.empty() || _renderDelegate == nullptr) {
         return;
     }
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
 
     std::vector<std::string> outputs;
     std::vector<std::string> lpes;
@@ -565,7 +590,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
         }
 
-        AtNode* driver = renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
+        AtNode* driver = _renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
 
         if (!driver) {
             TF_WARN("Failed to create driver for render product %s\n", driverName.c_str());
@@ -610,14 +635,14 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
             if (paramName == "input") {
                 SdfPath imagerPath(VtValueGetString(pair.second));
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, renderDelegate);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
                 driverImager = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
                 AiNodeSetPtr(driver, str::input, driverImager);
                 continue;
             }
 
             // Set the parameter value using HdArnoldSetParameter
-            HdArnoldSetParameter(driver, paramEntry, pair.second, renderDelegate);
+            HdArnoldSetParameter(driver, paramEntry, pair.second, _renderDelegate);
 
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                 .Msg("Set driver parameter %s on %s\n", paramName.c_str(), driverNodeName);
@@ -632,7 +657,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         if (driverImager == nullptr && imagerIt != namespacedSettings.end()) {
             const VtValue& imagerValue = imagerIt->second;
             SdfPath imagerPath(VtValueGetString(imagerValue));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, renderDelegate);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
             AiNodeSetPtr(driver, str::input, target);
                 
@@ -655,7 +680,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         for (const auto& renderVar : product.renderVars) {
             // Create filter (default to box_filter)
             std::string varName = renderVar.varPath.GetString();
-            std::string filterName = varName + "/filter";
+            std::string filterName;
+            filterName.reserve(varName.size() + 7);
+            filterName = varName;
+            filterName += "/filter";
             std::string filterType = "box_filter";
 
             // Check if arnold:filter is specified in the render var settings
@@ -672,7 +700,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
             AtNode* filter = AiNodeLookUpByName(AiNodeGetUniverse(options), AtString(filterName.c_str()));
             if (!filter) {
-                filter = renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+                filter = _renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
             }
 
             if (!filter) {
@@ -701,8 +729,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 const std::string filterPrefix = "arnold:" + filterType + ":";
                 if (TfStringStartsWith(settingName, filterPrefix)) {
                     paramName = settingName.substr(filterPrefix.size());
-                } else if (TfStringStartsWith(settingName, "arnold:globals:")) {
-                    paramName = settingName.substr(15); // strlen("arnold:globals:")
+                } else if (TfStringStartsWith(settingName, "arnold:global:")) {
+                    paramName = settingName.substr(14); // strlen("arnold:global:")
                 } else if (TfStringStartsWith(settingName, "arnold:")) {
                     paramName = settingName.substr(7); // strlen("arnold:")
                 } else {
@@ -719,7 +747,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
 
                 // Set the parameter value using HdArnoldSetParameter
-                HdArnoldSetParameter(filter, paramEntry, pair.second, renderDelegate);
+                HdArnoldSetParameter(filter, paramEntry, pair.second, _renderDelegate);
 
                 TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                     .Msg("Set filter parameter %s on %s\n", paramName.c_str(), filterNodeName);
@@ -793,7 +821,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             if (!product.cameraPath.IsEmpty() && product.cameraPath != _hydraCameraPath) {
                 cameraName = product.cameraPath.GetString();
                 // Check the arnold camera name in case its name is different from the prim name
-                AtNode *cam = renderDelegate->LookupNode(cameraName.c_str());
+                AtNode *cam = _renderDelegate->LookupNode(cameraName.c_str());
                 if (cam)
                     cameraName = std::string(AiNodeGetName(cam));
             }
@@ -815,21 +843,43 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 aovName = layerName;
                 lpes.push_back(aovName + " " + sourceName);
             } else if (sourceType == UsdRenderTokens->primvar) {
-                // Primvar AOV - requires aov_write and user_data shaders
-                std::string aovShaderName = varName + "_shader";
+                // Primvar AOV - requires aov_write and a reader shader
+                std::string aovShaderName;
+                aovShaderName.reserve(varName.size() + 7);
+                aovShaderName = varName;
+                aovShaderName += "_shader";
                 AtNode* aovShader =
-                    renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
+                    _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
 
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                    std::string userDataName = varName + "_user_data";
-                    AtNode* userData =
-                        renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(userDataName.c_str()));
+                    std::string readerName;
+                    readerName.reserve(varName.size() + 10);
+                    readerName = varName;
+                    readerName += "_user_data";
 
-                    if (userData) {
-                        AiNodeLink(userData, "aov_input", aovShader);
-                        AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
+                    // "st" and "uv" are special: UVs are stored as built-in geometry data
+                    // in arnold rather than user data, so user_data_* returns zeros.
+                    // Use a utility shader in uv color_mode instead, matching the Hydra
+                    // render pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                    
+                    AtNode* reader = nullptr;
+                    if (sourceName == "st" || sourceName == "uv") {
+                        reader = _renderDelegate->CreateArnoldNode(str::utility, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::color_mode, str::uv);
+                            AiNodeSetStr(reader, str::shade_mode, str::flat);
+                        }
+                    } else {
+                        reader = _renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                        }
+                    }
+
+                    if (reader) {
+                        AiNodeLink(reader, "aov_input", aovShader);
                         aovShaders.push_back(aovShader);
                     }
                 }
@@ -912,9 +962,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
         TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu light path expressions\n", lpes.size());
     }
+
+    _MergeAovShaders(options, aovShaders);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXR_VERSION >= 2308
-#endif // ENABLE_HYDRA2_RENDERSETTINGS

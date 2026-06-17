@@ -91,6 +91,9 @@ void ArnoldUsdReadCreases(
         ll += 1;
     }
 
+    AiArrayUnmap(creaseIdxsArray);
+    AiArrayUnmap(creaseSharpnessArray);
+
     AiNodeSetArray(node, str::crease_idxs, creaseIdxsArray);
     AiNodeSetArray(node, str::crease_sharpness, creaseSharpnessArray);
 }
@@ -301,6 +304,8 @@ inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtVal
         return false;
 
     const VtArray<T>& inArray = in.UncheckedGet<VtArray<T>>();
+    if (inArray.empty())
+        return false;
 
     VtArray<T> outArray;
     outArray.resize(idx.size());
