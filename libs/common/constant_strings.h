@@ -448,6 +448,7 @@ ASTR(plugin_searchpath);
 ASTR(point_light);
 ASTR(points);
 ASTR(polymesh);
+ASTR(portal_light);
 ASTR(procedural_custom);
 ASTR(procedural_searchpath);
 ASTR(progressive);
