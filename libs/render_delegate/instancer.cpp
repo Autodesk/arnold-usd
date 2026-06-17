@@ -212,7 +212,7 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     
     HdArnoldSampledPrimvarType sampleArray;
     int instanceCount = ComputeSampleMatrixArrayRecursive(renderDelegate, sampleArray, prototypeId);
-    if (instanceCount == 0)
+    if (instanceCount == 0 || sampleArray.count == 0)
         return false;
 
     AtArray* matrices = _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfMatrix4f>>(sampleArray);
@@ -296,7 +296,7 @@ void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 
     VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
     if (!visVal.IsEmpty()) {
-        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+        AiNodeSetByte(node, str::visibility, static_cast<uint8_t>(VtValueGetInt(visVal)));
     } else {
         bool assignVisibility = false;
         HdArnoldRayFlags rayFlags{AI_RAY_ALL};
@@ -364,15 +364,23 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
 
 
     // By default _deformKeys will take over sample counts
-    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) { 
+    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) {
         sampleArray.Resize(1);
         sampleArray.times[0] = 0.0;
     } else if (_deformKeys > 1 /*&& _deformKeys > sampleArray.times.size()*/) {
-        const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
-        const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
-        sampleArray.Resize(_deformKeys);
-        for(int i = 0; i < _deformKeys; ++i) {
-            sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);   
+        // If none of the _AccumulateSampleTimes calls above pushed any sample times into
+        // sampleArray, min/max_element would return end() and we'd UB on dereference.
+        // Fall back to a single key at t=0 in that case.
+        if (sampleArray.times.empty()) {
+            sampleArray.Resize(1);
+            sampleArray.times[0] = 0.0;
+        } else {
+            const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
+            const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
+            sampleArray.Resize(_deformKeys);
+            for(int i = 0; i < _deformKeys; ++i) {
+                sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);
+            }
         }
     }
     const auto numSamples = sampleArray.count;

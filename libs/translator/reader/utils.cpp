@@ -609,7 +609,8 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
         }
     } else if (matrixNumKeys >= parentMatrixNumKeys) {
         for (unsigned int i = 0; i < matrixNumKeys; ++i) {
-            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
+            const float t = (float)i / AiMax(float(matrixNumKeys - 1), 1.f);
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, t, 0));
             AiArraySetMtx(matrices, i, m);
         }
     } else { // The number of matrices of the parent is greater than the child, it can happen on instances, we resize the current matrix
@@ -956,7 +957,9 @@ void ReadPrimvars(
             declaration = "uniform";
 
         if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
-            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
+            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray ||
+            typeName == SdfValueTypeNames->Double2 || typeName == SdfValueTypeNames->Double2Array ||
+            typeName == SdfValueTypeNames->TexCoord2d || typeName == SdfValueTypeNames->TexCoord2dArray) {
             primvarType = AI_TYPE_VECTOR2;
 
             // A special case for UVs
@@ -978,13 +981,21 @@ void ReadPrimvars(
             typeName == SdfValueTypeNames->Point3f || typeName == SdfValueTypeNames->Point3fArray ||
             typeName == SdfValueTypeNames->Normal3f || typeName == SdfValueTypeNames->Normal3fArray ||
             typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
-            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
+            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray ||
+            typeName == SdfValueTypeNames->Vector3d || typeName == SdfValueTypeNames->Vector3dArray ||
+            typeName == SdfValueTypeNames->Point3d || typeName == SdfValueTypeNames->Point3dArray ||
+            typeName == SdfValueTypeNames->Normal3d || typeName == SdfValueTypeNames->Normal3dArray ||
+            typeName == SdfValueTypeNames->Double3 || typeName == SdfValueTypeNames->Double3Array ||
+            typeName == SdfValueTypeNames->TexCoord3d || typeName == SdfValueTypeNames->TexCoord3dArray) {
             primvarType = AI_TYPE_VECTOR;
-        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
+        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray ||
+            typeName == SdfValueTypeNames->Color3d || typeName == SdfValueTypeNames->Color3dArray)
             primvarType = AI_TYPE_RGB;
         else if (
             typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
-            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
+            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array ||
+            typeName == SdfValueTypeNames->Color4d || typeName == SdfValueTypeNames->Color4dArray ||
+            typeName == SdfValueTypeNames->Double4 || typeName == SdfValueTypeNames->Double4Array)
             primvarType = AI_TYPE_RGBA;
         else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray || 
             typeName == SdfValueTypeNames->Double || typeName == SdfValueTypeNames->DoubleArray)

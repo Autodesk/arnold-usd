@@ -27,6 +27,7 @@
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/base/vt/dictionary.h>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -62,14 +63,35 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     _universe = universe;
     // eventually use a dedicated registry
     if (_registry == nullptr) {
-        // No registry was set (default), let's use the global one
-        if (s_writerRegistry == nullptr) {
-            s_writerRegistry = new UsdArnoldWriterRegistry(_writeBuiltin); // initialize the global registry
+        // No registry was set (default), let's use the global one. The cached
+        // global registry is keyed by _writeBuiltin — using a single cache
+        // entry would mean the first writer's setting silently wins for every
+        // later writer in the same process. Keep two caches and pick the one
+        // matching this writer's configuration.
+        static UsdArnoldWriterRegistry *s_writerRegistryBuiltin = nullptr;
+        static UsdArnoldWriterRegistry *s_writerRegistryNoBuiltin = nullptr;
+        UsdArnoldWriterRegistry *&slot = _writeBuiltin ? s_writerRegistryBuiltin : s_writerRegistryNoBuiltin;
+        if (slot == nullptr) {
+            slot = new UsdArnoldWriterRegistry(_writeBuiltin);
         }
-        _registry = s_writerRegistry;
+        // Keep the legacy global pointer pointing at *some* live registry for
+        // back-compat with any external code that may reach for it.
+        s_writerRegistry = slot;
+        _registry = slot;
     }
     // clear the list of nodes that were exported to usd
     _exportedNodes.clear();
+    _exportedShaders.clear();
+    _requiredShaders.clear();
+    // _authoredFrames / _nearestFrames were only refreshed inside the
+    // "specific time" branch below, so a second Write() with a default time
+    // (after one with a real frame) would keep the previous run's lists.
+    // _UsdArnoldGeomIsNewborn then trips on the stale GetAuthoredFrames(),
+    // and _UsdArnoldGeomSetupNewborn authors visibility=0 at frames that
+    // belong to a different universe. Reset both up front so the default-
+    // time branch behaves like a clean writer.
+    _authoredFrames.clear();
+    _nearestFrames.clear();
 
     // If we've explicitely set a scope, we want to use it as a defaultPrim
     if (_defaultPrim.empty() && !_scope.empty())
@@ -83,9 +105,20 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
 
     AtNode *options = AiUniverseGetOptions(universe);
     if (options) {
-        const float fps = AiNodeGetFlt(options, AtString("fps"));
-        _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
-        _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
+        // Only stamp the layer's fps when Arnold actually has a meaningful
+        // value: older Arnold builds don't define an "fps" parameter at
+        // all (AiNodeGetFlt then returns 0 plus a warning), and a fps of
+        // 0 / negative / NaN turns into a degenerate USD layer that
+        // divides by zero in playback math. Guard on both existence and
+        // a positive finite value before writing.
+        const AtNodeEntry* optionsEntry = AiNodeGetNodeEntry(options);
+        if (optionsEntry && AiNodeEntryLookUpParameter(optionsEntry, AtString("fps"))) {
+            const float fps = AiNodeGetFlt(options, AtString("fps"));
+            if (std::isfinite(fps) && fps > 0.f) {
+                _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
+                _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
+            }
+        }
     }
 
     if (!_upAxis.empty())
@@ -224,6 +257,15 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         // so it shouldn't start with a slash
         if (_defaultPrim[0] == '/')
             _defaultPrim = _defaultPrim.substr(1);
+        // SetDefaultPrim expects a single identifier, not a path. If we got
+        // here via a multi-component scope like "/world/geo/asset", stripping
+        // only the leading slash leaves "world/geo/asset" — TfToken accepts
+        // it, but USD treats it as an invalid defaultPrim and external
+        // references via the layer's defaultPrim break silently. Keep just
+        // the first path component.
+        size_t slashPos = _defaultPrim.find('/');
+        if (slashPos != std::string::npos)
+            _defaultPrim = _defaultPrim.substr(0, slashPos);
         _stage->GetRootLayer()->SetDefaultPrim(TfToken(_defaultPrim.c_str()));
     }
 }

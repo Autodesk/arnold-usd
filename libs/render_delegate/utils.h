@@ -39,7 +39,11 @@
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/gf/vec2d.h>
+#include <pxr/base/gf/vec3d.h>
+#include <pxr/base/gf/vec4d.h>
 
+#include <pxr/base/vt/array.h>
 #include <pxr/base/vt/value.h>
 
 #include <pxr/usd/sdf/path.h>
@@ -222,11 +226,89 @@ void GetShutterTimeSamples(const GfVec2f &shutter, int count, TfSmallVector<floa
 /// Hash map for storing precomputed primvars.
 using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
 
+/// Per-element double-to-float array conversion helpers (issue #480).
+///
+/// Each overload below converts a VtValue that is known to hold a
+/// double-precision array (e.g. VtVec3dArray) into the matching
+/// single-precision VtArray<T>. The generic fallback template returns false
+/// for any other target type, so the entry point HdArnoldUnboxArrayValue
+/// can be used uniformly with any T — non-float-array T just behaves as it
+/// did before this change.
+///
+/// Mirrors the per-type "double -> float" operator() overloads that
+/// hdPrman uses inside _VtValueToRtPrimVar (third_party/renderman/plugin/
+/// hdPrman/utils.cpp). Arnold's array storage is single-precision only, so
+/// the conversion is unconditional once the source matches.
+template <typename T>
+inline bool HdArnoldDowncastDoubleArray(const VtValue&, T&)
+{
+    return false;
+}
+
+inline bool HdArnoldDowncastDoubleArray(const VtValue& in, VtFloatArray& out)
+{
+    if (!in.IsHolding<VtDoubleArray>()) return false;
+    const auto& src = in.UncheckedGet<VtDoubleArray>();
+    out.resize(src.size());
+    std::transform(src.begin(), src.end(), out.begin(),
+        [](double v) { return static_cast<float>(v); });
+    return true;
+}
+
+inline bool HdArnoldDowncastDoubleArray(const VtValue& in, VtVec2fArray& out)
+{
+    if (!in.IsHolding<VtVec2dArray>()) return false;
+    const auto& src = in.UncheckedGet<VtVec2dArray>();
+    out.resize(src.size());
+    std::transform(src.begin(), src.end(), out.begin(),
+        [](const GfVec2d& v) { return GfVec2f(v); });
+    return true;
+}
+
+inline bool HdArnoldDowncastDoubleArray(const VtValue& in, VtVec3fArray& out)
+{
+    if (!in.IsHolding<VtVec3dArray>()) return false;
+    const auto& src = in.UncheckedGet<VtVec3dArray>();
+    out.resize(src.size());
+    std::transform(src.begin(), src.end(), out.begin(),
+        [](const GfVec3d& v) { return GfVec3f(v); });
+    return true;
+}
+
+inline bool HdArnoldDowncastDoubleArray(const VtValue& in, VtVec4fArray& out)
+{
+    if (!in.IsHolding<VtVec4dArray>()) return false;
+    const auto& src = in.UncheckedGet<VtVec4dArray>();
+    out.resize(src.size());
+    std::transform(src.begin(), src.end(), out.begin(),
+        [](const GfVec4d& v) { return GfVec4f(v); });
+    return true;
+}
+
+/// Try to populate `out` (a VtArray of single-precision floats) from a
+/// VtValue that may hold either the matching float array or its double
+/// counterpart. Float arrays are pass-through (VtArray is copy-on-write).
+/// Double arrays are converted element-by-element. Anything else returns
+/// false and leaves `out` untouched. (issue #480)
+template <typename T>
+inline bool HdArnoldUnboxArrayValue(const VtValue& in, T& out)
+{
+    if (in.IsHolding<T>()) {
+        out = in.UncheckedGet<T>();
+        return true;
+    }
+    return HdArnoldDowncastDoubleArray(in, out);
+}
+
 /// Unboxing sampled type with type checking and no error codes thrown. Count on @param out will be equal to the number
 /// of samples that could be converted. Sample conversion exits as soon as a single sample doesn't hold the correct
 /// type.
 ///
 /// Alternative to HdTimeSampleArray::UnboxFrom which uses the error-throwing VtValue::Get function.
+///
+/// In addition to strict type matching, double-precision array variants
+/// (VtVec3dArray vs VtVec3fArray, etc.) are accepted and converted to the
+/// target float type. (issue #480)
 ///
 /// @param in Input value holding the boxed samples.
 /// @param out Output value with the specified type.
@@ -237,18 +319,24 @@ void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampled
     out.Resize(count);
     out.count = 0;
     for (auto i = decltype(count){0}; i < count; i += 1, out.count += 1) {
-        if (!in.values[i].IsHolding<T>()) {
+        // HdArnoldUnboxArrayValue accepts either the requested T or, for
+        // T == VtFloatArray / VtVec[234]fArray, the matching double-precision
+        // variant (with element-by-element conversion). For any other T, it
+        // degrades to the original strict IsHolding<T> check.
+        if (!HdArnoldUnboxArrayValue(in.values[i], out.values[i])) {
             break;
         }
-        out.values[i] = in.values[i].UncheckedGet<T>();
         out.times[i] = in.times[i];
     }
 }
 
-/// Resample and unbox the values 
+/// Resample and unbox the values
 /// @param in Input value holding the boxed samples.
 /// @param shutter The shutter range.
 /// @param out Output value with the specified type.
+///
+/// As with HdArnoldUnboxSample, double-precision array variants are
+/// accepted and converted to the requested float type. (issue #480)
 template <typename T>
 void HdArnoldUnboxResample(const HdArnoldSampledType<VtValue>& in, GfVec2f shutter, HdArnoldSampledType<T>& out)
 {
@@ -258,12 +346,11 @@ void HdArnoldUnboxResample(const HdArnoldSampledType<VtValue>& in, GfVec2f shutt
     out.Resize(count);
     out.count = 0;
     for (uint32_t i = 0; i < count; i += 1, out.count += 1) {
-        if (!in.values[i].IsHolding<T>()) {
+        out.times[i] = timeSamples[i];
+        const VtValue resampled = in.Resample(out.times[i]);
+        if (!HdArnoldUnboxArrayValue(resampled, out.values[i])) {
             break;
         }
-        out.times[i] = timeSamples[i];
-        auto value = in.Resample(out.times[i]);
-        out.values[i] = value.template UncheckedGet<T>();
     }
 }
 

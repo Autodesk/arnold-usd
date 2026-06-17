@@ -126,6 +126,7 @@ private:
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
     bool _converged = false;                         ///< Store if the render buffer has converged.
+    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
 };
 
 using HdArnoldRenderBufferStorage =

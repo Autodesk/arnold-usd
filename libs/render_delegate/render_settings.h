@@ -20,8 +20,6 @@
 /// Hydra 2.0 Render Settings Prim for Arnold.
 #pragma once
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-
 #include "api.h"
 
 #include <pxr/pxr.h>
@@ -38,7 +36,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdRenderIndex;
 class HdArnoldRenderParam;
-
+class HdArnoldRenderDelegate;
 /// Hydra 2.0 Render Settings Prim for Arnold.
 ///
 /// This class represents a render settings prim in Hydra 2.0 for the Arnold
@@ -53,7 +51,7 @@ public:
     ///
     /// @param id The scene delegate path for this render settings prim.
     HDARNOLD_API
-    HdArnoldRenderSettings(SdfPath const& id);
+    HdArnoldRenderSettings(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id);
 
     /// Destructor.
     HDARNOLD_API
@@ -123,6 +121,7 @@ private:
     void _ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate);
 
 private:
+    HdArnoldRenderDelegate* _renderDelegate = nullptr;
     SdfPath _hydraCameraPath;
     GfVec2f _hydraCameraShutter = GfVec2f(0.f, 0.f);
 };
@@ -130,5 +129,3 @@ private:
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXR_VERSION >= 2308
-
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
