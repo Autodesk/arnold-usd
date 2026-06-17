@@ -739,6 +739,15 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         if (!lightShaderPath.IsEmpty())
             pathSet.insert({lightShaderPath, HdLight::DirtyParams});
 
+        // Instanced lights are Sprims, and Hydra does not re-sync them when only their Point
+        // Instancer animates - the instancer's prototype chain has no Rprim to carry the dirty
+        // notification, so the light's Sync is never called again after the first frame and the
+        // instanced lights stay frozen. Depend on the instancer here so that the render delegate
+        // (HasPendingChanges) can re-dirty this light whenever the instancer changes, letting the
+        // instanced lights animate. See issue #2641.
+        if (!instancerId.IsEmpty())
+            pathSet.insert({instancerId, HdLight::DirtyParams});
+
         // If we previously had node graph connected, we need to call TrackDependencies
         // even if our list is empty. This is needed to clear the previous dependencies
         if (_hasNodeGraphs || !pathSet.empty()) {
