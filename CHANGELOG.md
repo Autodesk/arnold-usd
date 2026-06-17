@@ -8,12 +8,17 @@
 - [usd#2625](https://github.com/Autodesk/arnold-usd/issues/2625) - Add turntable command line tool generating turntable scenes from a usd asset.
 - [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
 - [usd#2685](https://github.com/Autodesk/arnold-usd/issues/2685) - Fix warnings about empty node names with nested instancers
+- [usd#2687](https://github.com/Autodesk/arnold-usd/issues/2687) - Support double-precision primvars
+- [usd#2691](https://github.com/Autodesk/arnold-usd/issues/2691) - Support mesh normals updates interactively
+- [usd#2686](https://github.com/Autodesk/arnold-usd/issues/2686) - Prevent subdivisionScheme from being written as timeSamples in USD export
 
 ### Bug Fixes
 
 - [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
 - [usd#255](https://github.com/Autodesk/arnold-usd/issues/255) - Do not reset lights during IPR iterations
 - [usd#2677](https://github.com/Autodesk/arnold-usd/issues/2677) - Fix crash reading RenderSettings with empty arnold:filter on a RenderVar
+- [usd#2641](https://github.com/Autodesk/arnold-usd/issues/2641) - Animate instanced lights driven by an animated Point Instancer in Hydra
+- [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
 
 ## [7.5.2.0] (Unreleased)
 

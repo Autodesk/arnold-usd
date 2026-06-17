@@ -181,12 +181,20 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     AtString subdivType = AiNodeGetStr(node, AtString("subdiv_type"));
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
+    // subdivisionScheme is a uniform attribute in USD and must not have time samples.
+    // Write it directly at default time to prevent the time-varying SetAttribute logic
+    // from creating timeSamples when subdiv_type changes between frames (e.g. when
+    // MayaUSD exports a frame range and the Arnold scene is rebuilt each frame).
+    // When subdiv_type is "none" (Arnold's default, no explicit subdivision requested),
+    // preserve any existing authored value rather than overwriting with "none" -- this
+    // avoids clobbering a "catmullClark" value already written by MayaUSD's native exporter.
+    UsdAttribute subdivSchemeAttr = mesh.GetSubdivisionSchemeAttr();
     if (subdivType == catclarkStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->catmullClark);
+        subdivSchemeAttr.Set(UsdGeomTokens->catmullClark);
     else if (subdivType == linearStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->bilinear);
-    else
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->none);
+        subdivSchemeAttr.Set(UsdGeomTokens->bilinear);
+    else if (!subdivSchemeAttr.HasAuthoredValue())
+        subdivSchemeAttr.Set(UsdGeomTokens->none);
 
     // always write subdiv iterations even if it's set to default
     UsdAttribute attr = prim.CreateAttribute(

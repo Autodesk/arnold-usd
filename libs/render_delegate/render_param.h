@@ -65,8 +65,11 @@ public:
 
     /// Constructor for HdArnoldRenderParam.
     HdArnoldRenderParam(HdArnoldRenderDelegate* delegate);
-    /// Destructor for HdArnoldRenderParam.
-    ~HdArnoldRenderParam() override = default;
+    /// Destructor for HdArnoldRenderParam. Must explicitly stop the message-log
+    /// callback so the registration is removed from Arnold's global table —
+    /// the defaulted destructor would leak the callback slot otherwise.
+    HDARNOLD_API
+    ~HdArnoldRenderParam() override;
 
     /// Starts or continues rendering.
     ///
@@ -140,6 +143,11 @@ public:
     /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
     std::string GetRenderStatusString() const;
 
+    /// Updates the per-instance cached log message from the Arnold message
+    /// callback. Public so the file-scope `_MsgStatusCallback` free function can
+    /// route into the correct instance via its userPtr argument.
+    void SetCachedLogMessage(const char* msg);
+
     /// Calculates the total render time. This will reset if the scene is dirtied (i.e. tthe camera changes)
     ///
     /// @return elapsed render time in ms
@@ -165,24 +173,39 @@ public:
 private:
     inline void ResetStartTimer()
     {
-        _renderTimeMutex.lock();
+        // Use std::lock_guard so the mutex is released even if the time_point
+        // assignment or system_clock::now() throws. The previous manual
+        // lock()/unlock() would deadlock every future caller of any method
+        // protected by _renderTimeMutex if an exception escaped.
+        std::lock_guard<std::mutex> guard(_renderTimeMutex);
         _renderStartTime = std::chrono::system_clock::now();
-        _renderTimeMutex.unlock();
     }
 
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
-    std::atomic<bool> _needsRestart;
+    std::atomic<bool> _needsRestart{false};
     /// Indicate if rendering has been aborted at one point or another.
-    std::atomic<bool> _aborted;
-    /// Indicate if rendering has been paused.
-    std::atomic<bool> _paused;
+    std::atomic<bool> _aborted{false};
+    /// Indicate if rendering has been paused. Prior to C++20 std::atomic<bool>'s
+    /// default constructor leaves the value indeterminate, and the cpp file's
+    /// constructor explicitly stores false into _needsRestart and _aborted but
+    /// not into _paused — so the first UpdateRender call read uninitialized
+    /// memory. Initialize all three here for safety.
+    std::atomic<bool> _paused{false};
 
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
 
     unsigned int _msgLogCallback = 0;
+
+    /// Per-instance cached log message and its mutex. These were previously
+    /// file-scope globals shared across every HdArnoldRenderParam instance, so
+    /// concurrent renders (multiple delegates) overwrote each other's status
+    /// strings and GetRenderStatusString could return a message that came from
+    /// a different instance entirely.
+    mutable std::mutex _cachedLogMutex;
+    std::string _cachedLogMsg;
 
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
@@ -208,7 +231,11 @@ public:
     /// Only calls interrupt once per created instance of HdArnoldRenderParamInterrupt.
     void Interrupt()
     {
-        if (!_hasInterrupted) {
+        // _param is initialized in the constructor via reinterpret_cast from the
+        // HdRenderParam* the caller passes in. If the caller passes nullptr
+        // (legal at the HdRenderParam* interface), _param is also nullptr and
+        // dereferencing it crashes. Guard against that here.
+        if (_param != nullptr && !_hasInterrupted) {
             _hasInterrupted = true;
             _param->Interrupt();
         }
