@@ -23,6 +23,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/base/vt/dictionary.h>
@@ -86,6 +87,11 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
         _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
     }
+
+    if (!_upAxis.empty())
+        UsdGeomSetStageUpAxis(_stage, TfToken(_upAxis));
+    if (_metersPerUnit > 0.f)
+        UsdGeomSetStageMetersPerUnit(_stage, static_cast<double>(_metersPerUnit));
 
     // If a specific time was requested, we want to check if some data was already written 
     // to this USD stage for other frames. We do this by checking the scene custom metadata

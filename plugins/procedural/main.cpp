@@ -571,6 +571,14 @@ scene_write
         bool allAttributes;
         if (AiParamValueMapGetBool(params, str::all_attributes, &allAttributes))
             writer->SetWriteAllAttributes(allAttributes);
+
+        AtString upAxis;
+        if (AiParamValueMapGetStr(params, str::upAxis, &upAxis))
+            writer->SetUpAxis(std::string(upAxis.c_str()));
+
+        float metersPerUnit;
+        if (AiParamValueMapGetFlt(params, str::metersPerUnit, &metersPerUnit))
+            writer->SetMetersPerUnit(metersPerUnit);
     }
     writer->Write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
