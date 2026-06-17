@@ -525,7 +525,7 @@ VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
             const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
             if (aovGlId != 0) {
                 const AtRenderErrorCode rc = AiQueryAOV(
-                    _renderDelegate->GetRenderSession(), AtString(_aovName.GetText()), aovGlId);
+                    _renderDelegate->GetRenderSession(), AtString(_aovName.GetText()), aovGlId, AiQueryAOVHandleType::OPENGL);
                 if (rc == AI_SUCCESS) {
                     // Sync CUDA/GL interop before sampling the AOV texture in our blit.
                     glFinish();
