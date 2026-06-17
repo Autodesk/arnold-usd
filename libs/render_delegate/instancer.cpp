@@ -563,9 +563,23 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
     HdArnoldSampledMatrixArrayType sampleArray;
     ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
 
-    // Implementation with the arnold instancer
+    // Implementation with the arnold instancer.
+    // The arnold instancer node name must be globally unique. A separate chain of arnold
+    // instancer nodes is built per prototype shape (see HdArnoldShape), so when several shapes
+    // share the same (parentInstancer, childInstancer) pair, naming a node solely from those
+    // ids collides. We therefore derive the name from the unique child node we just created.
+    //
+    // Invariant: both callers (HdArnoldShape / HdArnoldLight) clear the instancers vector before
+    // the first call, and the parent recursion below only runs after a node has been pushed, so
+    // an empty vector here means this is the innermost (leaf) call. For the leaf we combine the
+    // instancer id with the prototype (shape) id; for parents we prefix the child node's name,
+    // which is already unique by induction. See NESTED_INSTANCER_CRASHES.md.
     std::stringstream ss;
-    ss << prototypeId << "_instancer";
+    if (instancers.empty()) {
+        ss << instancerId << "_prototype_" << prototypeId << "_instancer";
+    } else {
+        ss << AiNodeGetName(instancers.back()) << "_parent_" << instancerId;
+    }
     AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
     instancers.push_back(instancerNode);
 
