@@ -224,7 +224,8 @@ void Configure(CLI::App *app, Args &args)
         ->option_text("DIR");
 
     app->add_option("--light-rig", args.lightRig,
-        "Light rig to select: auto, one discovered HDRI rig, two_quad, or no_light")
+        "Light rig to select: auto, one discovered HDRI rig, two_quad, or no_light "
+        "(ignored when --hdri is given, which forces the custom HDRI rig)")
         ->option_text("NAME");
 
     app->add_option("--light-intensity", args.lightIntensity,
@@ -1392,7 +1393,7 @@ int Run(const Args &args)
     if (args.listStudioSets) {
         printf("Studio sets:\n");
         for (const StudioSetInfo &info : _AvailableStudioSets()) {
-            printf("  %s [%s] — %s\n", _StudioSetToString(info.type), info.aliases, info.description);
+            printf("  %s [%s] - %s\n", _StudioSetToString(info.type), info.aliases, info.description);
         }
         return 0;
     }
@@ -1481,7 +1482,16 @@ int Run(const Args &args)
     }
 
     std::string selectedRigName;
-    if (TfStringToLower(args.lightRig) == "auto") {
+    if (!args.hdri.empty()) {
+        // --hdri builds a dedicated "custom_hdri" dome rig and forces its
+        // selection, overriding whatever --light-rig requested.
+        const std::string requestedRig = TfStringToLower(args.lightRig);
+        if (requestedRig != "auto" && requestedRig != "custom_hdri") {
+            printf("turntable: --hdri overrides --light-rig '%s'; using the custom HDRI rig\n",
+                   args.lightRig.c_str());
+        }
+        selectedRigName = "custom_hdri";
+    } else if (TfStringToLower(args.lightRig) == "auto") {
         selectedRigName = rigs.front().name;
     } else {
         const LightRig *selectedRig = _FindRigByName(rigs, args.lightRig);
