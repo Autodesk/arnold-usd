@@ -197,7 +197,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
 
-    unsigned int _msgLogCallback = 0;
+    int _msgLogCallback = -1;
 
     /// Per-instance cached log message and its mutex. These were previously
     /// file-scope globals shared across every HdArnoldRenderParam instance, so
