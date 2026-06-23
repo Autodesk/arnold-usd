@@ -5,8 +5,21 @@
 
 ### Features
 
+- [usd#2698](https://github.com/Autodesk/arnold-usd/issues/2698) - Author upAxis and meterUnit metadatas in the writer
+- [usd#2625](https://github.com/Autodesk/arnold-usd/issues/2625) - Add turntable command line tool generating turntable scenes from a usd asset.
 - [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
+- [usd#2685](https://github.com/Autodesk/arnold-usd/issues/2685) - Fix warnings about empty node names with nested instancers
+- [usd#2687](https://github.com/Autodesk/arnold-usd/issues/2687) - Support double-precision primvars
+- [usd#2691](https://github.com/Autodesk/arnold-usd/issues/2691) - Support mesh normals updates interactively
+- [usd#2686](https://github.com/Autodesk/arnold-usd/issues/2686) - Prevent subdivisionScheme from being written as timeSamples in USD export
 
+### Bug Fixes
+
+- [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
+- [usd#255](https://github.com/Autodesk/arnold-usd/issues/255) - Do not reset lights during IPR iterations
+- [usd#2677](https://github.com/Autodesk/arnold-usd/issues/2677) - Fix crash reading RenderSettings with empty arnold:filter on a RenderVar
+- [usd#2641](https://github.com/Autodesk/arnold-usd/issues/2641) - Animate instanced lights driven by an animated Point Instancer in Hydra
+- [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
 
 ## [7.5.2.0] (Unreleased)
 
@@ -14,9 +27,8 @@
 
 - [usd#2632](https://github.com/Autodesk/arnold-usd/issues/2632) - Support holeIndices in UsdGeomMesh for non-subdivided meshes
 - [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
-- [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
-- [usd#2650](https://github.com/Autodesk/arnold-usd/issues/2650) - Optionally use Hydra Render Settings primitive instead of settings map
 - [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
+- [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 - [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.

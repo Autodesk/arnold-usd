@@ -165,8 +165,14 @@ void iterateParams(
         if (pentry == nullptr) {
             continue;
         }
-
-        HdArnoldSetParameter(light, pentry, delegate->GetLightParamValue(id, param.hdName), renderDelegate);
+        // Reset the parameter to its default when Hydra reports no value, so that
+        // attributes removed since the previous Sync don't leak across renders.
+        const VtValue value = delegate->GetLightParamValue(id, param.hdName);
+        if (value.IsEmpty()) {
+            AiNodeResetParameter(light, param.arnoldName);
+        } else {
+            HdArnoldSetParameter(light, pentry, value, renderDelegate);
+        }
     }
 }
 
@@ -601,10 +607,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 }
             }
         }
-        // We need to force dirtying the transform, because AiNodeReset resets the transformation.
-        *dirtyBits |= HdLight::DirtyTransform;
-        AiNodeReset(_light);
-                
+        // Clear any incoming connections on parameters that can be driven by a node
+        // graph (color, filters). The subsequent value writes and shader/texture
+        // links below depend on starting from a disconnected state, and Arnold's
+        // AiNodeSetRGB/SetArray do not implicitly remove existing links.
+        AiNodeResetParameter(_light, str::color);
+        AiNodeResetParameter(_light, str::filters);
+
         // convert the generic lights parameters
         iterateParams(_light, nentry, id, sceneDelegate, _delegate, genericParams);
         // convert the light specific attributes
@@ -729,6 +738,15 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
         if (!lightShaderPath.IsEmpty())
             pathSet.insert({lightShaderPath, HdLight::DirtyParams});
+
+        // Instanced lights are Sprims, and Hydra does not re-sync them when only their Point
+        // Instancer animates - the instancer's prototype chain has no Rprim to carry the dirty
+        // notification, so the light's Sync is never called again after the first frame and the
+        // instanced lights stay frozen. Depend on the instancer here so that the render delegate
+        // (HasPendingChanges) can re-dirty this light whenever the instancer changes, letting the
+        // instanced lights animate. See issue #2641.
+        if (!instancerId.IsEmpty())
+            pathSet.insert({instancerId, HdLight::DirtyParams});
 
         // If we previously had node graph connected, we need to call TrackDependencies
         // even if our list is empty. This is needed to clear the previous dependencies

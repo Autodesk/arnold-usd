@@ -45,6 +45,7 @@ option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
+option(BUILD_TURNTABLE "Build the turntable tool" OFF)
 
 # Configurations:
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)

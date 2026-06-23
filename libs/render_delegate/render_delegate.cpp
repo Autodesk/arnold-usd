@@ -436,18 +436,32 @@ void _CheckForBoolValue(const VtValue& value, F&& f)
         f(value.UncheckedGet<long>() != 0);
     } else if (value.IsHolding<long long>()) {
         f(value.UncheckedGet<long long>() != 0);
+    } else if (value.IsHolding<unsigned int>()) {
+        f(value.UncheckedGet<unsigned int>() != 0u);
+    } else if (value.IsHolding<unsigned long>()) {
+        f(value.UncheckedGet<unsigned long>() != 0ul);
+    } else if (value.IsHolding<unsigned long long>()) {
+        f(value.UncheckedGet<unsigned long long>() != 0ull);
     }
 }
 
 template <typename F>
 void _CheckForIntValue(const VtValue& value, F&& f)
 {
+    // See _CheckForBoolValue: unsigned integer types are silently dropped
+    // without the matching IsHolding branches.
     if (value.IsHolding<int>()) {
         f(value.UncheckedGet<int>());
     } else if (value.IsHolding<long>()) {
         f(static_cast<int>(value.UncheckedGet<long>()));
     } else if (value.IsHolding<long long>()) {
         f(static_cast<int>(value.UncheckedGet<long long>()));
+    } else if (value.IsHolding<unsigned int>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned int>()));
+    } else if (value.IsHolding<unsigned long>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned long>()));
+    } else if (value.IsHolding<unsigned long long>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned long long>()));
     }
 }
 
@@ -571,9 +585,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         }
         AiNodeEntryIteratorDestroy(shapeIter);
     }
-    std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
-    if (_counterResourceRegistry.fetch_add(1) == 0) {
-        _resourceRegistry = std::make_shared<HdResourceRegistry>();
+    {
+        std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
+        if (_counterResourceRegistry.fetch_add(1) == 0) {
+            _resourceRegistry = std::make_shared<HdResourceRegistry>();
+        }
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
@@ -657,9 +673,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 {
-    std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
-    if (_counterResourceRegistry.fetch_sub(1) == 1) {
-        _resourceRegistry.reset();
+    {
+        std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
+        if (_counterResourceRegistry.fetch_sub(1) == 1) {
+            _resourceRegistry.reset();
+        }
     }
     _renderParam->Interrupt();
     if (_renderDelegateOwnsUniverse) {
@@ -704,10 +722,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_value.IsHolding<double>()) {
             const float frame = static_cast<float>(_value.UncheckedGet<double>());
             AiNodeSetFlt(_options, str::frame, frame);
+            // Only restart when the frame actually changed. The previous
+            // unconditional Restart() would drop an in-progress render every
+            // time the host re-sent this setting with the wrong value type.
+            _renderParam->Restart();
         }
-
-        // We want to restart a new render in that case.
-        _renderParam->Restart();
     }
     
     // See the HDK hydra docs for more details
@@ -750,15 +769,18 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             });
         }
     } else if (key == str::t_log_verbosity) {
-        if (value.IsHolding<int>()) {
-            _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
+        // Some hosts (older Houdini, Maya) pass integer settings as long /
+        // long long. _CheckForIntValue normalises all three to int, so the
+        // verbosity actually takes effect instead of being silently dropped.
+        _CheckForIntValue(value, [&](const int verbosity) {
+            _verbosityLogFlags = _GetLogFlagsFromVerbosity(verbosity);
             static const auto& config = HdArnoldConfig::GetInstance();
             // Do not set the console and file flags, if the corresponding
             // environment variable was set in the config
             if (config.log_flags_console < 0) {
                 AiMsgSetConsoleFlags(
-                    #if ARNOLD_VERSION_NUM < 70100                    
-                        GetRenderSession(), 
+                    #if ARNOLD_VERSION_NUM < 70100
+                        GetRenderSession(),
                     #else
                         _universe,
                     #endif
@@ -766,15 +788,15 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
             if (config.log_flags_file < 0) {
                 AiMsgSetLogFileFlags(
-                    #if ARNOLD_VERSION_NUM < 70100                    
-                        GetRenderSession(), 
+                    #if ARNOLD_VERSION_NUM < 70100
+                        GetRenderSession(),
                     #else
                         _universe,
                     #endif
                     _verbosityLogFlags);
 
             }
-        }
+        });
     } else if (key == str::t_log_file) {
         if (value.IsHolding<std::string>()) {
             _logFile = value.UncheckedGet<std::string>();
@@ -811,22 +833,24 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             });
         }
     } else if (key == str::t_interactive_target_fps) {
+        // _CheckForFloatValue handles double and GfHalf as well as float, so
+        // hosts that don't normalise to float don't get their FPS setting dropped.
         if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, value.UncheckedGet<float>());
-            }
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, f);
+            });
         }
     } else if (key == str::t_interactive_target_fps_min) {
         if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, value.UncheckedGet<float>());
-            }
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, f);
+            });
         }
     } else if (key == str::t_interactive_fps_min) {
         if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
-            }
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, f);
+            });
         }
     } else if (key == _tokens->instantaneousShutter) {
         // If the arnold-specific attribute "ignore_motion_blur" is set, it should take 
@@ -862,13 +886,18 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
+            // getOrCreateColorManager returns nullptr when there is no OCIO env
+            // var and the ai_default_color_manager_ocio lookup fails; dereferencing
+            // it crashes inside AiNodeSetStr.
             AtNode* colorManager = getOrCreateColorManager(this, _options);
-            AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
+            if (colorManager != nullptr)
+                AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == str::color_space_narrow) {
         if (value.IsHolding<std::string>()) {
             AtNode* colorManager = getOrCreateColorManager(this, _options);
-            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
+            if (colorManager != nullptr)
+                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == _tokens->dataWindowNDC) {
         if (value.IsHolding<GfVec4f>()) {
@@ -918,9 +947,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
         const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
         AtNode* colorManager = getOrCreateColorManager(this, _options);
-        AtString cmParamStr(cmParamCStr);
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
-            _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
+        if (colorManager != nullptr) {
+            AtString cmParamStr(cmParamCStr);
+            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
+                _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
+            }
         }
     } 
     else {
@@ -1044,16 +1075,23 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         }
                     }
 
-                    // Look for driver:parameters:aov:format and arnold:format overrides
+                    // Look for driver:parameters:aov:format and arnold:format overrides.
+                    // Only apply the override if it maps to a known HdFormat; otherwise
+                    // _GetHdFormatFromToken returns HdFormatInvalid and we would clobber
+                    // a previously valid renderVar.format value.
                     const auto* aovDriverFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovDriverFormat);
                     if (aovDriverFormat != nullptr && aovDriverFormat->CanCast<TfToken>()) {
                         TfToken aovDriverFormatToken = VtValue::Cast<TfToken>(*aovDriverFormat).UncheckedGet<TfToken>();
-                        renderVar.format = _GetHdFormatFromToken(aovDriverFormatToken);
+                        const HdFormat overrideFormat = _GetHdFormatFromToken(aovDriverFormatToken);
+                        if (overrideFormat != HdFormatInvalid)
+                            renderVar.format = overrideFormat;
                     }
                     const auto* arnoldFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovFormat);
                     if (arnoldFormat != nullptr && arnoldFormat->CanCast<TfToken>()) {
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
-                        renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
+                        const HdFormat overrideFormat = _GetHdFormatFromToken(arnoldFormatToken);
+                        if (overrideFormat != HdFormatInvalid)
+                            renderVar.format = overrideFormat;
                     }
 
                     if (!renderVar.sourceName.empty()) {
@@ -1171,8 +1209,12 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     if(!renderStatus.empty())
     {
         // Beautify the log - 'Rendering' looks nicer than 'rendering'
-        // in the viewport annotation
-        renderStatus[0] = std::toupper(renderStatus[0]);
+        // in the viewport annotation. std::toupper requires the argument to be
+        // representable as unsigned char (or EOF); passing a `char` directly is
+        // UB for byte values > 127 on platforms where char is signed, since the
+        // implicit promotion to int is then negative.
+        renderStatus[0] = static_cast<char>(
+            std::toupper(static_cast<unsigned char>(renderStatus[0])));
     }
     const int width = AiNodeGetInt(_options, str::xres);
     const int height = AiNodeGetInt(_options, str::yres);
@@ -1436,29 +1478,28 @@ AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader()
 {
-    if (_fallbackShader)
-        return _fallbackShader;
-
     std::lock_guard<std::mutex> guard(_defaultShadersMutex);
     if (_fallbackShader == nullptr) {
-        _fallbackShader = CreateArnoldNode(str::standard_surface, 
+        // Build the shader graph in a local, then publish to _fallbackShader
+        // only once the user_data_reader has been linked. Otherwise a concurrent
+        // caller reading _fallbackShader could observe the pointer between the
+        // assignment and the AiNodeLink below, and return an unlinked shader.
+        AtNode* shader = CreateArnoldNode(str::standard_surface,
             AtString("_fallbackShader"));
-    
+
         AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
             AtString("_fallbackShader_userDataReader"));
-        
+
         AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
         AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
-        AiNodeLink(userDataReader, str::base_color, _fallbackShader);
+        AiNodeLink(userDataReader, str::base_color, shader);
+        _fallbackShader = shader;
     }
-    return _fallbackShader; 
+    return _fallbackShader;
 }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader()
 {
-    if (_fallbackVolumeShader)
-        return _fallbackVolumeShader;
-
     std::lock_guard<std::mutex> guard(_defaultShadersMutex);
     if (_fallbackVolumeShader == nullptr) {
         _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
@@ -1655,12 +1696,19 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
 
 bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
-    if (!_deferredFunctionCalls.empty()) {
-        // TODO: depending on the size, we could do the update in parallel.
-        for (const auto& func : _deferredFunctionCalls) {
-            func();
-        }
-        _deferredFunctionCalls.clear();
+    // Drain the deferred queue under the lock by swapping it into a local,
+    // then run the callbacks without holding the lock. Iterating
+    // _deferredFunctionCalls directly while another thread is push_back-ing
+    // under _deferredFunctionCallsMutex (from _ApplyLightLinking) is a data
+    // race: a reallocation could invalidate the loop's iterator.
+    std::vector<std::function<void()>> deferred;
+    {
+        std::lock_guard<std::mutex> guard(_deferredFunctionCallsMutex);
+        deferred.swap(_deferredFunctionCalls);
+    }
+    // TODO: depending on the size, we could do the update in parallel.
+    for (const auto& func : deferred) {
+        func();
     }
 
     HdDirtyBits bits = HdChangeTracker::Clean;
@@ -1740,14 +1788,41 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         changes = true;
     }
     SdfPath id;
+#ifdef ENABLE_SCENE_INDEX
+    // Under scene index emulation (Hydra 2) the change tracker's MarkRprimDirty / MarkSprimDirty
+    // must not be called directly: they raise "requires emulation" coding errors and the dirtiness
+    // is dropped. We instead push the dirtiness through the terminal scene index, the same way the
+    // bulk Rprim dirtying above does. Resolve the terminal scene index once for the lambda to use.
+    HdSceneIndexBaseRefPtr terminalSceneIndex =
+        HdRenderIndex::IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
+#endif
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
-        // Marking a primitive as being dirty. But the function to invoke
-        // depends on the prim type. For now we're checking first if a Rprim
-        // exists with this name, to choose between Rprims and Sprims.
-        if (renderIndex->HasRprim(source)) {
-            changeTracker.MarkRprimDirty(source, bits);
+        // Marking a primitive as being dirty. The conversion to data source locators and the
+        // function to invoke depend on the prim type, so we check first whether an Rprim exists
+        // with this name to choose between Rprims and Sprims.
+        const bool isRprim = renderIndex->HasRprim(source);
+#ifdef ENABLE_SCENE_INDEX
+        if (terminalSceneIndex) {
+            const HdSceneIndexPrim prim = terminalSceneIndex->GetPrim(source);
+            HdDataSourceLocatorSet locators;
+            if (isRprim) {
+                HdDirtyBitsTranslator::RprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            } else {
+                HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            }
+            if (!locators.IsEmpty()) {
+                TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash> dirtyEntries;
+                dirtyEntries.insert({source, locators});
+                auto dataSource = HdRetainedTypedSampledDataSource<
+                    TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
+                terminalSceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
+            }
+            return;
         }
-        else {
+#endif
+        if (isRprim) {
+            changeTracker.MarkRprimDirty(source, bits);
+        } else {
             // Depending on the Sprim type, the dirty bits must be different. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
             changeTracker.MarkSprimDirty(source, bits);
         }
@@ -1770,10 +1845,15 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                         _sourceToTargetsMap.erase(sourceIt);
                     }
                 }
-                // This source primitive needs to be updated
-                auto bits = _dependencyToDirtyBitsMap[{id, source}];
+                // This source primitive needs to be updated. Use find() so we don't
+                // silently insert a zero-bits entry when the (target, source) pair
+                // is missing — operator[] would leak default entries into the map.
+                const auto bitsIt = _dependencyToDirtyBitsMap.find({id, source});
+                const HdDirtyBits bits = bitsIt != _dependencyToDirtyBitsMap.end()
+                    ? bitsIt->second : HdChangeTracker::Clean;
                 markPrimDirty(source, bits);
-                _dependencyToDirtyBitsMap.erase({id, source});
+                if (bitsIt != _dependencyToDirtyBitsMap.end())
+                    _dependencyToDirtyBitsMap.erase(bitsIt);
             }
 
             // Erase the map from this target to all its sources
@@ -1787,7 +1867,16 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         // We need to ensure that the previous dependencies were properly cleared
         const auto &newTargetsWithBits = dependencyChange.targets;
         const auto &source = dependencyChange.source;
-        auto prevTargets = _sourceToTargetsMap[source];
+        // Look up via find() rather than operator[] so we don't silently
+        // insert an empty PathSet entry for sources we've never seen
+        // (TrackDependencies(source, {}) routinely hits this path via
+        // ClearDependencies).
+        PathSet prevTargets;
+        {
+            const auto prevIt = _sourceToTargetsMap.find(source);
+            if (prevIt != _sourceToTargetsMap.end())
+                prevTargets = prevIt->second;
+        }
         PathSet newTargets;
         for (const auto &pathAndBits : newTargetsWithBits) {
             newTargets.insert(pathAndBits.first);
@@ -1795,35 +1884,68 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
             // dependencies actually take effect (insert() is a no-op on existing keys).
             _dependencyToDirtyBitsMap[{pathAndBits.first, source}] = pathAndBits.second;
         }
-        // Set the new targets for this source
-        _sourceToTargetsMap[source] = newTargets;
+        // Set the new targets for this source. If the new list is empty, drop
+        // the entry entirely rather than leaving an empty PathSet behind.
+        if (newTargets.empty()) {
+            _sourceToTargetsMap.erase(source);
+        } else {
+            _sourceToTargetsMap[source] = newTargets;
+        }
 
         // Now check, for all targets that were set previously to this source,
         // if they're still present in the new list. If they're not, then we need
-        // to remove the source from the target map
+        // to remove the source from the target map. Use find() so a target that
+        // was already removed via the removal queue doesn't get a default-
+        // constructed entry resurrected here.
         for (const auto &prevTarget : prevTargets) {
             if (newTargets.find(prevTarget) == newTargets.end()) {
-                _targetToSourcesMap[prevTarget].erase(source);
+                const auto targetIt = _targetToSourcesMap.find(prevTarget);
+                if (targetIt != _targetToSourcesMap.end()) {
+                    targetIt->second.erase(source);
+                    if (targetIt->second.empty())
+                        _targetToSourcesMap.erase(targetIt);
+                }
                 _dependencyToDirtyBitsMap.erase({prevTarget, source});
             }
         }
-        
+
         for (const auto& target : newTargets) {
             // for each target, we want to add all the source to its map
             _targetToSourcesMap[target].insert(source);
         }
     }
-    
+
+    // Instanced lights are Sprims, and Hydra does not propagate a Point Instancer's dirtiness to
+    // them the way it does for instanced Rprims: when an instancer's prototypes are only lights,
+    // nothing carries the dirty notification to the light Sprim, so after the first frame the
+    // instanced lights stay frozen while the instancer animates (issue #2641). The light registers
+    // a dependency on its instancer (see HdArnoldGenericLight::Sync); here we look for instancers
+    // that prims depend on and that are still dirty in the change tracker - because no Rprim caused
+    // Hydra to sync and clean them - and propagate that dirtiness to the dependent prims so they
+    // re-sync and rebuild their Arnold instancer. The light's re-sync calls the instancer's Sync,
+    // which clears the instancer's dirty bits and prevents this from looping every frame.
+    for (const auto& targetAndSources : _targetToSourcesMap) {
+        const SdfPath& target = targetAndSources.first;
+        if (renderIndex->GetInstancer(target) == nullptr) {
+            continue;
+        }
+        if (changeTracker.GetInstancerDirtyBits(target) != HdChangeTracker::Clean) {
+            DirtyDependency(target);
+        }
+    }
+
     // Finally, we're processing all the dependencies that were marked as dirty.
     // For each of them, we need to update all the sources pointing at it
     while (_dependencyDirtyQueue.try_pop(id)) {
         auto it = _targetToSourcesMap.find(id);
         if (it != _targetToSourcesMap.end()) {
             changes = true;
-            // mark each source as being dirty
+            // mark each source as being dirty. Use find() to avoid inserting
+            // a zero-bits default entry when the (target, source) pair is missing.
             for (const auto &source: it->second) {
-                auto bits = _dependencyToDirtyBitsMap[{id, source}];
-                markPrimDirty(source, bits);
+                const auto bitsIt = _dependencyToDirtyBitsMap.find({id, source});
+                if (bitsIt != _dependencyToDirtyBitsMap.end())
+                    markPrimDirty(source, bitsIt->second);
             }
         }
     }
@@ -1937,16 +2059,18 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     if (renderTags == _renderTags)
         return false;
 
-    // if the amount of elements has not changed, we also want to check if we're receiving 
-    // the render tags in a different order
+    // If the amount of elements has not changed, we also want to check if we're receiving
+    // the render tags in a different order. Comparing as sorted vectors handles both
+    // ordering and duplicates correctly — the previous "every new tag is in old" check
+    // missed cases like new=[a, a] vs old=[a, b] (different sets, but every 'a' is
+    // found in old, so it reported no change).
     bool renderTagsChanged = renderTags.size() != _renderTags.size();
     if (!renderTagsChanged) {
-        for (auto t : renderTags) {
-            if (std::find(_renderTags.begin(), _renderTags.end(), t) == _renderTags.end()) {
-                renderTagsChanged = true;
-                break;
-            }
-        }
+        TfTokenVector a = renderTags;
+        TfTokenVector b = _renderTags;
+        std::sort(a.begin(), a.end());
+        std::sort(b.begin(), b.end());
+        renderTagsChanged = (a != b);
     }
     _renderTags = renderTags;
     return renderTagsChanged;
@@ -2018,6 +2142,10 @@ void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
 void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
 {
    _cryptomatteDrivers.clear();
+   // Otherwise HasCryptomatte() keeps reporting true after every driver is
+   // gone, and code paths gated on it (e.g. the per-instancer crypto offset
+   // declaration) stay enabled with no driver to consume the data.
+   _hasCryptomatte = false;
 }
 void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numInstances)
 {   
@@ -2084,6 +2212,9 @@ bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdComma
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render
         _renderParam->Restart();
+        // Hydra interprets the return value as "command handled" — returning
+        // false here made every successful flush look like an unhandled command.
+        return true;
     }
     return false;
 }

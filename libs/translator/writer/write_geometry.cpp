@@ -181,12 +181,20 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     AtString subdivType = AiNodeGetStr(node, AtString("subdiv_type"));
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
+    // subdivisionScheme is a uniform attribute in USD and must not have time samples.
+    // Write it directly at default time to prevent the time-varying SetAttribute logic
+    // from creating timeSamples when subdiv_type changes between frames (e.g. when
+    // MayaUSD exports a frame range and the Arnold scene is rebuilt each frame).
+    // When subdiv_type is "none" (Arnold's default, no explicit subdivision requested),
+    // preserve any existing authored value rather than overwriting with "none" -- this
+    // avoids clobbering a "catmullClark" value already written by MayaUSD's native exporter.
+    UsdAttribute subdivSchemeAttr = mesh.GetSubdivisionSchemeAttr();
     if (subdivType == catclarkStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->catmullClark);
+        subdivSchemeAttr.Set(UsdGeomTokens->catmullClark);
     else if (subdivType == linearStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->bilinear);
-    else
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->none);
+        subdivSchemeAttr.Set(UsdGeomTokens->bilinear);
+    else if (!subdivSchemeAttr.HasAuthoredValue())
+        subdivSchemeAttr.Set(UsdGeomTokens->none);
 
     // always write subdiv iterations even if it's set to default
     UsdAttribute attr = prim.CreateAttribute(
@@ -254,6 +262,9 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             break;
     }
     writer.SetAttribute(curves.GetTypeAttr(), curveType);
+    // Track whether the curves are cubic so we can pick the right widths
+    // interpolation below — see the radius/widths block.
+    const bool curvesAreCubic = (curveType == UsdGeomTokens->cubic);
 
     WriteAttribute(node, "points", prim, curves.GetPointsAttr(), writer);
 
@@ -284,10 +295,20 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
         writer.SetAttribute(curves.GetWidthsAttr(), widthArray);
         AiArrayUnmapConst(radiusArray);
 
-        if (radiusCount == 1)
+        if (radiusCount == 1) {
             curves.SetWidthsInterpolation(UsdGeomTokens->constant);
-        else
+        } else if (curvesAreCubic) {
+            // Arnold's radius array is one value per CV (per control point).
+            // For cubic basis curves UsdGeomBasisCurves expects "vertex"
+            // interpolation when there is one value per CV — "varying" has a
+            // *different* element count for cubic curves (one per segment +
+            // 1 / per-wrap, not per CV), so the previous unconditional
+            // "varying" silently produced a size-mismatched primvar. Linear
+            // curves keep "varying" since varying == vertex for them.
+            curves.SetWidthsInterpolation(UsdGeomTokens->vertex);
+        } else {
             curves.SetWidthsInterpolation(UsdGeomTokens->varying);
+        }
     }
     _exportedAttrs.insert("radius");
 
