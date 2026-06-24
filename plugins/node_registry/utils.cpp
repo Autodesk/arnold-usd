@@ -382,8 +382,14 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     }
     AiMetaDataIteratorDestroy(nodeMetadataIter);
 
-    if (hide)
-        return;
+    if (hide) {
+        // c4d_texture_tag and c4d_texture_tag_rgba carry hide=true metadata, 
+        // so they don't appear in DCC material browsers. They must still be 
+        // registered here so that USD scenes exported by C4DtoA can be rendered.
+        const AtString nodeName = AiNodeEntryGetNameAtString(nodeEntry);
+        if (nodeName != str::c4d_texture_tag && nodeName != str::c4d_texture_tag_rgba)
+            return;
+    }
 
     auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
     const auto filename = AiNodeEntryGetFilename(nodeEntry);

@@ -238,6 +238,8 @@ ASTR(buffer_pointers);
 ASTR(cache_id);
 ASTR(camera);
 ASTR(cast_shadows);
+ASTR(c4d_texture_tag);
+ASTR(c4d_texture_tag_rgba);
 ASTR(catclark);
 ASTR(clamp);
 ASTR(clearcoat);
