@@ -78,6 +78,11 @@ def render_delegate(env, sources):
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['hdsi','ts',]
+
+    # needed for fast viewport code path
+    if env['USD_BUILD_MODE'] != 'static':
+        usd_libs += ['hgi', 'hgiGL', 'garch']
+
     return add_plugin_deps(env, sources, usd_libs, True)
 
 

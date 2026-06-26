@@ -141,6 +141,7 @@ private:
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
+    bool _fastViewport = false;
     bool _isConverged = false;          ///< State of the render convergence.
 };
 
