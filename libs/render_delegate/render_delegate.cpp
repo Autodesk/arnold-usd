@@ -759,8 +759,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
 
-        if (_fastViewport)
+        if (_fastViewport) {
             AiNodeSetStr(_options, str::render_device, str::GPU);
+            AiNodeSetBool(_options, AtString("viewport_rendering"), true);
+        }
         else
         {
             _CheckForBoolValue(value, [&](const bool b) {
@@ -918,7 +920,6 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<bool>()) {
             _fastViewport = value.UncheckedGet<bool>();
             AiNodeSetBool(_options, str::viewport_rendering, _fastViewport);
-            AiNodeSetBool(_options, AtString("ignore_dlss"), true);
             if (_fastViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
             }

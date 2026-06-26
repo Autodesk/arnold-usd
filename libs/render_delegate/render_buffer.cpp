@@ -513,33 +513,43 @@ bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
 {
 #ifdef FAST_VIEWPORT_SUPPORT
-    
+    if (!_valid)
+        return VtValue();
     // GetResource() is called by Hydra/Solaris from the main thread with the GL context
     // current. AiQueryAOV does CUDA<->GL interop that requires a current GL context, so
     // this is the right place to pull Arnold's latest AOV data into the GL texture.
     if (_renderDelegate != nullptr && _renderDelegate->IsFastViewport()) {
-        auto* self = const_cast<HdArnoldRenderBuffer*>(this);
-        self->EnsureGpuTexture();
-        std::lock_guard<std::mutex> guard(self->_mutex);
-        if (_aovTexture && _texture) {
-            const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
-            if (aovGlId != 0) {
-                const AtRenderErrorCode rc = AiQueryAOV(
-                    _renderDelegate->GetRenderSession(), AtString(_aovName.GetText()), aovGlId, AiQueryAOVHandleType::OPENGL);
-                if (rc == AI_SUCCESS) {
-                    // Sync CUDA/GL interop before sampling the AOV texture in our blit.
+        AtRenderSession *rs = _renderDelegate->GetRenderSession();
+        const auto status = rs ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
+        if (status != AI_RENDER_STATUS_NOT_STARTED) {
+            auto* self = const_cast<HdArnoldRenderBuffer*>(this);
+            self->EnsureGpuTexture();
+            std::lock_guard<std::mutex> guard(self->_mutex);
+            if (_aovTexture && _texture) {
+                const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
+                if (aovGlId != 0) {
+                    // glFinish() ensures all pending GL/CUDA interop operations on this texture
+                    // are complete before Arnold maps it again via cuGraphicsMapResources.
+                    // Without this, successive AiQueryAOV calls on the same texture AV inside
+                    // Arnold because the previous async CUDA write hasn't finished unmapping.
                     glFinish();
-                    if (self->_FlipAovToDisplayTexture() && _GetGlTextureId(_texture) != 0) {
-                        return VtValue(_texture);
+                    //std::cerr<<"AiQueryAOV for "<<_aovName<<" ... "<<this<<" ///// "<<std::endl;
+                    const AtRenderErrorCode rc = AiQueryAOV(rs, AtString(_aovName.GetText()), aovGlId, AiQueryAOVHandleType::OPENGL);
+                    if (rc == AI_SUCCESS) {
+                        // Sync CUDA/GL interop before sampling the AOV texture in our blit.
+                        glFinish();
+                        if (self->_FlipAovToDisplayTexture() && _GetGlTextureId(_texture) != 0) {
+                            return VtValue(_texture);
+                        }
+
+                    } else {
+                        TF_WARN(
+                            "AiQueryAOV failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
                     }
-                    
-                } else {
-                    TF_WARN(
-                        "AiQueryAOV failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
                 }
+                // Flip failed or display texture unavailable — show AOV as-is (may be Y-inverted).
+                return VtValue(_aovTexture);
             }
-            // Flip failed or display texture unavailable — show AOV as-is (may be Y-inverted).
-            return VtValue(_aovTexture);
         }
     }
 
@@ -556,6 +566,9 @@ void HdArnoldRenderBuffer::SetHgi(Hgi* hgi) {
 
 void* HdArnoldRenderBuffer::Map()
 {
+    if (!_valid)
+        return nullptr;
+
     _mutex.lock();
     if (_buffer.empty()) {
         // Leaving the mutex unlocked here means a subsequent Unmap() must NOT

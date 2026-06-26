@@ -145,6 +145,8 @@ public:
     HDARNOLD_API
     void SetAovName(const TfToken& aovName) { _aovName = aovName; }
 
+    void SetValid(bool b) {_valid = b;}
+
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
@@ -169,6 +171,7 @@ private:
     bool _converged = false;                         ///< Store if the render buffer has converged.
     TfToken _aovName;                                ///< AOV name passed to AiQueryAOV.
     bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
+    bool _valid = true;
 };
 
 using HdArnoldRenderBufferStorage =

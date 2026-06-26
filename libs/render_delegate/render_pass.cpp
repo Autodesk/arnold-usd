@@ -917,6 +917,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // and treat it as Arnold would expect.
             bool isBeauty = binding.aovName == HdAovTokens->color;
             
+            if (_fastViewport && !isBeauty && sourceName != HdAovTokens->depth) {
+                buffer.buffer->SetValid(false);                
+                continue;
+            }
+
             // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
             // an aov with the same name. We can't just check for the source name; for example: using a primvar
             // type and displaying a "color" or a "depth" user data is a valid use case.
