@@ -20,6 +20,7 @@
 - [usd#2677](https://github.com/Autodesk/arnold-usd/issues/2677) - Fix crash reading RenderSettings with empty arnold:filter on a RenderVar
 - [usd#2641](https://github.com/Autodesk/arnold-usd/issues/2641) - Animate instanced lights driven by an animated Point Instancer in Hydra
 - [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
+- [usd#2628](https://github.com/Autodesk/arnold-usd/issues/2628) - Fix crash happening after changing the purpose in hydra
 
 ## [7.5.2.0] (Unreleased)
 
