@@ -456,6 +456,8 @@ ASTR(progressive_show_all_outputs);
 ASTR(projMtx);
 ASTR(quad_light);
 ASTR(radius);
+ASTR(ray_direction);
+ASTR(ray_origin);
 ASTR(reference_time);
 ASTR(region_max_x);
 ASTR(region_max_y);
