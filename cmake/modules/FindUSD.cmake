@@ -108,9 +108,6 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
         find_usd_version(${PXR_INCLUDE_DIRS}) 
         message(STATUS "USD version ${USD_VERSION}")
 
-        # The mayausd libraries are only x86_64 on osx for the moment
-        set(CMAKE_OSX_ARCHITECTURES x86_64;arm64)
-
         set(USD_MONOLITHIC_BUILD OFF)
 
         # Variable for running usdGenSchema
