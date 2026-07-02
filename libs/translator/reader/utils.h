@@ -101,7 +101,7 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
 void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context);
 
-void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr);
+void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr, bool isVolume = false);
 
 // The normals can be set on primvars:normals or just normals. 
 // primvars:normals takes "precedence" over "normals"

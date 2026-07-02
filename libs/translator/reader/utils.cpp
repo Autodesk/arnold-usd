@@ -202,46 +202,42 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
     return array;
 
 }
-void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim)
+void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim, bool isVolume)
 {
-    // First search the material attachment in the arnold scope, then in the mtlx one
-    // Finally, ComputeSurfaceSource will look into the universal scope
+    // Resolve both the surface and the volume terminals. We search the arnold
+    // scope first, then the mtlx one; ComputeSurfaceSource / ComputeVolumeSource
+    // also look into the universal scope as a fallback.
 #if PXR_VERSION >= 2108
     TfTokenVector contextList {str::t_arnold, str::t_mtlx};
     UsdShadeShader surface = mat.ComputeSurfaceSource(contextList);
+    UsdShadeShader volume = mat.ComputeVolumeSource(contextList);
 #else
     // old method, we need to ask for each context explicitely
-    // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
-    if (!surface) { // not found, check in the mtlx scope
+    if (!surface) // not found, check in the mtlx scope
         surface = mat.ComputeSurfaceSource(str::t_mtlx);
-    }
-    if (!surface) {// not found, search in the global scope
+    if (!surface) // not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
-    }
 
-#endif
-    
-    if (surface) {
-        // Found a surface shader, let's add a connection to it (to be processed later)
-        shaderPrim = surface.GetPrim();
-    } else {
-        // No surface found in USD primitives
-
-        // We have a single "shader" binding in arnold, whereas USD has "surface"
-        // and "volume" For now we export volume only if surface is empty.
-#if PXR_VERSION >= 2108
-        UsdShadeShader volume = mat.ComputeVolumeSource(contextList);
-#else
-        // old method, we need to ask for each context explicitely
-        UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
-        if (!volume)
-            volume = mat.ComputeVolumeSource();
+    UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
+    if (!volume) // not found, search in the global scope
+        volume = mat.ComputeVolumeSource();
 #endif
 
-        if (volume)
-            shaderPrim = volume.GetPrim();
-    }
+    // Arnold shapes have a single "shader" slot, whereas USD distinguishes the
+    // "surface" and "volume" terminals. For a shape that is rendered as a volume
+    // (a native volume node, or a polymesh with step_size > 0) we must prefer the
+    // volume terminal: otherwise a universal / preview surface terminal (e.g. a
+    // UsdPreviewSurface authored for DCC interop) would shadow the actual volume
+    // shader, and the volume would be rendered as a (black) surface. For regular
+    // shapes we keep preferring the surface terminal, only falling back to the
+    // volume terminal when no surface is bound.
+    UsdShadeShader primary = isVolume ? volume : surface;
+    UsdShadeShader fallback = isVolume ? surface : volume;
+    if (primary)
+        shaderPrim = primary.GetPrim();
+    else if (fallback)
+        shaderPrim = fallback.GetPrim();
 
     if (dispPrim) { 
         // first check displacement in the arnold scope, then in the mtlx one,
@@ -282,7 +278,7 @@ void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPri
         }
     }
 }
-static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
+static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr, bool isVolume = false)
 {
     // We want to get the material assignment for the "full" purpose, which is meant for rendering
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
@@ -290,7 +286,7 @@ static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPri
     if (!mat) {
         return;
     }
-    GetMaterialTargets(mat, shaderPrim, dispPrim);
+    GetMaterialTargets(mat, shaderPrim, dispPrim, isVolume);
 }
 
 // Read the materials / shaders assigned to a shape (node)
@@ -306,10 +302,10 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
         materialBoundPrim = prim.GetStage()->GetPrimAtPath(pathConsidered);
     }
     UsdPrim shaderPrim, dispPrim;
-    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
 
     if (shaderPrim) {
-        context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(), 
+        context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(),
             ArnoldAPIAdapter::CONNECTION_PTR);
     } else if (assignDefault) {
         AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader(IsVolume(node, prim)));
@@ -347,7 +343,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
 
-        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
         if (shaderPrim)
             shaderStr = shaderPrim.GetPath().GetString();
         else if (assignDefault) {
@@ -400,7 +396,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
         UsdPrim shaderPrim, dispPrim;
-        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
 
         if (shaderPrim) {
             shaderStr = shaderPrim.GetPath().GetString();
