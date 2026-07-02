@@ -1258,6 +1258,20 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     AiArrayUnmapConst(array);
 }
 
+// A shape is rendered as a volume either when it's a native volume node, or when
+// it's a polymesh with a positive step_size (an implicit / mesh volume). This must
+// stay consistent with the reader's IsVolume() (see reader/read_geometry.cpp),
+// otherwise volume shaders get wired into the surface slot and are dropped at import
+// (falling back to _fallbackVolume).
+static bool IsVolumeShape(const AtNode* node)
+{
+    if (AiNodeIs(node, str::volume))
+        return true;
+    if (AiNodeIs(node, str::polymesh))
+        return AiNodeGetFlt(node, str::step_size) > AI_EPSILON;
+    return false;
+}
+
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer, bool isVolume = false)
 {
    
@@ -1429,7 +1443,7 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
                 UsdPrim subsetPrim = subset.GetPrim();
 
                 // Process the material binding on the subset primitive
-                processMaterialBinding(shader, displacement, subsetPrim, writer);
+                processMaterialBinding(shader, displacement, subsetPrim, writer, IsVolumeShape(node));
             }
             AiArrayUnmap(shidxsArray);
             return;
@@ -1441,5 +1455,5 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     static const AtString polymesh_str("polymesh");
     AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, AtString("disp_map")) : nullptr;
 
-    processMaterialBinding(shader, displacement, prim, writer, AiNodeIs(node, str::volume));
+    processMaterialBinding(shader, displacement, prim, writer, IsVolumeShape(node));
 }
