@@ -1332,6 +1332,27 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         UsdShadeMaterialBindingAPI::Apply(prim).Bind(mat);
     }
 
+    // A shape rendered as a volume uses only the volume terminal. If the bound
+    // material already exposes a surface terminal (e.g. a UsdPreviewSurface that
+    // MaxUSD authors for interop), strip it: UsdImaging's Hydra-1 material
+    // adapter builds the surface terminal and then SKIPS the volume one
+    // ("surface XOR volume" in UsdImagingMaterialAdapter::GetMaterialResource),
+    // so the volume shape would get no shader and render black. Removing the
+    // surface terminal lets ComputeSurfaceSource return empty, so the volume
+    // terminal is built for all code paths. See MAXTOA-2033.
+    if (isVolume && mat) {
+        static const TfToken s_surfaceOutputs[] = {
+            TfToken("outputs:surface"),         // universal render context
+            TfToken("outputs:arnold:surface"),  // arnold render context
+            TfToken("outputs:mtlx:surface")     // materialx render context
+        };
+        UsdPrim matPrim = mat.GetPrim();
+        for (const TfToken& outputName : s_surfaceOutputs) {
+            if (matPrim.HasProperty(outputName))
+                matPrim.RemoveProperty(outputName);
+        }
+    }
+
     // Now bind the eventual surface shader and displacement to the material.
 
     // Store the previous writer scope, and set a new one based on the material name.
