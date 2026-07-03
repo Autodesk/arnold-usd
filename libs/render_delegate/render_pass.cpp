@@ -681,6 +681,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
             
+            // Keep the original y-up NDC range: when an explicit resolution is set, the Y region
+            // must be snapped to pixels in this space to match Houdini's convention exactly (see
+            // below), before being flipped into Arnold's y-down region.
+            float windowMinYUp = windowNDC[1];
+            float windowMaxYUp = windowNDC[3];
+
             // Need to invert the window range in the Y axis
             float minY = 1. - windowNDC[3];
             float maxY = 1. - windowNDC[1];
@@ -692,16 +698,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 std::swap(windowNDC[0], windowNDC[2]);
             if (windowNDC[1] > windowNDC[3])
                 std::swap(windowNDC[1], windowNDC[3]);
+            if (windowMinYUp > windowMaxYUp)
+                std::swap(windowMinYUp, windowMaxYUp);
 
 
-            // return the min region in a given axis X or Y, provided the input data that we receive from hydra
-            const auto getAxisRegion = [&](float windowMin, float windowMax, int settingsRes, int bufferRes, int expectedFraming) -> GfVec2i {
-                // if an explicit render settings resolution was provided, we want to use it, otherwise we use the 
-                // render buffer resolution
-                float regionMinFlt = windowMin * (settingsRes > 0 ? settingsRes : bufferRes);
-                float regionMaxFlt = windowMax * (settingsRes > 0 ? settingsRes : bufferRes) - 1;
-                GfVec2i region(std::round(regionMinFlt), std::round(regionMaxFlt));
-                
+            // Reconcile the snapped region of a given axis X or Y against the resolution and the
+            // render buffer size we received from hydra. regionMinFlt / regionMaxFlt are the
+            // unsnapped floating point pixel coordinates, region is the snapped integer region.
+            const auto adjustRegion = [&](float regionMinFlt, float regionMaxFlt, GfVec2i region,
+                                          int settingsRes, int bufferRes, int expectedFraming) -> GfVec2i {
                 // If we have a specific render settings resolution with a windowNDC, but applying it
                 // returns a 1-offset as compared to the expected buffer we had from the framing, then 
                 // we want to adjust the values to this offset
@@ -750,7 +755,21 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }                
             }
             
-            GfVec2i regionX = getAxisRegion(windowNDC[0], windowNDC[2], delegateResolution[0], width, framingWidth);
+            // Snap the NDC window to integer pixel coordinates with ceil, matching the convention
+            // used by Houdini (SYSceil in XUSD_RenderSettings::computeImageWindows and in karma's
+            // BRAY_HdPass::updateSceneResolution). This is required so that the data window baked
+            // into files written by native Arnold drivers ("arnold" product type in husk) lines up
+            // exactly with the window husk itself applies when writing the hydra render buffers
+            // ("raster" product type). We previously snapped with std::round, which could land one
+            // pixel off from husk's window whenever res * windowNDC has a fractional part, showing
+            // up as a 1-pixel shift between the two product types when overscan is used.
+            const int xRes = delegateResolution[0] > 0 ? delegateResolution[0] : width;
+            const float regionMinXFlt = windowNDC[0] * xRes;
+            const float regionMaxXFlt = windowNDC[2] * xRes - 1;
+            GfVec2i regionX = adjustRegion(
+                regionMinXFlt, regionMaxXFlt,
+                GfVec2i(std::ceil(regionMinXFlt), std::ceil(regionMaxXFlt)),
+                delegateResolution[0], width, framingWidth);
             
             AiNodeSetInt(options, str::region_min_x, regionX[0]);
             AiNodeSetInt(options, str::region_max_x, regionX[1]);
@@ -769,7 +788,35 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
             
             } 
-            GfVec2i regionY = getAxisRegion(windowNDC[1], windowNDC[3], delegateResolution[1], height, framingHeight);
+            GfVec2i regionY;
+            if (delegateResolution[1] > 0) {
+                // To match Houdini's convention exactly, the ceil has to be computed in the
+                // original y-up NDC space with the very same float expression husk uses, and only
+                // then can the resulting integer (inclusive) range be flipped into Arnold's y-down
+                // region. Snapping the flipped floating point values instead can land on the wrong
+                // pixel when res * windowNDC is close to an integer, because float precision
+                // errors round differently in the two spaces.
+                const int yRes = delegateResolution[1];
+                const float yMinUpFlt = windowMinYUp * yRes;
+                const float yMaxUpFlt = windowMaxYUp * yRes - 1;
+                const int yMinUp = std::ceil(yMinUpFlt);
+                const int yMaxUp = std::ceil(yMaxUpFlt);
+                regionY = adjustRegion(
+                    yRes - 1 - yMaxUpFlt, yRes - 1 - yMinUpFlt,
+                    GfVec2i(yRes - 1 - yMaxUp, yRes - 1 - yMinUp),
+                    delegateResolution[1], height, framingHeight);
+            } else {
+                // No explicit resolution was set: yres was extrapolated above and the flipped
+                // windowNDC normalized accordingly, so snap directly in the flipped space.
+                // floor is the y-down equivalent of the y-up ceil convention,
+                // since ceil(R - x) == R - floor(x).
+                const float regionMinYFlt = windowNDC[1] * height;
+                const float regionMaxYFlt = windowNDC[3] * height - 1;
+                regionY = adjustRegion(
+                    regionMinYFlt, regionMaxYFlt,
+                    GfVec2i(std::floor(regionMinYFlt), std::floor(regionMaxYFlt)),
+                    delegateResolution[1], height, framingHeight);
+            }
             AiNodeSetInt(options, str::region_min_y, regionY[0]);
             AiNodeSetInt(options, str::region_max_y, regionY[1]);
             clearBuffers(_renderBuffers, true, regionX[1] - regionX[0] + 1, regionY[1] - regionY[0] + 1);;
