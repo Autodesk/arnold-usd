@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2706](https://github.com/Autodesk/arnold-usd/issues/2706) - Fix overscan 1-pixel offset with certain resolutions
 - [usd#2698](https://github.com/Autodesk/arnold-usd/issues/2698) - Author upAxis and meterUnit metadatas in the writer
 - [usd#2625](https://github.com/Autodesk/arnold-usd/issues/2625) - Add turntable command line tool generating turntable scenes from a usd asset.
 - [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
