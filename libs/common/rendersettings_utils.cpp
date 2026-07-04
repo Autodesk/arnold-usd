@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include <cmath>
 #include <unordered_set>
 #include <vector>
 #include "rendersettings_utils.h"
@@ -483,23 +484,25 @@ void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolut
         (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
         (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
         (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
-        // Need to invert the window range in the Y axis
-        GfVec4f adjustedWindow = windowNDC;
-        float minY = 1. - adjustedWindow[3];
-        float maxY = 1. - adjustedWindow[1];
-        adjustedWindow[1] = minY;
-        adjustedWindow[3] = maxY;
-
         // Ensure the user isn't setting invalid ranges
+        GfVec4f adjustedWindow = windowNDC;
         if (adjustedWindow[0] > adjustedWindow[2])
             std::swap(adjustedWindow[0], adjustedWindow[2]);
         if (adjustedWindow[1] > adjustedWindow[3])
             std::swap(adjustedWindow[1], adjustedWindow[3]);
-        
-        AiNodeSetInt(options, str::region_min_x, int(adjustedWindow[0] * resolution[0]));
-        AiNodeSetInt(options, str::region_min_y, int(adjustedWindow[1] * resolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(adjustedWindow[2] * resolution[0]) - 1);
-        AiNodeSetInt(options, str::region_max_y, int(adjustedWindow[3] * resolution[1]) - 1);
+
+        // Snap the NDC window to integer pixel coordinates with ceil, matching the convention
+        // used by Houdini (SYSceil in XUSD_RenderSettings::computeImageWindows) and by the
+        // render delegate in HdArnoldRenderPass::_Execute, so that all code paths place the
+        // data window on the same pixels. The Y snapping must happen in the original y-up NDC
+        // space with the same float expressions before flipping into Arnold's y-down region,
+        // as float precision errors can round differently in the two spaces.
+        const int yMinUp = std::ceil(adjustedWindow[1] * resolution[1]);
+        const int yMaxUp = std::ceil(adjustedWindow[3] * resolution[1] - 1);
+        AiNodeSetInt(options, str::region_min_x, int(std::ceil(adjustedWindow[0] * resolution[0])));
+        AiNodeSetInt(options, str::region_max_x, int(std::ceil(adjustedWindow[2] * resolution[0] - 1)));
+        AiNodeSetInt(options, str::region_min_y, resolution[1] - 1 - yMaxUp);
+        AiNodeSetInt(options, str::region_max_y, resolution[1] - 1 - yMinUp);
     }
 }
 
