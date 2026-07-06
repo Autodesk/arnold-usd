@@ -205,6 +205,28 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             ReadLightNormalize(prim, meshLightNode, time);
             ReadLightShapingParams(prim, meshLightNode, time, false);
             ReadMatrix(prim, meshLightNode, time, context);
+            // Apply arnold:light:* primvars (same as the primvars:arnold:light path)
+            ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+            ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+            // Apply bare arnold:attr_name primvars if attr_name exists in the mesh_light node entry
+            {
+                const AtNodeEntry *nentry = AiNodeGetNodeEntry(meshLightNode);
+                const static std::string s_lightPrefix = "arnold:light:";
+                const static std::string s_arnoldPrefix = "arnold:";
+                for (const UsdGeomPrimvar &primvar : context.GetPrimvars()) {
+                    const std::string primvarName = primvar.GetPrimvarName().GetString();
+                    if (primvarName.length() > s_arnoldPrefix.length() &&
+                        TfStringStartsWith(primvarName, s_arnoldPrefix) &&
+                        !TfStringStartsWith(primvarName, s_lightPrefix) &&
+                        primvarName != "arnold:matrix") {
+                        const std::string paramName = primvarName.substr(s_arnoldPrefix.length());
+                        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.c_str()));
+                        if (paramEntry) {
+                            ReadAttribute(primvar.GetAttr(), meshLightNode, paramName, time, context, AiParamGetType(paramEntry));
+                        }
+                    }
+                }
+            }
         }
 #endif
     }

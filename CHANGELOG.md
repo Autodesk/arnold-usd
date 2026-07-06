@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.2.0] (Unreleased)
+## [7.5.2.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2707](https://github.com/Autodesk/arnold-usd/issues/2707) - MeshLightAPI parameters are not read properly
+
+## [7.5.2.0] 2026-06-18
 
 ### Features
 
