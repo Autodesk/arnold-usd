@@ -50,6 +50,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (ArnoldNodeGraph)
     ((PrimvarsArnoldFiltermap, "primvars:arnold:filtermap"))
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
+    ((PrimvarsArnoldRayOrigin, "primvars:arnold:ray_origin"))
+    ((PrimvarsArnoldRayDirection, "primvars:arnold:ray_direction"))
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
     ((PrimvarsArnoldTransformKeys, "primvars:arnold:transform_keys"))
     ((PrimvarsArnoldStepSize, "primvars:arnold:step_size"))
@@ -749,6 +751,16 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
     UsdAttribute uvRemapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldUvRemap);
     if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
         ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    // uv_camera cage projection: ray_origin / ray_direction are shaders linked
+    // through a node graph, just like uv_remap.
+    UsdAttribute rayOriginAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayOrigin);
+    if (rayOriginAttr && rayOriginAttr.HasAuthoredValue()) {
+        ReadNodeGraphAttr(prim, node, rayOriginAttr, "ray_origin", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    UsdAttribute rayDirectionAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayDirection);
+    if (rayDirectionAttr && rayDirectionAttr.HasAuthoredValue()) {
+        ReadNodeGraphAttr(prim, node, rayDirectionAttr, "ray_direction", context, ArnoldAPIAdapter::CONNECTION_LINK);
     }
 }
 
