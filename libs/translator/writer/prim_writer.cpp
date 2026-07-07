@@ -915,7 +915,7 @@ static inline bool convertArnoldAttribute(
                 }
 
                 if (strcmp(paramName, "shader") == 0 && numElements == 1) {
-                    if (vtArr[0] == "ai_default_reflection_shader") {
+                    if (vtArr[0] == "ai_default_reflection_shader" || vtArr[0].empty()) {
                         break;
                     }
                 }
