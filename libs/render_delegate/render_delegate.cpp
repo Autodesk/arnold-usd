@@ -135,6 +135,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_SHAPE_INSTANCING, "", "Set to 0 to disable inner shape instancing");
+TF_DEFINE_ENV_SETTING(
+    HDARNOLD_FLATTEN_INSTANCING, "",
+    "Set to 1 to flatten nested instances into shape instancing instead of using nested arnold instancer nodes");
 
 namespace {
 
@@ -663,7 +666,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _supportShapeInstancing = envShapeInstancing != std::string("0");
 #else
     _supportShapeInstancing = false;
-#endif    
+#endif
+
+    // When enabled, nested instances are flattened into shape instancing instead of
+    // being handled by a chain of nested arnold instancer nodes. Defaults to disabled.
+    std::string envFlattenInstancing = TfGetEnvSetting(HDARNOLD_FLATTEN_INSTANCING);
+    _flattenInstancing = envFlattenInstancing == std::string("1");
     
 }
 

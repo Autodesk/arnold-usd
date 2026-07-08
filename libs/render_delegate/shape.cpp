@@ -140,12 +140,15 @@ static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDel
         return true;
 
     // If we have a nested instancer configuration, we'll use an arnold instancer node.
-    // Nested instances are now handled by a chain of arnold instancer nodes
+    // Nested instances are handled by a chain of arnold instancer nodes
     // (see HdArnoldInstancer::CreateArnoldInstancer) rather than being flattened into
-    // shape instancing.
-    HdInstancer* parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
-    if (parentInstancer)
-        return true;
+    // shape instancing. Unless HDARNOLD_FLATTEN_INSTANCING is enabled, in which case we
+    // skip this test and flatten the nested instances into shape instancing.
+    if (!renderDelegate->FlattenInstancing()) {
+        HdInstancer* parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
+        if (parentInstancer)
+            return true;
+    }
 
     // Procedural nodes do not currently support shapes inner instancing
     return AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE_PROCEDURAL;

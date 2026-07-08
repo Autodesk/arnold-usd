@@ -710,6 +710,10 @@ public:
     // Return true if the render delegate supports shape instancing
     bool SupportShapeInstancing () const {return _supportShapeInstancing;}
 
+    // Return true if nested instances should be flattened into shape instancing
+    // instead of using nested arnold instancer nodes
+    bool FlattenInstancing () const {return _flattenInstancing;}
+
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
     bool HasCryptomatte() const {return _hasCryptomatte;}
@@ -843,6 +847,7 @@ private:
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
+    bool _flattenInstancing = false;
     bool _forceIgnoreMotionBlur = false;
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
