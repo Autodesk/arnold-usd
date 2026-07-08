@@ -13,6 +13,7 @@
 - [usd#2687](https://github.com/Autodesk/arnold-usd/issues/2687) - Support double-precision primvars
 - [usd#2691](https://github.com/Autodesk/arnold-usd/issues/2691) - Support mesh normals updates interactively
 - [usd#2686](https://github.com/Autodesk/arnold-usd/issues/2686) - Prevent subdivisionScheme from being written as timeSamples in USD export
+- [usd#2712](https://github.com/Autodesk/arnold-usd/pull/2712) - Add env variable HDARNOLD_FLATTEN_INSTANCING to flatten the nested instancers
 
 ### Bug Fixes
 
