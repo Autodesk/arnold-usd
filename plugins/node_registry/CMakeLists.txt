@@ -13,8 +13,11 @@ set(HDR
     tokens.h
     utils.h)
 
-# We are building a new "object" target as we need ndr in the procedural as well
-add_library(ndrObjects OBJECT ${SRC})
+# We are building a new "object" target as we need ndr in the procedural as well.
+# EXCLUDE_FROM_ALL for consistency with the other three object libraries; unlike them
+# this one is usually built anyway, because nodeRegistryArnold links it. See the note
+# in plugins/usd_imaging/CMakeLists.txt.
+add_library(ndrObjects OBJECT EXCLUDE_FROM_ALL ${SRC})
 target_compile_definitions(ndrObjects PRIVATE "NDRARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME ndrObjects DEPENDENCIES common)
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)

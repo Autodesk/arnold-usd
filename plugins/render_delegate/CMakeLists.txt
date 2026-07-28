@@ -4,7 +4,9 @@ set(SRC
 # Dependencies os this plugin
 set(_usd_deps arch plug trace tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUtil)
 
-add_library(hdArnoldObjects OBJECT ${SRC})
+# EXCLUDE_FROM_ALL: only the procedural links this, so it is dead weight in 'all' when
+# BUILD_PROCEDURAL is off. See the longer note in plugins/usd_imaging/CMakeLists.txt.
+add_library(hdArnoldObjects OBJECT EXCLUDE_FROM_ALL ${SRC})
 target_compile_definitions(hdArnoldObjects PRIVATE "HDARNOLD_EXPORTS=1")
     add_common_dependencies(
     TARGET_NAME hdArnoldObjects

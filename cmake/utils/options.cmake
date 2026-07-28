@@ -52,6 +52,14 @@ option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
 option(ENABLE_TRACING "Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE)." OFF)
+if (NOT ENABLE_TRACING)
+    # Apply globally, matching SConstruct:386-387 which appends TRACE_ENABLE=0 to the
+    # whole environment. libs/render_delegate sets it on its own target, so the
+    # delegate is covered but nodeRegistryArnold, sceneIndexArnold and
+    # usdImagingArnold are not, and they end up with USD trace instrumentation
+    # compiled in where the SCons build has none.
+    add_compile_definitions(TRACE_ENABLE=0)
+endif()
 option(MTOA_BUILD "Build MtoA-specific plugins (e.g. the ai<Name> primvar remap scene index)" OFF)
 if (MTOA_BUILD AND BUILD_BUNDLE)
     # The MtoA primvar remap SIP is useful only if the scene index ships in the bundle.
