@@ -1,0 +1,132 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+# Instanceable reference to an asset whose inherited primvars:crypto_asset should
+# resolve on the geometry for the Cryptomatte asset AOV. See arnold-usd #2699.
+def "inst1" (
+    instanceable = true
+    prepend references = @./asset.usda@
+)
+{
+    matrix4d xformOp:transform = ( (0.3, 0, 0, 0), (0, 0.3, 0, 0), (0, 0, 0.3, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (0.001, 1000)
+        float focalLength = 0.5
+        float horizontalAperture = 0.5
+        token projection = "perspective"
+        float verticalAperture = 0.28125
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 3, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DistantLight "distantlight1"
+    {
+        float inputs:angle = 0.53
+        color3f inputs:color = (1, 1, 1)
+        float inputs:intensity = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    def ArnoldNodeGraph "aov_shaders"
+    {
+        custom int _delegate_update
+        token outputs:aov_shaders:i1.connect = </materials/aov_shaders/cryptomatte1.outputs:shader>
+
+        def Shader "cryptomatte1"
+        {
+            uniform token info:id = "arnold:cryptomatte"
+            string inputs:aov_crypto_asset = "crypto_asset"
+            string inputs:aov_crypto_material = "crypto_material"
+            string inputs:aov_crypto_object = "crypto_object"
+            bool inputs:create_depth_outputs = 0
+            int inputs:cryptomatte_depth = 6
+            bool inputs:custom_output_driver = 1
+            token outputs:shader
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset"
+            {
+                custom bool arnold:cryptomatte_filter:noop = 1
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:name = "crypto_asset"
+                string sourceName = "crypto_asset"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset00"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_asset_filter00"
+                custom int arnold:cryptomatte_filter:rank = 0
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:name = "crypto_asset00"
+                string sourceName = "crypto_asset00"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/RGBA>,
+                </Render/Products/Vars/crypto_asset>,
+                </Render/Products/Vars/crypto_asset00>,
+            ]
+            token productName = "testrender.exr"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 2
+        custom string arnold:global:aov_shaders = "/materials/aov_shaders"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 120)
+    }
+}

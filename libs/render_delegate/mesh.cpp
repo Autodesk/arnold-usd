@@ -458,19 +458,29 @@ void HdArnoldMesh::Sync(
 
                     std::string primvarStr = primvar.first.GetText();
                     const static std::string s_lightPrefix = "arnold:light:";
-                    // check if the attribute starts with "arnold:light:"
-                    if (primvarStr.length() > s_lightPrefix.length() && 
-                        primvarStr.substr(0, s_lightPrefix.length()) == s_lightPrefix) {
-                        // we want to read this attribute and set it in the light node. We need to 
-                        // modify the attribute name so that we remove the light prefix
+                    const static std::string s_arnoldPrefix = "arnold:";
+                    bool shouldSetOnLight = false;
+                    if (primvarStr.length() > s_lightPrefix.length() &&
+                        TfStringStartsWith(primvarStr, s_lightPrefix)) {
+                        // Normalize "arnold:light:attr" → "arnold:attr" so both prefixes
+                        // share the same dispatch below
                         primvarStr.erase(7, 6);
-                    
+                        shouldSetOnLight = true;
+                    } else if (primvarStr.length() > s_arnoldPrefix.length() &&
+                               TfStringStartsWith(primvarStr, s_arnoldPrefix) &&
+                               primvarStr != "arnold:matrix") {
+
+                        const std::string paramName = primvarStr.substr(s_arnoldPrefix.length());
+                        shouldSetOnLight = AiNodeEntryLookUpParameter(
+                            AiNodeGetNodeEntry(_geometryLight), AtString(paramName.c_str())) != nullptr;
+                    }
+                    if (shouldSetOnLight) {
                         if (primvarStr == "arnold:shaders") {
-                            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id, 
-                                TfToken("primvars:arnold:light:shaders"), meshLight);
+                            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id,
+                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight);
                         } else {
                             HdArnoldSetConstantPrimvar(
-                                _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
+                                _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value,
                                 nullptr, nullptr, nullptr, _renderDelegate);
                         }
                         continue;
@@ -637,8 +647,17 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
     bool hasMeshLight = false;
     VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
     if (lightValue.IsHolding<bool>()) {
-        hasMeshLight = lightValue.UncheckedGet<bool>();            
+        hasMeshLight = lightValue.UncheckedGet<bool>();
     }
+#ifndef ENABLE_SCENE_INDEX
+    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
+    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
+    if (!hasMeshLight) {
+        VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
+        if (isLightValue.IsHolding<bool>())
+            hasMeshLight = isLightValue.UncheckedGet<bool>();
+    }
+#endif
     
     if (hasMeshLight) {
         if (_geometryLight == nullptr) {

@@ -205,6 +205,28 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             ReadLightNormalize(prim, meshLightNode, time);
             ReadLightShapingParams(prim, meshLightNode, time, false);
             ReadMatrix(prim, meshLightNode, time, context);
+            // Apply arnold:light:* primvars (same as the primvars:arnold:light path)
+            ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+            ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+            // Apply bare arnold:attr_name primvars if attr_name exists in the mesh_light node entry
+            {
+                const AtNodeEntry *nentry = AiNodeGetNodeEntry(meshLightNode);
+                const static std::string s_lightPrefix = "arnold:light:";
+                const static std::string s_arnoldPrefix = "arnold:";
+                for (const UsdGeomPrimvar &primvar : context.GetPrimvars()) {
+                    const std::string primvarName = primvar.GetPrimvarName().GetString();
+                    if (primvarName.length() > s_arnoldPrefix.length() &&
+                        TfStringStartsWith(primvarName, s_arnoldPrefix) &&
+                        !TfStringStartsWith(primvarName, s_lightPrefix) &&
+                        primvarName != "arnold:matrix") {
+                        const std::string paramName = primvarName.substr(s_arnoldPrefix.length());
+                        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.c_str()));
+                        if (paramEntry) {
+                            ReadAttribute(primvar.GetAttr(), meshLightNode, paramName, time, context, AiParamGetType(paramEntry));
+                        }
+                    }
+                }
+            }
         }
 #endif
     }
@@ -998,6 +1020,7 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // C0 = 0.28209479177387814 (the l=0 SH basis constant).
     // USD radiance:sphericalHarmonicsCoefficients stores raw coefficients;
     // apply the transformation here before building the Arnold atarray.
+    bool gsShSet = false;
     {
         UsdAttribute shAttr;
         bool isFloat = gs.UsesFloatRadianceCoefficients(&shAttr);
@@ -1034,7 +1057,25 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
                 }
                 AiNodeSetArray(node, str::gs_sh,
                     AiArrayConvert(shCoeffs.size(), 1, AI_TYPE_RGB, shCoeffs.data()));
+                gsShSet = true;
             }
+        }
+    }
+
+    // --- Spherical harmonics fallback: primvars:displayColor ----------------
+    // When Houdini's Bake GSplat SOP creates a ParticleField3DGaussianSplat prim,
+    // it stores the degree-0 splat color in primvars:displayColor instead of
+    // radiance coefficients. When no coefficients are present, use displayColor
+    // as the degree-0 DC term. The values are already the final DC color
+    // (raw_f_dc * C0 + 0.5), so they are passed through directly without normalization.
+    if (!gsShSet) {
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        UsdGeomPrimvar displayColorPv = primvarsAPI.GetPrimvar(TfToken("displayColor"));
+        if (displayColorPv) {
+            VtArray<GfVec3f> displayColor;
+            if (displayColorPv.Get(&displayColor, frame) && !displayColor.empty())
+                AiNodeSetArray(node, str::gs_sh,
+                    AiArrayConvert(displayColor.size(), 1, AI_TYPE_RGB, displayColor.cdata()));
         }
     }
 

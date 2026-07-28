@@ -33,6 +33,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (orientations)
     (scales)
     (opacities)
+    (displayColor)
     ((shCoeffs, "radiance:sphericalHarmonicsCoefficients"))
     ((shDegree,  "radiance:sphericalHarmonicsDegree"))
 );
@@ -144,6 +145,11 @@ void HdArnoldGaussianSplat::Sync(
         param.Interrupt();
 
         bool shCoeffsUpdated = false;
+        // Fallback for Houdini's ParticleField3DGaussianSplat export, which
+        // stores the degree-0 splat color in primvars:displayColor instead of
+        // radiance:sphericalHarmonicsCoefficients. Captured here and only used
+        // after the loop if no radiance SH coefficients were provided.
+        VtVec3fArray displayColorFallback;
         for (auto& primvar : _primvars) {
             auto&         desc = primvar.second;
             if (!desc.NeedsUpdate())
@@ -258,6 +264,22 @@ void HdArnoldGaussianSplat::Sync(
             if (name == _tokens->shDegree)
                 continue;
 
+            // --- primvars:displayColor - degree-0 SH fallback ----------------
+            // Captured here; applied after the loop only if no radiance SH
+            // coefficients are present. displayColor already stores the final
+            // DC color (raw_f_dc * C0 + 0.5), so it needs no normalization.
+            if (name == _tokens->displayColor) {
+                if (desc.value.IsHolding<VtVec3fArray>()) {
+                    displayColorFallback = desc.value.UncheckedGet<VtVec3fArray>();
+                } else if (desc.value.IsHolding<VtVec3hArray>()) {
+                    const auto& vh = desc.value.UncheckedGet<VtVec3hArray>();
+                    displayColorFallback.resize(vh.size());
+                    for (size_t i = 0; i < vh.size(); ++i)
+                        displayColorFallback[i] = GfVec3f(vh[i]);
+                }
+                continue;
+            }
+
             // --- generic fall-through primvar handling ------------------------
             if (desc.interpolation == HdInterpolationConstant) {
                 HdArnoldSetConstantPrimvar(node, name, desc.role, desc.value,
@@ -268,8 +290,16 @@ void HdArnoldGaussianSplat::Sync(
             }
         }
 
-        if (shCoeffsUpdated)
+        if (shCoeffsUpdated) {
             _NormalizeShDcCoefficient(node);
+        } else if (!displayColorFallback.empty()) {
+            // No radiance SH coefficients were provided. Use displayColor as the
+            // degree-0 DC term (1 RGB per point). The values are already the final
+            // DC color (raw_f_dc * C0 + 0.5), so they are passed through directly.
+            AiNodeSetArray(node, str::gs_sh,
+                AiArrayConvert(displayColorFallback.size(), 1, AI_TYPE_RGB,
+                    displayColorFallback.cdata()));
+        }
 
         UpdateVisibilityAndSidedness();
     }

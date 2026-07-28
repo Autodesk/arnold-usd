@@ -432,6 +432,48 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
 #endif
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, meshParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
+#ifdef ENABLE_SCENE_INDEX
+    // In Hydra 2 the light prim is a synthetic child of the mesh prim (meshLightResolvingSIP).
+    // Primvars are blocked on the child, so read arnold:light:* / arnold:* attrs from the parent mesh.
+    {
+        HdArnoldPrimvarMap primvars;
+        std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
+        HdDirtyBits dirtyBits = HdChangeTracker::Clean;
+        HdArnoldGetPrimvars(sceneDelegate, id.GetParentPath(), dirtyBits, primvars, &interpolations);
+
+        const static std::string s_lightPrefix = "arnold:light:";
+        const static std::string s_arnoldPrefix = "arnold:";
+
+        for (const auto& p : primvars) {
+            std::string primvarStr = p.first.GetString();
+            bool shouldSetOnLight = false;
+
+            if (primvarStr.length() > s_lightPrefix.length() &&
+                TfStringStartsWith(primvarStr, s_lightPrefix)) {
+                primvarStr.erase(7, 6); // "arnold:light:attr" -> "arnold:attr"
+                shouldSetOnLight = true;
+            } else if (primvarStr.length() > s_arnoldPrefix.length() &&
+                       TfStringStartsWith(primvarStr, s_arnoldPrefix) &&
+                       primvarStr != "arnold:matrix") {
+                const std::string paramName = primvarStr.substr(s_arnoldPrefix.length());
+                shouldSetOnLight = AiNodeEntryLookUpParameter(
+                    AiNodeGetNodeEntry(light), AtString(paramName.c_str())) != nullptr;
+            }
+
+            if (shouldSetOnLight) {
+                if (primvarStr == "arnold:shaders") {
+                    HdArnoldLight::ComputeLightShaders(sceneDelegate, renderDelegate,
+                        id.GetParentPath(),
+                        TfToken(("primvars:" + std::string(p.first.GetText())).c_str()), light);
+                } else {
+                    HdArnoldSetConstantPrimvar(
+                        light, TfToken(primvarStr.c_str()), p.second.role, p.second.value,
+                        nullptr, nullptr, nullptr, renderDelegate);
+                }
+            }
+        }
+    }
+#endif
 };
 
 auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,

@@ -289,19 +289,19 @@ void HdArnoldRenderParam::StartRenderMsgLog()
     // Stop) would overwrite `_msgLogCallback`, leaking the previous handle:
     // the callback function would remain registered with Arnold but we'd no
     // longer hold a handle to deregister it.
-    if (_msgLogCallback != 0) {
-        AiMsgDeregisterCallback(_msgLogCallback);
-        _msgLogCallback = 0;
+    if (_msgLogCallback >= 0) {
+        AiMsgDeregisterCallback(static_cast<unsigned int>(_msgLogCallback));
+        _msgLogCallback = -1;
     }
-    _msgLogCallback = AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, this);
+    _msgLogCallback = static_cast<int>(AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, this));
 #endif
 }
 
 void HdArnoldRenderParam::StopRenderMsgLog()
 {
-    if (_msgLogCallback) {
-        AiMsgDeregisterCallback(_msgLogCallback);
-        _msgLogCallback = 0;
+    if (_msgLogCallback >=0) {
+        AiMsgDeregisterCallback(static_cast<unsigned int>(_msgLogCallback));
+        _msgLogCallback = -1;
     }
 }
 
