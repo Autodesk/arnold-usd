@@ -18,8 +18,10 @@
 #include "render_buffer.h"
 #include "render_delegate.h"
 #include <pxr/base/tf/diagnostic.h>
-#include <pxr/imaging/hgiGL/texture.h>
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#include <pxr/imaging/hgiGL/texture.h>
+#endif
 #include <pxr/base/gf/half.h>
 #include <pxr/base/gf/vec3i.h>
 
@@ -30,7 +32,7 @@
 #include <string>
 
 #include <iostream>
-#ifdef FAST_VIEWPORT_SUPPORT
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
 #include <pxr/imaging/garch/glApi.h>
 #endif
 
@@ -213,11 +215,13 @@ HdArnoldRenderBuffer::HdArnoldRenderBuffer(HdArnoldRenderDelegate* renderDelegat
 
 namespace {
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+
 // Attempts to (re)create the HgiGL texture. Returns the GL texture id, which may be 0 if
 // no GL context was current at call time. Caller holds the buffer's mutex.
 //
 // The texture format hard-coded to HgiFormatFloat32Vec4 (GL_RGBA32F) regardless of the
-// Hd-side format, because that is what AiQueryAOV expects to write into. The Hd-side
+// Hd-side format, because that is what AiGetRenderOutput expects to write into. The Hd-side
 // _format is unchanged so CPU consumers (and Hydra's format introspection) keep seeing
 // what was requested; the actual GL texture sampled by the compositor reads its format
 // from the Hgi descriptor, which is always RGBA32F.
@@ -255,8 +259,6 @@ uint32_t _GetGlTextureId(const HgiTextureHandle& texture)
     }
     return 0;
 }
-
-#ifdef FAST_VIEWPORT_SUPPORT
 
 // Fullscreen blit with vertex-shader Y flip (Arnold top-origin -> OpenGL bottom-origin).
 struct _GpuFlipBlit {
@@ -427,7 +429,7 @@ void main(void)
 
 _GpuFlipBlit _gpuFlipBlit;
 
-#endif // FAST_VIEWPORT_SUPPORT
+#endif // SUPPORT_ACCELERATED_VIEWPORT
 
 } // namespace
 
@@ -456,6 +458,7 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     _width = dimensions[0];
     _height = dimensions[1];
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
     if (_hgi != nullptr) {
         // --GPU buffers--
         // Best-effort: try to create the GPU texture now. If GL context isn't current the
@@ -463,7 +466,8 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
         // from a GL-active context to retry.
         _CreateGpuTexture(_hgi, _aovTexture, _width, _height, _format, _aovName, "aov");
         _CreateGpuTexture(_hgi, _texture, _width, _height, _format, _aovName, "display");
-    } 
+    }
+#endif
 
     // --CPU buffers--
     const auto byteCount = _width * _height * HdDataSizeOfFormat(format);
@@ -473,6 +477,7 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     return true;
 }
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
 void HdArnoldRenderBuffer::EnsureGpuTexture()
 {
     if (_hgi == nullptr || _width == 0 || _height == 0 || _gpuInit) {
@@ -501,8 +506,9 @@ void HdArnoldRenderBuffer::EnsureGpuTexture()
         _gpuInit = true;
     }
 }
+#endif
 
-#ifdef FAST_VIEWPORT_SUPPORT
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
 bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 {
     const uint32_t srcId = _GetGlTextureId(_aovTexture);
@@ -512,13 +518,13 @@ bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 #endif
 VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
 {
-#ifdef FAST_VIEWPORT_SUPPORT
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
     if (!_valid)
         return VtValue();
     // GetResource() is called by Hydra/Solaris from the main thread with the GL context
-    // current. AiQueryAOV does CUDA<->GL interop that requires a current GL context, so
+    // current. AiGetRenderOutput does CUDA<->GL interop that requires a current GL context, so
     // this is the right place to pull Arnold's latest AOV data into the GL texture.
-    if (_renderDelegate != nullptr && _renderDelegate->IsFastViewport()) {
+    if (_renderDelegate != nullptr && _renderDelegate->IsAcceleratedViewport()) {
         AtRenderSession *rs = _renderDelegate->GetRenderSession();
         const auto status = rs ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
         if (status != AI_RENDER_STATUS_NOT_STARTED) {
@@ -530,11 +536,10 @@ VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
                 if (aovGlId != 0) {
                     // glFinish() ensures all pending GL/CUDA interop operations on this texture
                     // are complete before Arnold maps it again via cuGraphicsMapResources.
-                    // Without this, successive AiQueryAOV calls on the same texture AV inside
+                    // Without this, successive AiGetRenderOutput calls on the same texture AV inside
                     // Arnold because the previous async CUDA write hasn't finished unmapping.
                     glFinish();
-                    //std::cerr<<"AiQueryAOV for "<<_aovName<<" ... "<<this<<" ///// "<<std::endl;
-                    const AtRenderErrorCode rc = AiQueryAOV(rs, AtString(_aovName.GetText()), aovGlId, AiQueryAOVHandleType::OPENGL);
+                    const AtRenderErrorCode rc = AiGetRenderOutput(rs, AtString(_aovName.GetText()), aovGlId, AtGetRenderOutputHandleType::OPENGL);
                     if (rc == AI_SUCCESS) {
                         // Sync CUDA/GL interop before sampling the AOV texture in our blit.
                         glFinish();
@@ -544,7 +549,7 @@ VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
 
                     } else {
                         TF_WARN(
-                            "AiQueryAOV failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
+                            "AiGetRenderOutput failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
                     }
                 }
                 // Flip failed or display texture unavailable — show AOV as-is (may be Y-inverted).
@@ -614,7 +619,7 @@ void HdArnoldRenderBuffer::WriteBucket(
     unsigned int bucketXO, unsigned int bucketYO, unsigned int bucketWidth, unsigned int bucketHeight, HdFormat format,
     const void* bucketData)
 {
-    // When backed by a GPU texture, bucket data is delivered via AiQueryAOV, not the driver path.
+    // When backed by a GPU texture, bucket data is delivered via AiGetRenderOutput, not the driver path.
     if (_hgi != nullptr)
         return;
     

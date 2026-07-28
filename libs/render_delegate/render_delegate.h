@@ -731,7 +731,7 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
-    bool IsFastViewport() const {return _fastViewport;}
+    bool IsAcceleratedViewport() const {return _acceleratedViewport;}
     bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
 
 private:    
@@ -863,7 +863,7 @@ private:
     bool _forceIgnoreMotionBlur = false;
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
-    bool _fastViewport = false;
+    bool _acceleratedViewport = false;
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
 
     mutable std::mutex _nodeGraphNamesMutex;

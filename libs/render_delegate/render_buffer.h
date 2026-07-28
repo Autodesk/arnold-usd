@@ -23,6 +23,7 @@
 #include <pxr/pxr.h>
 
 #include "api.h"
+#include "config.h"
 
 #include "hdarnold.h"
 
@@ -131,17 +132,19 @@ public:
     HDARNOLD_API
     void SetHgi(Hgi* hgi);
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
     /// Ensures the GPU texture has been created with a valid GL id. Call this from a context
     /// where the GL context is current (e.g. the render pass's _Execute). If the texture is
     /// missing or its GL id is 0 (because the previous create-attempt ran without a GL
     /// context), it is destroyed and recreated.
     HDARNOLD_API
     void EnsureGpuTexture();
+#endif
 
     /// Returns true if this buffer is backed by a GPU texture.
     bool HasGpuTexture() const { return static_cast<bool>(_texture); }
 
-    /// Provide the Arnold AOV name used when calling AiQueryAOV on this buffer.
+    /// Provide the Arnold AOV name used when calling AiGetRenderOutput on this buffer.
     HDARNOLD_API
     void SetAovName(const TfToken& aovName) { _aovName = aovName; }
 
@@ -152,7 +155,7 @@ private:
     HDARNOLD_API
     void _Deallocate() override;
 
-#ifdef FAST_VIEWPORT_SUPPORT
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
     /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
     /// @return True if _texture was updated, false to use _aovTexture as-is.
     bool _FlipAovToDisplayTexture() const;
@@ -160,7 +163,7 @@ private:
 
     std::vector<uint8_t> _buffer;                    ///< Storing render data (CPU path only).
     Hgi* _hgi = nullptr;                             ///< Borrowed Hgi instance, owned by the render delegate's host.
-    mutable HgiTextureHandle _aovTexture;            ///< AiQueryAOV target (Arnold image-space Y).
+    mutable HgiTextureHandle _aovTexture;            ///< AiGetRenderOutput target (Arnold image-space Y).
     mutable HgiTextureHandle _texture;               ///< Hydra-facing texture after Y flip (GPU path only).
     std::atomic<bool> _gpuInit = false;
     std::mutex _mutex;                               ///< Mutex for the parallel writes.
@@ -169,7 +172,7 @@ private:
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
     HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
-    TfToken _aovName;                                ///< AOV name passed to AiQueryAOV.
+    TfToken _aovName;                                ///< AOV name passed to AiGetRenderOutput.
     bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
     bool _valid = true;
 };

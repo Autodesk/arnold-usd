@@ -398,7 +398,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
         {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
-        {str::t_fast_viewport, {"Enable fast viewport", config.fast_viewport}},
+        {str::t_accelerated_viewport, {"Enable accelerated viewport", config.accelerated_viewport}},
     };
     return data;
 }
@@ -767,7 +767,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
 
-        if (_fastViewport) {
+        if (_acceleratedViewport) {
             AiNodeSetStr(_options, str::render_device, str::GPU);
             AiNodeSetBool(_options, AtString("viewport_rendering"), true);
         }
@@ -923,12 +923,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _resolution = value.UncheckedGet<GfVec2i>();
         }
     }
-    else if (key == str::t_fast_viewport) {
-#ifdef FAST_VIEWPORT_SUPPORT
+    else if (key == str::t_accelerated_viewport) {
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
         if (value.IsHolding<bool>()) {
-            _fastViewport = value.UncheckedGet<bool>();
-            AiNodeSetBool(_options, str::viewport_rendering, _fastViewport);
-            if (_fastViewport) {
+            _acceleratedViewport = value.UncheckedGet<bool>();
+            AiNodeSetBool(_options, str::viewport_rendering, _acceleratedViewport);
+            if (_acceleratedViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
             }
         }    

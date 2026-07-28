@@ -623,7 +623,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 
     const bool framingChanged = newFraming != _framing;
-    const bool fastViewportChanged = _fastViewport != _renderDelegate->IsFastViewport();
+    const bool acceleratedViewportChanged = _acceleratedViewport != _renderDelegate->IsAcceleratedViewport();
 
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
@@ -645,7 +645,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
-                renderBuffer->SetHgi(_renderDelegate->IsFastViewport() ? _renderDelegate->GetHgi() : nullptr);
+                renderBuffer->SetHgi(_renderDelegate->IsAcceleratedViewport() ? _renderDelegate->GetHgi() : nullptr);
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
                 
@@ -654,7 +654,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-    if (framingChanged || fastViewportChanged) {
+    if (framingChanged || acceleratedViewportChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _framing = newFraming;
@@ -662,7 +662,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::xres, width);
         AiNodeSetInt(options, str::yres, height);
 
-        _fastViewport = _renderDelegate->IsFastViewport();
+        _acceleratedViewport = _renderDelegate->IsAcceleratedViewport();
         clearBuffers(_renderBuffers, true, width, height);
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
@@ -964,7 +964,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // and treat it as Arnold would expect.
             bool isBeauty = binding.aovName == HdAovTokens->color;
             
-            if (_fastViewport && !isBeauty && sourceName != HdAovTokens->depth) {
+            if (_acceleratedViewport && !isBeauty && sourceName != HdAovTokens->depth) {
                 buffer.buffer->SetValid(false);                
                 continue;
             }
@@ -977,7 +977,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             if (isRaw && sourceName == HdAovTokens->color) {
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
-                buffer.buffer->SetAovName(_fastViewport ? str::t_final_output : str::t_RGBA);                
+                buffer.buffer->SetAovName(_acceleratedViewport ? str::t_final_output : str::t_RGBA);                
             } else if (isRaw && sourceName == HdAovTokens->depth) {
                 output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);

@@ -406,6 +406,12 @@ if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenSha
     set(USD_HAS_FULLSCREEN_SHADER ON)
 endif ()
 
+# Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+# support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+    set(USD_HAS_HGI_GL ON)
+endif ()
+
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.

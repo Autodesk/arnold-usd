@@ -47,6 +47,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+#if ARNOLD_VERSION_NUM >= 70503 && defined(USD_HAS_HGI_GL)
+#define SUPPORT_ACCELERATED_VIEWPORT 1
+#endif
+
 /// Class that holds the global configuration values for the Render Delegate.
 ///
 /// Note: we are not following the coding conventions for the members, as we want
@@ -197,9 +201,9 @@ struct HdArnoldConfig {
     ///
     bool auto_generate_tx;
 
-    /// Use HDARNOLD_fast_viewport to set the value.
+    /// Use HDARNOLD_accelerated_viewport to set the value.
     ///
-    bool fast_viewport;
+    bool accelerated_viewport;
 
 private:
     /// Constructor for reading the values from the environment variables.

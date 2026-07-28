@@ -116,8 +116,8 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_asset_searchpath, "", "Asset search path.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures to TX");
 
-#ifdef FAST_VIEWPORT_SUPPORT
-TF_DEFINE_ENV_SETTING(HDARNOLD_fast_viewport, true, "Enable fast viewport");
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+TF_DEFINE_ENV_SETTING(HDARNOLD_accelerated_viewport, true, "Enable accelerated viewport");
 #endif
 
 HdArnoldConfig::HdArnoldConfig()
@@ -163,8 +163,8 @@ HdArnoldConfig::HdArnoldConfig()
     osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
     auto_generate_tx = TfGetEnvSetting(HDARNOLD_auto_generate_tx);
 
-#ifdef FAST_VIEWPORT_SUPPORT
-    fast_viewport = TfGetEnvSetting(HDARNOLD_fast_viewport);
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+    accelerated_viewport = TfGetEnvSetting(HDARNOLD_accelerated_viewport);
 #endif
 }
 

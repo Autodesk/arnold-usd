@@ -141,7 +141,7 @@ ASTR(debug);
 ASTR(desc);
 ASTR(deprecated);
 ASTR(driver_exr);
-ASTR(fast_viewport);
+ASTR(accelerated_viewport);
 ASTR(final_output);
 ASTR(FLOAT);
 ASTR(GI_diffuse_depth);

@@ -129,6 +129,7 @@ def get_usd_header_info(usd_include_dir):
     HAS_PYTHON_SUPPORT = False
     HAS_UPDATED_COMPOSITOR = False
     HAS_FULLSCREEN_SHADER = False
+    HAS_HGI_GL = False
 
     pxr_h = open(os.path.join(usd_include_dir, 'pxr', 'pxr.h'), 'r').read()
 
@@ -163,12 +164,19 @@ def get_usd_header_info(usd_include_dir):
     if os.path.exists(fullscreen_shader_h_path):
         HAS_FULLSCREEN_SHADER = True
 
+    # Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+    # support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+    hgigl_texture_h_path = os.path.join(usd_include_dir, 'pxr', 'imaging', 'hgiGL', 'texture.h')
+    if os.path.exists(hgigl_texture_h_path):
+        HAS_HGI_GL = True
+
     return {
         'USD_VERSION': '.'.join(VERSION),
         'USD_VERSION_INT': VERSION_INT,
         'USD_HAS_PYTHON_SUPPORT': HAS_PYTHON_SUPPORT,
         'USD_HAS_UPDATED_COMPOSITOR': HAS_UPDATED_COMPOSITOR,
-        'USD_HAS_FULLSCREEN_SHADER': HAS_FULLSCREEN_SHADER
+        'USD_HAS_FULLSCREEN_SHADER': HAS_FULLSCREEN_SHADER,
+        'USD_HAS_HGI_GL': HAS_HGI_GL
     }
 
 def convert_usd_version_to_int(usd_version):
