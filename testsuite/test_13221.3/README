@@ -16,10 +16,9 @@ The projector cameras live inside the template (as in test_13221) so the
 coordinate-system camera resolves identically under the legacy scene delegate
 (hydra) and the scene index (hydra2).
 
-NOTE: ref/reference.tif still has to be blessed - copy the built
-testrender.hydra2.tif once the render has been verified. Until then the harness
-finds no reference and the test renders without comparing anything, so it cannot
-fail.
+The :ndc copy ramps its colour over 0..1 rather than the -5..5 used for .camera,
+since NDC is normalised over the projector frustum and would otherwise collapse
+into a flat patch of colour.
 
 See #32 / ARNOLD-13221
 

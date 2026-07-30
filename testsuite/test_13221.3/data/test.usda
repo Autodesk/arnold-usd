@@ -181,6 +181,19 @@ def "fur_1" (
             {
                 string inputs:space = "map_proj:ndc"
             }
+            # NDC is normalised to 0..1 over the projector frustum, so the ramp window
+            # must be 0..1: with the default -5..5 the whole projection collapses into
+            # a flat patch of colour that would hide a wrong projection.
+            over "range_u"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
+            over "range_v"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
         }
     }
 }
