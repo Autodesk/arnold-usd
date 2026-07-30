@@ -27,16 +27,8 @@ foreach (each ${ARNOLD_USDIMAGING_CLASSES})
 endforeach ()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 
-# Add objects for the hydra procedural.
-#
-# EXCLUDE_FROM_ALL because the only consumers are the bundle and the procedural. Being
-# in 'all' meant a build with BUILD_BUNDLE=OFF and BUILD_PROCEDURAL=OFF still compiled
-# every source here a second time and discarded the result -- the most expensive
-# duplication in the build (node_graph_adapter.cpp, shape_adapter.cpp and
-# shape_adapters.cpp are ~40s each, so 229s of wasted CPU in a Houdini-hosted build).
-# Anything that links this target still pulls the objects in, so no consumer has to
-# change, and adding a new one needs no matching guard here.
-add_library(usdImagingArnoldObjects OBJECT EXCLUDE_FROM_ALL ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+# Add objects for the hydra procedural
+add_library(usdImagingArnoldObjects OBJECT ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 target_compile_definitions(usdImagingArnoldObjects PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME usdImagingArnoldObjects DEPENDENCIES common)
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)

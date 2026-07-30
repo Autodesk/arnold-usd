@@ -31,10 +31,8 @@ if (MTOA_BUILD)
     list(APPEND HDR mtoaSIP.h)
 endif()
 
-# Add objects for the hydra procedural.
-# EXCLUDE_FROM_ALL for the same reason as usdImagingArnoldObjects: only the bundle and
-# the procedural link it, so with both off it was 216s of CPU compiled and discarded.
-add_library(sceneIndexArnoldObjects OBJECT EXCLUDE_FROM_ALL ${SRC})
+# Add objects for the hydra procedural
+add_library(sceneIndexArnoldObjects OBJECT ${SRC})
 target_compile_definitions(sceneIndexArnoldObjects PRIVATE "HDSCENEINDEX_EXPORTS=1")
 add_common_includes(TARGET_NAME sceneIndexArnoldObjects DEPENDENCIES common)
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
