@@ -91,7 +91,8 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
     const bool needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
     const bool paused = _paused.exchange(false, std::memory_order_acq_rel);
 
-    switch(AiRenderGetStatus(_delegate->GetRenderSession())) {
+    const auto renderStatus = AiRenderGetStatus(_delegate->GetRenderSession());
+    switch(renderStatus) {
 
         case AI_RENDER_STATUS_RESTARTING:
         case AI_RENDER_STATUS_RENDERING:
@@ -100,9 +101,18 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             }
             if (paused) {
                 _paused.store(true, std::memory_order_release);
+#if ARNOLD_VERSION_NUM >= 70504
+                // Pause() may have raced a brief RESTARTING window, during which
+                // AiRenderPause() silently no-ops (it only takes effect while the
+                // status is exactly RENDERING). Re-issue it here so the pause
+                // request isn't dropped; harmless/idempotent once already gated.
+                if (renderStatus == AI_RENDER_STATUS_RENDERING) {
+                    AiRenderPause(_delegate->GetRenderSession());
+                }
+#endif
             }
             return Status::Converging;
-        
+
         case AI_RENDER_STATUS_FINISHED:
             // If render restart is true, it means the Render Delegate received an update after rendering has finished
             // and AiRenderInterrupt does not change the status anymore.
@@ -189,7 +199,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
     return Status::Converging;
 }
 
-void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
+void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus, bool clearPaused)
 {
     if (_delegate == nullptr || _delegate->IsBatchContext()) return;
     const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
@@ -197,6 +207,16 @@ void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
         status == AI_RENDER_STATUS_RESTARTING ||
         status == AI_RENDER_STATUS_PAUSED) {
         AiRenderInterrupt(_delegate->GetRenderSession(), AI_BLOCKING);
+        if (clearPaused) {
+            // A real interrupt tears down or fully unparks any in-flight render, including
+            // one gated by AiRenderPause(): Arnold's pause gate has no mechanism to discard
+            // accumulated samples across a scene edit (AiRenderResume()/AiRenderRestart() are
+            // equivalent while gated, see Resume()), so a restart driven by this interrupt
+            // will actually resume rendering. Clear _paused so it doesn't keep claiming
+            // "paused" once the render is active again -- otherwise it gets stuck true
+            // forever, since nothing else clears it on this path.
+            _paused.store(false, std::memory_order_release);
+        }
     }
     if (needsRestart) {
         _needsRestart.store(true, std::memory_order_release);
@@ -208,17 +228,41 @@ void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 
 void HdArnoldRenderParam::Pause()
 {
+#if ARNOLD_VERSION_NUM >= 70504
+    // Arnold 7.5.4+ can pause render threads at a gate without terminating
+    // them, preserving render progress, instead of the old interrupt-based
+    // approach below which fully tears down the in-flight render.
+    _paused.store(true, std::memory_order_release);
+    if (_delegate != nullptr && !_delegate->IsBatchContext()) {
+        AiRenderPause(_delegate->GetRenderSession());
+    }
+#else
     // Publish the pause intent before issuing the interrupt. Interrupt blocks
     // until Arnold transitions the render status away from RENDERING; if the
     // store happened *after* that transition, a concurrent UpdateRender call
     // could see status == PAUSED with `_paused == false` and immediately take
     // the `!paused` branch, calling AiRenderResume and silently undoing the
     // pause that was just requested.
+    // Pass clearPaused=false: here the interrupt itself is the mechanism used to
+    // reach the paused state, not an unrelated scene edit, so it must not undo the
+    // `_paused` store above.
     _paused.store(true, std::memory_order_release);
-    Interrupt(false, false);
+    Interrupt(false, false, false);
+#endif
 }
 
-void HdArnoldRenderParam::Resume() { _paused.store(false, std::memory_order_release); }
+void HdArnoldRenderParam::Resume()
+{
+    _paused.store(false, std::memory_order_release);
+#if ARNOLD_VERSION_NUM >= 70504
+    // Explicitly lift the pause gate here rather than waiting for the next
+    // UpdateRender poll, since AiRenderGetStatus() keeps reporting RENDERING
+    // while paused and UpdateRender has no other signal to act on.
+    if (_delegate != nullptr && !_delegate->IsBatchContext()) {
+        AiRenderResume(_delegate->GetRenderSession());
+    }
+#endif
+}
 
 void HdArnoldRenderParam::Restart()
 {

@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.4.0 Tentative] (Unreleased)
+
+- [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
 
 ## [7.5.3.1] (Unreleased)
 

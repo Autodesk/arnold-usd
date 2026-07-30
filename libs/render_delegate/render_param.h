@@ -86,14 +86,23 @@ public:
     /// @param needsRestart Whether or not changes are applied to the scene and we need to restart rendering.
     /// @param clearStatus Clears the internal failure status. Set it to false when no scene data changed, that could
     ///  affect the aborted internal status.
+    /// @param clearPaused Clears the internal paused status. A real interrupt tears down or fully unparks any
+    ///  in-flight render, including one gated by AiRenderPause(), so any pause in effect is no longer honoured past
+    ///  this call. Set it to false only when the interrupt itself is the mechanism used to *achieve* the pause (see
+    ///  Pause()'s pre-7.5.4 fallback), not when it is caused by an unrelated scene edit.
     HDARNOLD_API
-    void Interrupt(bool needsRestart = true, bool clearStatus = true);
+    void Interrupt(bool needsRestart = true, bool clearStatus = true, bool clearPaused = true);
     /// Pauses an ongoing render, does nothing if no render is running.
     HDARNOLD_API
     void Pause();
     /// Resumes an already paused render, does nothing if no render is running, or the render is not paused.
     HDARNOLD_API
     void Resume();
+    /// Returns whether a Pause() call is currently in effect. Cleared by Resume(), Restart(), or an
+    /// Interrupt() caused by a scene edit (see Interrupt()'s clearPaused parameter).
+    ///
+    /// @return True if paused.
+    bool IsPaused() const { return _paused.load(std::memory_order_acquire); }
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
