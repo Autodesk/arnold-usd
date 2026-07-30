@@ -51,6 +51,11 @@ option(BUILD_TURNTABLE "Build the turntable tool" OFF)
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
+# The bundle embeds the procedural alongside the USD/Hydra plugins. Hosts that ship the
+# procedural from an Arnold distribution instead only want the plugins, and embedding a
+# second copy would duplicate it and make the bundle something Arnold has to discover as
+# well as USD. ON preserves the existing behaviour.
+option(ENABLE_PROCEDURAL_IN_BUNDLE "Include the Arnold procedural in the bundle" ON)
 option(ENABLE_TRACING "Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE)." OFF)
 if (NOT ENABLE_TRACING)
     # Apply globally, matching SConstruct:386-387 which appends TRACE_ENABLE=0 to the
