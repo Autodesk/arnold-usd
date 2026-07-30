@@ -105,7 +105,7 @@ void HdArnoldNativeRprim::Sync(
 
     // DirtyCategories carries the coordinate-system bindings, and the material's
     // "space" inputs are rewritten to the cameras bound here, so a binding change
-    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
     if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -114,11 +114,11 @@ void HdArnoldNativeRprim::Sync(
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
         auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
-            const auto coordSysRemap = HdArnoldGetCoordSysRemap(sceneDelegate, id);
+            const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader(coordSysRemap));
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader(coordSysBinding));
             } else {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader(coordSysRemap));
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader(coordSysBinding));
             }
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);

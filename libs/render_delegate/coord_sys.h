@@ -93,21 +93,23 @@ private:
     AtNode* _ndcNode = nullptr;
 };
 
-/// Build the map from each coordinate-system name bound to the rprim @p id to the
-/// uniquely-named Arnold camera node(s) of that coordinate system.
+/// Build the rprim @p id's coordinate-system binding: the map from each bound
+/// coordinate-system name to the uniquely-named Arnold camera node(s) of that
+/// coordinate system, tagged with @p id as the owner.
 ///
 /// Arnold resolves named coordinate spaces globally by camera node name, so a
 /// material's "space" inputs must be rewritten to the cameras bound by the rprim
 /// being shaded. This is the rprim side of that handshake: every rprim that
-/// assigns a material should pass the result to the remap-aware
+/// assigns a material should pass the result to the binding-aware
 /// HdArnoldNodeGraph::GetCached*Shader accessors. Rprims must therefore also
 /// re-assign their material on HdChangeTracker::DirtyCategories (which carries
 /// coordinate-system binding changes) and include that bit in their initial
-/// dirty bits.
+/// dirty bits. The owner is what lets the node graph release this rprim's claim on
+/// a network variant when it re-binds.
 ///
 /// Returns an empty map when @p id has no coordinate-system bindings - the common
 /// case, which the accessors resolve to the unmodified base material.
 HDARNOLD_API
-HdArnoldNodeGraph::CoordSysRemap HdArnoldGetCoordSysRemap(HdSceneDelegate* sceneDelegate, const SdfPath& id);
+HdArnoldNodeGraph::CoordSysBinding HdArnoldGetCoordSysBinding(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
 PXR_NAMESPACE_CLOSE_SCOPE

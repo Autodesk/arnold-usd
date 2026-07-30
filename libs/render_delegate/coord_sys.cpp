@@ -296,12 +296,14 @@ void HdArnoldCoordSys::_MirrorCamera(
     _renderDelegate->RegisterCoordSysCamera(dst, ratio);
 }
 
-HdArnoldNodeGraph::CoordSysRemap HdArnoldGetCoordSysRemap(HdSceneDelegate* sceneDelegate, const SdfPath& id)
+HdArnoldNodeGraph::CoordSysBinding HdArnoldGetCoordSysBinding(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    HdArnoldNodeGraph::CoordSysRemap remap;
+    HdArnoldNodeGraph::CoordSysBinding binding;
+    binding.owner = id;
+    HdArnoldNodeGraph::CoordSysRemap& remap = binding.remap;
     const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
     if (!coordSysBindings)
-        return remap;
+        return binding;
     for (const SdfPath& coordSysId : *coordSysBindings) {
         // The coordSys sprims are synced before the rprims (see _SupportedSprimTypes),
         // so a bound coordinate system already has its Arnold camera node.
@@ -317,7 +319,7 @@ HdArnoldNodeGraph::CoordSysRemap HdArnoldGetCoordSysRemap(HdSceneDelegate* scene
             target.ndcNode = AiNodeGetName(ndcNode);
         remap[coordSys->GetName().GetString()] = std::move(target);
     }
-    return remap;
+    return binding;
 }
 
 void HdArnoldCoordSys::_MirrorTransform(AtNode* dst, HdSceneDelegate* sceneDelegate, bool flipV)

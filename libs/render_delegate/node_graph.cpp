@@ -279,7 +279,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             // (pristine) base and rebuild the per-rprim variants, BEFORE the unused-
             // node sweep so the rebuilt variant nodes (recreated under their stored
             // names) are kept rather than deleted.
-            _RebuildCoordSysRemaps();
+            _RebuildCoordSysRemaps(sceneDelegate->GetRenderIndex());
             // Loop through previous AtNodes that were created for this node graph.
             // If they're not empty in this list, it means that they're not used anymore.
             // Let's delete the unused ones
@@ -366,15 +366,16 @@ void HdArnoldNodeGraph::_CollectCoordSysNames()
     // Capture the coordinate-system names present in this graph from the *base*
     // shader nodes while their "space" inputs are still pristine ("<name>.<suffix>").
     // Called from _RebuildCoordSysRemaps right after (re-)translation and before any
-    // remap, so this always reads pristine values. Variant nodes (name contains the
-    // "__cs" marker) are skipped: they may still carry a previous round's remapped
-    // (camera-node) prefix, which would poison the name set.
+    // remap, so this always reads pristine values. Variant nodes are skipped: they
+    // may still carry a previous round's remapped (camera-node) prefix, which would
+    // poison the name set.
+    const std::unordered_set<std::string> variantNodes = _CoordSysVariantNodeNames();
     _coordSysNamesInGraph.clear();
     for (const auto& entry : _nodes) {
         AtNode* node = entry.second;
         if (node == nullptr || !AiNodeIs(node, str::osl))
             continue;
-        if (entry.first.find("__cs") != std::string::npos)
+        if (variantNodes.count(entry.first) != 0)
             continue;
         if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::param_shader_space) == nullptr)
             continue;
@@ -409,13 +410,143 @@ std::string HdArnoldNodeGraph::_CoordSysSignature(const CoordSysRemap& remap) co
     return signature;
 }
 
-void HdArnoldNodeGraph::_RebuildCoordSysRemaps()
+std::unordered_set<std::string> HdArnoldNodeGraph::_CoordSysVariantNodeNames() const
+{
+    std::unordered_set<std::string> names;
+    for (const auto* variants : {&_coordSysVariants, &_coordSysRetired}) {
+        for (const auto& entry : *variants)
+            names.insert(entry.second.nodes.begin(), entry.second.nodes.end());
+    }
+    return names;
+}
+
+bool HdArnoldNodeGraph::_HasCoordSysVariant(const std::string& signature) const
+{
+    return _coordSysVariants.count(signature) != 0 || _coordSysRetired.count(signature) != 0;
+}
+
+int HdArnoldNodeGraph::_CoordSysHoldCount(const std::string& signature) const
+{
+    const auto it = _coordSysHoldCounts.find(signature);
+    return it == _coordSysHoldCounts.end() ? 0 : it->second;
+}
+
+void HdArnoldNodeGraph::_DropCoordSysHoldCount(const std::string& signature)
+{
+    const auto it = _coordSysHoldCounts.find(signature);
+    if (it == _coordSysHoldCounts.end())
+        return;
+    if (--it->second <= 0)
+        _coordSysHoldCounts.erase(it);
+}
+
+void HdArnoldNodeGraph::_AcquireCoordSysHold(const SdfPath& owner, const std::string& signature)
+{
+    const auto it = _coordSysHolds.find(owner);
+    const std::string previous = (it == _coordSysHolds.end()) ? std::string() : it->second;
+    if (previous == signature)
+        return;
+    if (signature.empty()) {
+        if (it != _coordSysHolds.end())
+            _coordSysHolds.erase(it);
+    } else if (it != _coordSysHolds.end()) {
+        it->second = signature;
+    } else {
+        _coordSysHolds.emplace(owner, signature);
+    }
+    if (!signature.empty())
+        ++_coordSysHoldCounts[signature];
+    // Release last, so the retirement below sees the updated counts.
+    if (!previous.empty()) {
+        _DropCoordSysHoldCount(previous);
+        _RetireCoordSysSignature(previous);
+    }
+}
+
+void HdArnoldNodeGraph::_RetireCoordSysSignature(const std::string& signature)
+{
+    if (_CoordSysHoldCount(signature) != 0)
+        return;
+    // The base network is not torn down when its last claim goes: it is the network
+    // every other consumer (light filters, rprims with no binding) reads. It is
+    // reclaimed in place, and only if a conflicting binding needs the slot.
+    if (signature == _baseCoordSysSignature)
+        return;
+    const auto it = _coordSysVariants.find(signature);
+    if (it == _coordSysVariants.end())
+        return;
+    // Move it out of the rebuild set immediately - that is what stops every later
+    // material Sync from re-translating an abandoned network. Its nodes are kept until
+    // the next material Sync so that a binding cycling back to this camera revives it.
+    _coordSysRetired[signature] = std::move(it->second);
+    _coordSysVariants.erase(it);
+}
+
+void HdArnoldNodeGraph::_ResetCoordSysBase()
+{
+    // Nothing retained to re-translate from (the material has not been synced yet),
+    // so the base has to keep its current claim.
+    if (_materialNetworkMap.map.empty())
+        return;
+    // Re-translating restores the pristine "space" inputs. CreateArnoldNode reuses
+    // the existing nodes by name, so the terminal pointers rprims and light filters
+    // already hold stay valid; only the terminals this rebuild produces are updated,
+    // leaving any terminal created outside translation (GetOrCreateTerminal) alone.
+    const ArnoldNodeGraph rebuilt = _BuildCoordSysVariant(std::string());
+    for (const auto& terminal : rebuilt.terminals) {
+        AtNode* oldTerminal = nullptr;
+        _nodeGraphCache.UpdateTerminal(terminal.first, terminal.second, oldTerminal);
+    }
+    _baseCoordSysSignature.clear();
+    _baseCoordSysRemap.clear();
+}
+
+void HdArnoldNodeGraph::_GarbageCollectCoordSysHolds(const HdRenderIndex& renderIndex)
+{
+    for (auto it = _coordSysHolds.begin(); it != _coordSysHolds.end();) {
+        if (renderIndex.GetRprim(it->first) != nullptr) {
+            ++it;
+            continue;
+        }
+        const std::string signature = it->second;
+        it = _coordSysHolds.erase(it);
+        _DropCoordSysHoldCount(signature);
+        _RetireCoordSysSignature(signature);
+    }
+}
+
+void HdArnoldNodeGraph::_DestroyRetiredCoordSysVariants()
+{
+    for (const auto& variant : _coordSysRetired) {
+        for (const std::string& name : variant.second.nodes) {
+            const auto it = _nodes.find(name);
+            if (it == _nodes.end())
+                continue;
+            if (it->second != nullptr) {
+                // Keep the transient previous-nodes list in sync, so the unused-node
+                // sweep at the end of Sync does not destroy the same node twice.
+                const auto previousIt = _previousNodes.find(name);
+                if (previousIt != _previousNodes.end())
+                    previousIt->second = nullptr;
+                _renderDelegate->DestroyArnoldNode(it->second);
+            }
+            _nodes.erase(it);
+        }
+    }
+    _coordSysRetired.clear();
+}
+
+void HdArnoldNodeGraph::_RebuildCoordSysRemaps(const HdRenderIndex& renderIndex)
 {
     // Called during Sync after the base network is (re-)translated to its pristine
     // state and before the unused-node sweep. Re-establishes the coordinate-system
     // remaps so dependent rprims keep valid, correctly-remapped shader pointers
     // across re-syncs without having to re-sync themselves.
     std::lock_guard<std::mutex> guard(_coordSysMutex);
+    // Rprims that no longer exist cannot release their own claims, so collect them
+    // here, then free the nodes of everything retired since the last Sync.
+    _GarbageCollectCoordSysHolds(renderIndex);
+    _DestroyRetiredCoordSysVariants();
     _CollectCoordSysNames();
     // The base was reset to pristine by the (re-)translation; re-apply its remap.
     // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so this hits
@@ -427,12 +558,14 @@ void HdArnoldNodeGraph::_RebuildCoordSysRemaps()
     // immediately after keeps the "only pristine" rule valid - only the just-rebuilt
     // variant is pristine at that moment.
     for (auto& entry : _coordSysVariants) {
-        entry.second.cache = _BuildCoordSysVariant(entry.second.suffix);
+        entry.second.nodes.clear();
+        entry.second.cache = _BuildCoordSysVariant(entry.second.suffix, &entry.second.nodes);
         RemapCoordSysSpaces(entry.second.remap);
     }
 }
 
-HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(const std::string& suffix)
+HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(
+    const std::string& suffix, std::vector<std::string>* usedNodes)
 {
     // Re-translate the retained network into a fresh set of Arnold nodes by
     // namespacing every shader path with the given unique suffix. ReadMaterialNetwork
@@ -440,7 +573,16 @@ HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(cons
     // is fully wired by the same code that builds the base network. Reusing the same
     // suffix across re-syncs recreates the same node names (same Arnold pointers via
     // CreateArnoldNode), so rprims holding a variant terminal stay valid.
+    _nodeCaptureList = usedNodes;
     ArnoldNodeGraph cache;
+    // Built once outside the loop, exactly as the Sync path does: ReadMaterialNetwork
+    // removes each terminal it recognises, so per-network copies would let a later
+    // network re-claim a terminal an earlier one already consumed.
+    std::vector<SdfPath> terminals = _materialNetworkMap.terminals;
+    for (auto& ter : terminals) {
+        AppendPathLeafSuffix(ter, suffix);
+        EnsurePathHasMaterialPrefix(ter, GetId());
+    }
     for (const auto& tokenAndNetwork : _materialNetworkMap.map) {
         const TfToken& terminalType = tokenAndNetwork.first;
         HdMaterialNetwork network = tokenAndNetwork.second; // copy we can namespace
@@ -453,71 +595,89 @@ HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(cons
             AppendPathLeafSuffix(rel.outputId, suffix);
         }
         EnsureMaterialNetworPathsPrefix(network, GetId());
-        std::vector<SdfPath> terminals = _materialNetworkMap.terminals;
-        for (auto& ter : terminals) {
-            AppendPathLeafSuffix(ter, suffix);
-            EnsurePathHasMaterialPrefix(ter, GetId());
-        }
         AtNode* node = ReadMaterialNetwork(network, terminalType, terminals);
         AtNode* oldTerminal = nullptr;
         if (node)
             cache.UpdateTerminal(terminalType, node, oldTerminal);
     }
+    _nodeCaptureList = nullptr;
     return cache;
 }
 
-const HdArnoldNodeGraph::ArnoldNodeGraph& HdArnoldNodeGraph::_ResolveCoordSysCache(const CoordSysRemap& remap)
+AtNode* HdArnoldNodeGraph::_ResolveCoordSysTerminal(const CoordSysBinding& binding, const TfToken& terminalName)
 {
-    // Rprims are synced in parallel and share this node graph; serialise the base
-    // claim, variant build and remap. The returned reference stays valid after the
-    // lock is released: unordered_map insertions never invalidate references to
-    // existing elements, and no element is erased during sync.
+    // Rprims are synced in parallel and share this node graph; serialise the claim
+    // bookkeeping, the base claim, the variant build and the remap.
     std::lock_guard<std::mutex> guard(_coordSysMutex);
-    const std::string signature = _CoordSysSignature(remap);
-    // The graph uses no coordinate system this remap touches: nothing to remap.
+    const std::string signature = _CoordSysSignature(binding.remap);
+    // Move this rprim's claim first: releasing what it held before can free the base
+    // slot or retire a variant, which the resolution below then reuses or skips.
+    _AcquireCoordSysHold(binding.owner, signature);
+    // The graph uses no coordinate system this binding touches: nothing to remap.
     if (signature.empty())
-        return _nodeGraphCache;
+        return _nodeGraphCache.GetTerminal(terminalName);
+    // The base is claimed by a binding nobody uses any more (its rprims re-bound or
+    // were removed) and this binding needs a different one: take the slot back rather
+    // than duplicating the network. Restores the pristine "space" inputs.
+    //
+    // Not done when this signature already has a variant: the base would then resolve
+    // the same thing as that variant, leaving it orphaned - and it could not be freed,
+    // because other rprims may still be pointing at its terminal without ever
+    // re-syncing. Using the existing variant keeps every claim accounted for; the base
+    // slot is reclaimed by whichever signature next needs it.
+    if (!_baseCoordSysSignature.empty() && signature != _baseCoordSysSignature &&
+        _CoordSysHoldCount(_baseCoordSysSignature) == 0 && !_HasCoordSysVariant(signature))
+        _ResetCoordSysBase();
     // First distinct binding claims the base network, remapped in place. This
     // keeps the common case (one binding per material, or a material bound
     // consistently) free of any node duplication.
     if (_baseCoordSysSignature.empty()) {
-        RemapCoordSysSpaces(remap);
+        RemapCoordSysSpaces(binding.remap);
         _baseCoordSysSignature = signature;
-        _baseCoordSysRemap = remap;
-        return _nodeGraphCache;
+        _baseCoordSysRemap = binding.remap;
+        return _nodeGraphCache.GetTerminal(terminalName);
     }
     if (signature == _baseCoordSysSignature)
-        return _nodeGraphCache;
+        return _nodeGraphCache.GetTerminal(terminalName);
     // A conflicting binding: build (once) a re-translated variant and remap it.
     // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so it
     // touches just this fresh variant - the base and other variants already
     // resolve to their own camera names, which are never coordinate-system names.
     auto it = _coordSysVariants.find(signature);
     if (it == _coordSysVariants.end()) {
-        CoordSysVariant variant;
-        variant.suffix = "__cs" + std::to_string(++_coordSysVariantCount);
-        variant.remap = remap;
-        variant.cache = _BuildCoordSysVariant(variant.suffix);
-        it = _coordSysVariants.emplace(signature, std::move(variant)).first;
-        RemapCoordSysSpaces(remap);
+        // A variant retired since the last material Sync still has its nodes, already
+        // remapped to these cameras: revive it rather than translate a duplicate, so
+        // re-binding back and forth does not keep building networks.
+        const auto retiredIt = _coordSysRetired.find(signature);
+        if (retiredIt != _coordSysRetired.end()) {
+            it = _coordSysVariants.emplace(signature, std::move(retiredIt->second)).first;
+            _coordSysRetired.erase(retiredIt);
+        } else {
+            CoordSysVariant variant;
+            variant.suffix = "__cs" + std::to_string(++_coordSysVariantCount);
+            variant.remap = binding.remap;
+            variant.cache = _BuildCoordSysVariant(variant.suffix, &variant.nodes);
+            it = _coordSysVariants.emplace(signature, std::move(variant)).first;
+            RemapCoordSysSpaces(binding.remap);
+        }
     }
-    return it->second.cache;
+    return it->second.cache.GetTerminal(terminalName);
 }
 
-AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader(const CoordSysRemap& remap)
+AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader(const CoordSysBinding& binding)
 {
-    auto* terminal = _ResolveCoordSysCache(remap).GetTerminal(HdMaterialTerminalTokens->surface);
+    auto* terminal = _ResolveCoordSysTerminal(binding, HdMaterialTerminalTokens->surface);
     return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
 }
 
-AtNode* HdArnoldNodeGraph::GetCachedDisplacementShader(const CoordSysRemap& remap)
+AtNode* HdArnoldNodeGraph::GetCachedDisplacementShader(const CoordSysBinding& binding)
 {
-    return _ResolveCoordSysCache(remap).GetTerminal(str::t_displacement);
+    return _ResolveCoordSysTerminal(binding, str::t_displacement);
 }
 
-AtNode* HdArnoldNodeGraph::GetCachedVolumeShader(const CoordSysRemap& remap)
+AtNode* HdArnoldNodeGraph::GetCachedVolumeShader(const CoordSysBinding& binding)
 {
-    auto* terminal = _ResolveCoordSysCache(remap).GetTerminal(HdMaterialTerminalTokens->volume);
+    auto* terminal = _ResolveCoordSysTerminal(binding, HdMaterialTerminalTokens->volume);
     return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
 }
 

@@ -227,7 +227,7 @@ void HdArnoldVolume::Sync(
 
     // DirtyCategories carries the coordinate-system bindings, and the material's
     // "space" inputs are rewritten to the cameras bound here, so a binding change
-    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
     if (volumesChanged || (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories))) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -236,7 +236,7 @@ void HdArnoldVolume::Sync(
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
         auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         auto* volumeShader = material != nullptr
-                                 ? material->GetCachedVolumeShader(HdArnoldGetCoordSysRemap(sceneDelegate, id))
+                                 ? material->GetCachedVolumeShader(HdArnoldGetCoordSysBinding(sceneDelegate, id))
                                  : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }

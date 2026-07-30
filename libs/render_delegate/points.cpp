@@ -191,7 +191,7 @@ void HdArnoldPoints::Sync(
 
     // DirtyCategories carries the coordinate-system bindings, and the material's
     // "space" inputs are rewritten to the cameras bound here, so a binding change
-    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
     if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -202,11 +202,11 @@ void HdArnoldPoints::Sync(
         auto* material = reinterpret_cast<HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            const auto coordSysRemap = HdArnoldGetCoordSysRemap(sceneDelegate, id);
+            const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
             AiNodeSetPtr(
                 node, str::shader,
-                _IsVolume() ? material->GetCachedVolumeShader(coordSysRemap)
-                            : material->GetCachedSurfaceShader(coordSysRemap));
+                _IsVolume() ? material->GetCachedVolumeShader(coordSysBinding)
+                            : material->GetCachedSurfaceShader(coordSysBinding));
         } else {
             // For Houdini gaussian splats with no material bound, use gaussian_splat_shader.
             const bool isHoudiniGS = _primvars.count(_gsTokens->GS_Alpha) > 0;

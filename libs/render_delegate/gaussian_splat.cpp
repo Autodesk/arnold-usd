@@ -308,7 +308,7 @@ void HdArnoldGaussianSplat::Sync(
 
     // DirtyCategories carries the coordinate-system bindings, and the material's
     // "space" inputs are rewritten to the cameras bound here, so a binding change
-    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
     if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -319,7 +319,7 @@ void HdArnoldGaussianSplat::Sync(
         auto* material = reinterpret_cast<HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysRemap(sceneDelegate, id)));
+            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysBinding(sceneDelegate, id)));
         } else {
             // When no material is assigned, fall back to a shared gaussian_splat_shader.
             // Look for an existing one first to avoid duplicates.

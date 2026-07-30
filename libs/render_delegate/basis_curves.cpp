@@ -203,7 +203,7 @@ void HdArnoldBasisCurves::Sync(
 
     // DirtyCategories carries the coordinate-system bindings, and the material's
     // "space" inputs are rewritten to the cameras bound here, so a binding change
-    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
     if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -212,7 +212,7 @@ void HdArnoldBasisCurves::Sync(
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
         auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysRemap(sceneDelegate, id)));
+            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysBinding(sceneDelegate, id)));
         } else {
             AiNodeSetPtr(node, str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }

@@ -400,7 +400,7 @@ void HdArnoldMesh::Sync(
         // Shared materials bound by different rprims to different cameras each
         // resolve to their own camera through this per-rprim remap (see the
         // remap-aware HdArnoldNodeGraph::GetCached*Shader).
-        const auto coordSysRemap = HdArnoldGetCoordSysRemap(sceneDelegate, id);
+        const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
         auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
@@ -414,9 +414,9 @@ void HdArnoldMesh::Sync(
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetCachedVolumeShader(coordSysRemap)
-                                           : material->GetCachedSurfaceShader(coordSysRemap);
-                dispMap[arrayId] = material->GetCachedDisplacementShader(coordSysRemap);
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader(coordSysBinding)
+                                           : material->GetCachedSurfaceShader(coordSysBinding);
+                dispMap[arrayId] = material->GetCachedDisplacementShader(coordSysBinding);
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
