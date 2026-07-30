@@ -42,6 +42,7 @@
 #include <pxr/usd/usdVol/tokens.h>
 
 #include <constant_strings.h>
+#include "coord_sys.h"
 #include "node_graph.h"
 #include "openvdb_asset.h"
 #include "utils.h"
@@ -224,15 +225,19 @@ void HdArnoldVolume::Sync(
         volumesChanged = true;
     }
 
-    if (volumesChanged || (*dirtyBits & HdChangeTracker::DirtyMaterialId)) {
+    // DirtyCategories carries the coordinate-system bindings, and the material's
+    // "space" inputs are rewritten to the cameras bound here, so a binding change
+    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    if (volumesChanged || (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories))) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
-        auto* volumeShader =
-            material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
+        auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+        auto* volumeShader = material != nullptr
+                                 ? material->GetCachedVolumeShader(HdArnoldGetCoordSysRemap(sceneDelegate, id))
+                                 : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }
 

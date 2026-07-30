@@ -20,6 +20,7 @@
 #include <pxr/pxr.h>
 #include <pxr/imaging/hd/coordSys.h>
 
+#include "node_graph.h"
 #include "render_delegate.h"
 #include "render_param.h"
 
@@ -91,5 +92,22 @@ private:
     AtNode* _node = nullptr;
     AtNode* _ndcNode = nullptr;
 };
+
+/// Build the map from each coordinate-system name bound to the rprim @p id to the
+/// uniquely-named Arnold camera node(s) of that coordinate system.
+///
+/// Arnold resolves named coordinate spaces globally by camera node name, so a
+/// material's "space" inputs must be rewritten to the cameras bound by the rprim
+/// being shaded. This is the rprim side of that handshake: every rprim that
+/// assigns a material should pass the result to the remap-aware
+/// HdArnoldNodeGraph::GetCached*Shader accessors. Rprims must therefore also
+/// re-assign their material on HdChangeTracker::DirtyCategories (which carries
+/// coordinate-system binding changes) and include that bit in their initial
+/// dirty bits.
+///
+/// Returns an empty map when @p id has no coordinate-system bindings - the common
+/// case, which the accessors resolve to the unmodified base material.
+HDARNOLD_API
+HdArnoldNodeGraph::CoordSysRemap HdArnoldGetCoordSysRemap(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
 PXR_NAMESPACE_CLOSE_SCOPE

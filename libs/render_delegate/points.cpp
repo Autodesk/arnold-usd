@@ -19,6 +19,7 @@
 
 #include <constant_strings.h>
 
+#include "coord_sys.h"
 #include "node_graph.h"
 #include "utils.h"
 
@@ -45,7 +46,8 @@ HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility |
            HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths |
-           HdChangeTracker::DirtyMaterialId | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories |
+           HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 void HdArnoldPoints::Sync(
@@ -187,17 +189,24 @@ void HdArnoldPoints::Sync(
         UpdateVisibilityAndSidedness();
     }
 
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+    // DirtyCategories carries the coordinate-system bindings, and the material's
+    // "space" inputs are rewritten to the cameras bound here, so a binding change
+    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
 
-        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
+        auto* material = reinterpret_cast<HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, _IsVolume() ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader());
+            const auto coordSysRemap = HdArnoldGetCoordSysRemap(sceneDelegate, id);
+            AiNodeSetPtr(
+                node, str::shader,
+                _IsVolume() ? material->GetCachedVolumeShader(coordSysRemap)
+                            : material->GetCachedSurfaceShader(coordSysRemap));
         } else {
             // For Houdini gaussian splats with no material bound, use gaussian_splat_shader.
             const bool isHoudiniGS = _primvars.count(_gsTokens->GS_Alpha) > 0;

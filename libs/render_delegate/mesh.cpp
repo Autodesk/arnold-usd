@@ -387,32 +387,6 @@ void HdArnoldMesh::Sync(
         _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }
 
-    // Build the map from each bound coordinate-system name to its unique Arnold
-    // camera node(s). Threaded into material assignment so shared materials bound
-    // by different rprims to different cameras each resolve to their own camera
-    // (see HdArnoldNodeGraph's remap-aware GetCached*Shader).
-    auto computeCoordSysRemap = [&]() {
-        HdArnoldNodeGraph::CoordSysRemap remap;
-        const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
-        if (coordSysBindings) {
-            for (const auto& coordSysId : *coordSysBindings) {
-                const auto* coordSys = dynamic_cast<const HdArnoldCoordSys*>(
-                    sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->coordSys, coordSysId));
-                if (coordSys == nullptr || coordSys->GetArnoldNode() == nullptr)
-                    continue;
-                HdArnoldNodeGraph::CoordSysTarget target;
-                target.node = AiNodeGetName(coordSys->GetArnoldNode());
-                // Arnold's NDC is Y-opposite to its screen/raster; when the
-                // coordinate system created a dedicated (extra-flipped) NDC
-                // camera, route this rprim's ".NDC" space to it.
-                if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
-                    target.ndcNode = AiNodeGetName(ndcNode);
-                remap[coordSys->GetName().GetString()] = std::move(target);
-            }
-        }
-        return remap;
-    };
-
     auto materialsAssigned = false;
     auto assignMaterials = [&]() {
         // Materials have already been assigned.
@@ -423,7 +397,10 @@ void HdArnoldMesh::Sync(
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
         const auto isVolume = _IsVolume();
-        const auto coordSysRemap = computeCoordSysRemap();
+        // Shared materials bound by different rprims to different cameras each
+        // resolve to their own camera through this per-rprim remap (see the
+        // remap-aware HdArnoldNodeGraph::GetCached*Shader).
+        const auto coordSysRemap = HdArnoldGetCoordSysRemap(sceneDelegate, id);
         auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));

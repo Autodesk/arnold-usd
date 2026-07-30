@@ -21,6 +21,7 @@
 #include <constant_strings.h>
 #include <shape_utils.h>
 
+#include "coord_sys.h"
 #include "node_graph.h"
 #include "utils.h"
 
@@ -200,15 +201,18 @@ void HdArnoldBasisCurves::Sync(
         transformDirtied = true;
     }
 
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+    // DirtyCategories carries the coordinate-system bindings, and the material's
+    // "space" inputs are rewritten to the cameras bound here, so a binding change
+    // has to re-assign the material (see HdArnoldGetCoordSysRemap).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+        auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
-            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader());
+            AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysRemap(sceneDelegate, id)));
         } else {
             AiNodeSetPtr(node, str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
@@ -347,7 +351,8 @@ HdDirtyBits HdArnoldBasisCurves::GetInitialDirtyBitsMask() const
     return HdChangeTracker::Clean | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTopology |
            HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility | HdChangeTracker::DirtyDoubleSided |
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths |
-           HdChangeTracker::DirtyMaterialId | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories |
+           HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

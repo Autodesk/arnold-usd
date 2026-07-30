@@ -296,6 +296,30 @@ void HdArnoldCoordSys::_MirrorCamera(
     _renderDelegate->RegisterCoordSysCamera(dst, ratio);
 }
 
+HdArnoldNodeGraph::CoordSysRemap HdArnoldGetCoordSysRemap(HdSceneDelegate* sceneDelegate, const SdfPath& id)
+{
+    HdArnoldNodeGraph::CoordSysRemap remap;
+    const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
+    if (!coordSysBindings)
+        return remap;
+    for (const SdfPath& coordSysId : *coordSysBindings) {
+        // The coordSys sprims are synced before the rprims (see _SupportedSprimTypes),
+        // so a bound coordinate system already has its Arnold camera node.
+        const auto* coordSys = dynamic_cast<const HdArnoldCoordSys*>(
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->coordSys, coordSysId));
+        if (coordSys == nullptr || coordSys->GetArnoldNode() == nullptr)
+            continue;
+        HdArnoldNodeGraph::CoordSysTarget target;
+        target.node = AiNodeGetName(coordSys->GetArnoldNode());
+        // Arnold's NDC is Y-opposite to its screen/raster; when the coordinate system
+        // created a dedicated (extra-flipped) NDC camera, route the ".NDC" space to it.
+        if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
+            target.ndcNode = AiNodeGetName(ndcNode);
+        remap[coordSys->GetName().GetString()] = std::move(target);
+    }
+    return remap;
+}
+
 void HdArnoldCoordSys::_MirrorTransform(AtNode* dst, HdSceneDelegate* sceneDelegate, bool flipV)
 {
     HdArnoldSetTransform(dst, sceneDelegate, GetId());
