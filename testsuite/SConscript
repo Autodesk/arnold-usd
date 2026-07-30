@@ -9,6 +9,7 @@ from utils.contrib.bottle import SimpleTemplate
 import utils as sa
 from utils.build_tools     import process_return_code
 from utils.system          import print_safe, is_string
+from utils                 import dependencies
 from test                  import Testsuite
 
 Import('env')
@@ -37,6 +38,52 @@ else:
    test_env.Append(CPPPATH = [env['ARNOLD_API_INCLUDES'], os.path.join(root_path, 'testsuite', 'common', 'include')])
    test_env.Append(LIBPATH = env['ARNOLD_BINARIES'])
    test_env.Append(LIBS = Split('ai'))
+
+# Tests that construct the Hydra render delegate directly in C++ (e.g. test_2719,
+# which drives HdArnoldRenderDelegate::Pause()/Resume()/Stop()/IsPaused() against a
+# live render to guard against #2719-style state bugs) additionally need the
+# render_delegate/common static libraries and their USD dependencies. There is no
+# per-test env override hook in Test.prepare(), so this is added to every test.cpp
+# build rather than just the one that needs it -- harmless for tests that don't
+# reference any of these symbols, since unused static library members simply aren't
+# pulled in at link time. Only done when the render delegate is actually being
+# built: skip it entirely for BUILD_RENDER_DELEGATE=0 configurations, where such a
+# test cannot link (and isn't expected to run).
+if env.get('BUILD_RENDER_DELEGATE'):
+   def _add_render_delegate_test_deps(e):
+      e.Append(CPPPATH = [
+         os.path.join(root_path, 'libs', 'render_delegate'),
+         os.path.join(root_path, 'libs', 'common'),
+      ])
+      # Resolve against the root env's BUILD_BASE_DIR with os.path.abspath(), not a
+      # SCons Dir()/relative-string LIBPATH entry: the latter gets re-rooted against
+      # this SConscript's own variant_dir (testsuite/build/...), which silently
+      # doubles or mis-nests the path (as seen when this used e['BUILD_BASE_DIR']
+      # directly). plugins/render_delegate/SConscript resolves it the same way.
+      e.Append(LIBPATH = [
+         os.path.abspath(os.path.join(env['BUILD_BASE_DIR'], 'libs', 'render_delegate')),
+         os.path.abspath(os.path.join(env['BUILD_BASE_DIR'], 'libs', 'common')),
+         # USD_LIB is already on the root env's LIBPATH (SConstruct appends it before
+         # testsuite/SConscript runs), but explicitly re-adding it here too: whatever
+         # is causing e['BUILD_BASE_DIR']-relative paths above to get mis-rooted under
+         # this SConscript's variant_dir may also be dropping/hiding inherited LIBPATH
+         # entries for this env by the time the test.cpp Program() actually links
+         # ("library 'usd_arch' not found" otherwise).
+         os.path.abspath(env['USD_LIB']),
+      ])
+      _, usd_deps = dependencies.render_delegate(e, [])
+      e.Append(LIBS = ['render_delegate', 'common'] + usd_deps)
+      if sa.system.is_darwin and e.get('EXTRA_FRAMEWORKS'):
+         # A static USD build's Arch library needs Foundation (NSTemporaryDirectory,
+         # objc_msgSend) on macOS. plugins/procedural/SConscript applies the same
+         # EXTRA_FRAMEWORKS setting for its own static-USD link; test.cpp needs it too.
+         e.Append(FRAMEWORKS = e['EXTRA_FRAMEWORKS'].split(';'))
+
+   if 'UNIVERSAL_ENVS' in test_env:
+      for e in test_env['UNIVERSAL_ENVS']:
+         _add_render_delegate_test_deps(e)
+   else:
+      _add_render_delegate_test_deps(test_env)
 
 os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
 os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']

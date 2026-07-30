@@ -49,8 +49,21 @@ def add_plugin_deps(env, sources, libs, needs_dl):
         return (source_files, add_optional_libs(env, usd_deps))
 
 # Returns a list of usd dependencies and source files.
-# This only works with monolithic and shared usd dependencies.
 def render_delegate(env, sources):
+    if env['USD_BUILD_MODE'] == 'static':
+        # Static builds rely on a single monolithic static library, same as
+        # translator() below -- there are no per-module usd_<lib> archives to link
+        # against individually.
+        if system.is_windows:
+            usd_deps = [
+                '-WHOLEARCHIVE:libusd_m',
+                get_tbb_lib(env),
+            ]
+        else:
+            usd_deps = ['libusd_m', get_tbb_lib(env)]
+            if system.is_linux:
+                usd_deps = usd_deps + ['dl']
+        return (sources, add_optional_libs(env, usd_deps))
     usd_libs = [
         'arch',
         'plug',

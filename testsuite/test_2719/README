@@ -1,0 +1,32 @@
+HdArnoldRenderDelegate's paused state must survive/clear correctly around scene edits, Resume() and Stop()
+
+Pause() (the resumable AiRenderPause() gate added for #2719) left HdArnoldRenderParam's
+internal _paused flag stuck reporting "paused" once any scene edit (a plain Interrupt(),
+exactly what every camera/mesh/light Sync() issues) or a Stop() call resumed/tore down
+the render underneath it -- Arnold's pause gate has no mechanism to preserve accumulated
+samples across a scene edit, so such an edit always forces a real interrupt+restart, but
+nothing cleared the bookkeeping to match. HdArnoldRenderDelegate::IsPaused() (newly
+overridden here, since Houdini and other Hydra hosts query it) would therefore keep
+reporting a stale "paused" state.
+
+This test constructs HdArnoldRenderDelegate directly (rather than through a UsdStage +
+Hydra render index) and drives Pause()/Interrupt()/Resume()/Stop()/IsPaused() against a
+live render, since HdRenderDelegate::IsPaused() isn't reachable from a normal
+scene.usda-driven test (not exposed through UsdImagingGLEngine or Python bindings). The
+scene itself is built with plain AiNode() calls rather than AiSceneLoad() of a .usda
+file: this test statically links USD directly into the executable (via render_delegate),
+and AiBegin() auto-loads every plugin under ARNOLD_PLUGIN_PATH, including usd_proc.dylib
+-- which embeds its own private static copy of USD and crashes the process if loaded
+alongside it. ARNOLD_PLUGIN_PATH is cleared at the top of main() so nothing gets
+auto-loaded; the scene's AA_samples/resolution are deliberately high so the render stays
+busy long enough for the test to reliably observe it mid-flight.
+
+Requires BUILD_RENDER_DELEGATE=1 (the default). USD_BUILD_MODE=static configurations
+also required a fix to tools/utils/dependencies.py:render_delegate(), which had no
+static-build case (unlike dependencies.py:translator()) and so could never link against
+a statically-built USD -- likely a pre-existing, previously-unexercised gap rather than
+something specific to this test.
+
+Fixes #2719
+
+author: cyril.pichard@autodesk.com
