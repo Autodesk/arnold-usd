@@ -228,10 +228,7 @@ if (HOUDINI_LOCATION)
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
         # hdsi has shipped since USD 22.05 and plugins/usd_imaging links it
-        # unconditionally, so it must be aliased unconditionally too. Gating it on
-        # 25.05 alongside ts left no hdsi target on older USD, and the bare "hdsi"
-        # in USDIMAGING_LIBS then degraded to a -lhdsi link flag which cannot match
-        # Houdini's libpxr_hdsi. ts really is new in 25.05, so that one stays gated.
+        # unconditionally, so it must be aliased unconditionally too.
         list(APPEND ARNOLD_USD_LIBS_ hdsi)
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
             list(APPEND ARNOLD_USD_LIBS_ ts)
@@ -259,9 +256,7 @@ if (HOUDINI_LOCATION)
             set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb)
             # Houdini 22 no longer exports a tbbmalloc target from HoudiniConfig.cmake,
             # although dsolib still ships libtbbmalloc. Link it only where the target
-            # exists, otherwise configuring against H22 fails with
-            # "Target hdArnold links to Houdini::Dep::tbbmalloc but the target was not
-            # found".
+            # exists
             if (TARGET Houdini::Dep::tbbmalloc)
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbbmalloc)
             endif()
@@ -430,10 +425,7 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-# hdsi is listed for the same reason as in the Houdini branch above:
-# plugins/usd_imaging links it unconditionally, so it needs a target. The loop
-# below only creates one if find_library succeeds, so listing it is harmless on
-# a USD install that predates the library.
+# hdsi is listed for the same reason as in the Houdini branch above
 set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdsi;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 if (${USD_VERSION} VERSION_LESS "0.25.05")
     list(APPEND USD_LIBS ndr)
