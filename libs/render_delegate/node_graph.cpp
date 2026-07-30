@@ -41,6 +41,7 @@
 #include "utils.h"
 
 #include <ai.h>
+#include <algorithm>
 #include <iostream>
 #include <unordered_map>
 #include <materials_utils.h>
@@ -63,6 +64,17 @@ inline void EnsureMaterialNetworPathsPrefix(HdMaterialNetwork& network, const Sd
     for (auto& nd : network.nodes) {
         EnsurePathHasMaterialPrefix(nd.path, materialPath);
     }
+}
+
+// Append a suffix to the leaf of a shader prim path, so a re-translated copy of a
+// material network produces distinctly-named Arnold nodes (the node names derive
+// from these paths - see GetArnoldShaderName). Used to build per-rprim coordinate-
+// system variants (see HdArnoldNodeGraph::_BuildCoordSysVariant).
+inline void AppendPathLeafSuffix(SdfPath& path, const std::string& suffix)
+{
+    if (path.IsEmpty() || !path.IsPrimPath())
+        return;
+    path = path.GetParentPath().AppendChild(TfToken(path.GetName() + suffix));
 }
 
 // MaterialReader classes are shared between the procedural and delegate code
@@ -192,6 +204,16 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             // in this list will be destroyed
             _previousNodes = _nodes;
 
+            // Retain the network so per-rprim coordinate-system variants can be
+            // re-translated on demand (see _BuildCoordSysVariant). The base claim
+            // and the variants (their suffix + remap) are deliberately kept across
+            // re-syncs: re-translating resets the base nodes to their pristine
+            // "space" and destroys the variant nodes, so we rebuild both further
+            // below (_RebuildCoordSysRemaps) from the retained state, reusing the
+            // same node names so dependent rprims keep valid, correctly-remapped
+            // shader pointers without needing to re-sync.
+            _materialNetworkMap = materialNetworkmap;
+
             // terminals contains the list of terminal node paths
             // whether it's for displacement, surface, volume, etc...
             // As we'll use this to identify the networks root shaders, 
@@ -253,6 +275,11 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                         replaceOldTerminal(_nodes);
                 }
             }
+            // Re-establish the coordinate-system remaps on the freshly-translated
+            // (pristine) base and rebuild the per-rprim variants, BEFORE the unused-
+            // node sweep so the rebuilt variant nodes (recreated under their stored
+            // names) are kept rather than deleted.
+            _RebuildCoordSysRemaps();
             // Loop through previous AtNodes that were created for this node graph.
             // If they're not empty in this list, it means that they're not used anymore.
             // Let's delete the unused ones
@@ -331,6 +358,166 @@ AtNode* HdArnoldNodeGraph::GetCachedDisplacementShader() const { return _nodeGra
 AtNode* HdArnoldNodeGraph::GetCachedVolumeShader() const
 {
     auto* terminal = _nodeGraphCache.GetTerminal(HdMaterialTerminalTokens->volume);
+    return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
+}
+
+void HdArnoldNodeGraph::_CollectCoordSysNames()
+{
+    // Capture the coordinate-system names present in this graph from the *base*
+    // shader nodes while their "space" inputs are still pristine ("<name>.<suffix>").
+    // Called from _RebuildCoordSysRemaps right after (re-)translation and before any
+    // remap, so this always reads pristine values. Variant nodes (name contains the
+    // "__cs" marker) are skipped: they may still carry a previous round's remapped
+    // (camera-node) prefix, which would poison the name set.
+    _coordSysNamesInGraph.clear();
+    for (const auto& entry : _nodes) {
+        AtNode* node = entry.second;
+        if (node == nullptr || !AiNodeIs(node, str::osl))
+            continue;
+        if (entry.first.find("__cs") != std::string::npos)
+            continue;
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::param_shader_space) == nullptr)
+            continue;
+        const std::string value = AiNodeGetStr(node, str::param_shader_space).c_str();
+        if (value.empty())
+            continue;
+        _coordSysNamesInGraph.insert(value.substr(0, value.find('.')));
+    }
+}
+
+std::string HdArnoldNodeGraph::_CoordSysSignature(const CoordSysRemap& remap) const
+{
+    if (_coordSysNamesInGraph.empty())
+        return {};
+    // Build a deterministic signature from the bindings this graph actually uses,
+    // so two rprims binding the same names to the same cameras share one variant.
+    std::vector<std::string> parts;
+    for (const std::string& name : _coordSysNamesInGraph) {
+        const auto it = remap.find(name);
+        if (it == remap.end())
+            continue;
+        parts.push_back(name + ">" + it->second.node + "|" + it->second.ndcNode);
+    }
+    if (parts.empty())
+        return {};
+    std::sort(parts.begin(), parts.end());
+    std::string signature;
+    for (const std::string& part : parts) {
+        signature += part;
+        signature += ';';
+    }
+    return signature;
+}
+
+void HdArnoldNodeGraph::_RebuildCoordSysRemaps()
+{
+    // Called during Sync after the base network is (re-)translated to its pristine
+    // state and before the unused-node sweep. Re-establishes the coordinate-system
+    // remaps so dependent rprims keep valid, correctly-remapped shader pointers
+    // across re-syncs without having to re-sync themselves.
+    std::lock_guard<std::mutex> guard(_coordSysMutex);
+    _CollectCoordSysNames();
+    // The base was reset to pristine by the (re-)translation; re-apply its remap.
+    // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so this hits
+    // only the base nodes (any surviving variant nodes still carry camera prefixes).
+    if (!_baseCoordSysSignature.empty())
+        RemapCoordSysSpaces(_baseCoordSysRemap);
+    // Rebuild each variant one at a time: re-translating recreates its nodes under
+    // their stored names (same Arnold pointers, reset to pristine), and remapping
+    // immediately after keeps the "only pristine" rule valid - only the just-rebuilt
+    // variant is pristine at that moment.
+    for (auto& entry : _coordSysVariants) {
+        entry.second.cache = _BuildCoordSysVariant(entry.second.suffix);
+        RemapCoordSysSpaces(entry.second.remap);
+    }
+}
+
+HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(const std::string& suffix)
+{
+    // Re-translate the retained network into a fresh set of Arnold nodes by
+    // namespacing every shader path with the given unique suffix. ReadMaterialNetwork
+    // derives node names (and resolves connections) from these paths, so the variant
+    // is fully wired by the same code that builds the base network. Reusing the same
+    // suffix across re-syncs recreates the same node names (same Arnold pointers via
+    // CreateArnoldNode), so rprims holding a variant terminal stay valid.
+    ArnoldNodeGraph cache;
+    for (const auto& tokenAndNetwork : _materialNetworkMap.map) {
+        const TfToken& terminalType = tokenAndNetwork.first;
+        HdMaterialNetwork network = tokenAndNetwork.second; // copy we can namespace
+        if (network.nodes.empty())
+            continue;
+        for (auto& nd : network.nodes)
+            AppendPathLeafSuffix(nd.path, suffix);
+        for (auto& rel : network.relationships) {
+            AppendPathLeafSuffix(rel.inputId, suffix);
+            AppendPathLeafSuffix(rel.outputId, suffix);
+        }
+        EnsureMaterialNetworPathsPrefix(network, GetId());
+        std::vector<SdfPath> terminals = _materialNetworkMap.terminals;
+        for (auto& ter : terminals) {
+            AppendPathLeafSuffix(ter, suffix);
+            EnsurePathHasMaterialPrefix(ter, GetId());
+        }
+        AtNode* node = ReadMaterialNetwork(network, terminalType, terminals);
+        AtNode* oldTerminal = nullptr;
+        if (node)
+            cache.UpdateTerminal(terminalType, node, oldTerminal);
+    }
+    return cache;
+}
+
+const HdArnoldNodeGraph::ArnoldNodeGraph& HdArnoldNodeGraph::_ResolveCoordSysCache(const CoordSysRemap& remap)
+{
+    // Rprims are synced in parallel and share this node graph; serialise the base
+    // claim, variant build and remap. The returned reference stays valid after the
+    // lock is released: unordered_map insertions never invalidate references to
+    // existing elements, and no element is erased during sync.
+    std::lock_guard<std::mutex> guard(_coordSysMutex);
+    const std::string signature = _CoordSysSignature(remap);
+    // The graph uses no coordinate system this remap touches: nothing to remap.
+    if (signature.empty())
+        return _nodeGraphCache;
+    // First distinct binding claims the base network, remapped in place. This
+    // keeps the common case (one binding per material, or a material bound
+    // consistently) free of any node duplication.
+    if (_baseCoordSysSignature.empty()) {
+        RemapCoordSysSpaces(remap);
+        _baseCoordSysSignature = signature;
+        _baseCoordSysRemap = remap;
+        return _nodeGraphCache;
+    }
+    if (signature == _baseCoordSysSignature)
+        return _nodeGraphCache;
+    // A conflicting binding: build (once) a re-translated variant and remap it.
+    // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so it
+    // touches just this fresh variant - the base and other variants already
+    // resolve to their own camera names, which are never coordinate-system names.
+    auto it = _coordSysVariants.find(signature);
+    if (it == _coordSysVariants.end()) {
+        CoordSysVariant variant;
+        variant.suffix = "__cs" + std::to_string(++_coordSysVariantCount);
+        variant.remap = remap;
+        variant.cache = _BuildCoordSysVariant(variant.suffix);
+        it = _coordSysVariants.emplace(signature, std::move(variant)).first;
+        RemapCoordSysSpaces(remap);
+    }
+    return it->second.cache;
+}
+
+AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader(const CoordSysRemap& remap)
+{
+    auto* terminal = _ResolveCoordSysCache(remap).GetTerminal(HdMaterialTerminalTokens->surface);
+    return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
+}
+
+AtNode* HdArnoldNodeGraph::GetCachedDisplacementShader(const CoordSysRemap& remap)
+{
+    return _ResolveCoordSysCache(remap).GetTerminal(str::t_displacement);
+}
+
+AtNode* HdArnoldNodeGraph::GetCachedVolumeShader(const CoordSysRemap& remap)
+{
+    auto* terminal = _ResolveCoordSysCache(remap).GetTerminal(HdMaterialTerminalTokens->volume);
     return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
 }
 

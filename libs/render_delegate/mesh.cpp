@@ -387,6 +387,32 @@ void HdArnoldMesh::Sync(
         _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }
 
+    // Build the map from each bound coordinate-system name to its unique Arnold
+    // camera node(s). Threaded into material assignment so shared materials bound
+    // by different rprims to different cameras each resolve to their own camera
+    // (see HdArnoldNodeGraph's remap-aware GetCached*Shader).
+    auto computeCoordSysRemap = [&]() {
+        HdArnoldNodeGraph::CoordSysRemap remap;
+        const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
+        if (coordSysBindings) {
+            for (const auto& coordSysId : *coordSysBindings) {
+                const auto* coordSys = dynamic_cast<const HdArnoldCoordSys*>(
+                    sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->coordSys, coordSysId));
+                if (coordSys == nullptr || coordSys->GetArnoldNode() == nullptr)
+                    continue;
+                HdArnoldNodeGraph::CoordSysTarget target;
+                target.node = AiNodeGetName(coordSys->GetArnoldNode());
+                // Arnold's NDC is Y-opposite to its screen/raster; when the
+                // coordinate system created a dedicated (extra-flipped) NDC
+                // camera, route this rprim's ".NDC" space to it.
+                if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
+                    target.ndcNode = AiNodeGetName(ndcNode);
+                remap[coordSys->GetName().GetString()] = std::move(target);
+            }
+        }
+        return remap;
+    };
+
     auto materialsAssigned = false;
     auto assignMaterials = [&]() {
         // Materials have already been assigned.
@@ -397,6 +423,7 @@ void HdArnoldMesh::Sync(
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
         const auto isVolume = _IsVolume();
+        const auto coordSysRemap = computeCoordSysRemap();
         auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
@@ -404,14 +431,15 @@ void HdArnoldMesh::Sync(
         HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
             nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
-            const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+            auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader();
-                dispMap[arrayId] = material->GetCachedDisplacementShader();
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader(coordSysRemap)
+                                           : material->GetCachedSurfaceShader(coordSysRemap);
+                dispMap[arrayId] = material->GetCachedDisplacementShader(coordSysRemap);
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
@@ -625,8 +653,11 @@ void HdArnoldMesh::Sync(
         }        
     }
 
-    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
+    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
+    // or if the coordinate-system bindings changed (assignMaterials rewrites each material's
+    // "space" inputs to the cameras bound here - see the remap-aware GetCached*Shader).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories) ||
+        (dirtyTopology && !_subsets.empty())) {
         param.Interrupt();
         assignMaterials();
     }
@@ -635,30 +666,19 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
         if (coordSysBindings && !coordSysBindings->empty()) {
+            // Store the bound coordinate-system camera nodes as a user attribute on
+            // the mesh. The material "space" inputs are rewritten to these cameras
+            // in assignMaterials (triggered above on DirtyCategories), which also
+            // handles shared materials bound to different cameras by different rprims.
             auto* coordSysArray = AiArrayAllocate(coordSysBindings->size(), 1, AI_TYPE_NODE);
             auto** coordSysNodes = static_cast<AtNode**>(AiArrayMap(coordSysArray));
             size_t count = 0;
-            // Map each bound coordinate-system name to its unique Arnold camera
-            // node name. Arnold resolves named coordinate spaces globally by
-            // camera node name, so distinct rprims binding a coordinate system
-            // of the same name (e.g. "map_proj") to different cameras must each
-            // rewrite their material's "space" input to their own camera.
-            std::unordered_map<std::string, HdArnoldNodeGraph::CoordSysTarget> coordSysRemap;
             for (const auto& coordSysId : *coordSysBindings) {
                 const HdSprim* sprim = sceneDelegate->GetRenderIndex().GetSprim(
                     HdPrimTypeTokens->coordSys, coordSysId);
                 const auto* coordSys = dynamic_cast<const HdArnoldCoordSys*>(sprim);
-                if (coordSys && coordSys->GetArnoldNode() != nullptr) {
+                if (coordSys && coordSys->GetArnoldNode() != nullptr)
                     coordSysNodes[count++] = coordSys->GetArnoldNode();
-                    // Arnold's NDC is Y-opposite to its screen/raster; when the
-                    // coordinate system created a dedicated (extra-flipped) NDC
-                    // camera, route this rprim's ".NDC" space to it.
-                    HdArnoldNodeGraph::CoordSysTarget target;
-                    target.node = AiNodeGetName(coordSys->GetArnoldNode());
-                    if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
-                        target.ndcNode = AiNodeGetName(ndcNode);
-                    coordSysRemap[coordSys->GetName().GetString()] = std::move(target);
-                }
             }
             AiArrayUnmap(coordSysArray);
             if (count < coordSysBindings->size())
@@ -666,19 +686,6 @@ void HdArnoldMesh::Sync(
             if (AiNodeLookUpUserParameter(node, str::coord_sys) == nullptr)
                 AiNodeDeclare(node, str::coord_sys, str::constantArrayNode);
             AiNodeSetArray(node, str::coord_sys, coordSysArray);
-
-            // Rewrite the "space" inputs of this rprim's materials so their
-            // coordinate-system name resolves to the unique camera bound here.
-            if (!coordSysRemap.empty()) {
-                auto remapMaterial = [&](const SdfPath& materialId) {
-                    if (auto* nodeGraph = HdArnoldNodeGraph::GetNodeGraph(
-                            sceneDelegate->GetRenderIndex(), materialId, _renderDelegate))
-                        nodeGraph->RemapCoordSysSpaces(coordSysRemap);
-                };
-                remapMaterial(sceneDelegate->GetMaterialId(id));
-                for (const auto& subsetMaterial : _subsets)
-                    remapMaterial(subsetMaterial);
-            }
         } else {
             AiNodeResetParameter(node, str::coord_sys);
         }

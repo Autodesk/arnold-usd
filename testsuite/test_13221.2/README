@@ -1,0 +1,22 @@
+CoordSys: one shared material bound by rprims to *different* cameras
+
+Two grids reference the same </gridTemplate> (so each has its own projector
+camera inside it) but they all bind a single shared MaterialX material
+</mtl/projected> - one node graph shared by both rprims. Each grid binds the
+'map_proj' coordinate system to its own projector camera.
+
+Arnold resolves named coordinate spaces globally by camera node name, so the
+single shared "space" input cannot serve both cameras: arnold-usd keeps the base
+material for the first binding and re-translates a per-rprim variant for the
+conflicting one, so each grid projects from its own camera. Without this, both
+grids would project from a single camera (the second grid's gradient shifted).
+
+The projector cameras live inside the grid template (as in test_13221) so the
+coordinate-system camera resolves identically under the legacy scene delegate
+(hydra) and the scene index (hydra2).
+
+See #32 / ARNOLD-13221
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /Cameras/renderCamera'}
