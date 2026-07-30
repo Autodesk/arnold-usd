@@ -662,34 +662,11 @@ void HdArnoldMesh::Sync(
         assignMaterials();
     }
 
-    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
-        param.Interrupt();
-        const auto coordSysBindings = sceneDelegate->GetCoordSysBindings(id);
-        if (coordSysBindings && !coordSysBindings->empty()) {
-            // Store the bound coordinate-system camera nodes as a user attribute on
-            // the mesh. The material "space" inputs are rewritten to these cameras
-            // in assignMaterials (triggered above on DirtyCategories), which also
-            // handles shared materials bound to different cameras by different rprims.
-            auto* coordSysArray = AiArrayAllocate(coordSysBindings->size(), 1, AI_TYPE_NODE);
-            auto** coordSysNodes = static_cast<AtNode**>(AiArrayMap(coordSysArray));
-            size_t count = 0;
-            for (const auto& coordSysId : *coordSysBindings) {
-                const HdSprim* sprim = sceneDelegate->GetRenderIndex().GetSprim(
-                    HdPrimTypeTokens->coordSys, coordSysId);
-                const auto* coordSys = dynamic_cast<const HdArnoldCoordSys*>(sprim);
-                if (coordSys && coordSys->GetArnoldNode() != nullptr)
-                    coordSysNodes[count++] = coordSys->GetArnoldNode();
-            }
-            AiArrayUnmap(coordSysArray);
-            if (count < coordSysBindings->size())
-                AiArrayResize(coordSysArray, count, 1);
-            if (AiNodeLookUpUserParameter(node, str::coord_sys) == nullptr)
-                AiNodeDeclare(node, str::coord_sys, str::constantArrayNode);
-            AiNodeSetArray(node, str::coord_sys, coordSysArray);
-        } else {
-            AiNodeResetParameter(node, str::coord_sys);
-        }
-    }
+    // Note: we deliberately do not export the bound coordinate-system cameras as a
+    // "coord_sys" user attribute on the shape. Arnold's OSL render services resolve
+    // named spaces globally by camera node name and never consult such an array, so
+    // it would have no consumer - while holding AtNode pointers that dangle if the
+    // coordinate system is removed without this rprim being re-synced.
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
     
