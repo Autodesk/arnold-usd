@@ -227,8 +227,11 @@ if (HOUDINI_LOCATION)
         if (${USD_VERSION} VERSION_LESS "0.25.05")
             list(APPEND ARNOLD_USD_LIBS_ ndr)
         endif()
+        # hdsi has shipped since USD 22.05 and plugins/usd_imaging links it
+        # unconditionally, so it must be aliased unconditionally too.
+        list(APPEND ARNOLD_USD_LIBS_ hdsi)
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ hdsi;ts)
+            list(APPEND ARNOLD_USD_LIBS_ ts)
         endif()
         if (APPLE)
            set(HOUDINI_LIBS_LOCATION ${HOUDINI_LOCATION}/Frameworks/Houdini.framework/Versions/Current/Libraries)
@@ -250,7 +253,13 @@ if (HOUDINI_LOCATION)
         if (APPLE)
             set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-framework Python")
         else()
-            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb)
+            # Houdini 22 no longer exports a tbbmalloc target from HoudiniConfig.cmake,
+            # although dsolib still ships libtbbmalloc. Link it only where the target
+            # exists
+            if (TARGET Houdini::Dep::tbbmalloc)
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbbmalloc)
+            endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
             endif()
@@ -259,9 +268,16 @@ if (HOUDINI_LOCATION)
         check_compositor()
 
         # usdGenSchema
+        # HINTS, not PATHS: CMake searches PATHS *after* the default system paths, so a
+        # usdGenSchema from any other Houdini on PATH wins over the one belonging to
+        # HOUDINI_LOCATION. That silently generates the schemas with the wrong USD
+        # version -- building against H21 with H22's generator produces
+        # customData/userDocBrief where H21 emits inline doc strings, a ~50KB
+        # difference in generatedSchema.usda.
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
-            PATHS "${HOUDINI_LOCATION}/bin" "${HOUDINI_LOCATION}/Frameworks/Houdini.framework//Versions/Current/Resources/bin"
+            HINTS "${HOUDINI_LOCATION}/bin" "${HOUDINI_LOCATION}/Frameworks/Houdini.framework//Versions/Current/Resources/bin"
+            NO_DEFAULT_PATH
             DOC "USD Gen Schema executable")
 
         check_usd_use_python() # should that be true by default on houdini ?
@@ -419,7 +435,8 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
+# hdsi is listed for the same reason as in the Houdini branch above
+set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdsi;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 if (${USD_VERSION} VERSION_LESS "0.25.05")
     list(APPEND USD_LIBS ndr)
 endif()

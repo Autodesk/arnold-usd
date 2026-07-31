@@ -16,14 +16,23 @@ add_library(${BUNDLE_NAME} SHARED) # or usdbundle_proc
 
 # should not start with "lib", so set the prefix to ""
 set_target_properties(${BUNDLE_NAME} PROPERTIES PREFIX "")
-target_sources(${BUNDLE_NAME} PRIVATE 
+target_sources(${BUNDLE_NAME} PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/../render_delegate/renderer_plugin.cpp
-	${CMAKE_CURRENT_LIST_DIR}/../procedural/main.cpp
-	${CMAKE_CURRENT_LIST_DIR}/../procedural/asset_utils.cpp
 )
-target_compile_definitions(${BUNDLE_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
-if (${BUILD_PROC_SCENE_FORMAT})
-	target_compile_definitions(${BUNDLE_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
+
+# The procedural half of the bundle. USD_PROCEDURAL_NAME, ARNOLD_HAS_SCENE_FORMAT_API and
+# ENABLE_HYDRA_IN_USD_PROCEDURAL below are read only by procedural/main.cpp, and
+# asset_utils is used only by main.cpp, so the whole group gates together and the
+# remaining plugins link unchanged.
+if (ENABLE_PROCEDURAL_IN_BUNDLE)
+	target_sources(${BUNDLE_NAME} PRIVATE
+		${CMAKE_CURRENT_LIST_DIR}/../procedural/main.cpp
+		${CMAKE_CURRENT_LIST_DIR}/../procedural/asset_utils.cpp
+	)
+	target_compile_definitions(${BUNDLE_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
+	if (${BUILD_PROC_SCENE_FORMAT})
+		target_compile_definitions(${BUNDLE_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
+	endif()
 endif()
 
 
@@ -32,7 +41,9 @@ target_include_directories(${BUNDLE_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/.
 target_include_directories(${BUNDLE_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/render_delegate")
 
 target_compile_definitions(${BUNDLE_NAME} PRIVATE "HDARNOLD_EXPORTS=1")
-target_compile_definitions(${BUNDLE_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
+if (ENABLE_PROCEDURAL_IN_BUNDLE)
+	target_compile_definitions(${BUNDLE_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
+endif()
 
 
 if (ENABLE_SCENE_INDEX_IN_BUNDLE)
