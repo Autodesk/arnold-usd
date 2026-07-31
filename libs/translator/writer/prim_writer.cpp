@@ -1258,6 +1258,20 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     AiArrayUnmapConst(array);
 }
 
+// A shape is rendered as a volume either when it's a native volume node, or when
+// it's a polymesh with a positive step_size (an implicit / mesh volume). This must
+// stay consistent with the reader's IsVolume() (see reader/read_geometry.cpp),
+// otherwise volume shaders get wired into the surface slot and are dropped at import
+// (falling back to _fallbackVolume).
+static bool IsVolumeShape(const AtNode* node)
+{
+    if (AiNodeIs(node, str::volume))
+        return true;
+    if (AiNodeIs(node, str::polymesh))
+        return AiNodeGetFlt(node, str::step_size) > AI_EPSILON;
+    return false;
+}
+
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer, bool isVolume = false)
 {
    
@@ -1316,6 +1330,27 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
         // Bind the material to this primitive
         UsdShadeMaterialBindingAPI::Apply(prim).Bind(mat);
+    }
+
+    // A shape rendered as a volume uses only the volume terminal. If the bound
+    // material already exposes a surface terminal (e.g. a UsdPreviewSurface that
+    // MaxUSD authors for interop), strip it: UsdImaging's Hydra-1 material
+    // adapter builds the surface terminal and then SKIPS the volume one
+    // ("surface XOR volume" in UsdImagingMaterialAdapter::GetMaterialResource),
+    // so the volume shape would get no shader and render black. Removing the
+    // surface terminal lets ComputeSurfaceSource return empty, so the volume
+    // terminal is built for all code paths. See MAXTOA-2033.
+    if (isVolume && mat) {
+        static const TfToken s_surfaceOutputs[] = {
+            TfToken("outputs:surface"),         // universal render context
+            TfToken("outputs:arnold:surface"),  // arnold render context
+            TfToken("outputs:mtlx:surface")     // materialx render context
+        };
+        UsdPrim matPrim = mat.GetPrim();
+        for (const TfToken& outputName : s_surfaceOutputs) {
+            if (matPrim.HasProperty(outputName))
+                matPrim.RemoveProperty(outputName);
+        }
     }
 
     // Now bind the eventual surface shader and displacement to the material.
@@ -1429,7 +1464,7 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
                 UsdPrim subsetPrim = subset.GetPrim();
 
                 // Process the material binding on the subset primitive
-                processMaterialBinding(shader, displacement, subsetPrim, writer);
+                processMaterialBinding(shader, displacement, subsetPrim, writer, IsVolumeShape(node));
             }
             AiArrayUnmap(shidxsArray);
             return;
@@ -1441,5 +1476,5 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     static const AtString polymesh_str("polymesh");
     AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, AtString("disp_map")) : nullptr;
 
-    processMaterialBinding(shader, displacement, prim, writer, AiNodeIs(node, str::volume));
+    processMaterialBinding(shader, displacement, prim, writer, IsVolumeShape(node));
 }
