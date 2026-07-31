@@ -198,6 +198,12 @@ driver_process_bucket
             colorData = bucketData;
         }
     }
+    // hydra_primId (ids) only tells us which prim a ray hit, for viewport picking - it isn't a
+    // reliable "was anything hit" signal: it never gets written for volume samples, and during
+    // progressive/IPR refinement it can briefly disagree with the accumulated beauty AOV before
+    // converging. Arnold's own RGBA alpha is a much more stable "was there coverage" signal, so
+    // background detection below is keyed off native alpha rather than ids.
+    const auto* colorIn = colorData != nullptr ? static_cast<const AtRGBA*>(colorData) : nullptr;
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
         driverData->depthBuffer->WriteBucket(
@@ -206,14 +212,14 @@ driver_process_bucket
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
         const auto* in = static_cast<const GfVec3f*>(positionData);
-        if (ids.empty()) {
+        if (colorIn == nullptr) {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                 const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
                 depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
             }
         } else {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                if (ids[i] == -1) {
+                if (colorIn[i].a <= 0.0f) {
                     depth[i] = 1.0f;
                 } else {
                     const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
@@ -225,20 +231,14 @@ driver_process_bucket
         driverData->depthBuffer->WriteBucket(
             bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
     }
-    if (colorData != nullptr && driverData->colorBuffer) {
-        if (ids.empty()) {
-            driverData->colorBuffer->WriteBucket(
-                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, colorData);
-        } else {
-            auto& color = driverData->colors[tid];
-            color.resize(pixelCount, AI_RGBA_ZERO);
-            const auto* in = static_cast<const AtRGBA*>(colorData);
-            for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                color[i] = ids[i] == -1 ? AI_RGBA_ZERO : in[i];
-            }
-            driverData->colorBuffer->WriteBucket(
-                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
+    if (colorIn != nullptr && driverData->colorBuffer) {
+        auto& color = driverData->colors[tid];
+        color.resize(pixelCount, AI_RGBA_ZERO);
+        for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+            color[i] = colorIn[i].a <= 0.0f ? AI_RGBA_ZERO : colorIn[i];
         }
+        driverData->colorBuffer->WriteBucket(
+            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
     }
 }
 

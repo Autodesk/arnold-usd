@@ -233,23 +233,7 @@ void HdArnoldVolume::Sync(
         const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         auto* volumeShader =
             material != nullptr ? material->GetCachedVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
-        // options.aov_shaders (how hydra_primId normally reaches the picking AOV for surfaces) is
-        // never evaluated during ray-marched volume integration, so volumes always show up as
-        // "no hit" for picking/background detection. Write hydra_primId directly from a wrapper
-        // in each volume's own shader chain instead, which does get evaluated per marched sample.
-        _ForEachVolume([&](HdArnoldShape* s) {
-            if (volumeShader) {
-                const auto writerName =
-                    AtString{TfStringPrintf("%s_primid_writer", AiNodeGetName(s->GetShape())).c_str()};
-                auto* writer = _renderDelegate->FindOrCreateArnoldNode(str::aov_write_int, writerName);
-                AiNodeSetStr(writer, str::aov_name, str::hydraPrimId);
-                AiNodeSetInt(writer, str::aov_input, GetPrimId() + 1);
-                AiNodeLink(volumeShader, str::passthrough, writer);
-                AiNodeSetPtr(s->GetShape(), str::shader, writer);
-            } else {
-                AiNodeResetParameter(s->GetShape(), str::shader);
-            }
-        });
+        _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }
 
     auto transformDirtied = false;

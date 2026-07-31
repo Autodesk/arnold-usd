@@ -436,7 +436,6 @@ ASTR(param_colorspace);
 ASTR(param_filename);
 ASTR(param_shader_file);
 ASTR(parent_instance);
-ASTR(passthrough);
 ASTR(path);
 ASTR(penumbra_angle);
 ASTR(periodic);
