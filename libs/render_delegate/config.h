@@ -47,7 +47,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#if ARNOLD_VERSION_NUM >= 70503 && defined(USD_HAS_HGI_GL)
+// The fast/accelerated viewport relies on Hgi/GL interop APIs that are not
+// available on macOS, so keep it disabled there regardless of USD/Arnold version.
+#if ARNOLD_VERSION_NUM >= 70503 && defined(USD_HAS_HGI_GL) && !defined(__APPLE__)
 #define SUPPORT_ACCELERATED_VIEWPORT 1
 #endif
 
@@ -203,7 +205,7 @@ struct HdArnoldConfig {
 
     /// Use HDARNOLD_accelerated_viewport to set the value.
     ///
-    bool accelerated_viewport;
+    bool accelerated_viewport = false;
 
 private:
     /// Constructor for reading the values from the environment variables.

@@ -398,7 +398,9 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
         {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
         {str::t_accelerated_viewport, {"Enable accelerated viewport", config.accelerated_viewport}},
+#endif
     };
     return data;
 }
