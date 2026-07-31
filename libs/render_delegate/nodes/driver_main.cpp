@@ -198,11 +198,6 @@ driver_process_bucket
             colorData = bucketData;
         }
     }
-    // hydra_primId (ids) only tells us which prim a ray hit, for viewport picking - it isn't a
-    // reliable "was anything hit" signal: it never gets written for volume samples, and during
-    // progressive/IPR refinement it can briefly disagree with the accumulated beauty AOV before
-    // converging. Arnold's own RGBA alpha is a much more stable "was there coverage" signal, so
-    // background detection below is keyed off native alpha rather than ids.
     const auto* colorIn = colorData != nullptr ? static_cast<const AtRGBA*>(colorData) : nullptr;
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
@@ -212,14 +207,19 @@ driver_process_bucket
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
         const auto* in = static_cast<const GfVec3f*>(positionData);
-        if (colorIn == nullptr) {
+        // No RGBA beauty or ID data, so fallback to the original behaviour (i.e. compute the depth from P without masking)
+        if (colorIn == nullptr && ids.empty()) {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                 const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
                 depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
             }
         } else {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                if (colorIn[i].a <= 0.0f) {
+                // Use the alpha of RGBA if it's available, if that isn't available use the ID
+                // If neither is available, just set depth to 1.0f
+                const bool hasCoverage =
+                    colorIn != nullptr ? colorIn[i].a > 0.0f : ids[i] != -1;
+                if (!hasCoverage) {
                     depth[i] = 1.0f;
                 } else {
                     const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
