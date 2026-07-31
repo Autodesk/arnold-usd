@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## [7.5.4.0] (Unreleased)
+
+- [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
 
 ## [7.5.3.1] (Unreleased)
 
@@ -9,7 +12,7 @@
 - [usd#2699](https://github.com/Autodesk/arnold-usd/issues/2699) - Fix primvars:crypto_asset being ignored on instanceable references
 
 
-## [7.5.3.0] (Unreleased)
+## [7.5.3.0] 2026-07-22
 
 ### Features
 
