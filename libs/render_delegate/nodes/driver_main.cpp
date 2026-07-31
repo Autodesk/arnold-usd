@@ -198,6 +198,7 @@ driver_process_bucket
             colorData = bucketData;
         }
     }
+    const auto* colorIn = colorData != nullptr ? static_cast<const AtRGBA*>(colorData) : nullptr;
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
         driverData->depthBuffer->WriteBucket(
@@ -206,14 +207,19 @@ driver_process_bucket
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
         const auto* in = static_cast<const GfVec3f*>(positionData);
-        if (ids.empty()) {
+        // No RGBA beauty or ID data, so fallback to the original behaviour (i.e. compute the depth from P without masking)
+        if (colorIn == nullptr && ids.empty()) {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                 const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
                 depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
             }
         } else {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                if (ids[i] == -1) {
+                // Use the alpha of RGBA if it's available, if that isn't available use the ID
+                // If neither is available, just set depth to 1.0f
+                const bool hasCoverage =
+                    colorIn != nullptr ? colorIn[i].a > 0.0f : ids[i] != -1;
+                if (!hasCoverage) {
                     depth[i] = 1.0f;
                 } else {
                     const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
@@ -225,23 +231,14 @@ driver_process_bucket
         driverData->depthBuffer->WriteBucket(
             bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
     }
-    if (colorData != nullptr && driverData->colorBuffer) {
-        if (ids.empty()) {
-            driverData->colorBuffer->WriteBucket(
-                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, colorData);
-        } else {
-            auto& color = driverData->colors[tid];
-            color.resize(pixelCount, AI_RGBA_ZERO);
-            const auto* in = static_cast<const AtRGBA*>(colorData);
-            for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                color[i] = in[i];
-                if (ids[i] == -1) {
-                    color[i].a = 0.0f;
-                }
-            }
-            driverData->colorBuffer->WriteBucket(
-                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
+    if (colorIn != nullptr && driverData->colorBuffer) {
+        auto& color = driverData->colors[tid];
+        color.resize(pixelCount, AI_RGBA_ZERO);
+        for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+            color[i] = colorIn[i].a <= 0.0f ? AI_RGBA_ZERO : colorIn[i];
         }
+        driverData->colorBuffer->WriteBucket(
+            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
     }
 }
 
