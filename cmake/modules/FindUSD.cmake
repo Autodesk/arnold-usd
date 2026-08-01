@@ -224,9 +224,12 @@ if (HOUDINI_LOCATION)
 
         # List of usd libraries we need for this project
         set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
-        if (${USD_VERSION} VERSION_LESS "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ ndr)
-        endif()
+        # Some Houdini builds (e.g. 21.0, USD 0.25.5) still ship ndr as a distinct
+        # library from sdr even though upstream USD >= 0.25.05 folded NdrProperty's
+        # definition into sdr's headers -- SdrShaderProperty still needs NdrProperty's
+        # vtable from the separate ndr import lib there. Alias unconditionally, like
+        # hdsi below: harmless to list on a Houdini install where ndr no longer exists.
+        list(APPEND ARNOLD_USD_LIBS_ ndr)
         # hdsi has shipped since USD 22.05 and plugins/usd_imaging links it
         # unconditionally, so it must be aliased unconditionally too.
         list(APPEND ARNOLD_USD_LIBS_ hdsi)
@@ -262,6 +265,10 @@ if (HOUDINI_LOCATION)
             endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
+            elseif (TARGET Houdini::Dep::pxr_python)
+                # USD 0.25.05 renamed its internal boost fork from hboost to pxr_boost;
+                # Houdini ships the renamed one as libpxr_python instead of hboost_python.
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::pxr_python)
             endif()
         endif()
         
