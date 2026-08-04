@@ -6,6 +6,7 @@
 
 ### Bug fixes
 
+- [usd#2715](https://github.com/Autodesk/arnold-usd/issues/2715) - Honor PointInstancer-level visibility in the Hydra render delegate
 - [usd#2699](https://github.com/Autodesk/arnold-usd/issues/2699) - Fix primvars:crypto_asset being ignored on instanceable references
 
 
@@ -25,7 +26,6 @@
 
 ### Bug Fixes
 
-- [usd#2715](https://github.com/Autodesk/arnold-usd/issues/2715) - Honor PointInstancer-level visibility in the Hydra render delegate
 - [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
 - [usd#255](https://github.com/Autodesk/arnold-usd/issues/255) - Do not reset lights during IPR iterations
 - [usd#2677](https://github.com/Autodesk/arnold-usd/issues/2677) - Fix crash reading RenderSettings with empty arnold:filter on a RenderVar
