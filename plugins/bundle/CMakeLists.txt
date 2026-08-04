@@ -54,7 +54,12 @@ if (MTOA_BUILD)
 	target_compile_definitions(${BUNDLE_NAME} PUBLIC MTOA_BUILD=1)
 endif()
 
-target_link_libraries(${BUNDLE_NAME} PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects sdr hd hf trace ndr cameraUtil pxOsd)
+target_link_libraries(${BUNDLE_NAME} PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects sdr hd hf trace cameraUtil pxOsd)
+# Whether ndr still exists is per-distribution, not per-USD-version: H21 ships it on USD 0.25.5,
+# MayaUSD does not (see FindUSD.cmake). Unguarded, CMake would pass the bare name to the linker.
+if (TARGET ndr)
+	target_link_libraries(${BUNDLE_NAME} PRIVATE ndr)
+endif()
 target_link_libraries(${BUNDLE_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
   if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
       target_link_libraries(${BUNDLE_NAME} PRIVATE hdsi;ts)                                                                                                                     
