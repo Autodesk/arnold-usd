@@ -117,6 +117,16 @@ protected:
     int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
 
 private:
+    /// Queries the Hydra visibility of the instancer prim.
+    ///
+    /// Mirrors HdStInstancer / hdPrman: when the point instancer prim itself is hidden
+    /// (e.g. USD visibility=invisible flattened onto the instancer), instance creation must
+    /// be gated off. This is queried live rather than cached because the prototype rprim's
+    /// _SyncInstances (which drives instance creation) may run before this instancer's Sync.
+    ///
+    /// @return true if the instancer prim is visible.
+    bool _IsInstancerVisible() const { return GetDelegate()->GetVisible(GetId()); }
+
     void ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray);
     // Internal helper: returns combined matrices in double precision for recursive combination.
     int ComputeSampleMatrixArrayRecursiveInternal(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
