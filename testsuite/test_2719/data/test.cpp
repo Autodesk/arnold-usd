@@ -67,7 +67,9 @@ bool WaitForStatus(HdArnoldRenderParam* renderParam, AtRenderSession* session, A
     return true;
 }
 
-// Drives UpdateRender() until it reports Converged/Aborted or the timeout elapses.
+// Drives UpdateRender() until it reports Converged/Aborted or the timeout elapses. Sleeps between ticks like
+// WaitForStatus() does: a tight spin loop here would steal a core from the render itself, which on a low-core
+// machine is the difference between converging inside the timeout and not.
 HdArnoldRenderParam::Status RunToCompletion(HdArnoldRenderParam* renderParam, int timeoutMs)
 {
     const auto start = std::chrono::steady_clock::now();
@@ -79,15 +81,50 @@ HdArnoldRenderParam::Status RunToCompletion(HdArnoldRenderParam* renderParam, in
         if (elapsed.count() > timeoutMs) {
             break;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return status;
+}
+
+// IsPaused()/IsStopped() are only part of HdRenderDelegate from USD 22.03 on; query the override where it exists
+// (that is the API hosts actually call) and fall back to the render param that backs it otherwise.
+bool IsPaused(const HdArnoldRenderDelegate& delegate, HdArnoldRenderParam* renderParam)
+{
+#if PXR_VERSION >= 2203
+    return delegate.IsPaused();
+#else
+    return renderParam->IsPaused();
+#endif
+}
+
+bool IsStopped(const HdArnoldRenderDelegate& delegate, HdArnoldRenderParam* renderParam)
+{
+#if PXR_VERSION >= 2203
+    return delegate.IsStopped();
+#else
+    return renderParam->IsStopped();
+#endif
+}
+
+// True when Arnold reports the render threads as parked at the AiRenderPause() gate. Unlike IsPaused() above this
+// is Arnold's own view of it, so it catches a pause that our bookkeeping claims but never actually established
+// (or vice versa). Before 7.5.4 there is no gate and Pause() interrupts the render instead, so the equivalent
+// observable is the render status.
+bool ArnoldIsPaused(AtRenderSession* session)
+{
+#if ARNOLD_VERSION_NUM >= 70504
+    return AiRenderIsPaused(session);
+#else
+    return AiRenderGetStatus(session) == AI_RENDER_STATUS_PAUSED;
+#endif
 }
 
 // Builds a small, deliberately expensive scene directly with AiNode() calls (see the
 // top-of-file comment for why this doesn't load a .usda file instead). The high
 // AA_samples/resolution keep the render busy long enough for the Pause()/Interrupt()
-// sequence in main() to reliably land while AiRenderGetStatus() still reports
-// RENDERING. Do not lower these to "optimize" the test -- that would make it flaky.
+// sequence in main() to reliably land while the render is still in flight. Do not lower
+// these to "optimize" the test -- that would make it flaky. main() drops AA_samples once
+// it is done with the pause checks, so the final convergence check stays quick.
 void BuildScene(AtUniverse* universe)
 {
     AtNode* options = AiUniverseGetOptions(universe);
@@ -140,6 +177,16 @@ int main(int, char**)
         auto* renderParam = static_cast<HdArnoldRenderParam*>(delegate.GetRenderParam());
         AtRenderSession* session = delegate.GetRenderSession();
 
+        // Pausing is only advertised where Arnold provides the resumable AiRenderPause()/AiRenderResume() API.
+#if ARNOLD_VERSION_NUM >= 70504
+        Check(delegate.IsPauseSupported(), "IsPauseSupported() should be true with Arnold 7.5.4+");
+#else
+        Check(!delegate.IsPauseSupported(), "IsPauseSupported() should be false before Arnold 7.5.4");
+#endif
+        Check(!IsPaused(delegate, renderParam), "IsPaused() should be false on a fresh delegate");
+        Check(!IsStopped(delegate, renderParam) || AiRenderGetStatus(session) == AI_RENDER_STATUS_NOT_STARTED,
+            "IsStopped() should only report a not-yet-started render on a fresh delegate");
+
         // Kick off the render (NOT_STARTED -> RENDERING) and wait for it to actually
         // be in flight: Pause()/Interrupt() below need to observe a live
         // AI_RENDER_STATUS_RENDERING session for this test to be meaningful. If the
@@ -151,40 +198,78 @@ int main(int, char**)
                 "for this test to be meaningful")) {
 
             // --- A scene edit while paused must cancel the pause, not leave it stuck ---
-            // Arnold's AiRenderPause() gate (Arnold 7.5.4+) has no mechanism to discard
+            // Arnold's AiRenderPause() gate (Arnold 7.5.4+) has no mechanism to preserve
             // accumulated samples across a scene edit, so any edit forces a real
             // interrupt+restart, which must be reflected in IsPaused() rather than left
             // claiming "paused" while the render is actually active again.
             delegate.Pause();
-            Check(delegate.IsPaused(), "IsPaused() should be true right after Pause()");
+            Check(IsPaused(delegate, renderParam), "IsPaused() should be true right after Pause()");
+            // Assert against Arnold's own view too, not just our bookkeeping: a gated render keeps reporting
+            // AI_RENDER_STATUS_RENDERING, so a status check alone cannot tell a paused render from a running one
+            // and would pass whether or not Pause() actually did anything.
+            Check(ArnoldIsPaused(session), "Arnold does not report the render as paused after Pause()");
 
             renderParam->Interrupt(); // stand-in for a camera/mesh/light Sync() edit
-            Check(!delegate.IsPaused(),
+            Check(!IsPaused(delegate, renderParam),
                 "IsPaused() stayed true after a scene-edit Interrupt() cancelled the pause (#2719)");
+            Check(!ArnoldIsPaused(session), "The interrupt did not unpark the render gated by AiRenderPause()");
 
-            Check(WaitForStatus(renderParam, session, AI_RENDER_STATUS_RENDERING, 5000),
+            Check(WaitForStatus(renderParam, session, AI_RENDER_STATUS_RENDERING, 5000) && !ArnoldIsPaused(session),
                 "Render did not resume after the edit-cancelled pause");
 
             // --- Resume() must clear the flag when there was no edit in between ---
             delegate.Pause();
-            Check(delegate.IsPaused(), "IsPaused() should be true right after a second Pause()");
+            Check(IsPaused(delegate, renderParam), "IsPaused() should be true right after a second Pause()");
             delegate.Resume();
-            Check(!delegate.IsPaused(), "IsPaused() should be false right after Resume()");
+            Check(!IsPaused(delegate, renderParam), "IsPaused() should be false right after Resume()");
+            // Pumped rather than checked immediately: on Arnold 7.5.4+ Resume() lifts the gate itself, but on the
+            // interrupt-based fallback path the AiRenderResume() call lives in UpdateRender()'s PAUSED branch.
+            Check(WaitForStatus(renderParam, session, AI_RENDER_STATUS_RENDERING, 5000) && !ArnoldIsPaused(session),
+                "Render did not resume after Resume()");
 
-            // --- Stop() must clear the flag too, matching Restart()'s existing contract ---
+            // --- Stop() must clear the pause flag, and must actually keep the render stopped ---
             delegate.Pause();
-            Check(delegate.IsPaused(), "IsPaused() should be true right after a third Pause()");
+            Check(IsPaused(delegate, renderParam), "IsPaused() should be true right after a third Pause()");
 #if PXR_VERSION >= 2203
             delegate.Stop(true);
 #else
             delegate.Stop();
 #endif
-            Check(!delegate.IsPaused(), "IsPaused() stayed true after Stop() (#2719)");
+            Check(!IsPaused(delegate, renderParam), "IsPaused() stayed true after Stop() (#2719)");
+            Check(IsStopped(delegate, renderParam), "IsStopped() should be true right after Stop()");
+            // The regression this guards: Stop() only interrupts the render, which leaves the session at
+            // AI_RENDER_STATUS_PAUSED -- and UpdateRender()'s PAUSED branch resumes anything it finds sitting
+            // there. Without a latched stop the render therefore restarts by itself on the very next tick, with no
+            // host involvement at all, while IsStopSupported() still claims stopping works.
+            bool stayedStopped = true;
+            for (int i = 0; i < 20 && stayedStopped; ++i) {
+                renderParam->UpdateRender();
+                stayedStopped = IsStopped(delegate, renderParam) &&
+                    AiRenderGetStatus(session) != AI_RENDER_STATUS_RENDERING &&
+                    AiRenderGetStatus(session) != AI_RENDER_STATUS_RESTARTING;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            Check(stayedStopped, "Render restarted on its own after Stop(), without a Restart() (#2719)");
+
+            // A scene edit must not resurrect a stopped render either.
+            renderParam->Interrupt();
+            for (int i = 0; i < 20 && stayedStopped; ++i) {
+                renderParam->UpdateRender();
+                stayedStopped = IsStopped(delegate, renderParam) &&
+                    AiRenderGetStatus(session) != AI_RENDER_STATUS_RENDERING &&
+                    AiRenderGetStatus(session) != AI_RENDER_STATUS_RESTARTING;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            Check(stayedStopped, "A scene edit restarted a stopped render, without a Restart() (#2719)");
         }
 
-        // Let the render actually finish so the delegate tears down cleanly.
+        // Let the render actually finish so the delegate tears down cleanly, and check Restart() lifts the stop.
+        // The heavy AA_samples above exist purely to keep the render in flight long enough for the checks above to
+        // land; converging at that quality takes ~8s on a 10-core M1 Max and Restart() starts over from scratch, so
+        // trim it back rather than making the timeout below absorb a loaded CI machine's slowdown.
+        AiNodeSetInt(AiUniverseGetOptions(delegate.GetUniverse()), AtString("AA_samples"), 3);
         delegate.Restart();
-        const auto finalStatus = RunToCompletion(renderParam, 30000);
+        const auto finalStatus = RunToCompletion(renderParam, 60000);
         Check(finalStatus == HdArnoldRenderParam::Status::Converged, "Render did not converge by the end of the test");
     }
 

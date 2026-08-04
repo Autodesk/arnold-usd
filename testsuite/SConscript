@@ -46,10 +46,21 @@ else:
 # per-test env override hook in Test.prepare(), so this is added to every test.cpp
 # build rather than just the one that needs it -- harmless for tests that don't
 # reference any of these symbols, since unused static library members simply aren't
-# pulled in at link time. Only done when the render delegate is actually being
-# built: skip it entirely for BUILD_RENDER_DELEGATE=0 configurations, where such a
-# test cannot link (and isn't expected to run).
-if env.get('BUILD_RENDER_DELEGATE'):
+# pulled in at link time.
+# This mirrors the condition SConstruct uses to decide whether libs/render_delegate
+# is built at all -- not just BUILD_RENDER_DELEGATE: the cmake `testsuite` target
+# runs abuild with BUILD_RENDER_DELEGATE=0 (cmake has already built the delegate
+# itself), so keying off that alone would silently produce an unlinkable test there.
+# Tests needing the library are skipped when it isn't available, see below.
+render_delegate_lib_built = bool(
+   env.get('BUILD_RENDER_DELEGATE') or
+   (env.get('BUILD_PROCEDURAL') and env.get('ENABLE_HYDRA_IN_USD_PROCEDURAL')))
+
+# Tests whose test.cpp links libs/render_delegate, and so cannot even be compiled in a
+# configuration that doesn't build it.
+render_delegate_tests = ['test_2719']
+
+if render_delegate_lib_built:
    def _add_render_delegate_test_deps(e):
       e.Append(CPPPATH = [
          os.path.join(root_path, 'libs', 'render_delegate'),
@@ -149,6 +160,14 @@ args_prepare = dict(
 
 if len(testsuite_targets) > 0:
    testsuite = Testsuite.load(**args_load)
+   if not render_delegate_lib_built:
+      # Their test.cpp links libs/render_delegate, which this configuration doesn't build, so they can't be
+      # compiled at all here. Ignore them explicitly instead of letting the link fail the whole run.
+      skipped = set(render_delegate_tests) & testsuite.tests_found
+      if skipped:
+         testsuite.skipped_tests['ignore'] |= skipped
+         print('Ignoring {} test(s) needing the render delegate library, which this '
+               'configuration does not build: {}'.format(len(skipped), ' '.join(sorted(skipped))))
    print('Found {} tests in {}'.format(len(testsuite.tests_found), testsuite.source))
    print('Filtering tests with patterns: {} ...'.format(' '.join(testsuite_targets)))
    TESTSUITE_TARGET = testsuite.prepare(**args_prepare)

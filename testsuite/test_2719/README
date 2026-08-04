@@ -1,4 +1,4 @@
-HdArnoldRenderDelegate's paused state must survive/clear correctly around scene edits, Resume() and Stop()
+HdArnoldRenderDelegate's paused/stopped state must survive/clear correctly around scene edits, Resume() and Stop()
 
 Pause() (the resumable AiRenderPause() gate added for #2719) left HdArnoldRenderParam's
 internal _paused flag stuck reporting "paused" once any scene edit (a plain Interrupt(),
@@ -9,19 +9,33 @@ nothing cleared the bookkeeping to match. HdArnoldRenderDelegate::IsPaused() (ne
 overridden here, since Houdini and other Hydra hosts query it) would therefore keep
 reporting a stale "paused" state.
 
+The mirror image of that is also covered here: Stop() only interrupts the render, which
+leaves the session at AI_RENDER_STATUS_PAUSED, and UpdateRender() resumes anything it
+finds sitting there -- so without a latched stop the render restarted by itself on the
+next tick, with no host involvement, while IsStopSupported() still claimed stopping
+worked. The test ticks UpdateRender() after Stop() (and after a scene edit) to check the
+render actually stays stopped until Restart().
+
 This test constructs HdArnoldRenderDelegate directly (rather than through a UsdStage +
-Hydra render index) and drives Pause()/Interrupt()/Resume()/Stop()/IsPaused() against a
-live render, since HdRenderDelegate::IsPaused() isn't reachable from a normal
-scene.usda-driven test (not exposed through UsdImagingGLEngine or Python bindings). The
+Hydra render index) and drives Pause()/Interrupt()/Resume()/Stop()/IsPaused()/IsStopped()
+against a live render, since HdRenderDelegate::IsPaused() isn't reachable from a normal
+scene.usda-driven test (not exposed through UsdImagingGLEngine or Python bindings). Where
+the render is expected to be paused the test asserts against Arnold's own AiRenderIsPaused()
+as well as our bookkeeping: a gated render keeps reporting AI_RENDER_STATUS_RENDERING, so
+a render status check alone would pass whether or not the pause ever took effect. The
 scene itself is built with plain AiNode() calls rather than AiSceneLoad() of a .usda
 file: this test statically links USD directly into the executable (via render_delegate),
 and AiBegin() auto-loads every plugin under ARNOLD_PLUGIN_PATH, including usd_proc.dylib
 -- which embeds its own private static copy of USD and crashes the process if loaded
 alongside it. ARNOLD_PLUGIN_PATH is cleared at the top of main() so nothing gets
 auto-loaded; the scene's AA_samples/resolution are deliberately high so the render stays
-busy long enough for the test to reliably observe it mid-flight.
+busy long enough for the test to reliably observe it mid-flight, and are trimmed back
+before the final convergence check (converging at that quality takes ~8s on a 10-core M1
+Max, and Restart() starts over from scratch).
 
-Requires BUILD_RENDER_DELEGATE=1 (the default). USD_BUILD_MODE=static configurations
+Needs libs/render_delegate, so it is skipped in configurations that don't build it (see
+testsuite/SConscript) -- including the cmake `testsuite` target, which runs abuild with
+BUILD_RENDER_DELEGATE=0. USD_BUILD_MODE=static configurations
 also required a fix to tools/utils/dependencies.py:render_delegate(), which had no
 static-build case (unlike dependencies.py:translator()) and so could never link against
 a statically-built USD -- likely a pre-existing, previously-unexercised gap rather than

@@ -1953,7 +1953,9 @@ bool HdArnoldRenderDelegate::IsPauseSupported() const
 #endif
 }
 
+#if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsPaused() const { return _renderParam->IsPaused(); }
+#endif
 
 bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
 
@@ -1963,9 +1965,9 @@ bool HdArnoldRenderDelegate::Stop(bool blocking)
 bool HdArnoldRenderDelegate::Stop()
 #endif
 {
-    // A hard stop: fully interrupt the render rather than the resumable pause
-    // gate used by Pause() below.
-    _renderParam->Interrupt(false, false);
+    // A hard stop: fully interrupt the render, and keep it stopped until Restart(),
+    // rather than parking it at the resumable pause gate used by Pause() below.
+    _renderParam->Stop();
     return true;
 }
 
@@ -1989,7 +1991,13 @@ bool HdArnoldRenderDelegate::Restart()
 
 #if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsStopped() const
-{   
+{
+    // A render parked at the AiRenderPause() gate keeps reporting AI_RENDER_STATUS_RENDERING, so the Arnold status
+    // alone would miss it. That is intentional here -- paused is not stopped, and IsPaused() reports that instead --
+    // but a Stop() has to be reported even before the next UpdateRender() tick observes the interrupted status.
+    if (_renderParam->IsStopped()) {
+        return true;
+    }
     int status = AiRenderGetStatus(GetRenderSession());
     return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }

@@ -375,12 +375,15 @@ public:
     HDARNOLD_API
     bool IsPauseSupported() const override;
 
+    // HdRenderDelegate::IsPaused()/IsStopped() were only added in USD 22.03.
+#if PXR_VERSION >= 2203
     /// Query the delegate's pause state.
     ///
     /// @return True if a Pause() call is currently in effect (i.e. no Resume(),
     ///  Restart(), or scene edit has cancelled it since).
     HDARNOLD_API
     bool IsPaused() const override;
+#endif
 
     /// Advertise whether this delegate supports stopping and restarting of
     /// background render threads. Default implementation returns false.
