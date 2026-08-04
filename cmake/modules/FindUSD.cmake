@@ -265,6 +265,15 @@ if (HOUDINI_LOCATION)
             endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
+                if (WIN32)
+                    # Houdini's hboost headers still use Boost's auto_link.hpp on MSVC,
+                    # which embeds a #pragma comment(lib, "hboost_python<ver>-vc143-mt-x64-1_82.lib")
+                    # guess (toolset + boost version suffix) in every translation unit that
+                    # includes them. Houdini ships the plain "hboost_python<ver>-mt-x64.lib"
+                    # name instead, so the implicit link fails even though the explicit
+                    # Houdini::Dep::hboost_python target above points at the right file.
+                    add_compile_definitions(BOOST_ALL_NO_LIB=1 HBOOST_ALL_NO_LIB=1)
+                endif()
             elseif (TARGET Houdini::Dep::pxr_python)
                 # USD 0.25.05 renamed its internal boost fork from hboost to pxr_boost;
                 # Houdini ships the renamed one as libpxr_python instead of hboost_python.
