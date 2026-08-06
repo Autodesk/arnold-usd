@@ -468,7 +468,7 @@ protected:
     int _coordSysVariantCount = 0;
     /// Serialises coordinate-system resolution: rprims are synced in parallel and
     /// share this node graph, so the base claim / variant build / remap must be
-    /// mutually exclusive (see _ResolveCoordSysCache, _RebuildCoordSysRemaps).
+    /// mutually exclusive (see _ResolveCoordSysTerminal, _RebuildCoordSysRemaps).
     std::mutex _coordSysMutex;
 };
 

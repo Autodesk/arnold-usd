@@ -139,10 +139,9 @@ AtNode* HdArnoldCoordSys::_EnsureNode(
         // The projection type changed (e.g. the first Sync defaulted to
         // perspective and the bound camera has now resolved to orthographic).
         // Recreate the node in place, following HdArnoldCamera::Sync: free the
-        // name so it can be reused, redirect any references (the mesh coord_sys
-        // user-data array holds the node pointer) with AiNodeReplace, then
-        // destroy the old node. Unregister first so we do not leave a dangling
-        // entry in the per-render aspect-correction map.
+        // name so it can be reused, redirect any references still held to it with
+        // AiNodeReplace, then destroy the old node. Unregister first so we do not
+        // leave a dangling entry in the per-render aspect-correction map.
         _renderDelegate->UnregisterCoordSysCamera(existing);
         AiNodeSetStr(existing, str::name, AtString());
     }
@@ -289,6 +288,10 @@ void HdArnoldCoordSys::_MirrorCamera(
         ratio = (hAperture > AI_EPSILON) ? (vAperture / hAperture) : 1.0f;
     } else {
         // Unknown projection: matrix mirrored above, but we cannot mirror a frustum.
+        // Drop any registration left by an earlier Sync, otherwise the per-render
+        // aspect correction keeps rewriting this node's screen window from a stale
+        // aperture ratio (see UpdateCoordSysCameraProjections).
+        _renderDelegate->UnregisterCoordSysCamera(dst);
         return;
     }
     AiNodeSetVec2(dst, str::screen_window_min, windowMin.x, yCenter - ratio);
@@ -324,6 +327,11 @@ HdArnoldNodeGraph::CoordSysBinding HdArnoldGetCoordSysBinding(HdSceneDelegate* s
 
 void HdArnoldCoordSys::_MirrorTransform(AtNode* dst, HdSceneDelegate* sceneDelegate, bool flipV)
 {
+    // No bound camera resolves (any more), so this node carries no mirrored frustum.
+    // Drop any registration left by an earlier Sync that did resolve one: the
+    // per-render aspect correction would otherwise keep rewriting the screen window
+    // from a stale aperture ratio (see UpdateCoordSysCameraProjections).
+    _renderDelegate->UnregisterCoordSysCamera(dst);
     HdArnoldSetTransform(dst, sceneDelegate, GetId());
     // Arnold does not apply the parent procedural matrix to cameras, so we fold it
     // in here, matching HdArnoldCamera.

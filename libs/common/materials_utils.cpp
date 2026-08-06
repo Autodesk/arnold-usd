@@ -739,7 +739,11 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
             // ...) exposes a "space" string input that may reference a USD
             // coordinate system. Rewrite it to Arnold's OSL naming so the
             // coord-sys camera node is resolved (see _RewriteCoordSysSpaceName).
-            if (paramType == AI_TYPE_STRING && attrName == str::t_space) {
+            // Only when the value really holds a string: VtValueGetString yields an
+            // empty string for anything else, which would clobber the OSL node's
+            // default space. Any other value type falls through to ReadAttribute.
+            if (paramType == AI_TYPE_STRING && attrName == str::t_space &&
+                (attr.value.IsHolding<std::string>() || attr.value.IsHolding<TfToken>())) {
                 const std::string rewritten = _RewriteCoordSysSpaceName(VtValueGetString(attr.value));
                 AiNodeSetStr(node, paramName, AtString(rewritten.c_str()));
                 continue;
