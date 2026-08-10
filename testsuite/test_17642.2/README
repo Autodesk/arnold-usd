@@ -1,0 +1,10 @@
+When a shape is rendered as a volume (a native volume node, or a polymesh with
+step_size > 0), the reader must resolve the material's volume terminal with
+priority over the surface terminal. Otherwise a universal / preview surface
+terminal (e.g. a UsdPreviewSurface authored by MaxUSD for interop) shadows the
+real volume shader via ComputeSurfaceSource's universal-scope fallback, and the
+volume is bound a surface shader and renders black.
+
+Companion (reader side) to test_17642.1. See MAXTOA-2033.
+
+author: zap.andersson and Claude
