@@ -1,0 +1,16 @@
+Hydra render delegate must honor PointInstancer-level visibility
+
+Hiding a PointInstancer prim (token visibility = "invisible") is honored in VP2 and
+HdStorm but was ignored by the Arnold Hydra render delegate, which kept rendering the
+instances. HdArnoldInstancer now gates instance creation on the instancer's Hydra
+visibility (sceneDelegate->GetVisible), matching hdSt / hdPrman.
+
+The scene has two PointInstancers: InvisibleInstancer (hidden, on the right) must not
+render any instances, while VisibleInstancer (on the left) must still render all of
+its instances - guarding against the fix over-hiding visible instancers.
+
+Fixes #2715
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'scene.usda', 'diff_hardfail': 0.04}
