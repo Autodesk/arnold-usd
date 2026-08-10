@@ -204,6 +204,10 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     const SdfPath& instancerId = GetId();
     if (!prototypeNode)
         return false;
+    // An invisible instancer produces no instances; returning false makes the caller
+    // (HdArnoldShape::_SyncInstances) hide the prototype source mesh. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible())
+        return false;
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
 
     // If the sampling interval has changed we need to resample the translate, orientations and scales
@@ -290,6 +294,15 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
 void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 {
     const SdfPath& instancerId = GetId();
+
+    // Hydra visibility=invisible on the instancer prim does not author any arnold:visibility
+    // primvar, so it is handled explicitly here. This also covers nested chains where a node was
+    // populated before the hide. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible()) {
+        AiNodeSetByte(node, str::visibility, 0);
+        return;
+    }
+
     VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
     if (!matteVal.IsEmpty())
         AiNodeSetBool(node, str::matte, VtValueGetBool(matteVal));
@@ -555,6 +568,13 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
     const SdfPath& instancerId = GetId();
+
+    // Match HdStInstancer / hdPrman: an invisible instancer produces no instances. The prototype
+    // source mesh is left hidden by the caller (HdArnoldShape::_SyncInstances) when the instancers
+    // vector stays empty. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible()) {
+        return;
+    }
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {

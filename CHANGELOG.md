@@ -18,6 +18,7 @@
 
 ### Bug fixes
 
+- [usd#2715](https://github.com/Autodesk/arnold-usd/issues/2715) - Honor PointInstancer-level visibility in the Hydra render delegate
 - [usd#2699](https://github.com/Autodesk/arnold-usd/issues/2699) - Fix primvars:crypto_asset being ignored on instanceable references
 
 
