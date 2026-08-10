@@ -562,6 +562,14 @@ void HdArnoldNodeGraph::_RebuildCoordSysRemaps(const HdRenderIndex& renderIndex)
         entry.second.cache = _BuildCoordSysVariant(entry.second.suffix, &entry.second.nodes);
         RemapCoordSysSpaces(entry.second.remap);
     }
+    // Publish whether the rprim phase has anything to serialise. Deliberately not
+    // just _coordSysNamesInGraph: a material whose "space" inputs stop naming a
+    // coordinate system still has claims to release and variants to retire, and
+    // those releases happen on the locked path (_AcquireCoordSysHold).
+    _coordSysActive.store(
+        !_coordSysNamesInGraph.empty() || !_baseCoordSysSignature.empty() || !_coordSysHolds.empty() ||
+            !_coordSysVariants.empty() || !_coordSysRetired.empty(),
+        std::memory_order_release);
 }
 
 HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(
@@ -606,10 +614,31 @@ HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(
 
 AtNode* HdArnoldNodeGraph::_ResolveCoordSysTerminal(const CoordSysBinding& binding, const TfToken& terminalName)
 {
+    // Fast path for a graph with no coordinate-system state: there is no claim to
+    // move, no variant to pick and nothing to remap, so the whole critical section
+    // below would be a no-op ending in this same lookup. Since every rprim sharing
+    // this material would still queue on the mutex to do nothing, take it out of the
+    // parallel per-rprim material assignment entirely - that path was lock-free
+    // before coordinate systems and stays lock-free for materials that use none.
+    //
+    // _coordSysActive is published under _coordSysMutex during the material sync
+    // phase (_RebuildCoordSysRemaps), which Hydra runs to completion before the
+    // parallel rprim sync, and nothing in the rprim phase can turn it on (see its
+    // declaration), so reading it here without the lock is safe.
+    if (!_coordSysActive.load(std::memory_order_acquire))
+        return _nodeGraphCache.GetTerminal(terminalName);
+
+    // Built before taking the lock: it reads only the caller's own remap and
+    // _coordSysNamesInGraph, which is fixed for the whole rprim sync phase (same
+    // reasoning as the guard above). It sorts and concatenates a string per call, so
+    // leaving it inside the critical section made every other rprim wait on this
+    // material's string building - measured at roughly half the time spent under the
+    // lock.
+    const std::string signature = _CoordSysSignature(binding.remap);
+
     // Rprims are synced in parallel and share this node graph; serialise the claim
     // bookkeeping, the base claim, the variant build and the remap.
     std::lock_guard<std::mutex> guard(_coordSysMutex);
-    const std::string signature = _CoordSysSignature(binding.remap);
     // Move this rprim's claim first: releasing what it held before can free the base
     // slot or retire a variant, which the resolution below then reuses or skips.
     _AcquireCoordSysHold(binding.owner, signature);

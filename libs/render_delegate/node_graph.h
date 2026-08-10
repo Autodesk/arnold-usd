@@ -44,6 +44,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
+#include <atomic>
 #include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -470,6 +471,16 @@ protected:
     /// share this node graph, so the base claim / variant build / remap must be
     /// mutually exclusive (see _ResolveCoordSysTerminal, _RebuildCoordSysRemaps).
     std::mutex _coordSysMutex;
+    /// Whether this graph has any coordinate-system state at all: "space" inputs
+    /// naming a coordinate system, or claims/variants left over from bindings that
+    /// had them. Lets _ResolveCoordSysTerminal skip _coordSysMutex entirely for the
+    /// overwhelmingly common no-coordinate-system material, keeping the parallel
+    /// per-rprim material assignment lock-free as it was before coordinate systems.
+    /// Written under the lock during the material sync phase, read without it from
+    /// the rprim sync phase; it can only go false -> true inside a material Sync,
+    /// because creating any state at all requires a non-empty signature, which
+    /// requires a non-empty _coordSysNamesInGraph, which already implies true.
+    std::atomic<bool> _coordSysActive{false};
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
