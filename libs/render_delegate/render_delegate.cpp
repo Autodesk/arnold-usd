@@ -737,8 +737,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
     if (_key == str::t_houdiniCopTextureChanged) {
         // COP textures need updating, flush the texture cache to trigger a refresh
-        // of all the image_cop nodes
-        _renderParam->Pause();
+        // of all the image_cop nodes. Use Interrupt() directly rather than Pause(),
+        // which now issues a resumable AiRenderPause() on newer Arnold versions --
+        // this needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         _renderParam->Restart();
     }
@@ -1942,7 +1944,18 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     return changes;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const { return false; }
+bool HdArnoldRenderDelegate::IsPauseSupported() const
+{
+#if ARNOLD_VERSION_NUM >= 70504
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if PXR_VERSION >= 2203
+bool HdArnoldRenderDelegate::IsPaused() const { return _renderParam->IsPaused(); }
+#endif
 
 bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
 
@@ -1951,6 +1964,14 @@ bool HdArnoldRenderDelegate::Stop(bool blocking)
 #else
 bool HdArnoldRenderDelegate::Stop()
 #endif
+{
+    // A hard stop: fully interrupt the render, and keep it stopped until Restart(),
+    // rather than parking it at the resumable pause gate used by Pause() below.
+    _renderParam->Stop();
+    return true;
+}
+
+bool HdArnoldRenderDelegate::Pause()
 {
     _renderParam->Pause();
     return true;
@@ -1970,7 +1991,13 @@ bool HdArnoldRenderDelegate::Restart()
 
 #if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsStopped() const
-{   
+{
+    // A render parked at the AiRenderPause() gate keeps reporting AI_RENDER_STATUS_RENDERING, so the Arnold status
+    // alone would miss it. That is intentional here -- paused is not stopped, and IsPaused() reports that instead --
+    // but a Stop() has to be reported even before the next UpdateRender() tick observes the interrupted status.
+    if (_renderParam->IsStopped()) {
+        return true;
+    }
     int status = AiRenderGetStatus(GetRenderSession());
     return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }
@@ -2178,8 +2205,10 @@ HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
 bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
 {
     if (command == TfToken("flush_texture")) {
-        // Stop render
-        _renderParam->Pause();
+        // Stop render. Use Interrupt() directly rather than Pause(), which now
+        // issues a resumable AiRenderPause() on newer Arnold versions -- this
+        // needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
         // Flush texture
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render

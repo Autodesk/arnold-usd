@@ -1,15 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+
 ## [7.5.4.0] (Unreleased)
 
 ### Features
 
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
+- [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
 
 ### Bug fixes
 
 - [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
+
 
 ## [7.5.3.1] (Unreleased)
 

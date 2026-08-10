@@ -368,12 +368,23 @@ public:
         _delegateRenderProductsDirty = true;
     }
     /// Advertise whether this delegate supports pausing and resuming of
-    /// background render threads. Default implementation returns false.
+    /// background render threads. True when Arnold provides the resumable
+    /// AiRenderPause()/AiRenderResume() API, false otherwise.
     ///
-    /// @return True if pause/restart is supported.
+    /// @return True if pause/resume is supported.
     HDARNOLD_API
     bool IsPauseSupported() const override;
-    
+
+    // HdRenderDelegate::IsPaused()/IsStopped() were only added in USD 22.03.
+#if PXR_VERSION >= 2203
+    /// Query the delegate's pause state.
+    ///
+    /// @return True if a Pause() call is currently in effect (i.e. no Resume(),
+    ///  Restart(), or scene edit has cancelled it since).
+    HDARNOLD_API
+    bool IsPaused() const override;
+#endif
+
     /// Advertise whether this delegate supports stopping and restarting of
     /// background render threads. Default implementation returns false.
     ///
@@ -406,9 +417,18 @@ public:
     HDARNOLD_API
     bool Restart() override;
 
+    /// Pause all of this delegate's background rendering threads. Only takes
+    /// effect when IsPauseSupported() returns true; preserves render progress
+    /// via AiRenderPause() rather than interrupting the render.
+    ///
+    /// @return True if successful.
+    HDARNOLD_API
+    bool Pause() override;
+
     /// Resume all of this delegate's background rendering threads previously
-    /// paused by a call to Pause. Default implementation does nothing. This is
-    /// currently doing the same as restart
+    /// paused by a call to Pause.
+    ///
+    /// @return True if successful.
     HDARNOLD_API
     bool Resume() override;
 
