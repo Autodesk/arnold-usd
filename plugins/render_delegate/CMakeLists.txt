@@ -3,6 +3,11 @@ set(SRC
 
 # Dependencies os this plugin
 set(_usd_deps arch plug trace tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUtil)
+# The accelerated viewport code path (SUPPORT_ACCELERATED_VIEWPORT) references garch's
+# GLApi (glGetIntegerv, ...) and hgiGL, so those must be linked when hgiGL is available.
+if (USD_HAS_HGI_GL)
+    list(APPEND _usd_deps garch hgiGL)
+endif()
 
 add_library(hdArnoldObjects OBJECT ${SRC})
 target_compile_definitions(hdArnoldObjects PRIVATE "HDARNOLD_EXPORTS=1")
