@@ -228,10 +228,11 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
         _sceneIndex = _displayStyleSceneIndex =
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
-        {
-            std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
-            _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
-        }
+        // Note: the Arnold renderer scene-index plugins are applied by
+        // HdRenderIndex itself (at its terminal scene index) for any delegate
+        // with a renderer display name. Applying them again here would run every
+        // plugin twice; harmless for filtering plugins but the coordSys plugin
+        // adds prims, so a second pass produced a duplicate coordSys camera.
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
         _stageSceneIndex->SetTime(UsdTimeCode(_time.frame));
 #endif        
@@ -536,9 +537,14 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
             HdsiPrimTypePruningSceneIndexTokens->bindingToken,
             HdRetainedTypedSampledDataSource<TfToken>::New(
                 HdMaterialBindingsSchema::GetSchemaToken()));
+    // Note: coordSys prims (needed for named coordinate spaces) are added by the
+    // Arnold renderer scene-index plugin (HdArnoldCoordSysSceneIndexPlugin,
+    // applied below via AppendSceneIndicesForRenderer), so that every Hydra host
+    // gets them, not just the procedural.
+
     // Add a SceneGlobals scene index that we can use to set the render pass, render settings
     // shutter, frame, etc.
-    sceneIndex = _sceneGlobalsSceneIndex = 
+    sceneIndex = _sceneGlobalsSceneIndex =
         HdsiSceneGlobalsSceneIndex::New(sceneIndex);
 
     // Prune scene materials prior to flattening inherited

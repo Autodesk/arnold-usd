@@ -725,6 +725,24 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
+    /// Register a coordinate-system projection camera together with its aperture
+    /// ratio (verticalAperture / horizontalAperture). The vertical screen window
+    /// of these cameras is (re)computed from the actual render resolution in
+    /// UpdateCoordSysCameraProjections(), so the projection stays independent of
+    /// the render camera aspect / resolution (see HdArnoldCoordSys).
+    void RegisterCoordSysCamera(AtNode* camera, float apertureRatio) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras[camera] = apertureRatio;
+    }
+    void UnregisterCoordSysCamera(AtNode* camera) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras.erase(camera);
+    }
+    /// Recompute the vertical screen window of every registered coordinate-system
+    /// camera from the current render frame aspect ratio. Must be called after the
+    /// options' xres/yres are set for the render (see HdArnoldRenderPass).
+    void UpdateCoordSysCameraProjections();
+
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
     // Return true if the render delegate supports shape instancing
@@ -845,6 +863,9 @@ private:
 
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
+
+    std::mutex _coordSysCamerasMutex;
+    std::unordered_map<AtNode*, float> _coordSysCameras; ///< coordSys camera node -> aperture ratio (vAp/hAp)
 
     /// FPS value from render settings.
     float _fps;

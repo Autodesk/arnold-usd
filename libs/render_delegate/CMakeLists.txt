@@ -4,6 +4,7 @@ set(SRC
     basis_curves.cpp
     camera.cpp
     config.cpp
+    coord_sys.cpp
     gaussian_splat.cpp
     instancer.cpp
     light.cpp
@@ -31,6 +32,7 @@ set(HDR
     basis_curves.h
     camera.h
     config.h
+    coord_sys.h
     debug_codes.h
     rprim.h
     hdarnold.h

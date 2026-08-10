@@ -1454,6 +1454,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         clearBuffers(_renderBuffers, true, bufferWidth, bufferHeight);
     }
 
+    // Match coordinate-system projection cameras to the render frame aspect ratio now
+    // that xres/yres are finalized for this render, so named-camera projections stay
+    // independent of the render camera aspect / resolution. This only writes (and thus
+    // only restarts the render) when the aspect actually changed.
+    _renderDelegate->UpdateCoordSysCameraProjections();
+
     // Check if hydra still has pending changes that will be processed in the next iteration.
     bool hasPendingChanges = _renderDelegate->HasPendingChanges(
         GetRenderIndex(), cameraId,

@@ -1,0 +1,214 @@
+#usda 1.0
+(
+    defaultPrim = "fur"
+    doc = """Exercises Hydra CoordSys support on *non-mesh* rprims: a BasisCurves
+             and a Points prim projected through a named coordinate system.
+
+             The per-rprim rewrite of the material 'space' inputs (arnold-usd
+             names each coord-sys camera uniquely and points every rprim's
+             material at the camera it binds) has to happen for every rprim
+             type, not just meshes. When only HdArnoldMesh performed the
+             rewrite, curves and points kept the authored coordinate-system
+             name, which matches no Arnold camera node - so the space failed to
+             resolve and the projection silently disappeared.
+
+             Two copies of </fur> each reference the template, so each has its
+             own projector camera and its own copy of the material; both
+             coordinate systems are named 'map_proj'. Within one copy the curves
+             and the points share a single material and a single binding, so
+             they also cover two different rprim types resolving one coordinate
+             system. The copies use the .camera and .NDC spaces.
+
+             See #32 / ARNOLD-13221."""
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "fur" (
+    active = false
+    prepend apiSchemas = ["CoordSysAPI:map_proj"]
+    kind = "component"
+)
+{
+    rel coordSys:map_proj:binding = </fur/proj_cam>
+
+    def BasisCurves "curves" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] curveVertexCounts = [2, 2, 2, 2, 2, 2, 2]
+        float3[] extent = [(-5.35, -0.25, -4.85), (5.35, 0.45, 4.85)]
+        rel material:binding = </fur/mtl/projected>
+        point3f[] points = [(-5, 0.1, -4.5), (5, 0.1, -4.5),
+                            (-5, 0.1, -3), (5, 0.1, -3),
+                            (-5, 0.1, -1.5), (5, 0.1, -1.5),
+                            (-5, 0.1, 0), (5, 0.1, 0),
+                            (-5, 0.1, 1.5), (5, 0.1, 1.5),
+                            (-5, 0.1, 3), (5, 0.1, 3),
+                            (-5, 0.1, 4.5), (5, 0.1, 4.5)]
+        uniform token type = "linear"
+        uniform token wrap = "nonperiodic"
+        float[] widths = [0.7] (
+            interpolation = "constant"
+        )
+    }
+
+    def Points "points" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-4.45, 1.05, -4.45), (4.45, 1.95, 4.45)]
+        rel material:binding = </fur/mtl/projected>
+        point3f[] points = [(-4, 1.5, -4), (-2, 1.5, -4), (0, 1.5, -4), (2, 1.5, -4), (4, 1.5, -4),
+                            (-4, 1.5, -2), (-2, 1.5, -2), (0, 1.5, -2), (2, 1.5, -2), (4, 1.5, -2),
+                            (-4, 1.5, 0), (-2, 1.5, 0), (0, 1.5, 0), (2, 1.5, 0), (4, 1.5, 0),
+                            (-4, 1.5, 2), (-2, 1.5, 2), (0, 1.5, 2), (2, 1.5, 2), (4, 1.5, 2),
+                            (-4, 1.5, 4), (-2, 1.5, 4), (0, 1.5, 4), (2, 1.5, 4), (4, 1.5, 4)]
+        float[] widths = [0.9] (
+            interpolation = "constant"
+        )
+    }
+
+    def Camera "proj_cam"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 36
+        token projection = "perspective"
+        float verticalAperture = 27
+        float xformOp:rotateX = -56
+        double3 xformOp:translate = (0, 12, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+
+    def Scope "mtl"
+    {
+        def Material "projected"
+        {
+            token outputs:mtlx:surface.connect = </fur/mtl/projected/surface.outputs:out>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </fur/mtl/projected/rgb.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "rgb"
+            {
+                uniform token info:id = "ND_combine3_color3"
+                float inputs:in1.connect = </fur/mtl/projected/range_u.outputs:out>
+                float inputs:in2.connect = </fur/mtl/projected/range_v.outputs:out>
+                float inputs:in3 = 0
+                color3f outputs:out
+            }
+
+            def Shader "range_u"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </fur/mtl/projected/separate.outputs:outx>
+                float inputs:inhigh = 5
+                float inputs:inlow = -5
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "range_v"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </fur/mtl/projected/separate.outputs:outy>
+                float inputs:inhigh = 5
+                float inputs:inlow = -5
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "separate"
+            {
+                uniform token info:id = "ND_separate3_vector3"
+                vector3f inputs:in.connect = </fur/mtl/projected/position.outputs:out>
+                float outputs:outx
+                float outputs:outy
+                float outputs:outz
+            }
+
+            def Shader "position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                string inputs:space = "map_proj"
+                vector3f outputs:out
+            }
+        }
+    }
+}
+
+def "fur_0" (
+    active = true
+    append references = </fur>
+)
+{
+    double3 xformOp:translate = (0, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj"
+            }
+        }
+    }
+}
+
+def "fur_1" (
+    active = true
+    append references = </fur>
+)
+{
+    double3 xformOp:translate = (12, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj:ndc"
+            }
+            # NDC is normalised to 0..1 over the projector frustum, so the ramp window
+            # must be 0..1: with the default -5..5 the whole projection collapses into
+            # a flat patch of colour that would hide a wrong projection.
+            over "range_u"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
+            over "range_v"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
+        }
+    }
+}
+
+def Scope "Cameras"
+{
+    def Camera "renderCamera"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 24
+        token projection = "perspective"
+        float verticalAperture = 18
+        float xformOp:rotateX = -90
+        double3 xformOp:translate = (6, 36, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+}
