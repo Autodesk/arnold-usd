@@ -224,11 +224,14 @@ if (HOUDINI_LOCATION)
 
         # List of usd libraries we need for this project
         set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL)
-        if (${USD_VERSION} VERSION_LESS "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ ndr)
-        endif()
+        # H21 is USD 0.25.5 but still needs the separate ndr lib, so a version check is the
+        # wrong discriminator. H22 drops it, and the loop below then defines no target.
+        list(APPEND ARNOLD_USD_LIBS_ ndr)
+        # hdsi has shipped since USD 22.05 and plugins/usd_imaging links it
+        # unconditionally, so it must be aliased unconditionally too.
+        list(APPEND ARNOLD_USD_LIBS_ hdsi)
         if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ hdsi;ts)
+            list(APPEND ARNOLD_USD_LIBS_ ts)
         endif()
         if (APPLE)
            set(HOUDINI_LIBS_LOCATION ${HOUDINI_LOCATION}/Frameworks/Houdini.framework/Versions/Current/Libraries)
@@ -243,25 +246,61 @@ if (HOUDINI_LOCATION)
             if (TARGET Houdini::Dep::pxr_${lib})
                 add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
             else() # otherwise we pick the library on disk, but the location  might change in the future
-                add_library(${lib} SHARED IMPORTED)
-                set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${HOUDINI_LIBS_LOCATION}/libpxr_${lib}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                set(_lib_path "${HOUDINI_LIBS_LOCATION}/libpxr_${lib}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                # CMake does not check IMPORTED_LOCATION at configure time, so skip missing libs
+                # here rather than failing at link.
+                if (EXISTS "${_lib_path}")
+                    add_library(${lib} SHARED IMPORTED)
+                    set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${_lib_path}")
+                else()
+                    list(APPEND _missing_usd_libs ${lib})
+                endif()
+                unset(_lib_path)
             endif()
         endforeach ()
+        if (_missing_usd_libs)
+            message(STATUS "USD libraries not shipped by this Houdini, no target defined: ${_missing_usd_libs}")
+            unset(_missing_usd_libs)
+        endif()
         if (APPLE)
             set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-framework Python")
         else()
-            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb)
+            # H22 no longer exports a tbbmalloc target, although dsolib still ships the lib.
+            if (TARGET Houdini::Dep::tbbmalloc)
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbbmalloc)
+            endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
+                if (WIN32)
+                    # Houdini's hboost headers still use Boost's auto_link.hpp on MSVC,
+                    # which embeds a #pragma comment(lib, "hboost_python<ver>-vc143-mt-x64-1_82.lib")
+                    # guess (toolset + boost version suffix) in every translation unit that
+                    # includes them. Houdini ships the plain "hboost_python<ver>-mt-x64.lib"
+                    # name instead, so the implicit link fails even though the explicit
+                    # Houdini::Dep::hboost_python target above points at the right file.
+                    add_compile_definitions(BOOST_ALL_NO_LIB=1 HBOOST_ALL_NO_LIB=1)
+                endif()
+            elseif (TARGET Houdini::Dep::pxr_python)
+                # USD 0.25.05 renamed its boost fork hboost -> pxr_boost, so Houdini ships
+                # libpxr_python instead of hboost_python.
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::pxr_python)
             endif()
         endif()
         
         check_compositor()
 
         # usdGenSchema
+        # HINTS, not PATHS: CMake searches PATHS *after* the default system paths, so a
+        # usdGenSchema from any other Houdini on PATH wins over the one belonging to
+        # HOUDINI_LOCATION. That silently generates the schemas with the wrong USD
+        # version -- building against H21 with H22's generator produces
+        # customData/userDocBrief where H21 emits inline doc strings, a ~50KB
+        # difference in generatedSchema.usda.
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
-            PATHS "${HOUDINI_LOCATION}/bin" "${HOUDINI_LOCATION}/Frameworks/Houdini.framework//Versions/Current/Resources/bin"
+            HINTS "${HOUDINI_LOCATION}/bin" "${HOUDINI_LOCATION}/Frameworks/Houdini.framework//Versions/Current/Resources/bin"
+            NO_DEFAULT_PATH
             DOC "USD Gen Schema executable")
 
         check_usd_use_python() # should that be true by default on houdini ?
@@ -298,15 +337,25 @@ if (NOT DEFINED USD_LIB_PREFIX)
     message(STATUS "USD_LIB_PREFIX is not defined, we are trying to find it")
     foreach (SEARCH_PATH IN ITEMS ${USD_LIBRARY_DIR_HINTS})
         foreach (USD_LIBRARY_EXT IN ITEMS ${USD_LIBRARY_EXT_HINTS})
-            file(GLOB FOUND_USD_LIB RELATIVE "${SEARCH_PATH}" "${SEARCH_PATH}/*${USD_LIBRARY_EXT}" )
-            if (FOUND_USD_LIB)
-                string(FIND  "${FOUND_USD_LIB}" "${USD_LIBRARY_EXT}" USD_PREFIX_LENGTH )
-                string(SUBSTRING "${FOUND_USD_LIB}" 0 ${USD_PREFIX_LENGTH} USD_LIB_PREFIX_FOUND)
+            file(GLOB FOUND_USD_LIBS RELATIVE "${SEARCH_PATH}" "${SEARCH_PATH}/*${USD_LIBRARY_EXT}" )
+            # The glob can return several libraries, and on case-insensitive filesystems
+            # (macOS, Windows) it also matches unrelated libraries whose name only differs in
+            # case (e.g. libusd_esfUsd.dylib / libusd_execUsd.dylib both match *usd.dylib).
+            # Only accept a candidate whose name ends with the exact, case-sensitive hint and
+            # derive the prefix from the text preceding it.
+            string(REPLACE "." "\\." USD_LIBRARY_EXT_REGEX "${USD_LIBRARY_EXT}")
+            foreach (FOUND_USD_LIB IN LISTS FOUND_USD_LIBS)
+                if (FOUND_USD_LIB MATCHES "^(.*)${USD_LIBRARY_EXT_REGEX}$")
+                    set(USD_LIB_PREFIX_FOUND "${CMAKE_MATCH_1}")
+                    break()
+                endif()
+            endforeach()
+            if (DEFINED USD_LIB_PREFIX_FOUND)
                 break()
             endif()
         endforeach()
         if (DEFINED USD_LIB_PREFIX_FOUND)
-            message(STATUS "Found USD_LIB_PREFIX: ${USD_LIB_PREFIX}")
+            message(STATUS "Found USD_LIB_PREFIX: ${USD_LIB_PREFIX_FOUND}")
             break()
         endif()
     endforeach()
@@ -415,7 +464,8 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;hgi;hgiGL;js;usd_ms)
+# hdsi is listed for the same reason as in the Houdini branch above
+set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdsi;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 if (${USD_VERSION} VERSION_LESS "0.25.05")
     list(APPEND USD_LIBS ndr)
 endif()

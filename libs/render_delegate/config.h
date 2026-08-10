@@ -207,6 +207,18 @@ struct HdArnoldConfig {
     ///
     bool accelerated_viewport = false;
 
+    /// Flip coordinate-system camera projections vertically (all named spaces).
+    /// Disabled by default; set HDARNOLD_coordsys_flip_v=1 for the opposite orientation.
+    ///
+    bool coordsys_flip_v;
+
+    /// Give the .NDC space an extra vertical flip relative to the other named spaces
+    /// (Arnold's NDC is Y-opposite to its screen/raster). Enabled by default; set
+    /// HDARNOLD_coordsys_flip_ndc_v=0 for Arnold's native NDC orientation.
+    ///
+    bool coordsys_flip_ndc_v;
+
+
 private:
     /// Constructor for reading the values from the environment variables.
     HDARNOLD_API

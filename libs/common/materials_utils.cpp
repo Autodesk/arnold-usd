@@ -537,8 +537,52 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     return node;
 }
 
+/// Rewrite a MaterialX geometric-node "space" input value that references a USD
+/// coordinate system into the naming Arnold's OSL render services expect.
+///
+/// Houdini/Solaris author coord-sys space names with a colon separator and
+/// lower-case projection names, e.g. "map_proj", "map_proj:ndc",
+/// "map_proj:raster", "map_proj:screen". Arnold instead resolves a named space
+/// bound to a camera node using dot notation with its own suffixes:
+/// "map_proj.camera", "map_proj.NDC", "map_proj.screen", "map_proj.raster"
+/// (see HdArnoldCoordSys, which creates the camera node named after the coord
+/// system). We rewrite the former into the latter.
+///
+/// Standard MaterialX / OSL built-in space names (model/object/world/...) and
+/// values already using dot notation are left untouched. Note: without the
+/// rprim's coord-sys binding list here we cannot positively distinguish a
+/// coord-sys reference from an arbitrary custom space, so a plain non-standard
+/// name is heuristically treated as a coord-sys binding and mapped to
+/// "<name>.camera".
+static std::string _RewriteCoordSysSpaceName(const std::string& space)
+{
+    // Already in Arnold dot notation (or empty) - nothing to do.
+    if (space.empty() || space.find('.') != std::string::npos)
+        return space;
+
+    const size_t colon = space.find(':');
+    if (colon == std::string::npos) {
+        // Leave standard MaterialX / OSL built-in spaces untouched; treat any
+        // other plain name as a coordinate system bound to a camera.
+        static const std::unordered_set<std::string> standardSpaces = {
+            "model", "object", "world", "common", "shader", "tangent",
+            "camera", "screen", "raster", "NDC"};
+        if (standardSpaces.count(space) != 0)
+            return space;
+        return space + ".camera";
+    }
+
+    // "<name>:<suffix>" -> "<name>.<SUFFIX>", mapping Houdini's lower-case "ndc"
+    // to Arnold's "NDC"; the other suffixes (raster/screen/camera) already match.
+    const std::string name = space.substr(0, colon);
+    std::string suffix = space.substr(colon + 1);
+    if (suffix == "ndc")
+        suffix = "NDC";
+    return name + "." + suffix;
+}
+
 /// Read a MaterialX shader through OSL
-AtNode* ReadMtlxOslShader(const std::string& nodeName, 
+AtNode* ReadMtlxOslShader(const std::string& nodeName,
     const InputAttributesList& inputAttrs, const TfToken& shaderId, 
     ArnoldAPIAdapter &context, const TimeSettings& time, 
     MaterialReader& materialReader, AtParamValueMap* params)
@@ -689,11 +733,26 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                 // In this case, we don't need to convert any VtValue as it will be ignored
                 materialReader.ConnectShader(node, attrNameStr, attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
                 continue;
-            } 
+            }
+
+            // A MaterialX geometric node (ND_position_vector3, ND_normal_vector3,
+            // ...) exposes a "space" string input that may reference a USD
+            // coordinate system. Rewrite it to Arnold's OSL naming so the
+            // coord-sys camera node is resolved (see _RewriteCoordSysSpaceName).
+            // Only when the value really holds a string: VtValueGetString yields an
+            // empty string for anything else, which would clobber the OSL node's
+            // default space. Any other value type falls through to ReadAttribute.
+            if (paramType == AI_TYPE_STRING && attrName == str::t_space &&
+                (attr.value.IsHolding<std::string>() || attr.value.IsHolding<TfToken>())) {
+                const std::string rewritten = _RewriteCoordSysSpaceName(VtValueGetString(attr.value));
+                AiNodeSetStr(node, paramName, AtString(rewritten.c_str()));
+                continue;
+            }
+
             // Read the attribute value, as we do for regular attributes
-            ReadAttribute(attr, node, attrNameStr, time, 
+            ReadAttribute(attr, node, attrNameStr, time,
                     context, paramType, arrayType);
-            
+
         }
         return node;
     }

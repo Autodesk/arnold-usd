@@ -56,6 +56,7 @@
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
+#include "coord_sys.h"
 #include "gaussian_splat.h"
 #include "instancer.h"
 #include "light.h"
@@ -269,6 +270,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
     // Scene-index dependency forwarding dirties lights when graphs change but does
     // not reorder this pass.
     static const TfTokenVector r{HdPrimTypeTokens->camera,
+                                 HdPrimTypeTokens->coordSys,
                                  HdPrimTypeTokens->material,
                                  str::t_ArnoldNodeGraph,
                                  HdPrimTypeTokens->distantLight,
@@ -743,8 +745,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
     if (_key == str::t_houdiniCopTextureChanged) {
         // COP textures need updating, flush the texture cache to trigger a refresh
-        // of all the image_cop nodes
-        _renderParam->Pause();
+        // of all the image_cop nodes. Use Interrupt() directly rather than Pause(),
+        // which now issues a resumable AiRenderPause() on newer Arnold versions --
+        // this needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         _renderParam->Restart();
     }
@@ -1351,8 +1355,11 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         DirtyDependency(sprimId);
 
     if (typeId == HdPrimTypeTokens->camera) {
-        return (_mask & AI_NODE_CAMERA) ? 
+        return (_mask & AI_NODE_CAMERA) ?
             new HdArnoldCamera(this, sprimId) : nullptr;
+    }
+    if (typeId == HdPrimTypeTokens->coordSys) {
+        return new HdArnoldCoordSys(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->material) {
         return (_mask & AI_NODE_SHADER) ? 
@@ -1475,6 +1482,39 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 }
 
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
+
+void HdArnoldRenderDelegate::UpdateCoordSysCameraProjections()
+{
+    std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+    if (_coordSysCameras.empty())
+        return;
+    const int yres = AiNodeGetInt(_options, str::yres);
+    if (yres == 0)
+        return;
+    // Arnold bakes the render frame aspect ratio into every camera's vertical fov
+    // (see AiWorldToScreenMatrix). We cancel it per coordSys projector by setting
+    // its vertical screen window to frameAspect * (vAperture/hAperture), using the
+    // resolution actually being rendered - so the projection follows the projector's
+    // own aperture and is independent of the render camera aspect / resolution.
+    const float frameAspect =
+        (static_cast<float>(AiNodeGetInt(_options, str::xres)) / static_cast<float>(yres)) *
+        AiNodeGetFlt(_options, str::pixel_aspect_ratio);
+    for (const auto& entry : _coordSysCameras) {
+        AtNode* camera = entry.first;
+        const float yHalf = frameAspect * entry.second;
+        const AtVector2 windowMin = AiNodeGetVec2(camera, str::screen_window_min);
+        const AtVector2 windowMax = AiNodeGetVec2(camera, str::screen_window_max);
+        const float yCenter = 0.5f * (windowMin.y + windowMax.y);
+        const float newMinY = yCenter - yHalf;
+        const float newMaxY = yCenter + yHalf;
+        // Only write when the value actually changes: this is called every render,
+        // and re-setting the parameter would dirty the camera and restart rendering.
+        if (!GfIsClose(windowMin.y, newMinY, AI_EPSILON) || !GfIsClose(windowMax.y, newMaxY, AI_EPSILON)) {
+            AiNodeSetVec2(camera, str::screen_window_min, windowMin.x, newMinY);
+            AiNodeSetVec2(camera, str::screen_window_max, windowMax.x, newMaxY);
+        }
+    }
+}
 
 AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
 {
@@ -1967,7 +2007,18 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     return changes;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const { return false; }
+bool HdArnoldRenderDelegate::IsPauseSupported() const
+{
+#if ARNOLD_VERSION_NUM >= 70504
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if PXR_VERSION >= 2203
+bool HdArnoldRenderDelegate::IsPaused() const { return _renderParam->IsPaused(); }
+#endif
 
 bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
 
@@ -1976,6 +2027,14 @@ bool HdArnoldRenderDelegate::Stop(bool blocking)
 #else
 bool HdArnoldRenderDelegate::Stop()
 #endif
+{
+    // A hard stop: fully interrupt the render, and keep it stopped until Restart(),
+    // rather than parking it at the resumable pause gate used by Pause() below.
+    _renderParam->Stop();
+    return true;
+}
+
+bool HdArnoldRenderDelegate::Pause()
 {
     _renderParam->Pause();
     return true;
@@ -1995,7 +2054,13 @@ bool HdArnoldRenderDelegate::Restart()
 
 #if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsStopped() const
-{   
+{
+    // A render parked at the AiRenderPause() gate keeps reporting AI_RENDER_STATUS_RENDERING, so the Arnold status
+    // alone would miss it. That is intentional here -- paused is not stopped, and IsPaused() reports that instead --
+    // but a Stop() has to be reported even before the next UpdateRender() tick observes the interrupted status.
+    if (_renderParam->IsStopped()) {
+        return true;
+    }
     int status = AiRenderGetStatus(GetRenderSession());
     return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }
@@ -2217,8 +2282,10 @@ HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
 bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
 {
     if (command == TfToken("flush_texture")) {
-        // Stop render
-        _renderParam->Pause();
+        // Stop render. Use Interrupt() directly rather than Pause(), which now
+        // issues a resumable AiRenderPause() on newer Arnold versions -- this
+        // needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
         // Flush texture
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render

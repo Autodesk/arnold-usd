@@ -120,6 +120,20 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures t
 TF_DEFINE_ENV_SETTING(HDARNOLD_accelerated_viewport, true, "Enable accelerated viewport");
 #endif
 
+TF_DEFINE_ENV_SETTING(
+    HDARNOLD_coordsys_flip_v, false,
+    "Flip the coordinate-system camera projections vertically (V axis) for every named "
+    "space (.camera/.NDC/.screen/.raster). Disabled by default; set to 1 for the opposite "
+    "orientation. See HDARNOLD_coordsys_flip_ndc_v for the NDC-only correction.");
+
+TF_DEFINE_ENV_SETTING(
+    HDARNOLD_coordsys_flip_ndc_v, true,
+    "Give the .NDC space an extra vertical (V axis) flip relative to the other named "
+    "spaces. Arnold's NDC convention is Y-opposite to its screen/raster, so this is "
+    "enabled by default to make the NDC projection agree with the others (and Karma). "
+    "The .NDC space is routed to a dedicated flipped camera node, leaving .camera/"
+    ".screen/.raster untouched. Set to 0 for Arnold's native NDC orientation.");
+
 HdArnoldConfig::HdArnoldConfig()
 {
     bucket_size = std::max(1, TfGetEnvSetting(HDARNOLD_bucket_size));
@@ -166,6 +180,8 @@ HdArnoldConfig::HdArnoldConfig()
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
     accelerated_viewport = TfGetEnvSetting(HDARNOLD_accelerated_viewport);
 #endif
+    coordsys_flip_v = TfGetEnvSetting(HDARNOLD_coordsys_flip_v);
+    coordsys_flip_ndc_v = TfGetEnvSetting(HDARNOLD_coordsys_flip_ndc_v);
 }
 
 const HdArnoldConfig& HdArnoldConfig::GetInstance() { return TfSingleton<HdArnoldConfig>::GetInstance(); }

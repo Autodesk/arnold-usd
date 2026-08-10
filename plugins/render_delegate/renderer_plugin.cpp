@@ -126,11 +126,15 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
 
 void HdArnoldRendererPlugin::DeleteRenderDelegate(HdRenderDelegate* renderDelegate) { delete renderDelegate; }
 
+// The bool/no-argument IsSupported overloads were removed from HdRendererPlugin in USD 26.08
+// (HD_API_VERSION 103), in favor of the HdRendererCreateArgsSchema overload defined below.
+#if PXR_VERSION < 2608
 #ifdef USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
 bool HdArnoldRendererPlugin::IsSupported(bool /*gpuEnabled*/) const { return true; }
 #else
 bool HdArnoldRendererPlugin::IsSupported() const { return true; }
 #endif
+#endif // PXR_VERSION < 2608
 #if PXR_VERSION >= 2511
 bool HdArnoldRendererPlugin::IsSupported(
     HdRendererCreateArgs const &rendererCreateArgs, std::string *reasonWhyNot) const

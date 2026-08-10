@@ -74,6 +74,12 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: render passes"
+                    },
+                    "HdArnoldCoordSysSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold: coordinate systems"
                     }${MTOA_ENTRY}
                 }
             },
