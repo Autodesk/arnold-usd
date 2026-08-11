@@ -63,6 +63,10 @@ if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
 if local_env['USD_HAS_HGI_GL']:
+    # Appended to the shared 'env' (not local_env) so this define is visible to
+    # any SConscript compiling against render_buffer.h after this one runs,
+    # matching the PUBLIC visibility of USD_HAS_HGI_GL in the CMake build.
+    env.Append(CPPDEFINES = ['USD_HAS_HGI_GL'])
     local_env.Append(CPPDEFINES = ['USD_HAS_HGI_GL'])
 
 local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])

@@ -137,6 +137,12 @@ else:  # shared libs
     if local_env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['hdsi','ts',]
 
+    # The accelerated viewport code path (SUPPORT_ACCELERATED_VIEWPORT) in
+    # render_delegate references Hgi/HgiGL and garch's GLApi, so the procedural
+    # needs those too when it embeds the render delegate.
+    if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and local_env['USD_HAS_HGI_GL']:
+        usd_libs += ['hgi', 'hgiGL', 'garch']
+
     usd_deps += [get_tbb_lib(env)]
 
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
