@@ -140,13 +140,24 @@ else:  # shared libs
     # The accelerated viewport code path (SUPPORT_ACCELERATED_VIEWPORT) in
     # render_delegate references Hgi/HgiGL and garch's GLApi, so the procedural
     # needs those too when it embeds the render delegate.
-    if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and local_env['USD_HAS_HGI_GL']:
+    needs_accelerated_viewport_libs = local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and local_env['USD_HAS_HGI_GL']
+    if needs_accelerated_viewport_libs:
         usd_libs += ['hgi', 'hgiGL', 'garch']
 
     usd_deps += [get_tbb_lib(env)]
 
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
     usd_deps = usd_deps + usd_libs
+
+    if needs_accelerated_viewport_libs:
+        # garch/hgiGL pull in Arch's stack-trace/file-access code, which needs
+        # pthread_join on Linux (must come after garch/tbb on the link line, since
+        # they're static archives with no system-lib dependencies of their own) and
+        # SymInitialize/SymFromAddr/gethostname/OpenProcessToken on Windows.
+        if system.is_linux:
+            usd_deps = usd_deps + ['pthread']
+        elif system.is_windows:
+            usd_deps = usd_deps + ['Ws2_32', 'Dbghelp', 'Shlwapi', 'advapi32']
     source_files = source_files + usd_sources
 
 

@@ -96,7 +96,16 @@ def render_delegate(env, sources):
     if env['USD_BUILD_MODE'] != 'static':
         usd_libs += ['hgi', 'hgiGL', 'garch']
 
-    return add_plugin_deps(env, sources, usd_libs, True)
+    source_files, usd_deps = add_plugin_deps(env, sources, usd_libs, True)
+    # garch/hgiGL pull in Arch's stack-trace/file-access code, which needs pthread_join
+    # on Linux (it must come after garch/tbb on the link line, since they're static
+    # archives that don't carry their own system-lib dependencies) and SymInitialize/
+    # SymFromAddr/gethostname/OpenProcessToken on Windows.
+    if system.is_linux:
+        usd_deps = usd_deps + ['pthread']
+    elif system.is_windows:
+        usd_deps = usd_deps + ['Ws2_32', 'Dbghelp', 'Shlwapi', 'advapi32']
+    return (source_files, usd_deps)
 
 
 # This only works with monolithic and shared usd dependencies.
