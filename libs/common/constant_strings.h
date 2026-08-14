@@ -255,6 +255,7 @@ ASTR(color_space_narrow);
 ASTR(color_mode);
 ASTR(color_pointer);
 ASTR(color_to_signed);
+ASTR(compression);
 ASTR(cone_angle);
 ASTR(cone_softness);
 ASTR(config);

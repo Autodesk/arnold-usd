@@ -625,6 +625,10 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
     }
    _exportedAttrs.insert("input");
     
+   // Note that driver_exr.compression is a positional array, where element i applies to
+   // render_outputs[i]. It's written here as a single array on the RenderProduct, which stays
+   // aligned with the orderedVars authored above, so that the reader restores the same array.
+   // Don't reorder the render_outputs loop above without revisiting this
    _WriteArnoldParameters(node, writer, renderProductPrim, attrPrefix);
    writer.SetScope(prevScope);
 

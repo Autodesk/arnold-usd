@@ -3,6 +3,9 @@
 //
 
 #pragma once
+#include <string>
+#include <vector>
+
 #include <pxr/pxr.h>
 #include <pxr/usd/usd/stage.h>
 #include <ai.h>
@@ -34,6 +37,18 @@ void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSett
 void ComputeUsdLuxVersion(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time, const AtUniverse *universe);
 void SetArnoldDefaultOptions(AtUniverse *universe);
 void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolution);
+
+// Resolve the driver_exr.compression applying to layer #index of an exr driver, based on whatever is
+// currently set on the node (i.e. the RenderProduct-level value, if any). This mirrors arnold's
+// own positional rule: element #index, else element 0, else "zip".
+std::string GetDriverCompressionFallback(const AtNode *driver, size_t index);
+
+// Set the positional per-layer compression array on a driver_exr node. compressions must be
+// index-aligned with the outputs this driver receives. An empty entry means "this RenderVar
+// didn't author a compression" and is filled with GetDriverCompressionFallback. If no entry was
+// authored, or if the node isn't a driver_exr, this is a no-op so that a legacy compression
+// authored on the RenderProduct is left untouched.
+void SetDriverExrCompressions(AtNode *driver, const std::vector<std::string> &compressions);
 
 // Color manager helper functions
 AtNode* GetOrCreateColorManager(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, 

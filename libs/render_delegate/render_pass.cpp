@@ -68,6 +68,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
+    ((compression, "arnold:driver_exr:compression"))
     (request_imager_update)
     (sourceName)
     (sourceType)
@@ -1147,7 +1148,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
                 std::vector<float> tolerances;
                 std::vector<bool> enableFiltering;
-                std::vector<bool> halfPrecision;               
+                std::vector<bool> halfPrecision;
+
+                // Similarly, driver_exr.compression is a positional string array where element i
+                // applies to render_outputs[i], so RenderVars can author
+                // arnold:driver_exr:compression to get their own compression (see ARNOLD-15669)
+                const bool isExrDriver = AiNodeIs(customProduct.driver, str::driver_exr);
+                std::vector<std::string> compressions;
 
                 // Loop through render vars in case we have AOV-specific parameters
                 for (const auto& renderVar : product.renderVars) {
@@ -1172,6 +1179,21 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         if (halfPrecision.empty())
                             halfPrecision.assign(numRenderVars, AiNodeGetBool(customProduct.driver, str::depth_half_precision));
                         halfPrecision[renderVarIndex] = halfPrecisionIt->second.UncheckedGet<bool>();
+                    }
+                    if (isExrDriver) {
+                        const auto compressionIt = renderVar.settings.find(_tokens->compression);
+                        if (compressionIt != renderVar.settings.end()) {
+                            // VtValueGetString accepts a string, a token, or an array of those,
+                            // so the attribute can be authored either as a scalar or as an array
+                            const std::string compression = VtValueGetString(compressionIt->second);
+                            if (!compression.empty()) {
+                                // Entries left empty are filled with the RenderProduct-level
+                                // compression by SetDriverExrCompressions below
+                                if (compressions.empty())
+                                    compressions.assign(numRenderVars, std::string());
+                                compressions[renderVarIndex] = compression;
+                            }
+                        }
                     }
 
                     const auto isRaw = renderVar.sourceType == _tokens->raw;
@@ -1253,6 +1275,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeResetParameter(customProduct.driver, str::layer_half_precision);
                     }
                 }
+                // Gather the per-RenderVar compressions into driver_exr.compression, positionally
+                // aligned with this driver's render_outputs. Unlike the deep exr arrays above we
+                // don't reset the parameter when no RenderVar authored one, as it also holds the
+                // compression authored on the RenderProduct
+                SetDriverExrCompressions(customProduct.driver, compressions);
                 AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));
             }

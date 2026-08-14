@@ -1,0 +1,102 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Scope "Render"
+{
+    def RenderSettings "render_settings"
+    {
+        rel products = [
+            </Render/Products/perVar>,
+            </Render/Products/legacy>,
+            </Render/Products/mixed>,
+        ]
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 1
+    }
+
+    def Scope "Vars"
+    {
+        # Every RenderVar of the first product authors its own compression, except the last one
+        def RenderVar "rgba"
+        {
+            token dataType = "color4f"
+            string sourceName = "RGBA"
+            token sourceType = "raw"
+            custom string arnold:driver_exr:compression = "dwaa"
+        }
+        def RenderVar "normal"
+        {
+            token dataType = "color3f"
+            string sourceName = "N"
+            token sourceType = "raw"
+            custom string arnold:driver_exr:compression = "piz"
+        }
+        def RenderVar "depth"
+        {
+            token dataType = "float"
+            string sourceName = "Z"
+            token sourceType = "raw"
+            # no compression authored, so this one falls back to the driver default, "zip"
+        }
+
+        # Legacy case: nothing authored on the RenderVars
+        def RenderVar "legacyRgba"
+        {
+            token dataType = "color4f"
+            string sourceName = "RGBA"
+            token sourceType = "raw"
+        }
+        def RenderVar "legacyDepth"
+        {
+            token dataType = "float"
+            string sourceName = "Z"
+            token sourceType = "raw"
+        }
+
+        # RenderProduct-level default, overridden by a single RenderVar
+        def RenderVar "mixedRgba"
+        {
+            token dataType = "color4f"
+            string sourceName = "RGBA"
+            token sourceType = "raw"
+            custom string arnold:driver_exr:compression = "dwab"
+        }
+        def RenderVar "mixedDepth"
+        {
+            token dataType = "float"
+            string sourceName = "Z"
+            token sourceType = "raw"
+        }
+    }
+
+    def Scope "Products"
+    {
+        def RenderProduct "perVar"
+        {
+            custom string arnold:driver = "driver_exr"
+            rel orderedVars = [</Render/Vars/rgba>, </Render/Vars/normal>, </Render/Vars/depth>]
+            token productName = "per_var.exr"
+        }
+        def RenderProduct "legacy"
+        {
+            custom string arnold:driver = "driver_exr"
+            custom string arnold:driver_exr:compression = "zips"
+            rel orderedVars = [</Render/Vars/legacyRgba>, </Render/Vars/legacyDepth>]
+            token productName = "legacy.exr"
+        }
+        def RenderProduct "mixed"
+        {
+            custom string arnold:driver = "driver_exr"
+            custom string arnold:driver_exr:compression = "zips"
+            rel orderedVars = [</Render/Vars/mixedRgba>, </Render/Vars/mixedDepth>]
+            token productName = "mixed.exr"
+        }
+    }
+}
