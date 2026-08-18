@@ -1,0 +1,89 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    startTimeCode = 1
+)
+
+def PointInstancer "InvisibleInstancer"
+{
+    float3[] extent = [(-200, -200, -200), (400, 200, 200)]
+    float3[] positions = [(20, -70, 0), (20, 100, 0), (120, -50, 0), (120, 100, 0), (220, -50, 0), (220, 100, 0)]
+    int[] protoIndices = [0, 0, 1, 1, 2, 2]
+    rel prototypes = [
+        </InvisibleInstancer/sphere>,
+        </InvisibleInstancer/cone>,
+        </InvisibleInstancer/cube>,
+    ]
+    token visibility = "invisible"
+
+    def Cube "cube"
+    {
+        custom bool primvars:arnold:smoothing = 0
+        double size = 50
+    }
+
+    def Sphere "sphere"
+    {
+        double radius = 40
+    }
+
+    def Cone "cone"
+    {
+        double height = 100
+        double radius = 30
+    }
+}
+
+def PointInstancer "VisibleInstancer"
+{
+    float3[] extent = [(-400, -200, -200), (200, 200, 200)]
+    float3[] positions = [(-220, -70, 0), (-220, 100, 0), (-120, -50, 0), (-120, 100, 0), (-20, -50, 0), (-20, 100, 0)]
+    int[] protoIndices = [0, 0, 1, 1, 2, 2]
+    rel prototypes = [
+        </VisibleInstancer/cube>,
+        </VisibleInstancer/sphere>,
+        </VisibleInstancer/cone>,
+    ]
+    token visibility = "inherited"
+
+    def Cube "cube"
+    {
+        custom bool primvars:arnold:smoothing = 0
+        double size = 50
+    }
+
+    def Sphere "sphere"
+    {
+        double radius = 40
+    }
+
+    def Cone "cone"
+    {
+        double height = 100
+        double radius = 30
+    }
+}
+
+def DistantLight "Light"
+{
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float2 clippingRange = (1, 20000)
+        float focalLength = 18.147562
+        float focusDistance = 1243.9154
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        float verticalAperture = 11.787188
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-100, 0, 1243.9154052734375, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
