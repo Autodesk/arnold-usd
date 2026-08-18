@@ -775,7 +775,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
 
         if (_acceleratedViewport) {
             AiNodeSetStr(_options, str::render_device, str::GPU);
-            AiNodeSetBool(_options, AtString("viewport_rendering"), true);
+            AiNodeSetBool(_options, str::direct_outputs, true);
         }
         else
         {
@@ -933,7 +933,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
         if (value.IsHolding<bool>()) {
             _acceleratedViewport = value.UncheckedGet<bool>();
-            AiNodeSetBool(_options, str::viewport_rendering, _acceleratedViewport);
+            AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
             if (_acceleratedViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
             }

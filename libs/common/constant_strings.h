@@ -275,6 +275,7 @@ ASTR(diffuse);
 ASTR(diffuseColor);
 ASTR(diffuse_reflect);
 ASTR(diffuse_transmit);
+ASTR(direct_outputs);
 ASTR(disk_light);
 ASTR(disp_map);
 ASTR(displacement);
