@@ -55,14 +55,32 @@ def render_delegate(env, sources):
         # translator() below -- there are no per-module usd_<lib> archives to link
         # against individually.
         if system.is_windows:
+            # -WHOLEARCHIVE: pulls in every object file from libusd_m, including
+            # ones this particular target may not otherwise reference (e.g. the
+            # Alembic reader, Arch's stack-trace/file-access code) -- unlike a
+            # normal static lib, the linker can't drop the unused ones. So, same
+            # as plugins/procedural/SConscript's static-Windows branch, we need
+            # both the system libs those pull in and EXTRA_STATIC_LIBS (Alembic,
+            # MaterialX, ...) whole-archived alongside libusd_m.
             usd_deps = [
                 '-WHOLEARCHIVE:libusd_m',
                 get_tbb_lib(env),
+                'Ws2_32',
+                'Dbghelp',
+                'Shlwapi',
+                'advapi32',
             ]
+            extra_static_libs = env.get('EXTRA_STATIC_LIBS')
+            if extra_static_libs:
+                for extra_lib in extra_static_libs.split(';'):
+                    usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
         else:
             usd_deps = ['libusd_m', get_tbb_lib(env)]
             if system.is_linux:
-                usd_deps = usd_deps + ['dl']
+                # Not whole-archived here, so only symbols actually referenced
+                # get pulled from libusd_m -- but this target does reference
+                # Arch's stack-trace code, which needs pthread_join.
+                usd_deps = usd_deps + ['dl', 'pthread']
         return (sources, add_optional_libs(env, usd_deps))
     usd_libs = [
         'arch',
@@ -205,13 +223,20 @@ def translator(env, sources):
         # static builds rely on a monolithic static library
         if system.is_windows:
             usd_deps = [
-                '-WHOLEARCHIVE:libusd_m', 
+                '-WHOLEARCHIVE:libusd_m',
                 get_tbb_lib(env),
                 'Ws2_32',
                 'Dbghelp',
-                'Shlwapi', 
-                'advapi32' 
+                'Shlwapi',
+                'advapi32'
             ]
+            # Same reasoning as render_delegate()'s static-Windows branch above:
+            # -WHOLEARCHIVE:libusd_m pulls in objects (e.g. the Alembic reader)
+            # whose symbols only resolve if EXTRA_STATIC_LIBS is whole-archived too.
+            extra_static_libs = env.get('EXTRA_STATIC_LIBS')
+            if extra_static_libs:
+                for extra_lib in extra_static_libs.split(';'):
+                    usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
         else:
             usd_deps = [
                 'libusd_m', 
