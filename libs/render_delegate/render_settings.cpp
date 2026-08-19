@@ -319,17 +319,21 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
     // Get USD rendering color space from the data source
     UsdImagingUsdRenderSettingsSchema usdRss = UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
 
-    // Setup color manager - check for OCIO environment variable first
+    // Setup color manager - the OCIO environment variable takes precedence, then comes the
+    // config path the host application gave us through the render settings (#2730)
     AtNode* colorManager = nullptr;
     const char* ocio_path = std::getenv("OCIO");
-    if (ocio_path) {
-        colorManager = _renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
+    const AtString ocioConfig(ocio_path ? ocio_path : _renderDelegate->GetOcioConfigPath().c_str());
+    if (!ocioConfig.empty()) {
+        // This is called on every render settings update, and the render delegate might have
+        // created this color manager already, so we must not create a new one every time
+        colorManager = _renderDelegate->FindOrCreateArnoldNode(str::color_manager_ocio, str::color_manager_ocio);
         if (colorManager) {
-            AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+            AiNodeSetStr(colorManager, str::config, ocioConfig);
         }
     }
 
-    // If no OCIO environment variable, use the default color manager
+    // If we have no OCIO config, use the default color manager
     if (colorManager == nullptr) {
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
     }

@@ -115,6 +115,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (resolution)
     (renderSettingsSrc)
     (hydraSceneRenderSettingsSrc)
+    (ocioConfigPath)
 
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
@@ -522,6 +523,11 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
     return _renderDelegate->GetPxrMtlxPath();
 }
 
+const std::string& HydraArnoldAPI::GetOcioConfigPath() const
+{
+    return _renderDelegate->GetOcioConfigPath();
+}
+
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 
     _apiAdapter(this),
     _universe(universe),
@@ -709,26 +715,44 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
-void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
-{    
-    // function to get or create the color manager and set it on the options node
-    auto getOrCreateColorManager = [](HdArnoldRenderDelegate *renderDelegate, AtNode* options) -> AtNode* {
-        AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
-        if (colorManager == nullptr) {
-            const char *ocio_path = std::getenv("OCIO");
-            if (ocio_path) {
-                colorManager = renderDelegate->CreateArnoldNode(str::color_manager_ocio, 
-                    str::color_manager_ocio);
-                AiNodeSetPtr(options, str::color_manager, colorManager);
-                AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
-            }
-            else
-                // use the default color manager
-                colorManager = renderDelegate->LookupNode("ai_default_color_manager_ocio");
-        }
+AtNode* HdArnoldRenderDelegate::_GetOrCreateColorManager()
+{
+    AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(_options, str::color_manager));
+    if (colorManager != nullptr)
         return colorManager;
-    };
 
+    // The OCIO environment variable takes precedence over everything else, then comes the
+    // config path the host application gave us through the render settings (#2730).
+    const char* ocio_path = std::getenv("OCIO");
+    const AtString config(ocio_path ? ocio_path : _ocioConfigPath.c_str());
+    if (!config.empty()) {
+        // The reading paths create the same color manager when they read the render settings
+        // prim, we must not end up with two of them
+        colorManager = FindOrCreateArnoldNode(str::color_manager_ocio, str::color_manager_ocio);
+        AiNodeSetPtr(_options, str::color_manager, colorManager);
+        AiNodeSetStr(colorManager, str::config, config);
+        // The color spaces might have been received before we had a config to create this
+        // color manager, in which case they were applied to the default color manager.
+        _ApplyColorSpaces(colorManager);
+    } else {
+        // use the default color manager
+        colorManager = LookupNode("ai_default_color_manager_ocio");
+    }
+    return colorManager;
+}
+
+void HdArnoldRenderDelegate::_ApplyColorSpaces(AtNode* colorManager)
+{
+    if (colorManager == nullptr)
+        return;
+    if (!_colorSpaceLinear.empty())
+        AiNodeSetStr(colorManager, str::color_space_linear, AtString(_colorSpaceLinear.c_str()));
+    if (!_colorSpaceNarrow.empty())
+        AiNodeSetStr(colorManager, str::color_space_narrow, AtString(_colorSpaceNarrow.c_str()));
+}
+
+void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
+{
     // When husk/houdini changes frame, they set the new frame number via the render settings.
     if (_key == str::t_houdiniFrame) {
         if (_value.IsHolding<double>()) {
@@ -763,6 +787,23 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
             _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
         }
+    }
+    // The host application can tell us where its OCIO config file resides, e.g. maya
+    // reads it from its color management preferences (#2730). We only use it when the OCIO
+    // environment variable is not set, as it always takes precedence.
+    if (_key == _tokens->ocioConfigPath) {
+        if (_value.IsHolding<std::string>()) {
+            _ocioConfigPath = _value.UncheckedGet<std::string>();
+            if (!_ocioConfigPath.empty() && std::getenv("OCIO") == nullptr) {
+                // Create the color manager right away, the color spaces might never be set.
+                AtNode* colorManager = _GetOrCreateColorManager();
+                // The color manager could already exist, in which case the above returned it
+                // as-is and we still need to apply the config we just received.
+                if (colorManager != nullptr && AiNodeIs(colorManager, str::color_manager_ocio))
+                    AiNodeSetStr(colorManager, str::config, AtString(_ocioConfigPath.c_str()));
+            }
+        }
+        return;
     }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
@@ -902,18 +943,20 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
-            // getOrCreateColorManager returns nullptr when there is no OCIO env
-            // var and the ai_default_color_manager_ocio lookup fails; dereferencing
+            _colorSpaceLinear = value.UncheckedGet<std::string>();
+            // _GetOrCreateColorManager returns nullptr when there is no OCIO config
+            // and the ai_default_color_manager_ocio lookup fails; dereferencing
             // it crashes inside AiNodeSetStr.
-            AtNode* colorManager = getOrCreateColorManager(this, _options);
+            AtNode* colorManager = _GetOrCreateColorManager();
             if (colorManager != nullptr)
-                AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
+                AiNodeSetStr(colorManager, str::color_space_linear, AtString(_colorSpaceLinear.c_str()));
         }
     } else if (key == str::color_space_narrow) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(this, _options);
+            _colorSpaceNarrow = value.UncheckedGet<std::string>();
+            AtNode* colorManager = _GetOrCreateColorManager();
             if (colorManager != nullptr)
-                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
+                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(_colorSpaceNarrow.c_str()));
         }
     } else if (key == _tokens->dataWindowNDC) {
         if (value.IsHolding<GfVec4f>()) {
@@ -961,7 +1004,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         }
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
         const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
-        AtNode* colorManager = getOrCreateColorManager(this, _options);
+        AtNode* colorManager = _GetOrCreateColorManager();
         if (colorManager != nullptr) {
             AtString cmParamStr(cmParamCStr);
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
