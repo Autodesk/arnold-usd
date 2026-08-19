@@ -116,6 +116,10 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_asset_searchpath, "", "Asset search path.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures to TX");
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+TF_DEFINE_ENV_SETTING(HDARNOLD_accelerated_viewport, true, "Enable accelerated viewport");
+#endif
+
 TF_DEFINE_ENV_SETTING(
     HDARNOLD_coordsys_flip_v, false,
     "Flip the coordinate-system camera projections vertically (V axis) for every named "
@@ -172,6 +176,10 @@ HdArnoldConfig::HdArnoldConfig()
 #endif
     osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
     auto_generate_tx = TfGetEnvSetting(HDARNOLD_auto_generate_tx);
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+    accelerated_viewport = TfGetEnvSetting(HDARNOLD_accelerated_viewport);
+#endif
     coordsys_flip_v = TfGetEnvSetting(HDARNOLD_coordsys_flip_v);
     coordsys_flip_ndc_v = TfGetEnvSetting(HDARNOLD_coordsys_flip_ndc_v);
 }

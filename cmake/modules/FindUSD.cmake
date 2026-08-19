@@ -223,7 +223,7 @@ if (HOUDINI_LOCATION)
         message(STATUS "USD version: ${USD_VERSION}")
 
         # List of usd libraries we need for this project
-        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL)
         # H21 is USD 0.25.5 but still needs the separate ndr lib, so a version check is the
         # wrong discriminator. H22 drops it, and the loop below then defines no target.
         list(APPEND ARNOLD_USD_LIBS_ ndr)
@@ -453,6 +453,12 @@ endif ()
 
 if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
     set(USD_HAS_FULLSCREEN_SHADER ON)
+endif ()
+
+# Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+# support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+    set(USD_HAS_HGI_GL ON)
 endif ()
 
 # Look for the dynamic libraries.

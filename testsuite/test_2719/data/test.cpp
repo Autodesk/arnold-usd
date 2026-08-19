@@ -165,7 +165,11 @@ int main(int, char**)
     // reading, no custom shaders), and loading one (usd_proc.dylib in particular)
     // crashes since it embeds its own private static copy of USD alongside the one
     // statically linked directly into this executable.
+#ifdef _WIN32
+    _putenv_s("ARNOLD_PLUGIN_PATH", "");
+#else
     unsetenv("ARNOLD_PLUGIN_PATH");
+#endif
 
     AiBegin(AI_SESSION_INTERACTIVE);
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);

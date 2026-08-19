@@ -645,6 +645,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 
     const bool framingChanged = newFraming != _framing;
+    const bool acceleratedViewportChanged = _acceleratedViewport != _renderDelegate->IsAcceleratedViewport();
+
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
     float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
@@ -667,6 +669,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
+                renderBuffer->SetHgi(_renderDelegate->IsAcceleratedViewport() ? _renderDelegate->GetHgi() : nullptr);
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, _zeroData.data());
@@ -674,7 +677,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-    if (framingChanged) {
+    if (framingChanged || acceleratedViewportChanged) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _framing = newFraming;
@@ -682,6 +685,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::xres, width);
         AiNodeSetInt(options, str::yres, height);
 
+        _acceleratedViewport = _renderDelegate->IsAcceleratedViewport();
         clearBuffers(_renderBuffers, true, width, height);
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
@@ -1003,6 +1007,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // and treat it as Arnold would expect.
             bool isBeauty = binding.aovName == HdAovTokens->color;
             
+            if (_acceleratedViewport && !isBeauty && sourceName != HdAovTokens->depth) {
+                buffer.buffer->SetValid(false);                
+                continue;
+            }
+
             // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
             // an aov with the same name. We can't just check for the source name; for example: using a primvar
             // type and displaying a "color" or a "depth" user data is a valid use case.
@@ -1011,9 +1020,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             if (isRaw && sourceName == HdAovTokens->color) {
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(_acceleratedViewport ? str::t_final_output : str::t_RGBA);                
             } else if (isRaw && sourceName == HdAovTokens->depth) {
                 output = AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, mainDriverName).c_str()};
                 AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(str::t_Z);
             } else if (isRaw && sourceName == HdAovTokens->primId) {
                 if (!primIdWriterPushed) {
                     aovShaders.push_back(_primIdWriter);
@@ -1023,6 +1034,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
                                  .c_str()};
                 AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
+                buffer.buffer->SetAovName(str::t_id);
+                
             } else {
                 // Querying the data format from USD, with a default value of color3f.
                 TfToken format = _GetOptionalSetting<TfToken>(
@@ -1115,6 +1128,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         "%s %s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName, layerName.c_str())
                         .c_str()};
 
+                buffer.buffer->SetAovName(TfToken(layerName.c_str()));
             }
             outputs.push_back(output);
         }
