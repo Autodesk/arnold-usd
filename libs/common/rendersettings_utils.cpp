@@ -864,7 +864,9 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
 
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->globalOperator), "operator", context, time);
 
-    // Setup color manager
+    // Setup color manager. The OCIO environment variable takes precedence over everything
+    // else, then comes an explicit color_manager:node_entry authored in the scene, and
+    // finally the config path the host application gave us (#2730)
     AtNode* colorManager = nullptr;
     const char *ocio_path = std::getenv("OCIO");
     if (ocio_path) {
@@ -878,6 +880,15 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             std::string colorManagerEntry = VtValueGetString(colorManagerEntryValue);
             colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
         }
+    }
+
+    if (colorManager == nullptr && !context.GetOcioConfigPath().empty()) {
+        // The render delegate creates this same color manager when it receives the config
+        // path, in which case we reuse it instead of ending up with two of them
+        colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
+        if (colorManager == nullptr || !AiNodeIs(colorManager, str::color_manager_ocio))
+            colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
+        AiNodeSetStr(colorManager, str::config, AtString(context.GetOcioConfigPath().c_str()));
     }
 
     if (colorManager == nullptr) {

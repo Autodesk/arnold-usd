@@ -1,0 +1,17 @@
+Use the OCIO config file path from the settings map when $OCIO is not set
+
+When the OCIO environment variable is not set, the render delegate now takes the OCIO
+config file path from the "ocioConfigPath" render setting, which host applications such
+as maya set from their color management preferences. The environment variable keeps
+precedence over that setting.
+
+The "ocioConfigPath" setting can only be pushed by a host application through the Hydra
+settings map, which kick cannot do, so this test covers the environment variable leg of
+the rule: $OCIO creates a color_manager_ocio configured with it, and no config is applied
+when neither the environment variable nor the setting is present.
+
+See #2730
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {}
