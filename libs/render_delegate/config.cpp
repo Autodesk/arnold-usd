@@ -117,7 +117,7 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_asset_searchpath, "", "Asset search path.");
 TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures to TX");
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
-TF_DEFINE_ENV_SETTING(HDARNOLD_accelerated_viewport, true, "Enable accelerated viewport");
+TF_DEFINE_ENV_SETTING(HDARNOLD_accelerated_viewport, false, "Enable accelerated viewport");
 #endif
 
 TF_DEFINE_ENV_SETTING(
