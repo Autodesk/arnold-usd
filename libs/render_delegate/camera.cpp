@@ -30,6 +30,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
  (exposure)
  ((filtermap, "primvars:arnold:filtermap"))
  ((uv_remap, "primvars:arnold:uv_remap"))
+ ((ray_origin, "primvars:arnold:ray_origin"))
+ ((ray_direction, "primvars:arnold:ray_direction"))
 
 );
 // clang-format on
@@ -113,6 +115,12 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
         const AtString paramName = AiParamGetName(param);
         if (paramName == str::motion_start || paramName == str::motion_end)
             continue;
+        // ray_origin / ray_direction (uv_camera) are vector params driven by a
+        // linked shader referenced via a prim-path string, handled explicitly in
+        // UpdateGenericParams. Skip them here so the generic value setter doesn't
+        // try to interpret the shader path as a vector value.
+        if (paramName == str::ray_origin || paramName == str::ray_direction)
+            continue;
         
         TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
         const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);
@@ -145,8 +153,24 @@ void HdArnoldCamera::UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRende
     const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
     if (filtermap)
         AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
-    else 
+    else
         AiNodeResetParameter(_camera, str::filtermap);
+
+    // Link the ray_origin / ray_direction shaders (uv_camera cage projection):
+    // each is referenced by a prim-path string and resolved to a shader terminal,
+    // mirroring uv_remap. When absent the param is reset and the uv_camera falls
+    // back to its normal-offset rays.
+    AtNode *ray_origin = ReadCameraShader(sceneDelegate, renderParam, _tokens->ray_origin, str::t_ray_origin, dirtyBits);
+    if (ray_origin)
+        AiNodeLink(ray_origin, str::ray_origin, _camera);
+    else
+        AiNodeResetParameter(_camera, str::ray_origin);
+
+    AtNode *ray_direction = ReadCameraShader(sceneDelegate, renderParam, _tokens->ray_direction, str::t_ray_direction, dirtyBits);
+    if (ray_direction)
+        AiNodeLink(ray_direction, str::ray_direction, _camera);
+    else
+        AiNodeResetParameter(_camera, str::ray_direction);
 }
 
 void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
