@@ -235,10 +235,22 @@ void HdArnoldVolume::Sync(
         // by the render delegate
         _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
         auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+        const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
         auto* volumeShader = material != nullptr
-                                 ? material->GetCachedVolumeShader(HdArnoldGetCoordSysBinding(sceneDelegate, id))
+                                 ? material->GetCachedVolumeShader(coordSysBinding)
                                  : _renderDelegate->GetFallbackVolumeShader();
-        _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
+        auto assignShader = [](HdArnoldShape* s, AtNode* shader) {
+            if (shader) AiNodeSetPtr(s->GetShape(), str::shader, shader); else AiNodeResetParameter(s->GetShape(), str::shader);
+        };
+        for (auto* v : _volumes) { assignShader(v, volumeShader); }
+        for (auto* v : _inMemoryVolumes) { assignShader(v, volumeShader); }
+        // Points nodes created from vdb points grids are regular (non-volumetric) shapes, so
+        // they need a surface shader rather than the volume shader (#2740).
+        if (!_pointsVolumes.empty()) {
+            auto* surfaceShader = material != nullptr ? material->GetCachedSurfaceShader(coordSysBinding)
+                                                       : _renderDelegate->GetFallbackSurfaceShader();
+            for (auto* v : _pointsVolumes) { assignShader(v, surfaceShader); }
+        }
     }
 
     auto transformDirtied = false;
@@ -354,6 +366,49 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         }
     }
 
+#if ARNOLD_VERSION_NUM >= 70504
+    // Since Arnold 7.5.4.0, AiVolumeFileGetChannelTypes lets us know if a vdb grid stores
+    // OpenVDB points rather than a regular volume/SDF grid. Arnold volume nodes can't render
+    // points grids, so those are routed to dedicated points nodes instead (#2740). The query
+    // reopens and reparses the whole file, so its result is cached per filename.
+    std::unordered_map<std::string, std::unordered_map<std::string, int>> channelTypesCache;
+    auto getChannelType = [&channelTypesCache](const std::string& file, const std::string& grid) -> int {
+        auto cacheIt = channelTypesCache.find(file);
+        if (cacheIt == channelTypesCache.end()) {
+            std::unordered_map<std::string, int> types;
+            AtArray* channels = AiVolumeFileGetChannels(file.c_str());
+            AtArray* channelTypes = AiVolumeFileGetChannelTypes(file.c_str());
+            if (channels != nullptr && channelTypes != nullptr) {
+                const auto numChannels = AiArrayGetNumElements(channels);
+                for (auto i = decltype(numChannels){0}; i < numChannels; ++i) {
+                    types[AiArrayGetStr(channels, i).c_str()] = AiArrayGetInt(channelTypes, i);
+                }
+            }
+            cacheIt = channelTypesCache.emplace(file, std::move(types)).first;
+        }
+        auto typeIt = cacheIt->second.find(grid);
+        return typeIt == cacheIt->second.end() ? AI_VOLUME_CHANNEL_TYPE_UNKNOWN : typeIt->second;
+    };
+
+    // Split each file's requested grids into regular volume grids and points grids.
+    std::unordered_map<std::string, std::vector<VdbFieldData>> openvdb_points_fields;
+    for (auto& openvdb : openvdb_fields) {
+        std::vector<VdbFieldData> volumeOnlyFields;
+        for (auto& fieldData : openvdb.second) {
+            if (getChannelType(openvdb.first, fieldData.field.GetString()) == AI_VOLUME_CHANNEL_TYPE_POINTS) {
+                openvdb_points_fields[openvdb.first].push_back(fieldData);
+            } else {
+                volumeOnlyFields.push_back(fieldData);
+            }
+        }
+        openvdb.second = std::move(volumeOnlyFields);
+    }
+    // Drop files left with no regular volume grid, so we don't create an empty volume node.
+    for (auto it = openvdb_fields.begin(); it != openvdb_fields.end();) {
+        it = it->second.empty() ? openvdb_fields.erase(it) : std::next(it);
+    }
+#endif
+
     _volumes.erase(
         std::remove_if(
             _volumes.begin(), _volumes.end(),
@@ -401,6 +456,54 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
         delete volume;
     }
     _inMemoryVolumes.clear();
+
+#if ARNOLD_VERSION_NUM >= 70504
+    // Arnold's points node can only source a single grid per node (file_grid), so each
+    // requested points grid gets its own points node.
+    _pointsVolumes.erase(
+        std::remove_if(
+            _pointsVolumes.begin(), _pointsVolumes.end(),
+            [&openvdb_points_fields](HdArnoldShape* shape) -> bool {
+                auto* p = shape->GetShape();
+                const std::string file = AiNodeGetStr(p, str::file_name).c_str();
+                const std::string grid = AiNodeGetStr(p, str::file_grid).c_str();
+                auto pointsIt = openvdb_points_fields.find(file);
+                const bool stillNeeded = pointsIt != openvdb_points_fields.end() &&
+                    std::any_of(
+                        pointsIt->second.begin(), pointsIt->second.end(),
+                        [&grid](const VdbFieldData& fieldData) { return fieldData.field.GetString() == grid; });
+                if (!stillNeeded) {
+                    delete shape;
+                    return true;
+                }
+                return false;
+            }),
+        _pointsVolumes.end());
+
+    for (const auto& openvdbPoints : openvdb_points_fields) {
+        for (const auto& fieldData : openvdbPoints.second) {
+            const auto& gridName = fieldData.field.GetString();
+            AtNode* pointsNode = nullptr;
+            for (auto* shape : _pointsVolumes) {
+                auto* p = shape->GetShape();
+                if (openvdbPoints.first == AiNodeGetStr(p, str::file_name).c_str() &&
+                    gridName == AiNodeGetStr(p, str::file_grid).c_str()) {
+                    pointsNode = p;
+                    break;
+                }
+            }
+            if (pointsNode == nullptr) {
+                auto* shape = new HdArnoldShape(str::points, _renderDelegate, id, GetPrimId());
+                pointsNode = shape->GetShape();
+                AiNodeSetStr(pointsNode, str::file_name, AtString(openvdbPoints.first.c_str()));
+                AiNodeSetStr(pointsNode, str::file_grid, AtString(gridName.c_str()));
+                AiNodeSetStr(
+                    pointsNode, str::name, AtString(TfStringPrintf("%s_pts_%p", id.GetText(), pointsNode).c_str()));
+                _pointsVolumes.push_back(shape);
+            }
+        }
+    }
+#endif
 
     if (houvdb_fields.empty()) {
         return;

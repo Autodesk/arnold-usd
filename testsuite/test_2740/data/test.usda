@@ -1,0 +1,68 @@
+#usda 1.0
+(
+    defaultPrim = "world"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def DomeLight "light"
+{
+}
+
+def Xform "world" (
+    kind = "component"
+)
+{
+    def Volume "points" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel field:points = </world/points/vdb>
+        rel material:binding = </mtl/pointsMat>
+        string primvars:arnold:mode = "sphere"
+
+        def OpenVDBAsset "vdb"
+        {
+            asset filePath = @./pointgrid.vdb@
+            token fieldName = "points"
+        }
+    }
+}
+
+def Scope "mtl"
+{
+    def Material "pointsMat"
+    {
+        token outputs:arnold:surface.connect = </mtl/pointsMat/surface.outputs:out>
+
+        def Shader "surface"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            color3f inputs:base_color.connect = </mtl/pointsMat/pointColor.outputs:out>
+            float inputs:specular_roughness = 0.3
+            token outputs:out
+        }
+
+        def Shader "pointColor"
+        {
+            uniform token info:id = "arnold:user_data_rgb"
+            string inputs:attribute = "Cd"
+            color3f inputs:default = (0.5, 0.5, 0.5)
+            token outputs:out
+        }
+    }
+}
+
+def Scope "Cameras"
+{
+    def Camera "renderCamera"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 31.176915
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        token projection = "perspective"
+        matrix4d xformOp:transform = ( (0.6, 0, -0.8, 0), (-0.297112541, 0.928476690, -0.222834406, 0), (0.742781353, 0.371390676, 0.557086014, 0), (8, 4, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
