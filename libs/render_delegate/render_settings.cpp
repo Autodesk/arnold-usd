@@ -675,6 +675,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         bool useLayerName = false;
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
+        std::vector<std::string> compressionList;
+        const std::string compressionKey = "arnold:" + driverType + ":compression";
 
         // Process render vars for this product
         for (const auto& renderVar : product.renderVars) {
@@ -914,6 +918,15 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             layerNames.push_back(layerName);
             aovNamesList.push_back(sourceName);
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
+            std::string varCompression;
+            if (isDriverExr) {
+                auto compressionIt = renderVarSettings.find(compressionKey);
+                if (compressionIt != renderVarSettings.end())
+                    varCompression = VtValueGetString(compressionIt->second);
+            }
+            compressionList.push_back(varCompression);
         }
 
         // Add layer names for duplicated AOVs
@@ -939,6 +952,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 AiNodeSetBool(driver, AtString("half_precision"), true);
             }
         }
+
+        SetDriverExrCompressions(driver, compressionList);
     }
 
     // Set outputs array on options

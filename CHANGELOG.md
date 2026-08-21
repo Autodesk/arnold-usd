@@ -11,6 +11,7 @@
 
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
 - [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-RenderVar EXR compression
 
 ### Bug fixes
 
