@@ -752,8 +752,8 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
     if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
         ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, ArnoldAPIAdapter::CONNECTION_LINK);
     }
-    // uv_camera cage projection: ray_origin / ray_direction are shaders linked
-    // through a node graph, just like uv_remap.
+    // The uv_camera ray_origin / ray_direction are linked to a shader through an
+    // ArnoldNodeGraph primitive, just like uv_remap above
     UsdAttribute rayOriginAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayOrigin);
     if (rayOriginAttr && rayOriginAttr.HasAuthoredValue()) {
         ReadNodeGraphAttr(prim, node, rayOriginAttr, "ray_origin", context, ArnoldAPIAdapter::CONNECTION_LINK);
