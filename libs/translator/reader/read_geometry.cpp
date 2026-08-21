@@ -57,6 +57,8 @@
 #include "read_light.h"
 #include "utils.h"
 
+#include <unordered_map>
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -2135,12 +2137,37 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     if (reader == nullptr)
         return nullptr;
 
-    AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
     UsdVolVolume::FieldMap fields = volume.GetFieldPaths();
     std::string filename;
     std::vector<std::string> grids;
+    std::vector<std::string> pointsGrids;
+
+#if ARNOLD_VERSION_NUM >= 70504
+    // Since Arnold 7.5.4.0, AiVolumeFileGetChannelTypes lets us know if a given vdb grid stores
+    // OpenVDB points rather than a regular volume/SDF grid. Arnold volume nodes can't render
+    // points grids, so those are routed to a dedicated points node instead (#2740). The query
+    // reopens and reparses the whole file, so its result is cached per filename.
+    std::unordered_map<std::string, std::unordered_map<std::string, int>> channelTypesCache;
+    auto getChannelType = [&channelTypesCache](const std::string &file, const std::string &grid) -> int {
+        auto cacheIt = channelTypesCache.find(file);
+        if (cacheIt == channelTypesCache.end()) {
+            std::unordered_map<std::string, int> types;
+            AtArray *channels = AiVolumeFileGetChannels(file.c_str());
+            AtArray *channelTypes = AiVolumeFileGetChannelTypes(file.c_str());
+            if (channels != nullptr && channelTypes != nullptr) {
+                const unsigned numChannels = AiArrayGetNumElements(channels);
+                for (unsigned i = 0; i < numChannels; ++i) {
+                    types[AiArrayGetStr(channels, i).c_str()] = AiArrayGetInt(channelTypes, i);
+                }
+            }
+            cacheIt = channelTypesCache.emplace(file, std::move(types)).first;
+        }
+        auto typeIt = cacheIt->second.find(grid);
+        return typeIt == cacheIt->second.end() ? AI_VOLUME_CHANNEL_TYPE_UNKNOWN : typeIt->second;
+    };
+#endif
 
     // Loop over all the fields in this volume node.
     // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
@@ -2161,33 +2188,65 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
-                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", AiNodeGetName(node));
+                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", prim.GetPath().GetText());
             }
             TfToken vdbGrid;
             if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid, time.frame)) {
+                std::string gridName = vdbGrid.GetString();
+#if ARNOLD_VERSION_NUM >= 70504
+                if (getChannelType(fieldFilename, gridName) == AI_VOLUME_CHANNEL_TYPE_POINTS) {
+                    pointsGrids.push_back(gridName);
+                    continue;
+                }
+#endif
                 int fieldIndex = 0;
                 if (vdbAsset.GetFieldIndexAttr().Get(&fieldIndex, time.frame)) {
-                    std::string vdbIndexGrid = vdbGrid.GetString();
-                    vdbIndexGrid += std::string("[") + std::to_string(fieldIndex) + std::string("]");
-                    grids.push_back(vdbIndexGrid);
-                } else {
-                    grids.push_back(vdbGrid);
+                    gridName += std::string("[") + std::to_string(fieldIndex) + std::string("]");
                 }
+                grids.push_back(gridName);
             }
         }
     }
 
-    // Now set the first vdb filename that was found
-    AiNodeSetStr(node, str::filename, AtString(filename.c_str()));
+    AtNode *node = nullptr;
+    // Only skip creating the arnold volume node when every field turned out to be a points grid.
+    // If nothing was found at all, we still create an (empty) volume node, matching prior behavior.
+    if (!grids.empty() || pointsGrids.empty()) {
+        node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
+        // Now set the first vdb filename that was found
+        AiNodeSetStr(node, str::filename, AtString(filename.c_str()));
 
-    // Set all the grids that are needed
-    AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
-    for (size_t i = 0; i < grids.size(); ++i) {
-        AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+        // Set all the grids that are needed
+        AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
+        for (size_t i = 0; i < grids.size(); ++i) {
+            AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+        }
+        AiNodeSetArray(node, str::grids, gridsArray);
+
+        _ReadGenericShape(prim, context, node, time, "primvars:arnold");
     }
-    AiNodeSetArray(node, str::grids, gridsArray);
 
-    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+#if ARNOLD_VERSION_NUM >= 70504
+    // Arnold's points node can only source a single grid per node (file_grid), so each points
+    // grid found on this volume prim gets its own points node.
+    for (size_t i = 0; i < pointsGrids.size(); ++i) {
+        std::string pointsName = prim.GetPath().GetText();
+        if (node != nullptr || pointsGrids.size() > 1) {
+            pointsName += "/points_";
+            pointsName += pointsGrids[i];
+        }
+        AtNode *pointsNode = context.CreateArnoldNode("points", pointsName.c_str());
+        AiNodeSetStr(pointsNode, str::file_name, AtString(filename.c_str()));
+        AiNodeSetStr(pointsNode, str::file_grid, AtString(pointsGrids[i].c_str()));
+        // Points don't support the same feature set as volumes (e.g. no volume shading, no
+        // interior/exterior shaders), so we fall back to the generic shape reading path used
+        // by regular geometry: standard material binding, primvars and arnold parameters.
+        _ReadGenericShape(prim, context, pointsNode, time, "primvars:arnold");
+        if (node == nullptr)
+            node = pointsNode;
+    }
+#endif
+
     return node;
 }
 
