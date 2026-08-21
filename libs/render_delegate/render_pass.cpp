@@ -1229,6 +1229,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 // same reason; mirror that here for the custom-product depth/primId outputs.
                 const auto* filterGeoName =
                     customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : closestName;
+                // The drivers are reused across updates (see FindOrCreateArnoldNode above), so we
+                // need to clear the per-layer compression array before reading the RenderProduct
+                // parameters below. Otherwise an array authored during a previous update would
+                // survive the user removing the per-RenderVar overrides. _ReadNodeParameters
+                // restores the RenderProduct-level compression right after, if there is one
+                if (AiNodeIs(customProduct.driver, str::driver_exr))
+                    AiNodeResetParameter(customProduct.driver, str::compression);
+
                 // Applying custom parameters to the driver.
                 // First we read parameters simply prefixed with arnold: (do we still need this ?)
                 _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings, _renderDelegate);
@@ -1413,8 +1421,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
                 // Gather the per-RenderVar compressions into driver_exr.compression, positionally
                 // aligned with this driver's render_outputs. Unlike the deep exr arrays above we
-                // don't reset the parameter when no RenderVar authored one, as it also holds the
-                // compression authored on the RenderProduct
+                // don't need to reset the parameter when no RenderVar authored one, as it was
+                // already reset before the RenderProduct parameters were read
                 SetDriverExrCompressions(customProduct.driver, compressions);
                 AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));

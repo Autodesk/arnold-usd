@@ -38,16 +38,25 @@ void ComputeUsdLuxVersion(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSe
 void SetArnoldDefaultOptions(AtUniverse *universe);
 void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolution);
 
-// Resolve the driver_exr.compression applying to layer #index of an exr driver, based on whatever is
-// currently set on the node (i.e. the RenderProduct-level value, if any). This mirrors arnold's
-// own positional rule: element #index, else element 0, else "zip".
+// Resolve the driver_exr.compression applying to layer #index of an exr driver, based on whatever
+// is currently set on the node (i.e. the RenderProduct-level value, if any). This mirrors arnold's
+// own positional rule: element #index, else element 0, else "zip" (see driver_open in
+// driver_exr.cpp).
 std::string GetDriverCompressionFallback(const AtNode *driver, size_t index);
 
-// Set the positional per-layer compression array on a driver_exr node. compressions must be
-// index-aligned with the outputs this driver receives. An empty entry means "this RenderVar
-// didn't author a compression" and is filled with GetDriverCompressionFallback. If no entry was
-// authored, or if the node isn't a driver_exr, this is a no-op so that a legacy compression
-// authored on the RenderProduct is left untouched.
+// Set the positional per-layer compression array on a driver_exr node, gathered from the
+// arnold:driver_exr:compression attribute of each RenderVar. Note that per-RenderVar settings are
+// usually named arnold:{parameter} (e.g. arnold:layer_tolerance), but "compression" is an existing
+// RenderProduct-level parameter, so we use the fully qualified arnold:driver_exr:compression on
+// RenderVars as well, to make it obvious that both refer to the same driver parameter.
+//
+// compressions must be index-aligned with the outputs this driver receives. An empty entry means
+// "this RenderVar didn't author a compression" and is filled with GetDriverCompressionFallback,
+// so as soon as one RenderVar authors a compression, every layer ends up with an explicit value.
+// If no entry was authored, or if the node isn't a driver_exr, this is a no-op, so that a
+// compression authored on the RenderProduct is left untouched. Callers that reuse their driver
+// nodes across updates are responsible for resetting the parameter beforehand, see
+// HdArnoldRenderPass::_Execute.
 void SetDriverExrCompressions(AtNode *driver, const std::vector<std::string> &compressions);
 
 // Color manager helper functions

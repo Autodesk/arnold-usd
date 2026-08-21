@@ -62,7 +62,19 @@ bool CheckScene()
     success &= CheckCompression("/Render/Products/legacy", {"zips"});
     // RenderVars that don't author one fall back to the RenderProduct-level compression
     success &= CheckCompression("/Render/Products/mixed", {"dwab", "zips"});
+    // Same, for a RenderProduct whose driver was deduced from the filename, where the
+    // product-level compression is authored as arnold:compression
+    success &= CheckCompression("/Render/Products/deduced", {"piz", "rle"});
     return success;
+}
+
+// Create the parameter map used for the scene load/write calls. It's allocated per session, as an
+// AtParamValueMap doesn't outlive the AiBegin/AiEnd it was created in
+AtParamValueMap *CreateParams()
+{
+    AtParamValueMap *params = AiParamValueMap();
+    AiParamValueMapSetBool(params, AtString("convert_string_outputs"), false);
+    return params;
 }
 
 } // namespace
@@ -71,16 +83,18 @@ int main(int argc, char **argv)
 {
     AiBegin();
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
-    AtParamValueMap *params = AiParamValueMap();
-    AiParamValueMapSetBool(params, AtString("convert_string_outputs"), false);
+    AtParamValueMap *params = CreateParams();
     AiSceneLoad(nullptr, "test.usda", params);
 
     bool success = CheckScene();
 
     AiSceneWrite(nullptr, "scene.ass", params);
+    AiParamValueMapDestroy(params);
     AiEnd();
 
     AiBegin();
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
+    params = CreateParams();
     AiSceneLoad(nullptr, "scene.ass", params);
     AiParamValueMapDestroy(params);
     // The compression array must survive the .ass round trip unchanged

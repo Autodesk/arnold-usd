@@ -16,6 +16,7 @@ def Scope "Render"
             </Render/Products/perVar>,
             </Render/Products/legacy>,
             </Render/Products/mixed>,
+            </Render/Products/deduced>,
         ]
         int2 resolution = (160, 120)
         custom int arnold:global:AA_samples = 1
@@ -74,6 +75,21 @@ def Scope "Render"
             string sourceName = "Z"
             token sourceType = "raw"
         }
+
+        # Same as the mixed case, but for a RenderProduct without an arnold:driver
+        def RenderVar "deducedRgba"
+        {
+            token dataType = "color4f"
+            string sourceName = "RGBA"
+            token sourceType = "raw"
+            custom string arnold:driver_exr:compression = "piz"
+        }
+        def RenderVar "deducedDepth"
+        {
+            token dataType = "float"
+            string sourceName = "Z"
+            token sourceType = "raw"
+        }
     }
 
     def Scope "Products"
@@ -97,6 +113,14 @@ def Scope "Render"
             custom string arnold:driver_exr:compression = "zips"
             rel orderedVars = [</Render/Vars/mixedRgba>, </Render/Vars/mixedDepth>]
             token productName = "mixed.exr"
+        }
+        # Without an arnold:driver the driver type is deduced from the filename, and the
+        # product-level parameters are named arnold:{parameter}, not arnold:{driverType}:{parameter}
+        def RenderProduct "deduced"
+        {
+            custom string arnold:compression = "rle"
+            rel orderedVars = [</Render/Vars/deducedRgba>, </Render/Vars/deducedDepth>]
+            token productName = "deduced.exr"
         }
     }
 }
