@@ -47,6 +47,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// The fast/accelerated viewport relies on Hgi/GL interop APIs that are not
+// available on macOS, so keep it disabled there regardless of USD/Arnold version.
+#if ARNOLD_VERSION_NUM >= 70503 && defined(USD_HAS_HGI_GL) && !defined(__APPLE__)
+#define SUPPORT_ACCELERATED_VIEWPORT 1
+#endif
+
 /// Class that holds the global configuration values for the Render Delegate.
 ///
 /// Note: we are not following the coding conventions for the members, as we want
@@ -196,6 +202,21 @@ struct HdArnoldConfig {
     /// Use HDARNOLD_auto_generate_tx to set the value.
     ///
     bool auto_generate_tx;
+
+    /// Use HDARNOLD_accelerated_viewport to set the value.
+    ///
+    bool accelerated_viewport = false;
+
+    /// Flip coordinate-system camera projections vertically (all named spaces).
+    /// Disabled by default; set HDARNOLD_coordsys_flip_v=1 for the opposite orientation.
+    ///
+    bool coordsys_flip_v;
+
+    /// Give the .NDC space an extra vertical flip relative to the other named spaces
+    /// (Arnold's NDC is Y-opposite to its screen/raster). Enabled by default; set
+    /// HDARNOLD_coordsys_flip_ndc_v=0 for Arnold's native NDC orientation.
+    ///
+    bool coordsys_flip_ndc_v;
 
 
 private:

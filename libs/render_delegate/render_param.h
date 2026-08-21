@@ -86,14 +86,38 @@ public:
     /// @param needsRestart Whether or not changes are applied to the scene and we need to restart rendering.
     /// @param clearStatus Clears the internal failure status. Set it to false when no scene data changed, that could
     ///  affect the aborted internal status.
+    /// @param clearPaused Clears the internal paused status, but only when there is an actual render to interrupt:
+    ///  AiRenderInterrupt() unparks a render gated by AiRenderPause() (it clears Arnold's own pause flag and leaves
+    ///  the session in AI_RENDER_STATUS_PAUSED), so a pause in effect is not honoured past this call and the
+    ///  bookkeeping has to follow. A pause requested before the render began survives, since there is nothing to
+    ///  unpark and UpdateRender() is still holding the render at AI_RENDER_STATUS_NOT_STARTED. Set it to false only
+    ///  when the interrupt itself is the mechanism used to *achieve* the pause (see Pause()'s pre-7.5.4 fallback),
+    ///  not when it is caused by an unrelated scene edit.
     HDARNOLD_API
-    void Interrupt(bool needsRestart = true, bool clearStatus = true);
-    /// Pauses an ongoing render, does nothing if no render is running.
+    void Interrupt(bool needsRestart = true, bool clearStatus = true, bool clearPaused = true);
+    /// Pauses the render. On Arnold 7.5.4+ this gates the render threads via AiRenderPause() without discarding
+    /// accumulated progress; before that it falls back to interrupting the render. A pause requested before the
+    /// render has begun is remembered, and UpdateRender() then holds off on starting it.
     HDARNOLD_API
     void Pause();
-    /// Resumes an already paused render, does nothing if no render is running, or the render is not paused.
+    /// Resumes a paused render, does nothing if the render is not paused.
     HDARNOLD_API
     void Resume();
+    /// Returns whether a Pause() call is currently in effect. Cleared by Resume(), Restart(), or an
+    /// Interrupt() cancelling the pause (see Interrupt()'s clearPaused parameter). Note this cannot be derived
+    /// from AiRenderGetStatus(), which keeps reporting AI_RENDER_STATUS_RENDERING for a gated render.
+    ///
+    /// @return True if paused.
+    bool IsPaused() const { return _paused.load(std::memory_order_acquire); }
+    /// Stops the render, discarding any progress, and holds it stopped until Restart() (or Resume()) is called.
+    /// Unlike Pause() this does not preserve accumulated samples; unlike a bare Interrupt() the render is not
+    /// picked up again by the next UpdateRender() call.
+    HDARNOLD_API
+    void Stop();
+    /// Returns whether a Stop() call is currently in effect.
+    ///
+    /// @return True if stopped.
+    bool IsStopped() const { return _stopped.load(std::memory_order_acquire); }
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
@@ -187,12 +211,18 @@ private:
     std::atomic<bool> _needsRestart{false};
     /// Indicate if rendering has been aborted at one point or another.
     std::atomic<bool> _aborted{false};
-    /// Indicate if rendering has been paused. Prior to C++20 std::atomic<bool>'s
-    /// default constructor leaves the value indeterminate, and the cpp file's
-    /// constructor explicitly stores false into _needsRestart and _aborted but
-    /// not into _paused — so the first UpdateRender call read uninitialized
-    /// memory. Initialize all three here for safety.
+    /// Indicate if rendering has been paused. This is plain state, not a one-shot intent flag: UpdateRender() reads
+    /// it without consuming it, and only Resume()/Restart()/Stop() and a pause-cancelling Interrupt() clear it. It
+    /// has to be tracked here rather than queried from Arnold because AiRenderIsPaused() only exists in 7.5.4+, and
+    /// because a pause requested before AiRenderBegin() is not something Arnold can remember.
+    /// Prior to C++20 std::atomic<bool>'s default constructor leaves the value indeterminate, and the cpp file's
+    /// constructor explicitly stores false into _needsRestart and _aborted but not into _paused — so the first
+    /// UpdateRender call read uninitialized memory. Initialize all of them here for safety.
     std::atomic<bool> _paused{false};
+    /// Indicate if rendering has been stopped by Stop() and must stay stopped until Restart()/Resume(). Distinct
+    /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
+    /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.
+    std::atomic<bool> _stopped{false};
 
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;

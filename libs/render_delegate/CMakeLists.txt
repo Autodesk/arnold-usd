@@ -4,6 +4,7 @@ set(SRC
     basis_curves.cpp
     camera.cpp
     config.cpp
+    coord_sys.cpp
     gaussian_splat.cpp
     instancer.cpp
     light.cpp
@@ -31,6 +32,7 @@ set(HDR
     basis_curves.h
     camera.h
     config.h
+    coord_sys.h
     debug_codes.h
     rprim.h
     hdarnold.h
@@ -66,6 +68,10 @@ endif ()
 
 if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
+endif ()
+
+if (${USD_HAS_HGI_GL})
+    target_compile_definitions(render_delegate PUBLIC "USD_HAS_HGI_GL=1")
 endif ()
 
 target_link_libraries(render_delegate INTERFACE common)

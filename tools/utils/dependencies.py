@@ -49,8 +49,39 @@ def add_plugin_deps(env, sources, libs, needs_dl):
         return (source_files, add_optional_libs(env, usd_deps))
 
 # Returns a list of usd dependencies and source files.
-# This only works with monolithic and shared usd dependencies.
 def render_delegate(env, sources):
+    if env['USD_BUILD_MODE'] == 'static':
+        # Static builds rely on a single monolithic static library, same as
+        # translator() below -- there are no per-module usd_<lib> archives to link
+        # against individually.
+        if system.is_windows:
+            # -WHOLEARCHIVE: pulls in every object file from libusd_m, including
+            # ones this particular target may not otherwise reference (e.g. the
+            # Alembic reader, Arch's stack-trace/file-access code) -- unlike a
+            # normal static lib, the linker can't drop the unused ones. So, same
+            # as plugins/procedural/SConscript's static-Windows branch, we need
+            # both the system libs those pull in and EXTRA_STATIC_LIBS (Alembic,
+            # MaterialX, ...) whole-archived alongside libusd_m.
+            usd_deps = [
+                '-WHOLEARCHIVE:libusd_m',
+                get_tbb_lib(env),
+                'Ws2_32',
+                'Dbghelp',
+                'Shlwapi',
+                'advapi32',
+            ]
+            extra_static_libs = env.get('EXTRA_STATIC_LIBS')
+            if extra_static_libs:
+                for extra_lib in extra_static_libs.split(';'):
+                    usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
+        else:
+            usd_deps = ['libusd_m', get_tbb_lib(env)]
+            if system.is_linux:
+                # Not whole-archived here, so only symbols actually referenced
+                # get pulled from libusd_m -- but this target does reference
+                # Arch's stack-trace code, which needs pthread_join.
+                usd_deps = usd_deps + ['dl', 'pthread']
+        return (sources, add_optional_libs(env, usd_deps))
     usd_libs = [
         'arch',
         'plug',
@@ -78,7 +109,21 @@ def render_delegate(env, sources):
         usd_libs += ['boost','python',]
     if env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['hdsi','ts',]
-    return add_plugin_deps(env, sources, usd_libs, True)
+
+    # needed for fast viewport code path
+    if env['USD_BUILD_MODE'] != 'static':
+        usd_libs += ['hgi', 'hgiGL', 'garch']
+
+    source_files, usd_deps = add_plugin_deps(env, sources, usd_libs, True)
+    # garch/hgiGL pull in Arch's stack-trace/file-access code, which needs pthread_join
+    # on Linux (it must come after garch/tbb on the link line, since they're static
+    # archives that don't carry their own system-lib dependencies) and SymInitialize/
+    # SymFromAddr/gethostname/OpenProcessToken on Windows.
+    if system.is_linux:
+        usd_deps = usd_deps + ['pthread']
+    elif system.is_windows:
+        usd_deps = usd_deps + ['Ws2_32', 'Dbghelp', 'Shlwapi', 'advapi32']
+    return (source_files, usd_deps)
 
 
 # This only works with monolithic and shared usd dependencies.
@@ -178,13 +223,20 @@ def translator(env, sources):
         # static builds rely on a monolithic static library
         if system.is_windows:
             usd_deps = [
-                '-WHOLEARCHIVE:libusd_m', 
+                '-WHOLEARCHIVE:libusd_m',
                 get_tbb_lib(env),
                 'Ws2_32',
                 'Dbghelp',
-                'Shlwapi', 
-                'advapi32' 
+                'Shlwapi',
+                'advapi32'
             ]
+            # Same reasoning as render_delegate()'s static-Windows branch above:
+            # -WHOLEARCHIVE:libusd_m pulls in objects (e.g. the Alembic reader)
+            # whose symbols only resolve if EXTRA_STATIC_LIBS is whole-archived too.
+            extra_static_libs = env.get('EXTRA_STATIC_LIBS')
+            if extra_static_libs:
+                for extra_lib in extra_static_libs.split(';'):
+                    usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
         else:
             usd_deps = [
                 'libusd_m', 

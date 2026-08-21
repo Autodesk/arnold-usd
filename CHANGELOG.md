@@ -3,13 +3,26 @@
 
 ## [7.5.4.0] (Unreleased)
 
+- [usd#2652](https://github.com/Autodesk/arnold-usd/issues/2652) - Add setting for accelerated viewport
+
+## [7.5.4.0] (Unreleased)
+
+### Features
+
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
-- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-rendervar EXR compression
+- [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-RenderVar EXR compression
+
+### Bug fixes
+
+- [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
+
 
 ## [7.5.3.1] (Unreleased)
 
 ### Bug fixes
 
+- [usd#2715](https://github.com/Autodesk/arnold-usd/issues/2715) - Honor PointInstancer-level visibility in the Hydra render delegate
 - [usd#2699](https://github.com/Autodesk/arnold-usd/issues/2699) - Fix primvars:crypto_asset being ignored on instanceable references
 
 

@@ -223,10 +223,10 @@ if (HOUDINI_LOCATION)
         message(STATUS "USD version: ${USD_VERSION}")
 
         # List of usd libraries we need for this project
-        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
-        if (${USD_VERSION} VERSION_LESS "0.25.05")
-            list(APPEND ARNOLD_USD_LIBS_ ndr)
-        endif()
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL)
+        # H21 is USD 0.25.5 but still needs the separate ndr lib, so a version check is the
+        # wrong discriminator. H22 drops it, and the loop below then defines no target.
+        list(APPEND ARNOLD_USD_LIBS_ ndr)
         # hdsi has shipped since USD 22.05 and plugins/usd_imaging links it
         # unconditionally, so it must be aliased unconditionally too.
         list(APPEND ARNOLD_USD_LIBS_ hdsi)
@@ -246,22 +246,45 @@ if (HOUDINI_LOCATION)
             if (TARGET Houdini::Dep::pxr_${lib})
                 add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
             else() # otherwise we pick the library on disk, but the location  might change in the future
-                add_library(${lib} SHARED IMPORTED)
-                set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${HOUDINI_LIBS_LOCATION}/libpxr_${lib}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                set(_lib_path "${HOUDINI_LIBS_LOCATION}/libpxr_${lib}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                # CMake does not check IMPORTED_LOCATION at configure time, so skip missing libs
+                # here rather than failing at link.
+                if (EXISTS "${_lib_path}")
+                    add_library(${lib} SHARED IMPORTED)
+                    set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${_lib_path}")
+                else()
+                    list(APPEND _missing_usd_libs ${lib})
+                endif()
+                unset(_lib_path)
             endif()
         endforeach ()
+        if (_missing_usd_libs)
+            message(STATUS "USD libraries not shipped by this Houdini, no target defined: ${_missing_usd_libs}")
+            unset(_missing_usd_libs)
+        endif()
         if (APPLE)
             set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-framework Python")
         else()
             set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb)
-            # Houdini 22 no longer exports a tbbmalloc target from HoudiniConfig.cmake,
-            # although dsolib still ships libtbbmalloc. Link it only where the target
-            # exists
+            # H22 no longer exports a tbbmalloc target, although dsolib still ships the lib.
             if (TARGET Houdini::Dep::tbbmalloc)
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbbmalloc)
             endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
+                if (WIN32)
+                    # Houdini's hboost headers still use Boost's auto_link.hpp on MSVC,
+                    # which embeds a #pragma comment(lib, "hboost_python<ver>-vc143-mt-x64-1_82.lib")
+                    # guess (toolset + boost version suffix) in every translation unit that
+                    # includes them. Houdini ships the plain "hboost_python<ver>-mt-x64.lib"
+                    # name instead, so the implicit link fails even though the explicit
+                    # Houdini::Dep::hboost_python target above points at the right file.
+                    add_compile_definitions(BOOST_ALL_NO_LIB=1 HBOOST_ALL_NO_LIB=1)
+                endif()
+            elseif (TARGET Houdini::Dep::pxr_python)
+                # USD 0.25.05 renamed its boost fork hboost -> pxr_boost, so Houdini ships
+                # libpxr_python instead of hboost_python.
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::pxr_python)
             endif()
         endif()
         
@@ -430,6 +453,12 @@ endif ()
 
 if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
     set(USD_HAS_FULLSCREEN_SHADER ON)
+endif ()
+
+# Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+# support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+    set(USD_HAS_HGI_GL ON)
 endif ()
 
 # Look for the dynamic libraries.

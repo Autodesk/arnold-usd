@@ -30,6 +30,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "mesh.h"
+#include "coord_sys.h"
 #include "light.h"
 #include <pxr/base/trace/trace.h>
 
@@ -42,6 +43,9 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
+
+#include <string>
+#include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -393,6 +397,10 @@ void HdArnoldMesh::Sync(
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
         const auto isVolume = _IsVolume();
+        // Shared materials bound by different rprims to different cameras each
+        // resolve to their own camera through this per-rprim remap (see the
+        // remap-aware HdArnoldNodeGraph::GetCached*Shader).
+        const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
         auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
@@ -400,14 +408,15 @@ void HdArnoldMesh::Sync(
         HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
             nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
-            const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+            auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader();
-                dispMap[arrayId] = material->GetCachedDisplacementShader();
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader(coordSysBinding)
+                                           : material->GetCachedSurfaceShader(coordSysBinding);
+                dispMap[arrayId] = material->GetCachedDisplacementShader(coordSysBinding);
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
@@ -621,11 +630,20 @@ void HdArnoldMesh::Sync(
         }        
     }
 
-    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
+    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
+    // or if the coordinate-system bindings changed (assignMaterials rewrites each material's
+    // "space" inputs to the cameras bound here - see the remap-aware GetCached*Shader).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories) ||
+        (dirtyTopology && !_subsets.empty())) {
         param.Interrupt();
         assignMaterials();
     }
+
+    // Note: we deliberately do not export the bound coordinate-system cameras as a
+    // "coord_sys" user attribute on the shape. Arnold's OSL render services resolve
+    // named spaces globally by camera node name and never consult such an array, so
+    // it would have no consumer - while holding AtNode pointers that dangle if the
+    // coordinate system is removed without this rprim being re-synced.
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
     
@@ -637,8 +655,8 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyPoints |
            HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided |
            HdChangeTracker::DirtySubdivTags | HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform |
-           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility |
-           HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | 
+           HdChangeTracker::DirtyCategories | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 

@@ -119,6 +119,11 @@ private:
         AtNode* writer = nullptr;
         /// Optional reader node for each AOV.
         AtNode* reader = nullptr;
+        /// Optional per-RenderVar filter node. Previously the AOV-specific filter
+        /// returned by _CreateFilter was only referenced from the output string and
+        /// never destroyed, leaking one Arnold filter per RenderVar on every
+        /// custom-product rebuild.
+        AtNode* filter = nullptr;
     };
 
     // Each arnold driver can handle multiple AOVs.
@@ -136,11 +141,18 @@ private:
     GfMatrix4d _viewMtx; ///< View matrix of the camera.
     GfMatrix4d _projMtx; ///< Projection matrix of the camera.
 
+    /// Scratch buffer of zero bytes used to clear HdArnoldRenderBuffers between
+    /// render iterations. Kept as a per-instance member so it grows monotonically
+    /// without being shared across HdArnoldRenderPass instances (which would
+    /// be the case for a function-local static).
+    std::vector<uint8_t> _zeroData;
+
     CameraUtilFraming _framing;
 
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
+    bool _acceleratedViewport = false;
     bool _isConverged = false;          ///< State of the render convergence.
 };
 

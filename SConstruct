@@ -240,7 +240,6 @@ ARNOLD_API_INCLUDES = os.path.abspath(env.subst(env['ARNOLD_API_INCLUDES']))
 ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
 ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
 
-
 if not is_windows and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
 
@@ -309,6 +308,7 @@ if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGI
     env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
     env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
     env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']
+    env['USD_HAS_HGI_GL'] = header_info['USD_HAS_HGI_GL']
     # Deactivate the scene index plugin for usd version < 25.05
     if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
         env['BUILD_SCENE_INDEX_PLUGIN'] = False
