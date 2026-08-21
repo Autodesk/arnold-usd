@@ -675,9 +675,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         bool useLayerName = false;
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
-        // driver_exr.compression is a positional string array, where element i applies to
-        // render_outputs[i]. Each RenderVar can author arnold:driver_exr:compression to get its
-        // own compression, and we gather them all below (see ARNOLD-15669)
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
         std::vector<std::string> compressionList;
         const std::string compressionKey = "arnold:" + driverType + ":compression";
 
@@ -919,17 +918,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             layerNames.push_back(layerName);
             aovNamesList.push_back(sourceName);
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
-            // Remember the compression for this output. This needs to happen here, next to
-            // outputs.push_back, so that the indices stay aligned (the loop above can skip
-            // RenderVars entirely). An empty string means no compression was authored
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
             std::string varCompression;
             if (isDriverExr) {
                 auto compressionIt = renderVarSettings.find(compressionKey);
-                if (compressionIt != renderVarSettings.end()) {
-                    // VtValueGetString accepts a string, a token, or an array of those,
-                    // so the attribute can be authored either as a scalar or as an array
+                if (compressionIt != renderVarSettings.end())
                     varCompression = VtValueGetString(compressionIt->second);
-                }
             }
             compressionList.push_back(varCompression);
         }
@@ -958,8 +953,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
         }
 
-        // Gather the per-RenderVar compressions into driver_exr.compression, positionally
-        // aligned with this driver's render_outputs
         SetDriverExrCompressions(driver, compressionList);
     }
 

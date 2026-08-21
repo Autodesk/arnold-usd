@@ -50,8 +50,8 @@ bool CheckOutput(unsigned int index, const char *expected)
 bool CheckScene()
 {
     bool success = true;
-    // The compression array is positional, so element i needs to line up with the i-th output
-    // referencing that driver, which is the order of options.outputs
+    // The compression array is positional, so element i lines up with the i-th output
+    // referencing that driver
     success &= CheckOutput(0, "RGBA RGBA /Render/Vars/rgba/filter /Render/Products/perVar");
     success &= CheckOutput(1, "N RGB /Render/Vars/normal/filter /Render/Products/perVar");
     success &= CheckOutput(2, "Z FLOAT /Render/Vars/depth/filter /Render/Products/perVar");
@@ -62,14 +62,13 @@ bool CheckScene()
     success &= CheckCompression("/Render/Products/legacy", {"zips"});
     // RenderVars that don't author one fall back to the RenderProduct-level compression
     success &= CheckCompression("/Render/Products/mixed", {"dwab", "zips"});
-    // Same, for a RenderProduct whose driver was deduced from the filename, where the
-    // product-level compression is authored as arnold:compression
+    // Same, but with the driver deduced from the filename and the product-level compression
+    // authored as arnold:compression
     success &= CheckCompression("/Render/Products/deduced", {"piz", "rle"});
     return success;
 }
 
-// Create the parameter map used for the scene load/write calls. It's allocated per session, as an
-// AtParamValueMap doesn't outlive the AiBegin/AiEnd it was created in
+// An AtParamValueMap doesn't outlive the AiBegin/AiEnd it was created in
 AtParamValueMap *CreateParams()
 {
     AtParamValueMap *params = AiParamValueMap();

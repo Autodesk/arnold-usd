@@ -115,7 +115,7 @@ def Scope "Render"
             token productName = "mixed.exr"
         }
         # Without an arnold:driver the driver type is deduced from the filename, and the
-        # product-level parameters are named arnold:{parameter}, not arnold:{driverType}:{parameter}
+        # product-level parameters are named arnold:{parameter}
         def RenderProduct "deduced"
         {
             custom string arnold:compression = "rle"

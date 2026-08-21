@@ -231,9 +231,8 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     }
 }
 
-// Compression used by driver_exr when its compression array is empty. The parameter default is
-// an empty array, so there is no way to query this from the node entry, and we have to mirror
-// arnold's own hardcoded fallback (see driver_open in driver_exr.cpp)
+// What driver_exr uses when its compression array is empty. Not queryable from the node entry,
+// whose default is an empty array (see driver_open in driver_exr.cpp)
 static constexpr const char *s_defaultExrCompression = "zip";
 
 std::string GetDriverCompressionFallback(const AtNode *driver, size_t index)
@@ -243,11 +242,7 @@ std::string GetDriverCompressionFallback(const AtNode *driver, size_t index)
     if (numCurrent == 0)
         return s_defaultExrCompression;
 
-    // driver_exr resolves the compression of layer #i as: element #i if the array is long
-    // enough, element #0 otherwise (see driver_open in driver_exr.cpp, which also warns when the
-    // array size doesn't match the number of layers). We mirror that rule here so that a
-    // RenderProduct authoring a single compression, or fewer compressions than there are
-    // RenderVars, keeps its original meaning once we expand the array
+    // Same rule as driver_exr: element #index, or element #0 when the array is shorter
     const uint32_t elem = (index < numCurrent) ? static_cast<uint32_t>(index) : 0;
     return AiArrayGetStr(current, elem).c_str();
 }
@@ -265,17 +260,12 @@ void SetDriverExrCompressions(AtNode *driver, const std::vector<std::string> &co
             break;
         }
     }
-    // No RenderVar authored a compression, so we leave the parameter exactly as the
-    // RenderProduct-level pass left it, which is also how it behaved before per-RenderVar
-    // compressions existed
+    // Nothing to gather, leave the RenderProduct-level compression alone
     if (!hasAuthored)
         return;
 
-    // At least one RenderVar authored a compression, so we need to write a full array: the
-    // remaining layers get an explicit value instead of being left to arnold's own resolution.
-    // The fallback is resolved from the array currently set on the driver (i.e. the
-    // RenderProduct-level compression, if any), so the array has to be filled completely before
-    // we set it back on the node
+    // The fallback reads the array currently set on the driver, so it has to stay in place until
+    // the new one is complete
     AtArray *array = AiArrayAllocate(static_cast<uint32_t>(compressions.size()), 1, AI_TYPE_STRING);
     for (size_t i = 0; i < compressions.size(); ++i) {
         const std::string compression = compressions[i].empty() ?
@@ -664,9 +654,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         size_t prevOutputsCount = outputs.size();
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
-        // driver_exr.compression is a positional string array, where element i applies to
-        // render_outputs[i]. Each RenderVar can author arnold:driver_exr:compression to get its
-        // own compression, and we gather them all below (see ARNOLD-15669)
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
         std::vector<std::string> compressionList;
         const TfToken compressionAttrName(std::string("arnold:") + driverType + ":compression");
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
@@ -851,18 +840,14 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             aovNamesList.push_back(sourceName);
             // Remember if this output is half precision or not
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
-            // Remember the compression for this output. This needs to happen here, next to
-            // outputs.push_back, so that the indices stay aligned (the loop above can skip
-            // RenderVars entirely). An empty string means no compression was authored
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
             std::string varCompression;
             if (isDriverExr) {
                 UsdAttribute compressionAttr = renderVarPrim.GetAttribute(compressionAttrName);
                 VtValue compressionValue;
-                if (compressionAttr && compressionAttr.Get(&compressionValue, time.frame)) {
-                    // VtValueGetString accepts a string, a token, or an array of those,
-                    // so the attribute can be authored either as a scalar or as an array
+                if (compressionAttr && compressionAttr.Get(&compressionValue, time.frame))
                     varCompression = VtValueGetString(compressionValue);
-                }
             }
             compressionList.push_back(varCompression);
         } // End renderVar loop
@@ -897,8 +882,6 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             if (isHalfDriver && driverType == "driver_exr")
                 AiNodeSetBool(driver, AtString("half_precision"), true);
         }
-        // Gather the per-RenderVar compressions into driver_exr.compression, positionally
-        // aligned with this driver's render_outputs
         SetDriverExrCompressions(driver, compressionList);
     } // End renderProduct loop
 

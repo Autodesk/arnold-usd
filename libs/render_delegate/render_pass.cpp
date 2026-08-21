@@ -1229,11 +1229,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 // same reason; mirror that here for the custom-product depth/primId outputs.
                 const auto* filterGeoName =
                     customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : closestName;
-                // The drivers are reused across updates (see FindOrCreateArnoldNode above), so we
-                // need to clear the per-layer compression array before reading the RenderProduct
-                // parameters below. Otherwise an array authored during a previous update would
-                // survive the user removing the per-RenderVar overrides. _ReadNodeParameters
-                // restores the RenderProduct-level compression right after, if there is one
+                // The drivers are reused across updates, so a compression array set during a
+                // previous one would survive the user removing the per-RenderVar overrides.
+                // _ReadNodeParameters below restores the RenderProduct-level value, if any
                 if (AiNodeIs(customProduct.driver, str::driver_exr))
                     AiNodeResetParameter(customProduct.driver, str::compression);
 
@@ -1255,9 +1253,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 std::vector<bool> enableFiltering;
                 std::vector<bool> halfPrecision;
 
-                // Similarly, driver_exr.compression is a positional string array where element i
-                // applies to render_outputs[i], so RenderVars can author
-                // arnold:driver_exr:compression to get their own compression (see ARNOLD-15669)
+                // Similarly, driver_exr.compression is a positional array where element i applies
+                // to render_outputs[i], and RenderVars can author arnold:driver_exr:compression
+                // (ARNOLD-15669)
                 const bool isExrDriver = AiNodeIs(customProduct.driver, str::driver_exr);
                 std::vector<std::string> compressions;
 
@@ -1288,12 +1286,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     if (isExrDriver) {
                         const auto compressionIt = renderVar.settings.find(_tokens->compression);
                         if (compressionIt != renderVar.settings.end()) {
-                            // VtValueGetString accepts a string, a token, or an array of those,
-                            // so the attribute can be authored either as a scalar or as an array
                             const std::string compression = VtValueGetString(compressionIt->second);
                             if (!compression.empty()) {
-                                // Entries left empty are filled with the RenderProduct-level
-                                // compression by SetDriverExrCompressions below
+                                // Entries left empty fall back to the RenderProduct-level value
                                 if (compressions.empty())
                                     compressions.assign(numRenderVars, std::string());
                                 compressions[renderVarIndex] = compression;
@@ -1419,10 +1414,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeResetParameter(customProduct.driver, str::layer_half_precision);
                     }
                 }
-                // Gather the per-RenderVar compressions into driver_exr.compression, positionally
-                // aligned with this driver's render_outputs. Unlike the deep exr arrays above we
-                // don't need to reset the parameter when no RenderVar authored one, as it was
-                // already reset before the RenderProduct parameters were read
+                // Unlike the deep exr arrays above, there's no reset here as the compression was
+                // already cleared before the RenderProduct parameters were read
                 SetDriverExrCompressions(customProduct.driver, compressions);
                 AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));
