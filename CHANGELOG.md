@@ -4,6 +4,7 @@
 ## [7.5.4.0] (Unreleased)
 
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-rendervar EXR compression
 
 ## [7.5.3.1] (Unreleased)
 
