@@ -33,6 +33,7 @@
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <pxr/imaging/hd/sceneIndex.h>
 #include <pxr/imaging/hd/sceneIndexPrimView.h>
+#include <pxr/imaging/hd/renderSettingsSchema.h>
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/imaging/hdsi/renderSettingsFilteringSceneIndex.h>
 
@@ -338,8 +339,26 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
         // Set the color manager node in the options
         AiNodeSetPtr(options, str::color_manager, colorManager);
 
-        // Set rendering color space from USD if available
-        HdTokenDataSourceHandle renderingColorSpaceHandle = usdRss.GetRenderingColorSpace();
+        // Set rendering color space if available. mayaHydra (via
+        // MhRenderingColorSpaceResolvingSceneIndex) and the render-settings flattening
+        // scene index resolve the color space into the HdRenderSettingsSchema
+        // "renderSettings" locator, not the raw UsdImaging "__usdRenderSettings"
+        // locator, so read from HdRenderSettingsSchema first.
+        HdTokenDataSourceHandle renderingColorSpaceHandle;
+#if PXR_VERSION >= 2311
+        // HdRenderSettingsSchema::GetRenderingColorSpace was introduced in USD 23.11.
+        HdRenderSettingsSchema hdRss = HdRenderSettingsSchema::GetFromParent(prim.dataSource);
+        if (hdRss.IsDefined()) {
+            renderingColorSpaceHandle = hdRss.GetRenderingColorSpace();
+        }
+#endif
+        // Fall back to the UsdImaging schema if the resolved value is absent or empty.
+        if (!renderingColorSpaceHandle || renderingColorSpaceHandle->GetTypedValue(0.0f).IsEmpty()) {
+            HdTokenDataSourceHandle usdHandle = usdRss.GetRenderingColorSpace();
+            if (usdHandle && !usdHandle->GetTypedValue(0.0f).IsEmpty()) {
+                renderingColorSpaceHandle = usdHandle;
+            }
+        }
         if (renderingColorSpaceHandle) {
             TfToken renderingColorSpace = renderingColorSpaceHandle->GetTypedValue(0.0f);
             if (!renderingColorSpace.IsEmpty()) {
