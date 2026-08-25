@@ -50,6 +50,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (ArnoldNodeGraph)
     ((PrimvarsArnoldFiltermap, "primvars:arnold:filtermap"))
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
+    ((PrimvarsArnoldRayOrigin, "primvars:arnold:ray_origin"))
+    ((PrimvarsArnoldRayDirection, "primvars:arnold:ray_direction"))
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
     ((PrimvarsArnoldTransformKeys, "primvars:arnold:transform_keys"))
     ((PrimvarsArnoldStepSize, "primvars:arnold:step_size"))
@@ -653,74 +655,90 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
 
 
     bool success = false;
-    // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
+    // A camera / light / render-setting references its shaders through an
+    // ArnoldNodeGraph primitive that acts as a passthrough. That reference can be
+    // authored in two ways, both handled here:
+    //   1. as a real USD connection pointing at the ArnoldNodeGraph output
+    //      terminal, e.g. primvars:arnold:ray_origin.connect = </cam/graph.outputs:ray_origin>
+    //   2. as a plain string holding the path to the ArnoldNodeGraph prim (legacy
+    //      form, still authored as a fallback and used by the render delegate)
     const TimeSettings &time = context.GetTimeSettings();
-    VtValue value;
-    if (attr && attr.Get(&value, time.frame)) {
-        // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value);
 
-        if (!valStr.empty()) {
-            SdfPath path(valStr);
-            // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
-            // If the prim isn't at that exact path it might have been remapped by
-            // a reference/payload composition. Consult the node-graph name map,
-            // built from the authored primvars:arnold:name attributes.
-            if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
-                SdfPath remapped = context.GetReader()->LookupNodeGraphPath(valStr);
-                if (remapped.IsEmpty()) {
-                    _PopulateNodeGraphNameMap(context.GetReader());
-                    remapped = context.GetReader()->LookupNodeGraphPath(valStr);
-                }
-                if (!remapped.IsEmpty())
-                    ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(remapped);
-            }
-            // We verify if the primitive is indeed a ArnoldNodeGraph
-            if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
-                // We can use a UsdShadeShader schema in order to read connections
-                UsdShadeShader ngShader(ngPrim);
-                
-                bool isArray = false;
-                if (cType == ArnoldAPIAdapter::CONNECTION_ARRAY) {
-                    isArray = true;
-                    cType = ArnoldAPIAdapter::CONNECTION_PTR;
-                }
-                int arrayIndex = 0;
-                while(true) {
-
-                    std::string outAttrName = attrName;
-                    std::string connAttrName = attrName;
-                    if (isArray) {
-                        // usd format for arrays
-                        std::string idStr = std::to_string(++arrayIndex);
-                        outAttrName += std::string(":i") + idStr;
-                        // format used internally in the reader to recognize arrays easily
-                        connAttrName += std::string("[") + idStr + std::string("]");
+    UsdPrim ngPrim;
+    // Case 1: the attribute is connected to the ArnoldNodeGraph. USD composition
+    // already remaps the connection target when this layer is referenced, so the
+    // prim can be resolved directly without consulting the node-graph name map.
+    if (attr && attr.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (attr.GetConnections(&connections) && !connections.empty())
+            ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(connections[0].GetPrimPath());
+    }
+    // Case 2: the attribute holds the ArnoldNodeGraph path as a string.
+    if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
+        VtValue value;
+        if (attr && attr.Get(&value, time.frame)) {
+            std::string valStr = VtValueGetString(value);
+            if (!valStr.empty()) {
+                // We check if there is a primitive at the path of this string
+                ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
+                // If the prim isn't at that exact path it might have been remapped by
+                // a reference/payload composition. Consult the node-graph name map,
+                // built from the authored primvars:arnold:name attributes.
+                if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
+                    SdfPath remapped = context.GetReader()->LookupNodeGraphPath(valStr);
+                    if (remapped.IsEmpty()) {
+                        _PopulateNodeGraphNameMap(context.GetReader());
+                        remapped = context.GetReader()->LookupNodeGraphPath(valStr);
                     }
-                    
-                    // the output attribute must have the same name as the input one in the RenderSettings
-                    UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
-                    if (outputAttr) {
-                        SdfPathVector sourcePaths;
-                        // Check which shader is connected to this output
-                        if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
-                            !sourcePaths.empty()) {
-                            SdfPath outPath(sourcePaths[0].GetPrimPath());
-                            UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
-                            if (outPrim) {
-                                context.AddConnection(node, connAttrName, outPath.GetText(), cType);
-                            }
-                        }
-                        success = true;
-                    } else
-                        break;
-                    if (!isArray)
-                        break;
+                    if (!remapped.IsEmpty())
+                        ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(remapped);
                 }
             }
         }
+    }
 
+    // We verify if the primitive is indeed a ArnoldNodeGraph
+    if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+        // We can use a UsdShadeShader schema in order to read connections
+        UsdShadeShader ngShader(ngPrim);
+
+        bool isArray = false;
+        if (cType == ArnoldAPIAdapter::CONNECTION_ARRAY) {
+            isArray = true;
+            cType = ArnoldAPIAdapter::CONNECTION_PTR;
+        }
+        int arrayIndex = 0;
+        while(true) {
+
+            std::string outAttrName = attrName;
+            std::string connAttrName = attrName;
+            if (isArray) {
+                // usd format for arrays
+                std::string idStr = std::to_string(++arrayIndex);
+                outAttrName += std::string(":i") + idStr;
+                // format used internally in the reader to recognize arrays easily
+                connAttrName += std::string("[") + idStr + std::string("]");
+            }
+
+            // the output attribute must have the same name as the input one in the RenderSettings
+            UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
+            if (outputAttr) {
+                SdfPathVector sourcePaths;
+                // Check which shader is connected to this output
+                if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
+                    !sourcePaths.empty()) {
+                    SdfPath outPath(sourcePaths[0].GetPrimPath());
+                    UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
+                    if (outPrim) {
+                        context.AddConnection(node, connAttrName, outPath.GetText(), cType);
+                    }
+                }
+                success = true;
+            } else
+                break;
+            if (!isArray)
+                break;
+        }
     }
     return success;
 }
@@ -737,14 +755,30 @@ void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, AtNo
 }
 
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)
-{   
-    UsdAttribute filtermapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldFiltermap); 
-    if (filtermapAttr && filtermapAttr.HasAuthoredValue()) {
-        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, ArnoldAPIAdapter::CONNECTION_PTR);    
+{
+    // The camera references its shaders through an ArnoldNodeGraph, either as a
+    // string path or as a USD connection (see ReadNodeGraphAttr). A pure
+    // connection has no authored value, so we test for both here.
+    const auto isAuthored = [](const UsdAttribute &attr) {
+        return attr && (attr.HasAuthoredValue() || attr.HasAuthoredConnections());
+    };
+    UsdAttribute filtermapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldFiltermap);
+    if (isAuthored(filtermapAttr)) {
+        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, ArnoldAPIAdapter::CONNECTION_PTR);
     }
     UsdAttribute uvRemapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldUvRemap);
-    if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
+    if (isAuthored(uvRemapAttr)) {
         ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    // The uv_camera ray_origin / ray_direction are linked to a shader through an
+    // ArnoldNodeGraph primitive, just like uv_remap above
+    UsdAttribute rayOriginAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayOrigin);
+    if (isAuthored(rayOriginAttr)) {
+        ReadNodeGraphAttr(prim, node, rayOriginAttr, "ray_origin", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    UsdAttribute rayDirectionAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayDirection);
+    if (isAuthored(rayDirectionAttr)) {
+        ReadNodeGraphAttr(prim, node, rayDirectionAttr, "ray_direction", context, ArnoldAPIAdapter::CONNECTION_LINK);
     }
 }
 
