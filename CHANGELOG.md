@@ -12,6 +12,7 @@
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
 - [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
 - [usd#2740](https://github.com/Autodesk/arnold-usd/issues/2740) - Render OpenVDB points grids in Volume prims as Arnold points nodes instead of volume nodes
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-RenderVar EXR compression
 
 ### Bug fixes
 
