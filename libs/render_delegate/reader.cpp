@@ -26,6 +26,7 @@
 #include <pxr/usd/usdRender/tokens.h>
 #include "render_delegate.h"
 #include "render_pass.h"
+#include "utils.h"
 
 #include "rendersettings_utils.h"
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -173,17 +174,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     static AtMutex s_renderIndexCreationMutex;
     static AtMutex s_renderDelegateCreationMutex;
 #ifdef ARNOLD_SCENE_INDEX
-    if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
-    {
-        // The environment variable is defined, it takes precedence on any other setting
-        std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
-        std::string::size_type i = useSceneIndex.find(" ");
-        while(i != std::string::npos) {
-            useSceneIndex.erase(i, 1);
-            i = useSceneIndex.find(" ");
-        }
-        _useSceneIndex = (useSceneIndex != "0");
-    }
+    _useSceneIndex = HdArnoldIsSceneIndexEnabled();
 #endif
 
     //

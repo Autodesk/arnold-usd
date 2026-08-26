@@ -464,7 +464,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
 void HdArnoldRenderSettings::_Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
 {
-    if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
+    if (!HdArnoldIsSceneIndexEnabled())
         return;
 
     // If we're not using the hydra render settings, we shouldn't do anything here
