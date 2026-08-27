@@ -655,10 +655,12 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        // if we have a procedural parent, we should avoid deleting nodes
-        // as this can happen in batch sessions during procedural_update, 
-        // which is not allowed
-        if (_procParent) {
+        // If we have a procedural parent and the parent render is a batch render,
+        // we must avoid deleting nodes: this can happen during procedural_update,
+        // which is not allowed in batch sessions. For interactive renders we do
+        // want to destroy the node, otherwise regenerating a node with the same
+        // name later on causes naming conflicts (see #2277).
+        if (_procParent && _isBatch) {
             AiNodeSetDisabled(node, true);
         }
         else
@@ -913,7 +915,7 @@ private:
     int _nodeId = 0;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
-    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
+    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk, or a batch parent render when running under a procedural)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;

@@ -180,11 +180,23 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     //
     // Create the render delegate using the plugin system. This allows the correct initialisation of the scene indices in hydra1
     //
+    // Determine the actual session mode of the parent render we're expanding into,
+    // so that the render delegate knows whether it runs inside a batch or an
+    // interactive render. We used to hardcode is_batch=true / session_type=INTERACTIVE
+    // here, which was wrong: an interactive Maya render also goes through this
+    // procedural path, and reporting it as batch prevented nodes from being properly
+    // destroyed on regeneration (naming conflicts). The procedural-specific behavior
+    // that relied on these values is now guarded on the procedural_parent instead.
+    const AtRenderSession* parentRenderSession = AiUniverseGetRenderSession(_universe);
+    const AtSessionMode parentSessionMode =
+        parentRenderSession ? AiGetSessionMode(parentRenderSession) : AI_SESSION_INTERACTIVE;
+    const bool parentIsBatch = (parentSessionMode == AI_SESSION_BATCH);
+
     HdRenderSettingsMap settingsMap;
-    settingsMap[TfToken("arnold:is_batch")] = VtValue(true);
+    settingsMap[TfToken("arnold:is_batch")] = VtValue(parentIsBatch);
     settingsMap[TfToken("arnold:context")] = VtValue(TfToken("kick"));
     settingsMap[TfToken("arnold:universe")] = VtValue(static_cast<void*>(_universe));
-    settingsMap[TfToken("arnold:session_type")] = VtValue(AI_SESSION_INTERACTIVE);
+    settingsMap[TfToken("arnold:session_type")] = VtValue(parentSessionMode);
     settingsMap[TfToken("arnold:procedural_parent")] = VtValue(static_cast<void*>(procParent));
     {
         // We must lock the render delegate creation as if multiple procedurals create HdArnoldRendererPlugin, we end up with a messed up plugin registry.

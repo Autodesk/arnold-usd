@@ -536,7 +536,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _context(context),
     _isBatch(isBatch), 
     _renderDelegateOwnsUniverse(universe==nullptr)
-{     
+{
 
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);
@@ -877,14 +877,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiProfileSetFileName(_profileFile.c_str());
         }
     } else if (key == str::t_enable_progressive_render) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForBoolValue(value, [&](const bool b) {
                 AiRenderSetHintBool(GetRenderSession(), str::progressive, b);
                 AiNodeSetBool(_options, str::enable_progressive_render, b);
             });
         }
     } else if (key == str::t_progressive_min_AA_samples) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForIntValue(value, [&](const int i) {
                 AiRenderSetHintInt(GetRenderSession(), str::progressive_min_AA_samples, i);
             });
@@ -892,19 +892,19 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_interactive_target_fps) {
         // _CheckForFloatValue handles double and GfHalf as well as float, so
         // hosts that don't normalise to float don't get their FPS setting dropped.
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForFloatValue(value, [&](const float f) {
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, f);
             });
         }
     } else if (key == str::t_interactive_target_fps_min) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForFloatValue(value, [&](const float f) {
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, f);
             });
         }
     } else if (key == str::t_interactive_fps_min) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForFloatValue(value, [&](const float f) {
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, f);
             });
@@ -1779,6 +1779,12 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     // For interactive renders, it is always possible to update the scene
     if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
+    // When running under a procedural parent, we translate the scene during the
+    // procedural expansion, while the parent render is already active (status
+    // RENDERING). We must be allowed to update the scene regardless of that
+    // status, otherwise no node would ever get translated in a batch render.
+    if (_procParent != nullptr)
+        return true;
     // For batch renders, only update the scene if the render hasn't started yet,
     // or if it's finished. We must use GetRenderSession() rather than _renderSession
     // directly: when we don't own the universe (procedural / external) _renderSession
@@ -2159,7 +2165,9 @@ void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 
 void HdArnoldRenderDelegate::SetDrivers(HdDriverVector const& drivers)
 {
-    if (_isBatch)
+    // Skip in batch renders, and when we run under a procedural parent: in that
+    // case we don't own the render loop and shouldn't grab the host's Hgi driver.
+    if (_isBatch || _procParent != nullptr)
         return;
 
     for (HdDriver* driver : drivers) {

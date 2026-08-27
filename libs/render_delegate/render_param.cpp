@@ -230,7 +230,11 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
 
 void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus, bool clearPaused)
 {
-    if (_delegate == nullptr || _delegate->IsBatchContext()) return;
+    // Skip in batch renders, and when we run under a procedural parent: in that
+    // case we don't own the render loop and must not interrupt the host's render
+    // session (which would otherwise happen now that the procedural reports its
+    // real, interactive session type).
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) return;
     const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
     if (status == AI_RENDER_STATUS_RENDERING ||
         status == AI_RENDER_STATUS_RESTARTING ||
@@ -263,7 +267,7 @@ void HdArnoldRenderParam::Pause()
     // only takes effect while the status is exactly RENDERING and silently no-ops in every other state, and the
     // `_paused` store below is what makes the request stick until UpdateRender() can establish the gate.
     _paused.store(true, std::memory_order_release);
-    if (_delegate != nullptr && !_delegate->IsBatchContext()) {
+    if (_delegate != nullptr && !_delegate->IsBatchContext() && _delegate->GetProceduralParent() == nullptr) {
         AiRenderPause(_delegate->GetRenderSession());
     }
 #else
@@ -289,7 +293,7 @@ void HdArnoldRenderParam::Resume()
     // Explicitly lift the pause gate here rather than waiting for the next
     // UpdateRender poll, since AiRenderGetStatus() keeps reporting RENDERING
     // while paused and UpdateRender has no other signal to act on.
-    if (_delegate != nullptr && !_delegate->IsBatchContext()) {
+    if (_delegate != nullptr && !_delegate->IsBatchContext() && _delegate->GetProceduralParent() == nullptr) {
         AiRenderResume(_delegate->GetRenderSession());
     }
 #endif
