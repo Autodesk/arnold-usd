@@ -127,7 +127,7 @@ vars.AddVariables(
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', True),
     BoolVariable('ENABLE_SHARED_ARRAYS', 'Enable the use of shared arrays in hydra', False),
-    BoolVariable('ENABLE_HYDRA2_RENDERSETTINGS', 'Enable the use of RenderSettings hydra prim', False),
+    BoolVariable('ENABLE_HYDRA2', 'Traverse the stage with the scene index (Hydra 2) by default. The USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX environment variable overrides this at runtime. Unrelated to BUILD_SCENE_INDEX_PLUGIN, which must stay enabled either way since Hydra 1 needs the scene index filters too.', True),
     BoolVariable('ENABLE_TRACING', 'Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE).', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),

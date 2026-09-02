@@ -89,4 +89,11 @@ target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SCENE_INDEX=1)
 endif()
+# Whether Hydra 2 is the default traversal mode. Only HdArnoldIsSceneIndexEnabled() in
+# utils.cpp reads this, so it is enough to define it for this library.
+if (ENABLE_HYDRA2)
+    target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=1)
+else()
+    target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=0)
+endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})

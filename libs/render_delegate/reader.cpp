@@ -173,7 +173,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 {
     static AtMutex s_renderIndexCreationMutex;
     static AtMutex s_renderDelegateCreationMutex;
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
     _useSceneIndex = HdArnoldIsSceneIndexEnabled();
 #endif
 
@@ -215,7 +215,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
         UsdImagingCreateSceneIndicesInfo info;
         info.displayUnloadedPrimsWithBounds = false;
         info.overridesSceneIndexCallback =
@@ -481,7 +481,7 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
     if (_sceneGlobalsSceneIndex) {
         SdfPath renderPassPrimPath(renderPass);
         if (!renderPassPrimPath.IsEmpty()) {
@@ -495,7 +495,7 @@ void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
     if (_useSceneIndex) {
-#ifdef ARNOLD_SCENE_INDEX        
+#ifdef ENABLE_SCENE_INDEX
         _stageSceneIndex->ApplyPendingUpdates();
 #endif
     }
@@ -522,7 +522,7 @@ void HydraArnoldReader::WriteDebugScene() const
 }
 
 
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
 
 HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
