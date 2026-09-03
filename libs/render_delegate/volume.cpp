@@ -47,6 +47,7 @@
 #include "openvdb_asset.h"
 #include "utils.h"
 
+#include <cctype>
 #include <iostream>
 #include <array>
 
@@ -183,6 +184,29 @@ struct VdbFieldData {
     int fieldIndex = 0;
 };
 
+// Arnold's AiVolumeFileMakeLODs (and core's VdbDataMip) auto-detect LOD mip-chains from
+// grids named "<channel>_level_<N>" inside the vdb file itself, so the "grids" array only
+// needs to list the plain base channel name once. Returns true and sets `baseName` if
+// `name` ends with a "_level_<digits>" suffix.
+bool _StripVdbLodSuffix(const std::string& name, std::string& baseName)
+{
+    static const std::string levelMarker = "_level_";
+    const auto markerPos = name.rfind(levelMarker);
+    if (markerPos == std::string::npos) {
+        return false;
+    }
+    const auto digitsStart = markerPos + levelMarker.size();
+    if (digitsStart >= name.size()) {
+        return false;
+    }
+    for (auto i = digitsStart; i < name.size(); ++i) {
+        if (!std::isdigit(static_cast<unsigned char>(name[i]))) {
+            return false;
+        }
+    }
+    baseName = name.substr(0, markerPos);
+    return true;
+}
 
 } // namespace
 
@@ -386,13 +410,26 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             _volumes.push_back(shape);
         }
 
-        const auto numFields = openvdb.second.size();
-        auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
-        for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            const int fieldIndex = openvdb.second[i].fieldIndex;
-            std::string fieldIndexName = openvdb.second[i].field.GetString();
-            fieldIndexName += std::string("[") + std::to_string(fieldIndex) + std::string("]");
-            AiArraySetStr(fields, i, AtString(fieldIndexName.c_str()));
+        // Build the list of grid names to expose to Arnold. Fields belonging to a
+        // "<channel>_level_<N>" LOD family collapse to a single base channel name entry
+        // (deduplicated), while all other fields keep the existing "name[fieldIndex]" form.
+        std::vector<std::string> gridNames;
+        std::unordered_set<std::string> seenLodBaseNames;
+        for (const auto& fieldData : openvdb.second) {
+            std::string baseName;
+            if (_StripVdbLodSuffix(fieldData.field.GetString(), baseName)) {
+                if (seenLodBaseNames.insert(baseName).second) {
+                    gridNames.push_back(baseName);
+                }
+            } else {
+                std::string fieldIndexName = fieldData.field.GetString();
+                fieldIndexName += std::string("[") + std::to_string(fieldData.fieldIndex) + std::string("]");
+                gridNames.push_back(fieldIndexName);
+            }
+        }
+        auto* fields = AiArrayAllocate(gridNames.size(), 1, AI_TYPE_STRING);
+        for (auto i = decltype(gridNames.size()){0}; i < gridNames.size(); ++i) {
+            AiArraySetStr(fields, i, AtString(gridNames[i].c_str()));
         }
         AiNodeSetArray(volume, str::grids, fields);
     }
