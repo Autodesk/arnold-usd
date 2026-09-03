@@ -33,6 +33,18 @@ else ()
     string(JOIN ":" PYTHONPATHS ${_PYTHONPATHS})
 endif ()
 
+# Windows has no notion of LD_LIBRARY_PATH -- DLL search uses PATH -- so setting it there is a
+# no-op that only serves to duplicate the (often huge, tool-laden) PATH a second time on the
+# generated command line. That regularly pushes these lines past cmd.exe's ~8191-character
+# limit, which silently corrupts the trailing "|| (set FAIL_LINE=...)" error handler and gets
+# swallowed into the preceding command's argv (surfaces as e.g. usdGenSchema: error:
+# unrecognized arguments: (set FAIL_LINE=3& goto :ABORT)).
+if (WIN32)
+    set(_LD_LIBRARY_PATH_ENV)
+else ()
+    set(_LD_LIBRARY_PATH_ENV "LD_LIBRARY_PATH=${LIBRARY_PATHS}")
+endif ()
+
 if (NOT USD_GENSCHEMA AND NOT BUILD_USDGENSCHEMA_ARNOLD)
     message(WARNING "usdGenSchema was not found, the schemas won't be generated with it. Consider using the internal usdgenschema by setting BUILD_USDGENSCHEMA_ARNOLD=True")
 endif()
@@ -42,7 +54,7 @@ add_custom_command(OUTPUT ${SCHEMAS_USDA}
     COMMAND
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${PYTHONPATHS}"
-    "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
+    ${_LD_LIBRARY_PATH_ENV}
     "PATH=${LIBRARY_PATHS}"
     ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
     DEPENDS "${CREATE_SCHEMA_PY}"
@@ -72,7 +84,7 @@ else()
         COMMAND
             ${CMAKE_COMMAND} -E env
             "PYTHONPATH=${PYTHONPATHS}"
-            "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
+            ${_LD_LIBRARY_PATH_ENV}
             "PATH=${LIBRARY_PATHS}"
             "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
