@@ -3,21 +3,26 @@
 
 ## [7.5.4.0] (Unreleased)
 
-- [usd#2652](https://github.com/Autodesk/arnold-usd/issues/2652) - Add setting for accelerated viewport
-
-## [7.5.4.0] (Unreleased)
-
 ### Features
 
+- [usd#2652](https://github.com/Autodesk/arnold-usd/issues/2652) - Add setting for accelerated viewport
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
 - [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
+- [usd#2740](https://github.com/Autodesk/arnold-usd/issues/2740) - Render OpenVDB points grids in Volume prims as Arnold points nodes instead of volume nodes
+- [usd#2730](https://github.com/Autodesk/arnold-usd/issues/2730) - Use the OCIO config file path from the settings map when $OCIO is not set
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-RenderVar EXR compression
+- [usd#2745](https://github.com/Autodesk/arnold-usd/issues/2745) - Support renderingColorSpace in the hydra2 render_settings
+- [usd#2710](https://github.com/Autodesk/arnold-usd/issues/2710) - Support uv_camera ray_direction / ray_origin in hydra
+- [usd#2731](https://github.com/Autodesk/arnold-usd/issues/2731) - Per-renderVar EXR compression
+- [usd#2747](https://github.com/Autodesk/arnold-usd/issues/2747) - Fix nodes destruction during interactive sessions under a procedural
 
 ### Bug fixes
 
 - [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
+- [usd#2728](https://github.com/Autodesk/arnold-usd/issues/2728) - Default USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX to enabled when unset, matching USD 26.03+ behavior.
 
 
-## [7.5.3.1] (Unreleased)
+## [7.5.3.2] (Unreleased)
 
 ### Bug fixes
 

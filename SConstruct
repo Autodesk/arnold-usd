@@ -207,7 +207,10 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE
     env['BUILD_USD_IMAGING_PLUGIN'] = True
     env['BUILD_NDR_PLUGIN'] = True
     env['BUILD_RENDER_DELEGATE'] = True
-    env['BUILD_SCENE_INDEX_PLUGIN'] = True
+    # Scene index (hydra2) is on by default with the hydra procedural, but callers
+    # that only want the classic Hydra render delegate can still turn it off explicitly.
+    if 'BUILD_SCENE_INDEX_PLUGIN' not in ARGUMENTS:
+        env['BUILD_SCENE_INDEX_PLUGIN'] = True
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']

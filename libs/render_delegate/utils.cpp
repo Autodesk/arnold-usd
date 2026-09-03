@@ -31,6 +31,7 @@
 // limitations under the License.
 #include "utils.h"
 
+#include <pxr/base/arch/env.h>
 #include <pxr/base/gf/vec2d.h>
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec2h.h>
@@ -80,6 +81,20 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 }
 
 } // namespace
+
+bool HdArnoldIsSceneIndexEnabled()
+{
+    if (!ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX"))
+        return true;
+
+    std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
+    std::string::size_type i = useSceneIndex.find(" ");
+    while (i != std::string::npos) {
+        useSceneIndex.erase(i, 1);
+        i = useSceneIndex.find(" ");
+    }
+    return useSceneIndex != "0";
+}
 
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
