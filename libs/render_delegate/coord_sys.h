@@ -55,18 +55,29 @@ public:
 
     AtNode* GetArnoldNode() const { return _node; }
 
-    /// The Arnold float_to_matrix shader carrying this coordinate system's full
-    /// world matrix (forward, local-to-world) and its inverse (world-to-local).
-    /// Unlike the camera node - whose scaling/shear Arnold strips at render time
-    /// ("ignoring scaling component in camera matrix") - these carry the matrix
-    /// verbatim, so affine coordinate spaces (".camera"/plain, and transform*
-    /// node from/to spaces) resolve correctly for non-orthonormal frames. Shader
-    /// graphs drive a matrix_multiply_vector helper's "matrix" input from one of
-    /// these; the projective ".NDC"/".screen"/".raster" spaces keep using the
-    /// camera node (GetArnoldNode), which is the only thing that can carry a
-    /// frustum. Either may be null when float_to_matrix is unavailable.
-    AtNode* GetForwardMatrixNode() const { return _fwdMatrixNode; }
-    AtNode* GetInverseMatrixNode() const { return _invMatrixNode; }
+    /// This coordinate system's full world matrix (forward, local-to-world) and
+    /// its inverse (world-to-local), carried by value rather than by an Arnold
+    /// node. Unlike the camera node - whose scaling/shear Arnold strips at render
+    /// time ("ignoring scaling component in camera matrix") - these carry the
+    /// matrix verbatim, so affine coordinate spaces (".camera"/plain, and
+    /// transform* node from/to spaces) resolve correctly for non-orthonormal
+    /// frames. HdArnoldNodeGraph::RemapCoordSysSpaces copies one of these by
+    /// value onto a matrix_multiply_vector helper's "matrix" input (see
+    /// HdArnoldGetCoordSysBinding); the projective ".NDC"/".screen"/".raster"
+    /// spaces keep using the camera node (GetArnoldNode), which is the only thing
+    /// that can carry a frustum.
+    ///
+    /// By-value copy rather than an AiNodeLink onto a dedicated Arnold node is
+    /// deliberate: Hydra makes no destruction-order guarantee between the
+    /// coordSys and material Sprims, and a live Arnold node link crossing that
+    /// boundary is unsafe to tear down in an unspecified order. Every other
+    /// cross-Sprim reference in this file (the camera node names above, the
+    /// camera_projection shader's target) is likewise by name/by value, never a
+    /// live node link; keep new coordinate-space plumbing consistent with that.
+    ///
+    /// Returns nullptr until the first Sync has computed a matrix.
+    const AtMatrix* GetForwardMatrix() const { return _hasMatrix ? &_fwdMatrix : nullptr; }
+    const AtMatrix* GetInverseMatrix() const { return _hasMatrix ? &_invMatrix : nullptr; }
 
     /// The camera node dedicated to the ".NDC" space, or nullptr when the NDC
     /// correction is disabled. Arnold's NDC convention is Y-opposite to its
@@ -101,16 +112,16 @@ private:
     /// optionally flipping the V axis. Used when no bound camera resolves.
     void _MirrorTransform(AtNode* dst, HdSceneDelegate* sceneDelegate, bool flipV);
 
-    /// Create (once) the forward/inverse float_to_matrix nodes and refresh their
-    /// 16 float inputs from @p matrix (which retains scale/shear). No-op when the
-    /// float_to_matrix node type is unavailable in this Arnold build.
-    void _SyncMatrixNodes(const AtMatrix& matrix, const std::string& baseName);
+    /// Store @p matrix (which retains scale/shear) and its inverse for
+    /// GetForwardMatrix()/GetInverseMatrix() to hand out by value.
+    void _UpdateMatrices(const AtMatrix& matrix);
 
     HdArnoldRenderDelegate* _renderDelegate;
     AtNode* _node = nullptr;
     AtNode* _ndcNode = nullptr;
-    AtNode* _fwdMatrixNode = nullptr; ///< float_to_matrix, local-to-world (full matrix).
-    AtNode* _invMatrixNode = nullptr; ///< float_to_matrix, world-to-local (full matrix).
+    AtMatrix _fwdMatrix; ///< Local-to-world, scale/shear preserved.
+    AtMatrix _invMatrix; ///< World-to-local, scale/shear preserved.
+    bool _hasMatrix = false;
 };
 
 /// Build the rprim @p id's coordinate-system binding: the map from each bound

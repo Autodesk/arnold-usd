@@ -209,8 +209,11 @@ public:
     struct CoordSysTarget {
         std::string node;    ///< Camera node for .screen/.raster (and .NDC when ndcNode is empty).
         std::string ndcNode; ///< Camera node for .NDC; empty to use `node`.
-        std::string matrixNode;    ///< float_to_matrix carrying the full local-to-world matrix.
-        std::string invMatrixNode; ///< float_to_matrix carrying the full world-to-local matrix.
+        SdfPath id;          ///< The coordSys sprim's path, tracked so its owner re-syncs
+                              ///< when the matrix below changes (see _TrackCoordSysDependencies).
+        AtMatrix matrix = AiM4Identity();    ///< Local-to-world, scale/shear preserved.
+        AtMatrix invMatrix = AiM4Identity(); ///< World-to-local, scale/shear preserved.
+        bool hasMatrix = false;              ///< Whether matrix/invMatrix carry a valid value yet.
     };
     /// Map from coordinate-system name to the camera node(s) bound to it by a
     /// specific rprim.
@@ -228,7 +231,8 @@ public:
     /// Rewrite the coordinate-system references of one shader network in place:
     /// projective ".NDC"/".screen"/".raster" spaces to the bound camera node
     /// name, and affine matrix_multiply_vector helpers to the bound coordSys's
-    /// float_to_matrix. @p scopeNodes restricts the rewrite to a single network:
+    /// matrix, copied in by value (AiNodeSetMatrix) rather than linked - see
+    /// CoordSysTarget::matrix. @p scopeNodes restricts the rewrite to a single network:
     /// pass a variant's node list to remap only that variant, or nullptr to remap
     /// the base network (every node not owned by a variant). Scoping is what keeps
     /// one binding's remap from capturing another network's still-pristine nodes.
@@ -391,7 +395,10 @@ protected:
 
     /// Move @p owner's claim to @p signature (empty for "no coordinate system"),
     /// retiring the signature it held before. Must be called with _coordSysMutex.
-    void _AcquireCoordSysHold(const SdfPath& owner, const std::string& signature);
+    /// Returns false when @p owner already held @p signature (the steady-state case
+    /// once every rprim has resolved its binding at least once), which is also when
+    /// nothing here can have changed the set _TrackCoordSysDependencies publishes.
+    bool _AcquireCoordSysHold(const SdfPath& owner, const std::string& signature);
 
     /// Number of rprims currently claiming @p signature. Kept as a counter rather
     /// than counted from _coordSysHolds: many rprims can share one material, and
@@ -432,6 +439,25 @@ protected:
     /// The Arnold node names belonging to variants (live or retired) rather than to
     /// the base network, so the base can be inspected on its own.
     std::unordered_set<std::string> _CoordSysVariantNodeNames() const;
+
+    /// Refresh every entry of @p remap from the live coordSys sprim it names
+    /// (looked up by CoordSysTarget::id in @p renderIndex), so a matrix captured
+    /// when a binding first resolved (see HdArnoldGetCoordSysBinding) does not go
+    /// stale once the coordSys's own transform later changes independently of the
+    /// rprim that bound it. Entries whose coordSys sprim no longer resolves are
+    /// left as they were. Called from _RebuildCoordSysRemaps, right before
+    /// re-applying @p remap, so RemapCoordSysSpaces always writes the current value.
+    void _RefreshCoordSysMatrices(CoordSysRemap& remap, const HdRenderIndex& renderIndex);
+
+    /// Register (or clear) this node graph's dependency on every coordSys sprim
+    /// currently referenced by _baseCoordSysRemap or a live _coordSysVariants entry,
+    /// so a later HdArnoldCoordSys::Sync (which calls DirtyDependency when its matrix
+    /// changes - see coord_sys.cpp) re-dirties this material's DirtyResource bit and
+    /// RemapCoordSysSpaces re-copies the refreshed matrix. Deliberately by-value
+    /// (CoordSysTarget::matrix), not an AiNodeLink: see HdArnoldCoordSys::GetForwardMatrix
+    /// for why a live cross-Sprim node link is unsafe here. Called with _coordSysMutex
+    /// held, whenever the set of referenced coordSys sprims may have changed.
+    void _TrackCoordSysDependencies();
 
     ArnoldNodeGraph _nodeGraphCache;         ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.

@@ -657,12 +657,14 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
 
         // Affine coordinate-system sides collected while reading this node's
         // space/fromspace/tospace inputs; turned into matrix_multiply_vector
-        // helpers after the node is fully built (see below). The affine path
-        // needs the float_to_matrix node type: when it is missing (older Arnold),
-        // fall back to the camera-node string path instead of inserting a helper
-        // that could never be linked (which would collapse to identity).
-        static const bool haveFloatToMatrix = AiNodeEntryLookUp(AtString("float_to_matrix")) != nullptr;
-        const char* coordHelperType = haveFloatToMatrix ? _MtlxCoordSysHelperType(shaderId) : nullptr;
+        // helpers after the node is fully built (see below), their "matrix" input
+        // set by value from the coordSys's matrix (HdArnoldNodeGraph::RemapCoordSysSpaces).
+        // The affine path needs the matrix_multiply_vector node type: when it is
+        // missing (older Arnold), fall back to the camera-node string path instead
+        // of inserting a helper whose "matrix" input would never be set (which
+        // would collapse to identity).
+        static const bool haveMatrixMultiplyVector = AiNodeEntryLookUp(AtString("matrix_multiply_vector")) != nullptr;
+        const char* coordHelperType = haveMatrixMultiplyVector ? _MtlxCoordSysHelperType(shaderId) : nullptr;
         struct _AffineSide {
             bool inverse;     ///< world->local (space/tospace) vs local->world (fromspace).
             std::string name; ///< coordinate-system name.
@@ -813,7 +815,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
         // (local->world) sides are applied before inverse (world->local) ones so
         // a transform node's fromspace/tospace compose as in * M_from * inv(M_to).
         // Each helper's "matrix" input is left unset here; the node-graph remap
-        // links it per-rprim to the coordinate system's float_to_matrix, which
+        // sets it by value, per-rprim, from the coordinate system's matrix, which
         // preserves scale/shear (see HdArnoldNodeGraph::RemapCoordSysSpaces). The
         // helper name encodes "|csmtx|<index>|<f|i>|<coordSysName>" so the remap
         // can find it and pick the forward/inverse matrix. Downstream consumers of

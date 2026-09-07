@@ -68,41 +68,13 @@ void _FlipCoordSysMatrixV(AtNode* node)
     }
 }
 
-// Set the 16 float inputs (input_00..input_33, row-major) on a float_to_matrix
-// shader from an AtMatrix. Matches float_to_matrix's row-major convention.
-void _SetFloatToMatrixInputs(AtNode* node, const AtMatrix& m)
-{
-    if (node == nullptr)
-        return;
-    char paramName[] = "input_RC";
-    for (int r = 0; r < 4; ++r) {
-        for (int c = 0; c < 4; ++c) {
-            paramName[6] = '0' + r;
-            paramName[7] = '0' + c;
-            AiNodeSetFlt(node, AtString(paramName), m[r][c]);
-        }
-    }
-}
-
 } // namespace
 
-void HdArnoldCoordSys::_SyncMatrixNodes(const AtMatrix& matrix, const std::string& baseName)
+void HdArnoldCoordSys::_UpdateMatrices(const AtMatrix& matrix)
 {
-    // float_to_matrix may be missing on older Arnold builds. When it is, we skip
-    // creating the carriers here, and ReadMtlxOslShader correspondingly skips the
-    // affine helper and keeps the camera-node string path (scale/shear stripped
-    // but functional) - the two guards must agree. Guard on the node entry.
-    static const bool haveFloatToMatrix = AiNodeEntryLookUp(AtString("float_to_matrix")) != nullptr;
-    if (!haveFloatToMatrix)
-        return;
-    if (_fwdMatrixNode == nullptr)
-        _fwdMatrixNode = _renderDelegate->CreateArnoldNode(
-            AtString("float_to_matrix"), AtString((baseName + "_mtx").c_str()));
-    if (_invMatrixNode == nullptr)
-        _invMatrixNode = _renderDelegate->CreateArnoldNode(
-            AtString("float_to_matrix"), AtString((baseName + "_mtxinv").c_str()));
-    _SetFloatToMatrixInputs(_fwdMatrixNode, matrix);
-    _SetFloatToMatrixInputs(_invMatrixNode, AiM4Invert(matrix));
+    _fwdMatrix = matrix;
+    _invMatrix = AiM4Invert(matrix);
+    _hasMatrix = true;
 }
 
 HdArnoldCoordSys::HdArnoldCoordSys(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
@@ -116,15 +88,12 @@ HdArnoldCoordSys::HdArnoldCoordSys(HdArnoldRenderDelegate* renderDelegate, const
 
 HdArnoldCoordSys::~HdArnoldCoordSys()
 {
+    _renderDelegate->ClearDependencies(GetId());
     for (AtNode* node : {_node, _ndcNode}) {
         if (node) {
             _renderDelegate->UnregisterCoordSysCamera(node);
             _renderDelegate->DestroyArnoldNode(node);
         }
-    }
-    for (AtNode* node : {_fwdMatrixNode, _invMatrixNode}) {
-        if (node)
-            _renderDelegate->DestroyArnoldNode(node);
     }
 }
 
@@ -276,17 +245,24 @@ void HdArnoldCoordSys::Sync(
             _MirrorTransform(_ndcNode, sceneDelegate, ndcFlip);
     }
 
-    // Refresh the affine matrix carriers from _node's stored world matrix. The
-    // camera node keeps the full matrix in its "matrix" attribute (Arnold only
-    // strips scale/shear when *rendering* through the camera), so reading it back
-    // preserves scale/shear for the affine coordinate spaces. Only when _node's
-    // matrix was (re)written above, i.e. the same conditions that mirrored it.
+    // Refresh the affine matrix (and its inverse) from _node's stored world
+    // matrix. The camera node keeps the full matrix in its "matrix" attribute
+    // (Arnold only strips scale/shear when *rendering* through the camera), so
+    // reading it back preserves scale/shear for the affine coordinate spaces.
+    // Only when _node's matrix was (re)written above, i.e. the same conditions
+    // that mirrored it.
     if (src != nullptr || (bits & DirtyTransform)) {
         if (AtArray* nodeMatrix = AiNodeGetArray(_node, str::matrix)) {
             if (AiArrayGetNumKeys(nodeMatrix) > 0)
-                _SyncMatrixNodes(AiArrayGetMtx(nodeMatrix, 0), nodeName);
+                _UpdateMatrices(AiArrayGetMtx(nodeMatrix, 0));
         }
     }
+
+    // Materials binding this coordinate system (HdArnoldNodeGraph::RemapCoordSysSpaces)
+    // copy GetForwardMatrix()/GetInverseMatrix() by value rather than linking an Arnold
+    // node, so they need to be told when those values change. Mirrors HdArnoldCamera,
+    // which dirties its dependents (e.g. camera_projection shaders) the same way.
+    _renderDelegate->DirtyDependency(GetId());
 }
 
 void HdArnoldCoordSys::_MirrorCamera(
@@ -371,11 +347,16 @@ HdArnoldNodeGraph::CoordSysBinding HdArnoldGetCoordSysBinding(HdSceneDelegate* s
         // created a dedicated (extra-flipped) NDC camera, route the ".NDC" space to it.
         if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
             target.ndcNode = AiNodeGetName(ndcNode);
-        // Full-matrix carriers for the affine spaces (scale/shear preserved).
-        if (AtNode* fwd = coordSys->GetForwardMatrixNode())
-            target.matrixNode = AiNodeGetName(fwd);
-        if (AtNode* inv = coordSys->GetInverseMatrixNode())
-            target.invMatrixNode = AiNodeGetName(inv);
+        // Full matrix (scale/shear preserved) for the affine spaces, carried by value
+        // rather than by an Arnold node link (see HdArnoldCoordSys::GetForwardMatrix).
+        // The coordSys's id lets the node graph re-sync when the matrix changes later
+        // (HdArnoldNodeGraph::_TrackCoordSysDependencies).
+        if (const AtMatrix* fwd = coordSys->GetForwardMatrix()) {
+            target.matrix = *fwd;
+            target.invMatrix = *coordSys->GetInverseMatrix();
+            target.hasMatrix = true;
+            target.id = coordSysId;
+        }
         remap[coordSys->GetName().GetString()] = std::move(target);
     }
     return binding;
