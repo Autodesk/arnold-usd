@@ -45,6 +45,8 @@ option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
+set(SCHEMA_GEN_TIMEOUT "300" CACHE STRING
+    "Timeout in seconds for each schema-generation hython/python subprocess (a Houdini/Arnold license-server problem hangs rather than fails).")
 option(BUILD_TURNTABLE "Build the turntable tool" OFF)
 
 # Configurations:

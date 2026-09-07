@@ -6,6 +6,17 @@ set(SCHEMAS_PLUGINFO "${SCHEMAS_SOURCE_OUT}/plugInfo.json")
 set(SCHEMAS_WRAP_MODULE "${SCHEMAS_OUT}/wrapModule.cpp")
 set(SCHEMAS_USDA "${SCHEMAS_OUT}/schema.usda")
 set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
+set(RUN_WITH_TIMEOUT_PY "${CMAKE_CURRENT_SOURCE_DIR}/run_with_timeout.py")
+
+# hython's license daemon (hserver, on Windows) can be lazily spawned on the first
+# license touch and then runs forever as a machine-wide singleton; it inherits its
+# parent's working directory, which would otherwise pin whichever step touches a
+# license first to a directory inside the build tree -- permanently blocking
+# `abuild --clean`. Anchor it to hython's own install directory instead.
+get_filename_component(_SCHEMA_GEN_SAFE_CWD "${PYTHON_EXECUTABLE}" DIRECTORY)
+if (NOT _SCHEMA_GEN_SAFE_CWD)
+    set(_SCHEMA_GEN_SAFE_CWD "${CMAKE_CURRENT_BINARY_DIR}")
+endif ()
 
 set(_PYTHONPATHS "${ARNOLD_PYTHON_DIR}")
 set(_LIBRARY_PATHS "${ARNOLD_BINARY_DIR}")
@@ -56,8 +67,11 @@ add_custom_command(OUTPUT ${SCHEMAS_USDA}
     "PYTHONPATH=${PYTHONPATHS}"
     ${_LD_LIBRARY_PATH_ENV}
     "PATH=${LIBRARY_PATHS}"
-    ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
-    DEPENDS "${CREATE_SCHEMA_PY}"
+    ${PYTHON_EXECUTABLE} "${RUN_WITH_TIMEOUT_PY}" --timeout ${SCHEMA_GEN_TIMEOUT}
+    --cleanup "${SCHEMAS_USDA}" --cleanup "${SCHEMAS_WRAP_MODULE}"
+    -- ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
+    WORKING_DIRECTORY "${_SCHEMA_GEN_SAFE_CWD}"
+    DEPENDS "${CREATE_SCHEMA_PY}" "${RUN_WITH_TIMEOUT_PY}"
 )
 
 # Custom target for generating an arnold schema from the arnold api
@@ -86,9 +100,11 @@ else()
             "PYTHONPATH=${PYTHONPATHS}"
             ${_LD_LIBRARY_PATH_ENV}
             "PATH=${LIBRARY_PATHS}"
-            "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
+            "${PYTHON_EXECUTABLE}" "${RUN_WITH_TIMEOUT_PY}" --timeout ${SCHEMA_GEN_TIMEOUT}
+            --cleanup "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
+            -- "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-        DEPENDS schemaSourceOut schemaUsda $<$<TARGET_EXISTS:usd_proc>:usd_proc>
+        DEPENDS schemaSourceOut schemaUsda "${RUN_WITH_TIMEOUT_PY}" $<$<TARGET_EXISTS:usd_proc>:usd_proc>
     )
 endif()
 
@@ -102,9 +118,11 @@ add_custom_target(updatedPlugInfo
     # UsdGenSchema doesn't setup the library name properly in the file and it's not compatible with
     # configure_file (in older USD versions), so we are manually editing the file using a simple python command.
     COMMAND
-        ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
+        ${PYTHON_EXECUTABLE} "${RUN_WITH_TIMEOUT_PY}" --timeout ${SCHEMA_GEN_TIMEOUT}
+        --cleanup "${SCHEMAS_PLUGINFO}"
+        -- ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tools"
-    DEPENDS generatedSchema
+    DEPENDS generatedSchema "${RUN_WITH_TIMEOUT_PY}"
 )
 
 # The final target is named schemas, it has the plugInfo updated and the generated schemas
