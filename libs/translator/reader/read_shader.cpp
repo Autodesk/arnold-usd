@@ -101,14 +101,14 @@ public:
         if (!input)
             return false;
 
-        const UsdShadeAttributeVector attrs = 
+        const UsdShadeAttributeVector attrs =
             UsdShadeUtils::GetValueProducingAttributes(input);
 
         if (attrs.empty())
             return false;
 
         return attrs[0].Get(&value);
-        
+
     }
 private:
 #ifdef ARNOLD_USD_MATERIAL_READER

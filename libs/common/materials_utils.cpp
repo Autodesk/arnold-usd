@@ -24,6 +24,7 @@
 #include <vector>
 #include <numeric>
 #include <pxr/base/tf/token.h>
+#include <pxr/base/tf/stringUtils.h>
 #include <constant_strings.h>
 #include "materials_utils.h"
 #include "api_adapter.h"
@@ -537,48 +538,69 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     return node;
 }
 
-/// Rewrite a MaterialX geometric-node "space" input value that references a USD
-/// coordinate system into the naming Arnold's OSL render services expect.
+/// How a MaterialX coordinate-space value resolves to Arnold.
 ///
 /// Houdini/Solaris author coord-sys space names with a colon separator and
 /// lower-case projection names, e.g. "map_proj", "map_proj:ndc",
-/// "map_proj:raster", "map_proj:screen". Arnold instead resolves a named space
-/// bound to a camera node using dot notation with its own suffixes:
-/// "map_proj.camera", "map_proj.NDC", "map_proj.screen", "map_proj.raster"
-/// (see HdArnoldCoordSys, which creates the camera node named after the coord
-/// system). We rewrite the former into the latter.
-///
-/// Standard MaterialX / OSL built-in space names (model/object/world/...) and
-/// values already using dot notation are left untouched. Note: without the
-/// rprim's coord-sys binding list here we cannot positively distinguish a
-/// coord-sys reference from an arbitrary custom space, so a plain non-standard
-/// name is heuristically treated as a coord-sys binding and mapped to
-/// "<name>.camera".
-static std::string _RewriteCoordSysSpaceName(const std::string& space)
+/// "map_proj:raster", "map_proj:screen".
+enum class CoordSysSpaceKind {
+    Standard,   ///< Built-in OSL space (world/object/...) - used verbatim.
+    Projective, ///< ".NDC"/".screen"/".raster" - resolved through the coordSys
+                ///< *camera* node (needs a frustum). @p arnoldValue holds the
+                ///< dotted "<name>.<SUFFIX>" the node-graph remap expects.
+    Affine,     ///< plain "<name>" or "<name>.camera" - resolved through the
+                ///< coordSys *matrix* (scale/shear preserved) via an inserted
+                ///< matrix_multiply_vector helper. @p name holds the coordSys name.
+};
+
+/// Classify a coordinate-space input value. Sets @p name (the bare coordinate-
+/// system name) for the Projective/Affine cases and @p arnoldValue (the value to
+/// store on the OSL node) for the Standard/Projective cases.
+static CoordSysSpaceKind _ClassifyCoordSysSpace(
+    const std::string& value, std::string& name, std::string& arnoldValue)
 {
-    // Already in Arnold dot notation (or empty) - nothing to do.
-    if (space.empty() || space.find('.') != std::string::npos)
-        return space;
-
-    const size_t colon = space.find(':');
-    if (colon == std::string::npos) {
-        // Leave standard MaterialX / OSL built-in spaces untouched; treat any
-        // other plain name as a coordinate system bound to a camera.
-        static const std::unordered_set<std::string> standardSpaces = {
-            "model", "object", "world", "common", "shader", "tangent",
-            "camera", "screen", "raster", "NDC"};
-        if (standardSpaces.count(space) != 0)
-            return space;
-        return space + ".camera";
+    arnoldValue = value;
+    if (value.empty())
+        return CoordSysSpaceKind::Standard;
+    static const std::unordered_set<std::string> standardSpaces = {
+        "model", "object", "world", "common", "shader", "tangent"};
+    const size_t sep = value.find_first_of(".:");
+    if (sep == std::string::npos) {
+        if (standardSpaces.count(value) != 0)
+            return CoordSysSpaceKind::Standard;
+        // A plain non-standard name is a coordinate-system reference; without a
+        // suffix it means the coord-sys ("camera"-equivalent) space, i.e. affine.
+        name = value;
+        return CoordSysSpaceKind::Affine;
     }
-
-    // "<name>:<suffix>" -> "<name>.<SUFFIX>", mapping Houdini's lower-case "ndc"
-    // to Arnold's "NDC"; the other suffixes (raster/screen/camera) already match.
-    const std::string name = space.substr(0, colon);
-    std::string suffix = space.substr(colon + 1);
+    name = value.substr(0, sep);
+    std::string suffix = value.substr(sep + 1);
     if (suffix == "ndc")
         suffix = "NDC";
-    return name + "." + suffix;
+    if (suffix == "NDC" || suffix == "screen" || suffix == "raster") {
+        arnoldValue = name + "." + suffix;
+        return CoordSysSpaceKind::Projective;
+    }
+    // "camera" (or anything else) resolves through the matrix, preserving scale.
+    return CoordSysSpaceKind::Affine;
+}
+
+/// For a MaterialX node that can consume a USD coordinate system, the
+/// matrix_multiply_vector "type" (point/vector/normal) matching its geometric
+/// quantity; nullptr for any other node.
+static const char* _MtlxCoordSysHelperType(const TfToken& shaderId)
+{
+    const std::string& s = shaderId.GetString();
+    if (!TfStringStartsWith(s, "ND_"))
+        return nullptr;
+    if (TfStringStartsWith(s, "ND_position_") || TfStringStartsWith(s, "ND_transformpoint_"))
+        return "point";
+    if (TfStringStartsWith(s, "ND_normal_") || TfStringStartsWith(s, "ND_transformnormal_"))
+        return "normal";
+    if (TfStringStartsWith(s, "ND_tangent_") || TfStringStartsWith(s, "ND_bitangent_") ||
+        TfStringStartsWith(s, "ND_transformvector_"))
+        return "vector";
+    return nullptr;
 }
 
 /// Read a MaterialX shader through OSL
@@ -632,6 +654,22 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
         const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
         AiNodeDeclare(node, str::node_def, str::constantString);
         AiNodeSetStr(node, str::node_def, AtString(shaderId.GetText()));
+
+        // Affine coordinate-system sides collected while reading this node's
+        // space/fromspace/tospace inputs; turned into matrix_multiply_vector
+        // helpers after the node is fully built (see below), their "matrix" input
+        // set by value from the coordSys's matrix (HdArnoldNodeGraph::RemapCoordSysSpaces).
+        // The affine path needs the matrix_multiply_vector node type: when it is
+        // missing (older Arnold), fall back to the camera-node string path instead
+        // of inserting a helper whose "matrix" input would never be set (which
+        // would collapse to identity).
+        static const bool haveMatrixMultiplyVector = AiNodeEntryLookUp(AtString("matrix_multiply_vector")) != nullptr;
+        const char* coordHelperType = haveMatrixMultiplyVector ? _MtlxCoordSysHelperType(shaderId) : nullptr;
+        struct _AffineSide {
+            bool inverse;     ///< world->local (space/tospace) vs local->world (fromspace).
+            std::string name; ///< coordinate-system name.
+        };
+        std::vector<_AffineSide> affineSides;
 
         // Loop over the USD attributes of the shader
         for (const auto &attrIt : inputAttrs) {
@@ -736,16 +774,33 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
             }
 
             // A MaterialX geometric node (ND_position_vector3, ND_normal_vector3,
-            // ...) exposes a "space" string input that may reference a USD
-            // coordinate system. Rewrite it to Arnold's OSL naming so the
-            // coord-sys camera node is resolved (see _RewriteCoordSysSpaceName).
-            // Only when the value really holds a string: VtValueGetString yields an
-            // empty string for anything else, which would clobber the OSL node's
-            // default space. Any other value type falls through to ReadAttribute.
-            if (paramType == AI_TYPE_STRING && attrName == str::t_space &&
+            // ...) exposes a "space" string input, and a transform node
+            // (ND_transformpoint_vector3, ...) exposes "fromspace"/"tospace",
+            // that may reference a USD coordinate system. Only when the value
+            // really holds a string: VtValueGetString yields an empty string for
+            // anything else, which would clobber the OSL node's default space.
+            // Any other value type falls through to ReadAttribute.
+            if (paramType == AI_TYPE_STRING &&
+                (attrName == str::t_space || attrName == str::t_fromspace || attrName == str::t_tospace) &&
                 (attr.value.IsHolding<std::string>() || attr.value.IsHolding<TfToken>())) {
-                const std::string rewritten = _RewriteCoordSysSpaceName(VtValueGetString(attr.value));
-                AiNodeSetStr(node, paramName, AtString(rewritten.c_str()));
+                std::string csName, arnoldValue;
+                const CoordSysSpaceKind kind =
+                    _ClassifyCoordSysSpace(VtValueGetString(attr.value), csName, arnoldValue);
+                if (kind == CoordSysSpaceKind::Affine && coordHelperType != nullptr) {
+                    // Neutralise this side to "world" and defer the transform to a
+                    // matrix_multiply_vector helper (created after this loop) whose
+                    // matrix carries the coordinate system's full transform, scale
+                    // and shear included - which the camera-node path strips. The
+                    // "space"/"tospace" sides map world->local (inverse), while
+                    // "fromspace" maps local->world (forward).
+                    AiNodeSetStr(node, paramName, AtString("world"));
+                    const bool inverse = (attrName == str::t_space || attrName == str::t_tospace);
+                    affineSides.push_back({inverse, csName});
+                } else {
+                    // Standard built-in space, or a projective space resolved
+                    // through the coordSys camera node by the node-graph remap.
+                    AiNodeSetStr(node, paramName, AtString(arnoldValue.c_str()));
+                }
                 continue;
             }
 
@@ -754,14 +809,45 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                     context, paramType, arrayType);
 
         }
+
+        // Turn any collected affine coordinate-system sides into a chain of
+        // matrix_multiply_vector helpers appended after this node. Forward
+        // (local->world) sides are applied before inverse (world->local) ones so
+        // a transform node's fromspace/tospace compose as in * M_from * inv(M_to).
+        // Each helper's "matrix" input is left unset here; the node-graph remap
+        // sets it by value, per-rprim, from the coordinate system's matrix, which
+        // preserves scale/shear (see HdArnoldNodeGraph::RemapCoordSysSpaces). The
+        // helper name encodes "|csmtx|<index>|<f|i>|<coordSysName>" so the remap
+        // can find it and pick the forward/inverse matrix. Downstream consumers of
+        // this node are redirected to the last helper via AddNodeName.
+        if (!affineSides.empty()) {
+            std::stable_sort(affineSides.begin(), affineSides.end(),
+                [](const _AffineSide& a, const _AffineSide& b) { return !a.inverse && b.inverse; });
+            AtNode* src = node;
+            int helperIndex = 0;
+            for (const auto& side : affineSides) {
+                const std::string helperName = nodeName + "|csmtx|" + std::to_string(helperIndex++) +
+                    "|" + (side.inverse ? "i" : "f") + "|" + side.name;
+                AtNode* helper = materialReader.CreateArnoldNode("matrix_multiply_vector", helperName.c_str());
+                if (helper == nullptr)
+                    break;
+                AiNodeSetStr(helper, str::type, AtString(coordHelperType));
+                AiNodeLink(src, "input", helper);
+                src = helper;
+            }
+            if (src != node) {
+                context.AddNodeName(nodeName, src);
+                return src;
+            }
+        }
         return node;
     }
     return nullptr;
 }
 
 /// Read a shader with a given shaderId and translate it to Arnold.
-AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId, 
-    const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
+AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
+    const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context,
     const TimeSettings& time, MaterialReader& materialReader)
 {
     if (shaderId.IsEmpty())

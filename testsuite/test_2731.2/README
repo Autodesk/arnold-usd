@@ -1,0 +1,18 @@
+Per-rprim coordSys binding: shared material, two meshes, two different targets
+
+Regression test for HdArnoldNodeGraph's per-binding coordSys handling. One shared
+MaterialX material (</World/mtl/shared>) is bound to two meshes; each mesh binds
+the same coordinate-system name 'cs' to a DIFFERENT Xform (grid_a -> frameA,
+grid_b -> frameB). The material reads the object position and transforms it
+world->cs via ND_transformpoint_vector3.
+
+Because both meshes shade with the same object position, the two grids differ
+only by which coordinate system their binding resolves to. The render delegate
+serves the second, conflicting binding a re-translated variant of the network;
+RemapCoordSysSpaces must remap each network scoped to its own nodes so one
+binding cannot capture the other's. If the grids render identically, that
+per-binding resolution is broken.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /World/Cameras/renderCamera'}

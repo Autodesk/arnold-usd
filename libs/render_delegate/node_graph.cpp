@@ -37,11 +37,13 @@
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include <constant_strings.h>
+#include "coord_sys.h"
 #include "hdarnold.h"
 #include "utils.h"
 
 #include <ai.h>
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <unordered_map>
 #include <materials_utils.h>
@@ -75,6 +77,20 @@ inline void AppendPathLeafSuffix(SdfPath& path, const std::string& suffix)
     if (path.IsEmpty() || !path.IsPrimPath())
         return;
     path = path.GetParentPath().AppendChild(TfToken(path.GetName() + suffix));
+}
+
+// Coordinate-space input parameters exposed by OSL-translated MaterialX nodes
+// (see ReadMtlxOslShader): "space" for position/normal/tangent/bitangent,
+// "fromspace"/"tospace" for transformpoint/transformvector/transformnormal.
+// RemapCoordSysSpaces and _CollectCoordSysNames check every one of these on
+// each node, so per-rprim coord-sys camera binding covers transform* nodes
+// (which can reference two coordSys names at once) as well as the
+// single-space ones.
+inline const std::array<AtString, 3>& CoordSysSpaceParams()
+{
+    static const std::array<AtString, 3> params{
+        str::param_shader_space, str::param_shader_fromspace, str::param_shader_tospace};
+    return params;
 }
 
 // MaterialReader classes are shared between the procedural and delegate code
@@ -310,38 +326,95 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     _wasSyncedOnce = true;
 }
 
-void HdArnoldNodeGraph::RemapCoordSysSpaces(const std::unordered_map<std::string, CoordSysTarget>& remap)
+void HdArnoldNodeGraph::RemapCoordSysSpaces(
+    const std::unordered_map<std::string, CoordSysTarget>& remap, const std::vector<std::string>* scopeNodes)
 {
     if (remap.empty())
         return;
-    for (const auto& entry : _nodes) {
-        AtNode* node = entry.second;
-        if (node == nullptr || !AiNodeIs(node, str::osl))
-            continue;
-        // MaterialX geometric nodes (ND_position_vector3, ...) expose their
-        // coordinate space as the OSL string input "param_shader_space" (see
-        // ReadMtlxOslShader). It has already been rewritten to Arnold's dotted
-        // "<name>.<suffix>" form; replace the "<name>" part (the coordinate
-        // system name) with the uniquely-named camera node bound to the rprim.
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::param_shader_space) == nullptr)
-            continue;
-        const std::string value = AiNodeGetStr(node, str::param_shader_space).c_str();
-        if (value.empty())
-            continue;
-        const size_t dot = value.find('.');
-        const std::string name = value.substr(0, dot);
+
+    static const std::string kTag = "|csmtx|";
+
+    // Rewrite a single node's coordinate-system references. Applied only to nodes
+    // that belong to the network being remapped (see the scoping below), so a
+    // still-pristine node in another network is never touched.
+    const auto remapNode = [&](const std::string& nodeName, AtNode* node) {
+        if (node == nullptr)
+            return;
+        // MaterialX geometric/transform nodes (ND_position_vector3,
+        // ND_transformpoint_vector3, ...) expose their projective coordinate
+        // space(s) as one or more of the OSL string inputs in CoordSysSpaceParams()
+        // (see ReadMtlxOslShader), already in Arnold's dotted "<name>.<suffix>"
+        // form; replace the "<name>" part with the uniquely-named camera node.
+        if (AiNodeIs(node, str::osl)) {
+            const AtNodeEntry* nentry = AiNodeGetNodeEntry(node);
+            for (const AtString& paramName : CoordSysSpaceParams()) {
+                if (AiNodeEntryLookUpParameter(nentry, paramName) == nullptr)
+                    continue;
+                const std::string value = AiNodeGetStr(node, paramName).c_str();
+                if (value.empty())
+                    continue;
+                const size_t dot = value.find('.');
+                const std::string name = value.substr(0, dot);
+                const auto it = remap.find(name);
+                if (it == remap.end())
+                    continue;
+                // Keep the suffix (".camera"/".NDC"/...); a value with no suffix (an
+                // unexpected plain name) defaults to the camera space.
+                const std::string suffix = (dot == std::string::npos) ? std::string(".camera") : value.substr(dot);
+                // Arnold's NDC is Y-opposite to its screen/raster, so the ".NDC" space is
+                // resolved through a separate extra-flipped camera when one was created;
+                // the other spaces stay on the primary node.
+                const std::string& target =
+                    (suffix == ".NDC" && !it->second.ndcNode.empty()) ? it->second.ndcNode : it->second.node;
+                AiNodeSetStr(node, paramName, AtString((target + suffix).c_str()));
+            }
+            return;
+        }
+        // Affine coordinate spaces are handled by matrix_multiply_vector helpers
+        // ReadMtlxOslShader inserts (names encode "|csmtx|<i>|<f|i>|<name>"). Copy
+        // the coordinate system's matrix (forward or inverse) - which, unlike the
+        // camera node, keeps scale/shear - onto the helper's "matrix" input by
+        // value. Deliberately not an AiNodeLink to the coordSys's own Arnold node:
+        // that would be a live link crossing a Sprim boundary Hydra gives no
+        // destruction-order guarantee for (see HdArnoldCoordSys::GetForwardMatrix).
+        // The value is refreshed whenever it changes via _TrackCoordSysDependencies.
+        if (!AiNodeIs(node, str::matrix_multiply_vector))
+            return;
+        const size_t tag = nodeName.find(kTag);
+        if (tag == std::string::npos)
+            return;
+        const size_t roleStart = nodeName.find('|', tag + kTag.size());
+        if (roleStart == std::string::npos)
+            return;
+        const size_t nameStart = nodeName.find('|', roleStart + 1);
+        if (nameStart == std::string::npos)
+            return;
+        const std::string role = nodeName.substr(roleStart + 1, nameStart - (roleStart + 1));
+        const std::string name = nodeName.substr(nameStart + 1);
         const auto it = remap.find(name);
-        if (it == remap.end())
-            continue;
-        // Keep the suffix (".camera"/".NDC"/...); a value with no suffix (an
-        // unexpected plain name) defaults to the camera space.
-        const std::string suffix = (dot == std::string::npos) ? std::string(".camera") : value.substr(dot);
-        // Arnold's NDC is Y-opposite to its screen/raster, so the ".NDC" space is
-        // resolved through a separate extra-flipped camera when one was created;
-        // the other spaces stay on the primary node.
-        const std::string& target =
-            (suffix == ".NDC" && !it->second.ndcNode.empty()) ? it->second.ndcNode : it->second.node;
-        AiNodeSetStr(node, str::param_shader_space, AtString((target + suffix).c_str()));
+        if (it == remap.end() || !it->second.hasMatrix)
+            return;
+        AiNodeSetMatrix(node, str::matrix, (role == "i") ? it->second.invMatrix : it->second.matrix);
+    };
+
+    // Scope the rewrite to exactly the network being remapped. A variant passes its
+    // own node list; the base network (scopeNodes == nullptr) is every node not
+    // owned by a variant. Without this, a base node for a coordSys the current
+    // binding does not cover stays legitimately pristine and would be captured by
+    // another binding's remap (order-dependent across parallel rprim sync).
+    if (scopeNodes != nullptr) {
+        for (const std::string& nodeName : *scopeNodes) {
+            const auto it = _nodes.find(nodeName);
+            if (it != _nodes.end())
+                remapNode(nodeName, it->second);
+        }
+    } else {
+        const std::unordered_set<std::string> variantNodes = _CoordSysVariantNodeNames();
+        for (const auto& entry : _nodes) {
+            if (variantNodes.count(entry.first) != 0)
+                continue;
+            remapNode(entry.first, entry.second);
+        }
     }
 }
 
@@ -371,18 +444,42 @@ void HdArnoldNodeGraph::_CollectCoordSysNames()
     // poison the name set.
     const std::unordered_set<std::string> variantNodes = _CoordSysVariantNodeNames();
     _coordSysNamesInGraph.clear();
+    static const std::string kTag = "|csmtx|";
     for (const auto& entry : _nodes) {
         AtNode* node = entry.second;
-        if (node == nullptr || !AiNodeIs(node, str::osl))
+        if (node == nullptr)
+            continue;
+        // Affine coordinate-system references live on matrix_multiply_vector
+        // helpers (their OSL nodes were neutralised to "world"); recover the
+        // coordinate-system name from the helper's encoded name. The name is
+        // fixed for the node's lifetime, so - unlike the "space" strings below -
+        // it is safe to read on variant nodes too.
+        if (AiNodeIs(node, str::matrix_multiply_vector)) {
+            const size_t tag = entry.first.find(kTag);
+            if (tag == std::string::npos)
+                continue;
+            const size_t roleStart = entry.first.find('|', tag + kTag.size());
+            if (roleStart == std::string::npos)
+                continue;
+            const size_t nameStart = entry.first.find('|', roleStart + 1);
+            if (nameStart == std::string::npos)
+                continue;
+            _coordSysNamesInGraph.insert(entry.first.substr(nameStart + 1));
+            continue;
+        }
+        if (!AiNodeIs(node, str::osl))
             continue;
         if (variantNodes.count(entry.first) != 0)
             continue;
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::param_shader_space) == nullptr)
-            continue;
-        const std::string value = AiNodeGetStr(node, str::param_shader_space).c_str();
-        if (value.empty())
-            continue;
-        _coordSysNamesInGraph.insert(value.substr(0, value.find('.')));
+        const AtNodeEntry* nentry = AiNodeGetNodeEntry(node);
+        for (const AtString& paramName : CoordSysSpaceParams()) {
+            if (AiNodeEntryLookUpParameter(nentry, paramName) == nullptr)
+                continue;
+            const std::string value = AiNodeGetStr(node, paramName).c_str();
+            if (value.empty())
+                continue;
+            _coordSysNamesInGraph.insert(value.substr(0, value.find('.')));
+        }
     }
 }
 
@@ -420,6 +517,45 @@ std::unordered_set<std::string> HdArnoldNodeGraph::_CoordSysVariantNodeNames() c
     return names;
 }
 
+void HdArnoldNodeGraph::_RefreshCoordSysMatrices(CoordSysRemap& remap, const HdRenderIndex& renderIndex)
+{
+    for (auto& entry : remap) {
+        CoordSysTarget& target = entry.second;
+        if (target.id.IsEmpty())
+            continue;
+        const auto* coordSys =
+            dynamic_cast<const HdArnoldCoordSys*>(renderIndex.GetSprim(HdPrimTypeTokens->coordSys, target.id));
+        if (coordSys == nullptr)
+            continue;
+        if (const AtMatrix* fwd = coordSys->GetForwardMatrix()) {
+            target.matrix = *fwd;
+            target.invMatrix = *coordSys->GetInverseMatrix();
+            target.hasMatrix = true;
+        }
+    }
+}
+
+void HdArnoldNodeGraph::_TrackCoordSysDependencies()
+{
+    // Retired variants are excluded on purpose: their nodes are about to be
+    // destroyed by _DestroyRetiredCoordSysVariants and no longer need refreshing.
+    HdArnoldRenderDelegate::PathSetWithDirtyBits deps;
+    for (const auto& entry : _baseCoordSysRemap) {
+        if (!entry.second.id.IsEmpty())
+            deps.insert({entry.second.id, HdMaterial::DirtyResource});
+    }
+    for (const auto& variant : _coordSysVariants) {
+        for (const auto& entry : variant.second.remap) {
+            if (!entry.second.id.IsEmpty())
+                deps.insert({entry.second.id, HdMaterial::DirtyResource});
+        }
+    }
+    // TrackDependencies replaces this source's full target set, so this always
+    // publishes the complete, current one - an empty set clears it, matching
+    // ClearDependencies.
+    _renderDelegate->TrackDependencies(GetId(), deps);
+}
+
 bool HdArnoldNodeGraph::_HasCoordSysVariant(const std::string& signature) const
 {
     return _coordSysVariants.count(signature) != 0 || _coordSysRetired.count(signature) != 0;
@@ -440,12 +576,12 @@ void HdArnoldNodeGraph::_DropCoordSysHoldCount(const std::string& signature)
         _coordSysHoldCounts.erase(it);
 }
 
-void HdArnoldNodeGraph::_AcquireCoordSysHold(const SdfPath& owner, const std::string& signature)
+bool HdArnoldNodeGraph::_AcquireCoordSysHold(const SdfPath& owner, const std::string& signature)
 {
     const auto it = _coordSysHolds.find(owner);
     const std::string previous = (it == _coordSysHolds.end()) ? std::string() : it->second;
     if (previous == signature)
-        return;
+        return false;
     if (signature.empty()) {
         if (it != _coordSysHolds.end())
             _coordSysHolds.erase(it);
@@ -461,6 +597,7 @@ void HdArnoldNodeGraph::_AcquireCoordSysHold(const SdfPath& owner, const std::st
         _DropCoordSysHoldCount(previous);
         _RetireCoordSysSignature(previous);
     }
+    return true;
 }
 
 void HdArnoldNodeGraph::_RetireCoordSysSignature(const std::string& signature)
@@ -548,19 +685,23 @@ void HdArnoldNodeGraph::_RebuildCoordSysRemaps(const HdRenderIndex& renderIndex)
     _GarbageCollectCoordSysHolds(renderIndex);
     _DestroyRetiredCoordSysVariants();
     _CollectCoordSysNames();
-    // The base was reset to pristine by the (re-)translation; re-apply its remap.
-    // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so this hits
-    // only the base nodes (any surviving variant nodes still carry camera prefixes).
-    if (!_baseCoordSysSignature.empty())
+    // The base was reset to pristine by the (re-)translation; refresh its targets'
+    // matrices from the live coordSys sprims (a coordSys can change its transform
+    // independently of any rprim bound to it - see _RefreshCoordSysMatrices) and
+    // re-apply the remap, scoped to the base node set (every node not owned by a
+    // variant).
+    if (!_baseCoordSysSignature.empty()) {
+        _RefreshCoordSysMatrices(_baseCoordSysRemap, renderIndex);
         RemapCoordSysSpaces(_baseCoordSysRemap);
-    // Rebuild each variant one at a time: re-translating recreates its nodes under
-    // their stored names (same Arnold pointers, reset to pristine), and remapping
-    // immediately after keeps the "only pristine" rule valid - only the just-rebuilt
-    // variant is pristine at that moment.
+    }
+    // Rebuild each variant one at a time, refresh its matrices the same way, and
+    // remap it scoped to its own node list, so it never touches the base or another
+    // variant's nodes.
     for (auto& entry : _coordSysVariants) {
         entry.second.nodes.clear();
         entry.second.cache = _BuildCoordSysVariant(entry.second.suffix, &entry.second.nodes);
-        RemapCoordSysSpaces(entry.second.remap);
+        _RefreshCoordSysMatrices(entry.second.remap, renderIndex);
+        RemapCoordSysSpaces(entry.second.remap, &entry.second.nodes);
     }
     // Publish whether the rprim phase has anything to serialise. Deliberately not
     // just _coordSysNamesInGraph: a material whose "space" inputs stop naming a
@@ -570,6 +711,9 @@ void HdArnoldNodeGraph::_RebuildCoordSysRemaps(const HdRenderIndex& renderIndex)
         !_coordSysNamesInGraph.empty() || !_baseCoordSysSignature.empty() || !_coordSysHolds.empty() ||
             !_coordSysVariants.empty() || !_coordSysRetired.empty(),
         std::memory_order_release);
+    // The base and every variant's remap were just refreshed above (retired variants'
+    // dropped): republish the full, current set of coordSys sprims this graph relies on.
+    _TrackCoordSysDependencies();
 }
 
 HdArnoldNodeGraph::ArnoldNodeGraph HdArnoldNodeGraph::_BuildCoordSysVariant(
@@ -641,56 +785,84 @@ AtNode* HdArnoldNodeGraph::_ResolveCoordSysTerminal(const CoordSysBinding& bindi
     std::lock_guard<std::mutex> guard(_coordSysMutex);
     // Move this rprim's claim first: releasing what it held before can free the base
     // slot or retire a variant, which the resolution below then reuses or skips.
-    _AcquireCoordSysHold(binding.owner, signature);
+    // Its return also seeds whether the set _TrackCoordSysDependencies publishes may
+    // have changed: false means this owner already held this exact signature, which
+    // is the steady-state case (every rprim re-resolving an unchanged binding) where
+    // nothing below changes the base or variant remaps either.
+    bool mayHaveChangedDeps = _AcquireCoordSysHold(binding.owner, signature);
+    AtNode* result = nullptr;
     // The graph uses no coordinate system this binding touches: nothing to remap.
-    if (signature.empty())
-        return _nodeGraphCache.GetTerminal(terminalName);
-    // The base is claimed by a binding nobody uses any more (its rprims re-bound or
-    // were removed) and this binding needs a different one: take the slot back rather
-    // than duplicating the network. Restores the pristine "space" inputs.
-    //
-    // Not done when this signature already has a variant: the base would then resolve
-    // the same thing as that variant, leaving it orphaned - and it could not be freed,
-    // because other rprims may still be pointing at its terminal without ever
-    // re-syncing. Using the existing variant keeps every claim accounted for; the base
-    // slot is reclaimed by whichever signature next needs it.
-    if (!_baseCoordSysSignature.empty() && signature != _baseCoordSysSignature &&
-        _CoordSysHoldCount(_baseCoordSysSignature) == 0 && !_HasCoordSysVariant(signature))
-        _ResetCoordSysBase();
-    // First distinct binding claims the base network, remapped in place. This
-    // keeps the common case (one binding per material, or a material bound
-    // consistently) free of any node duplication.
-    if (_baseCoordSysSignature.empty()) {
-        RemapCoordSysSpaces(binding.remap);
-        _baseCoordSysSignature = signature;
-        _baseCoordSysRemap = binding.remap;
-        return _nodeGraphCache.GetTerminal(terminalName);
-    }
-    if (signature == _baseCoordSysSignature)
-        return _nodeGraphCache.GetTerminal(terminalName);
-    // A conflicting binding: build (once) a re-translated variant and remap it.
-    // RemapCoordSysSpaces only rewrites still-pristine "space" inputs, so it
-    // touches just this fresh variant - the base and other variants already
-    // resolve to their own camera names, which are never coordinate-system names.
-    auto it = _coordSysVariants.find(signature);
-    if (it == _coordSysVariants.end()) {
-        // A variant retired since the last material Sync still has its nodes, already
-        // remapped to these cameras: revive it rather than translate a duplicate, so
-        // re-binding back and forth does not keep building networks.
-        const auto retiredIt = _coordSysRetired.find(signature);
-        if (retiredIt != _coordSysRetired.end()) {
-            it = _coordSysVariants.emplace(signature, std::move(retiredIt->second)).first;
-            _coordSysRetired.erase(retiredIt);
-        } else {
-            CoordSysVariant variant;
-            variant.suffix = "__cs" + std::to_string(++_coordSysVariantCount);
-            variant.remap = binding.remap;
-            variant.cache = _BuildCoordSysVariant(variant.suffix, &variant.nodes);
-            it = _coordSysVariants.emplace(signature, std::move(variant)).first;
+    if (signature.empty()) {
+        result = _nodeGraphCache.GetTerminal(terminalName);
+    } else {
+        // The base is claimed by a binding nobody uses any more (its rprims re-bound
+        // or were removed) and this binding needs a different one: take the slot back
+        // rather than duplicating the network. Restores the pristine "space" inputs.
+        //
+        // Not done when this signature already has a variant: the base would then
+        // resolve the same thing as that variant, leaving it orphaned - and it could
+        // not be freed, because other rprims may still be pointing at its terminal
+        // without ever re-syncing. Using the existing variant keeps every claim
+        // accounted for; the base slot is reclaimed by whichever signature needs it.
+        if (!_baseCoordSysSignature.empty() && signature != _baseCoordSysSignature &&
+            _CoordSysHoldCount(_baseCoordSysSignature) == 0 && !_HasCoordSysVariant(signature)) {
+            _ResetCoordSysBase();
+            mayHaveChangedDeps = true;
+        }
+        if (_baseCoordSysSignature.empty()) {
+            // First distinct binding claims the base network, remapped in place. This
+            // keeps the common case (one binding per material, or a material bound
+            // consistently) free of any node duplication.
             RemapCoordSysSpaces(binding.remap);
+            _baseCoordSysSignature = signature;
+            _baseCoordSysRemap = binding.remap;
+            result = _nodeGraphCache.GetTerminal(terminalName);
+            mayHaveChangedDeps = true;
+        } else if (signature == _baseCoordSysSignature) {
+            result = _nodeGraphCache.GetTerminal(terminalName);
+        } else {
+            // A conflicting binding: build (once) a re-translated variant and remap
+            // it, scoped to the variant's own node list so it touches only this fresh
+            // variant and never the base or another variant.
+            auto it = _coordSysVariants.find(signature);
+            if (it == _coordSysVariants.end()) {
+                // A variant retired since the last material Sync still has its nodes,
+                // already remapped to these cameras: revive it rather than translate
+                // a duplicate, so re-binding back and forth does not keep building
+                // networks.
+                const auto retiredIt = _coordSysRetired.find(signature);
+                if (retiredIt != _coordSysRetired.end()) {
+                    it = _coordSysVariants.emplace(signature, std::move(retiredIt->second)).first;
+                    _coordSysRetired.erase(retiredIt);
+                    // The revived variant's remap may hold matrices as stale as its
+                    // retirement; binding.remap was just resolved fresh by the caller
+                    // (HdArnoldGetCoordSysBinding), so use it instead of waiting for
+                    // the next _RebuildCoordSysRemaps to catch up.
+                    it->second.remap = binding.remap;
+                    RemapCoordSysSpaces(binding.remap, &it->second.nodes);
+                } else {
+                    CoordSysVariant variant;
+                    variant.suffix = "__cs" + std::to_string(++_coordSysVariantCount);
+                    variant.remap = binding.remap;
+                    variant.cache = _BuildCoordSysVariant(variant.suffix, &variant.nodes);
+                    it = _coordSysVariants.emplace(signature, std::move(variant)).first;
+                    // Scope to the just-built variant's nodes (variant was moved into
+                    // the map, so read the list back from `it`).
+                    RemapCoordSysSpaces(binding.remap, &it->second.nodes);
+                }
+                mayHaveChangedDeps = true;
+            }
+            result = it->second.cache.GetTerminal(terminalName);
         }
     }
-    return it->second.cache.GetTerminal(terminalName);
+    // Only republish the dependency set when something above could have changed it
+    // (a claim released by _AcquireCoordSysHold retired a variant; a new/revived
+    // variant or a reclaimed base was added): the common steady-state re-resolve of
+    // an already-held, already-remapped binding touches none of that and would
+    // otherwise pay this cost on every single rprim sync.
+    if (mayHaveChangedDeps)
+        _TrackCoordSysDependencies();
+    return result;
 }
 
 AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader(const CoordSysBinding& binding)
