@@ -622,6 +622,11 @@ void HdArnoldGetPrimvars(
 HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
 
+/// Returns whether the Hydra scene index should be used, based on the
+/// USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX environment variable. Defaults to
+/// true, matching USD's own default (26.03+), when the variable is unset.
+HDARNOLD_API
+bool HdArnoldIsSceneIndexEnabled();
 
 /// Use the velocities and accelerations primvars to extrapolate the positions.
 ///

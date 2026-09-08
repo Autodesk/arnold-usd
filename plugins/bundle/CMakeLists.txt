@@ -61,6 +61,19 @@ if (TARGET ndr)
 	target_link_libraries(${BUNDLE_NAME} PRIVATE ndr)
 endif()
 target_link_libraries(${BUNDLE_NAME} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,render_delegate>")
+# The accelerated viewport code path (SUPPORT_ACCELERATED_VIEWPORT) in render_delegate
+# references garch's GLApi (glGetIntegerv, ...) and hgiGL, so the bundle needs those too
+# since it links the render delegate as a whole archive. Distributions that ship
+# pxrConfig.cmake get them transitively, but the ones using FindUSD's flat imported
+# targets (e.g. the 3ds Max USD SDK) do not, hence the explicit link. Same TARGET guard
+# rationale as ndr above: don't pass a bare name to the linker if the lib isn't there.
+if (USD_HAS_HGI_GL)
+    foreach (_gl_lib garch hgiGL)
+        if (TARGET ${_gl_lib})
+            target_link_libraries(${BUNDLE_NAME} PRIVATE ${_gl_lib})
+        endif()
+    endforeach()
+endif()
   if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.5")
       target_link_libraries(${BUNDLE_NAME} PRIVATE hdsi;ts)                                                                                                                     
   endif()

@@ -101,6 +101,7 @@ public:
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
+    const std::string& GetOcioConfigPath() const override;
 
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
@@ -654,10 +655,12 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        // if we have a procedural parent, we should avoid deleting nodes
-        // as this can happen in batch sessions during procedural_update, 
-        // which is not allowed
-        if (_procParent) {
+        // If we have a procedural parent and the parent render is a batch render,
+        // we must avoid deleting nodes: this can happen during procedural_update,
+        // which is not allowed in batch sessions. For interactive renders we do
+        // want to destroy the node, otherwise regenerating a node with the same
+        // name later on causes naming conflicts (see #2277).
+        if (_procParent && _isBatch) {
             AiNodeSetDisabled(node, true);
         }
         else
@@ -772,11 +775,28 @@ public:
     bool IsAcceleratedViewport() const {return _acceleratedViewport;}
     bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
 
+    /// Path to the OCIO config file, as provided by the host application through the
+    /// "ocioConfigPath" render setting. It is only meant to be used when the OCIO
+    /// environment variable is not set, which always takes precedence (#2730).
+    const std::string& GetOcioConfigPath() const {return _ocioConfigPath;}
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    /// Returns the color manager to be used for this render, creating it if needed.
+    ///
+    /// The OCIO config is looked up in the OCIO environment variable first, then in the
+    /// "ocioConfigPath" render setting (#2730). When neither is set, arnold's default
+    /// color manager is returned, which can be a null pointer if it doesn't exist.
+    AtNode* _GetOrCreateColorManager();
+
+    /// Applies the color spaces received through the render settings to the given color
+    /// manager. This is needed as the color manager can be created after the color spaces
+    /// were set, in which case they would otherwise be lost.
+    void _ApplyColorSpaces(AtNode* colorManager);
 
     void _ParseDelegateRenderProducts(const VtValue& value);
 
@@ -868,6 +888,12 @@ private:
     std::string _reportFile;
     std::string _statsFile;
     std::string _profileFile;
+    /// OCIO config file path set by the host application, see GetOcioConfigPath.
+    std::string _ocioConfigPath;
+    /// Color spaces received through the render settings, kept so that they can be applied
+    /// to a color manager that is created after them.
+    std::string _colorSpaceLinear;
+    std::string _colorSpaceNarrow;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
@@ -889,7 +915,7 @@ private:
     int _nodeId = 0;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
-    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
+    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk, or a batch parent render when running under a procedural)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;

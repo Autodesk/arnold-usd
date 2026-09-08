@@ -50,6 +50,10 @@ option(BUILD_TURNTABLE "Build the turntable tool" OFF)
 # Configurations:
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
+# Unrelated to BUILD_SCENE_INDEX_PLUGIN / ENABLE_SCENE_INDEX_IN_BUNDLE: those say whether the
+# scene index filters are compiled in, which Hydra 1 needs too. This one only picks the
+# default traversal mode, and USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX still overrides it.
+option(ENABLE_HYDRA2 "Traverse the stage with the scene index (Hydra 2) by default" ON)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
 # The bundle embeds the procedural alongside the USD/Hydra plugins. Hosts that ship the
 # procedural from an Arnold distribution instead only want the plugins, and embedding a
