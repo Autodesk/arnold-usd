@@ -493,6 +493,8 @@ void HdArnoldRenderSettings::_Sync(
     HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
     param->SetHydraRenderSettingsPrimPath(GetId());
 
+    HdArnoldRenderParamInterrupt paramInterrupt(renderParam);
+
     // TODO when do we need to read them ? just only once ?
     // What happens when the resolution is changed in the render settings ?
     _ReadUsdRenderSettings(sceneDelegate);
@@ -505,6 +507,7 @@ void HdArnoldRenderSettings::_Sync(
 
     if (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         // Generate and apply Arnold options from the render settings
+        paramInterrupt.Interrupt();
         _UpdateArnoldOptions(sceneDelegate);
     }
 
@@ -515,16 +518,19 @@ void HdArnoldRenderSettings::_Sync(
 	const auto DirtyShutter = HdRenderSettings::DirtyUnionedSamplingInterval;
 #endif
     if (*dirtyBits & DirtyShutter || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+        paramInterrupt.Interrupt();
         _UpdateShutterInterval(sceneDelegate, param);
     }
 #endif
 
     if (*dirtyBits & DirtyRenderProducts) {
         // TODO implement _UpdateRenderProduct
+        paramInterrupt.Interrupt();
         _UpdateRenderProducts(sceneDelegate, param);
     }
 
     if (*dirtyBits & DirtyRenderingColorSpace) {
+        paramInterrupt.Interrupt();
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
 
@@ -613,7 +619,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
         }
 
-        AtNode* driver = _renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
+        AtNode* driver = _renderDelegate->FindOrCreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
 
         if (!driver) {
             TF_WARN("Failed to create driver for render product %s\n", driverName.c_str());
@@ -725,11 +731,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
             }
 
-            AtNode* filter = AiNodeLookUpByName(AiNodeGetUniverse(options), AtString(filterName.c_str()));
-            if (!filter) {
-                filter = _renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
-            }
-
+            AtNode *filter = _renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+            
             if (!filter) {
                 TF_WARN("Failed to create filter for render var %s\n", varName.c_str());
                 continue;
@@ -876,7 +879,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 aovShaderName = varName;
                 aovShaderName += "_shader";
                 AtNode* aovShader =
-                    _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
+                    _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
 
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
@@ -893,13 +896,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                     
                     AtNode* reader = nullptr;
                     if (sourceName == "st" || sourceName == "uv") {
-                        reader = _renderDelegate->CreateArnoldNode(str::utility, AtString(readerName.c_str()));
+                        reader = _renderDelegate->FindOrCreateArnoldNode(str::utility, AtString(readerName.c_str()));
                         if (reader) {
                             AiNodeSetStr(reader, str::color_mode, str::uv);
                             AiNodeSetStr(reader, str::shade_mode, str::flat);
                         }
                     } else {
-                        reader = _renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
+                        reader = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
                         if (reader) {
                             AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
                         }
