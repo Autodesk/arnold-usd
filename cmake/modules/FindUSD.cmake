@@ -252,6 +252,17 @@ if (HOUDINI_LOCATION)
                 if (EXISTS "${_lib_path}")
                     add_library(${lib} SHARED IMPORTED)
                     set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${_lib_path}")
+                    # On Windows the .dll in HOUDINI_LIBS_LOCATION (bin/) is not linkable; the
+                    # linker needs the import .lib, which Houdini ships separately under
+                    # custom/houdini/dsolib. A SHARED IMPORTED target with no IMPORTED_IMPLIB
+                    # fails at generate time with "IMPORTED_IMPLIB not set".
+                    if (WIN32)
+                        set(_lib_implib "${HOUDINI_LOCATION}/custom/houdini/dsolib/libpxr_${lib}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+                        if (EXISTS "${_lib_implib}")
+                            set_property(TARGET ${lib} PROPERTY IMPORTED_IMPLIB "${_lib_implib}")
+                        endif()
+                        unset(_lib_implib)
+                    endif()
                 else()
                     list(APPEND _missing_usd_libs ${lib})
                 endif()
