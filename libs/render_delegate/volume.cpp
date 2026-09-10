@@ -47,6 +47,7 @@
 #include "openvdb_asset.h"
 #include "utils.h"
 
+#include <cctype>
 #include <iostream>
 #include <array>
 
@@ -183,6 +184,39 @@ struct VdbFieldData {
     int fieldIndex = 0;
 };
 
+// Arnold's AiVolumeFileMakeLODs (and core's VdbDataMip) auto-detect LOD mip-chains from
+// grids named "<channel>_level_<N>" inside the vdb file itself, so the "grids" array only
+// needs to list the plain base channel name once. Returns `name` with every trailing
+// "_level_<digits>" suffix removed, matching core's VdbDatabaseHelpers::stripMiplevels -
+// running the VDB LOD SOP over already-LOD'd grids really does produce
+// "density_level_0_level_1".
+std::string _StripVdbLodSuffix(const std::string& name)
+{
+    static const std::string levelMarker = "_level_";
+    std::string baseName = name;
+    while (true) {
+        const auto markerPos = baseName.rfind(levelMarker);
+        if (markerPos == std::string::npos) {
+            break;
+        }
+        const auto digitsStart = markerPos + levelMarker.size();
+        if (digitsStart >= baseName.size()) {
+            break;
+        }
+        auto allDigits = true;
+        for (auto i = digitsStart; i < baseName.size(); ++i) {
+            if (!std::isdigit(static_cast<unsigned char>(baseName[i]))) {
+                allDigits = false;
+                break;
+            }
+        }
+        if (!allDigits) {
+            break;
+        }
+        baseName = baseName.substr(0, markerPos);
+    }
+    return baseName;
+}
 
 } // namespace
 
@@ -441,13 +475,21 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             _volumes.push_back(shape);
         }
 
-        const auto numFields = openvdb.second.size();
-        auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
-        for (auto i = decltype(numFields){0}; i < numFields; ++i) {
-            const int fieldIndex = openvdb.second[i].fieldIndex;
-            std::string fieldIndexName = openvdb.second[i].field.GetString();
-            fieldIndexName += std::string("[") + std::to_string(fieldIndex) + std::string("]");
-            AiArraySetStr(fields, i, AtString(fieldIndexName.c_str()));
+        // Build the list of grid names to expose to Arnold, in the "name[fieldIndex]"
+        // form core expects. A "<channel>_level_<N>" LOD family collapses to a single
+        // entry, since core matches the whole mip-chain from the base channel name.
+        std::vector<std::string> gridNames;
+        std::unordered_set<std::string> seenGridNames;
+        for (const auto& fieldData : openvdb.second) {
+            std::string gridName = _StripVdbLodSuffix(fieldData.field.GetString());
+            gridName += std::string("[") + std::to_string(fieldData.fieldIndex) + std::string("]");
+            if (seenGridNames.insert(gridName).second) {
+                gridNames.push_back(gridName);
+            }
+        }
+        auto* fields = AiArrayAllocate(gridNames.size(), 1, AI_TYPE_STRING);
+        for (auto i = decltype(gridNames.size()){0}; i < gridNames.size(); ++i) {
+            AiArraySetStr(fields, i, AtString(gridNames[i].c_str()));
         }
         AiNodeSetArray(volume, str::grids, fields);
     }
