@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#32](https://github.com/Autodesk/arnold-usd/issues/32) - Support coordsys primitives
 - [usd#2652](https://github.com/Autodesk/arnold-usd/issues/2652) - Add setting for accelerated viewport
 - [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
 - [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
@@ -16,6 +17,7 @@
 - [usd#2731](https://github.com/Autodesk/arnold-usd/issues/2731) - Per-renderVar EXR compression
 - [usd#2747](https://github.com/Autodesk/arnold-usd/issues/2747) - Fix nodes destruction during interactive sessions under a procedural
 - [usd#2749](https://github.com/Autodesk/arnold-usd/issues/2749) - Mesh geometry deduplication in the hydra render delegate
+- [usd#2754](https://github.com/Autodesk/arnold-usd/issues/2754) - Support for sequence rendering with hydra 2 render settings
 
 ### Bug fixes
 

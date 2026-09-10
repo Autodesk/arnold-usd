@@ -64,9 +64,10 @@ hydra2_only: test_2549
 not_implemented: test_2608
 
 # Tests skipped for a specific pass (consumed as the 'pass_<name>' skip list).
-# CoordSys support (test_13221) is implemented in the render delegate only, so
-# the procedural 'usd' pass would abort on the unresolved coordinate space.
-pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3
+# CoordSys support (test_13221, test_2731) is implemented in the render
+# delegate only, so the procedural 'usd' pass would abort on the unresolved
+# coordinate space.
+pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2
 
 ############################
 # USER-DEFINED TEST GROUPS #

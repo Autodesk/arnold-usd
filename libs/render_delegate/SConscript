@@ -62,6 +62,10 @@ if local_env['ENABLE_SHARED_ARRAYS']:
 if local_env['BUILD_SCENE_INDEX_PLUGIN']:
     local_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
 
+# Whether Hydra 2 is the default traversal mode. Only HdArnoldIsSceneIndexEnabled() in
+# utils.cpp reads this, so it is enough to define it for this library.
+local_env.Append(CPPDEFINES = [('ARNOLD_ENABLE_HYDRA2', '1' if local_env['ENABLE_HYDRA2'] else '0')])
+
 if local_env['USD_HAS_HGI_GL']:
     # Appended to the shared 'env' (not local_env) so this define is visible to
     # any SConscript compiling against render_buffer.h after this one runs,

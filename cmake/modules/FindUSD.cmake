@@ -119,6 +119,12 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
             PATHS "${PXR_USD_LOCATION}/bin"
             DOC "USD Gen Schema executable")
 
+        # Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+        # support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+        if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+            set(USD_HAS_HGI_GL ON)
+        endif ()
+
         unset(PXR_USD_LOCATION)
         return()
     else()
@@ -193,6 +199,12 @@ if (pxr_FOUND)
     if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
         set(USD_HAS_FULLSCREEN_SHADER ON)
     endif ()
+
+    # Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+    # support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+    if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+        set(USD_HAS_HGI_GL ON)
+    endif ()
     return()
 
 else()
@@ -252,6 +264,17 @@ if (HOUDINI_LOCATION)
                 if (EXISTS "${_lib_path}")
                     add_library(${lib} SHARED IMPORTED)
                     set_property(TARGET ${lib} PROPERTY IMPORTED_LOCATION "${_lib_path}")
+                    # On Windows the .dll in HOUDINI_LIBS_LOCATION (bin/) is not linkable; the
+                    # linker needs the import .lib, which Houdini ships separately under
+                    # custom/houdini/dsolib. A SHARED IMPORTED target with no IMPORTED_IMPLIB
+                    # fails at generate time with "IMPORTED_IMPLIB not set".
+                    if (WIN32)
+                        set(_lib_implib "${HOUDINI_LOCATION}/custom/houdini/dsolib/libpxr_${lib}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+                        if (EXISTS "${_lib_implib}")
+                            set_property(TARGET ${lib} PROPERTY IMPORTED_IMPLIB "${_lib_implib}")
+                        endif()
+                        unset(_lib_implib)
+                    endif()
                 else()
                     list(APPEND _missing_usd_libs ${lib})
                 endif()

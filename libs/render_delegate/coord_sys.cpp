@@ -70,6 +70,13 @@ void _FlipCoordSysMatrixV(AtNode* node)
 
 } // namespace
 
+void HdArnoldCoordSys::_UpdateMatrices(const AtMatrix& matrix)
+{
+    _fwdMatrix = matrix;
+    _invMatrix = AiM4Invert(matrix);
+    _hasMatrix = true;
+}
+
 HdArnoldCoordSys::HdArnoldCoordSys(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdCoordSys(id), _renderDelegate(renderDelegate)
 {
@@ -81,6 +88,7 @@ HdArnoldCoordSys::HdArnoldCoordSys(HdArnoldRenderDelegate* renderDelegate, const
 
 HdArnoldCoordSys::~HdArnoldCoordSys()
 {
+    _renderDelegate->ClearDependencies(GetId());
     for (AtNode* node : {_node, _ndcNode}) {
         if (node) {
             _renderDelegate->UnregisterCoordSysCamera(node);
@@ -236,6 +244,25 @@ void HdArnoldCoordSys::Sync(
         if (_ndcNode != nullptr)
             _MirrorTransform(_ndcNode, sceneDelegate, ndcFlip);
     }
+
+    // Refresh the affine matrix (and its inverse) from _node's stored world
+    // matrix. The camera node keeps the full matrix in its "matrix" attribute
+    // (Arnold only strips scale/shear when *rendering* through the camera), so
+    // reading it back preserves scale/shear for the affine coordinate spaces.
+    // Only when _node's matrix was (re)written above, i.e. the same conditions
+    // that mirrored it.
+    if (src != nullptr || (bits & DirtyTransform)) {
+        if (AtArray* nodeMatrix = AiNodeGetArray(_node, str::matrix)) {
+            if (AiArrayGetNumKeys(nodeMatrix) > 0)
+                _UpdateMatrices(AiArrayGetMtx(nodeMatrix, 0));
+        }
+    }
+
+    // Materials binding this coordinate system (HdArnoldNodeGraph::RemapCoordSysSpaces)
+    // copy GetForwardMatrix()/GetInverseMatrix() by value rather than linking an Arnold
+    // node, so they need to be told when those values change. Mirrors HdArnoldCamera,
+    // which dirties its dependents (e.g. camera_projection shaders) the same way.
+    _renderDelegate->DirtyDependency(GetId());
 }
 
 void HdArnoldCoordSys::_MirrorCamera(
@@ -320,6 +347,16 @@ HdArnoldNodeGraph::CoordSysBinding HdArnoldGetCoordSysBinding(HdSceneDelegate* s
         // created a dedicated (extra-flipped) NDC camera, route the ".NDC" space to it.
         if (AtNode* ndcNode = coordSys->GetArnoldNdcNode())
             target.ndcNode = AiNodeGetName(ndcNode);
+        // Full matrix (scale/shear preserved) for the affine spaces, carried by value
+        // rather than by an Arnold node link (see HdArnoldCoordSys::GetForwardMatrix).
+        // The coordSys's id lets the node graph re-sync when the matrix changes later
+        // (HdArnoldNodeGraph::_TrackCoordSysDependencies).
+        if (const AtMatrix* fwd = coordSys->GetForwardMatrix()) {
+            target.matrix = *fwd;
+            target.invMatrix = *coordSys->GetInverseMatrix();
+            target.hasMatrix = true;
+            target.id = coordSysId;
+        }
         remap[coordSys->GetName().GetString()] = std::move(target);
     }
     return binding;
