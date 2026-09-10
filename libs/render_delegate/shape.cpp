@@ -50,7 +50,7 @@ HdArnoldShape::~HdArnoldShape()
     }
 }
 
-void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id)
+void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId)
 {
     // An initialized ginstance can never be reused, and AiNodeIs must not be trusted on one:
     // during its node_initialize a ginstance mutates itself into a copy of its prototype
@@ -70,14 +70,20 @@ void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id)
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
         _isGinstance = shapeType == str::ginstance;
+        // A brand new node carries none of the previous one's state, and the hydra prim ID is
+        // not re-applied by Sync unless DirtyPrimID happens to be set - which it is not on the
+        // dedup conversions, nor when ArnoldProceduralCustom swaps its node entry. Without
+        // this the node has no hydra_primId user data at all, the primId AOV reads 0 for it,
+        // and the driver treats those pixels as background: the prim becomes unpickable.
+        _SetPrimId(primId);
     }
 }
 
-void HdArnoldShape::ConvertToInstanceOf(AtNode* proto, const SdfPath& id)
+void HdArnoldShape::ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId)
 {
     if (proto == nullptr)
         return;
-    SetShapeType(str::ginstance, id);
+    SetShapeType(str::ginstance, id, primId);
     if (_shape == nullptr)
         return;
     // The instance positions itself with its own matrix (set later during Sync), so it
@@ -282,6 +288,25 @@ void HdArnoldShape::_SyncInstances(
         }
     } else
     {
+        // Shape-instancing path: instance_matrix is baked onto _shape and no arnold instancer
+        // node is involved. Any instancer built by a previous Sync has to go, otherwise it
+        // keeps rendering a second, stale copy of the instances - and its "nodes" may point at
+        // a node that has since been destroyed. This condition is not static: the mesh dedup
+        // flips _forceInstancerNode (and _prototypeOverride) as a prototype becomes eligible
+        // or ineligible, so a shape can genuinely move from the branch above to this one.
+        const bool hadInstancers = !_instancers.empty();
+        for (auto &instancerNode : _instancers) {
+            _renderDelegate->DestroyArnoldNode(instancerNode);
+        }
+        _instancers.clear();
+        // That instancer had hidden the source mesh (visibility 0 above). This branch renders
+        // the instances on _shape itself, so give it its visibility back - SetVisibility skips
+        // the shape while _instancers is non-empty, so nothing else would restore it until the
+        // next edit that happens to dirty visibility.
+        if (hadInstancers) {
+            AiNodeSetByte(_shape, str::visibility, _visibility);
+        }
+
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.
         auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));

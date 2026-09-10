@@ -75,7 +75,10 @@ public:
     /// otherwise. A ginstance is always recreated: it cannot be reused once initialized.
     ///
     /// @param shapeType New node entry for this Arnold shape node
-    void SetShapeType(const AtString& shapeType, const SdfPath& id);
+    /// @param id Path to the primitive.
+    /// @param primId Prim ID of the owning rprim (HdRprim::GetPrimId), re-applied when the
+    ///  node has to be recreated.
+    void SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId);
 
     /// Turns this shape into an Arnold ginstance referencing @p proto.
     ///
@@ -87,7 +90,8 @@ public:
     ///
     /// @param proto The canonical Arnold node to instance.
     /// @param id Path to the primitive.
-    void ConvertToInstanceOf(AtNode* proto, const SdfPath& id);
+    /// @param primId Prim ID of the owning rprim (HdRprim::GetPrimId).
+    void ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId);
 
     /// Relinquishes ownership of the Arnold shape node without destroying it, returning
     /// the node. Used when the render delegate adopts a canonical mesh node that is still

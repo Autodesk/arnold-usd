@@ -2204,7 +2204,9 @@ void _ErasePendingDuplicate(std::vector<SdfPath>& pendingDuplicates, const SdfPa
 
 void HdArnoldRenderDelegate::_DetachAdoptedGeometry(AtNode* node, const SdfPath& id)
 {
-    if (node == nullptr)
+    // Never write to the node once the delegate has given up node ownership: the AtNodes belong
+    // to Arnold by then and may already be gone (see OnGeometryDestroyed).
+    if (node == nullptr || !_enableNodesDestruction)
         return;
     // The node is not owned by an rprim anymore, it only survives as the shared prototype of
     // the instances still referencing it. It must give up the prim path it is named after: the
@@ -2409,6 +2411,17 @@ bool HdArnoldRenderDelegate::HandOffCanonicalGeometry(const SdfPath& id, AtNode*
 
 bool HdArnoldRenderDelegate::OnGeometryDestroyed(const SdfPath& id, AtNode* node)
 {
+    // The reader has handed every AtNode over to Arnold and is only clearing the usd stage now
+    // (HydraArnoldReader / EnableNodesDestruction), so the rprims are being destroyed while
+    // their Arnold nodes are not ours anymore. There is nothing to keep alive - this delegate
+    // will not destroy a single node and is itself about to be deleted - and nothing may be
+    // touched: adopting a canonical renames it and hides it (_DetachAdoptedGeometry), and when
+    // a procedural is reinitialized Arnold has already destroyed its children by this point,
+    // so that write lands on freed memory and segfaults (ARNOLD-17180). Returning false leaves
+    // the node with the shape, whose destructor calls DestroyArnoldNode - a no-op in this
+    // state - so no node is written to or freed.
+    if (!_enableNodesDestruction)
+        return false;
     AtNode* toDestroy = nullptr;
     bool adopted = false;
     {
@@ -2441,6 +2454,15 @@ bool HdArnoldRenderDelegate::OnGeometryDestroyed(const SdfPath& id, AtNode* node
                 cm.node = node;
                 cm.canonicalPath = SdfPath();
                 adopted = true;
+                // Duplicates queued while the entry was still pending have no dependency on
+                // the canonical yet, so nothing else would ever wake them: dirty them so they
+                // pick up the node we just adopted. This should be unreachable (publishing
+                // drains the queue inside the same Sync that creates a pending entry), but
+                // leaving them queued would strand them and pin this node's refcount above
+                // zero forever, so drain it here like the sibling branch below does.
+                for (const SdfPath& duplicate : cm.pendingDuplicates)
+                    _dedupDirtyQueue.emplace(duplicate);
+                cm.pendingDuplicates.clear();
             } else {
                 // No instances reference the node (or there is no node to adopt): drop the
                 // entry, dirtying any registered duplicates so they re-evaluate.

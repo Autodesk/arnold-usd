@@ -46,6 +46,7 @@
 #include "instancer.h"
 #include "node_graph.h"
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -249,6 +250,16 @@ void HdArnoldMesh::Sync(
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
 
+    // GetMeshTopology() is a full round trip to the scene delegate. Both the dedup eligibility
+    // check below and the topology translation further down need it, so fetch it at most once
+    // per Sync and hand out a reference; nothing mutates the scene while we sync.
+    std::optional<HdMeshTopology> topologyCache;
+    auto getMeshTopology = [&]() -> const HdMeshTopology& {
+        if (!topologyCache.has_value())
+            topologyCache = GetMeshTopology(sceneDelegate);
+        return *topologyCache;
+    };
+
     // === Geometry deduplication ===
     // If this mesh is geometrically identical to a previously seen one, share a single
     // canonical Arnold polymesh instead of duplicating the geometry (and its BVH). The
@@ -285,12 +296,11 @@ void HdArnoldMesh::Sync(
             const bool instanced = !GetInstancerId().IsEmpty();
             bool eligible = instanced ||
                 GetRenderDelegate()->GetGeometryDedupMode() == HdArnoldRenderDelegate::GeometryDedupMode::All;
-            HdMeshTopology topology;
             uint64_t hash = 0;
             if (eligible) {
                 HdArnoldRenderParam* rp = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
                 const bool computedPoints = _primvars.count(HdTokens->points) != 0;
-                topology = GetMeshTopology(sceneDelegate);
+                const HdMeshTopology& topology = getMeshTopology();
                 eligible = !computedPoints && topology.GetGeomSubsets().empty() &&
                            _primvars.count(HdTokens->velocities) == 0 &&
                            _primvars.count(HdTokens->accelerations) == 0 && !_HasMeshLight(sceneDelegate, id);
@@ -313,6 +323,14 @@ void HdArnoldMesh::Sync(
             // refresh the local pointer afterwards.
             _ApplyGeometryDedup(id, eligible, instanced, hash, str::polymesh, dirtyBits, dirtyPrimvars, param);
             node = GetArnoldNode();
+            if (_isInstance) {
+                // A duplicate builds no geometry of its own, so it has no geom subsets either
+                // (eligibility above requires none). Clear the cached list: the block that
+                // recomputes it is skipped while we are an instance, and a stale non-empty
+                // _subsets would make assignMaterials build an oversized shader array from
+                // the previous subset materials.
+                _subsets.clear();
+            }
         }
     }
 
@@ -334,7 +352,7 @@ void HdArnoldMesh::Sync(
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology && !_isInstance) {
-        const auto topology = GetMeshTopology(sceneDelegate);
+        const HdMeshTopology& topology = getMeshTopology();
         _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         param.Interrupt();
         // Keep a reference on the vertex buffers as long as this object is live
@@ -850,15 +868,28 @@ uint64_t HdArnoldMesh::_ComputeGeometryHash(
     }
     // The display style drives the subdivision iterations set on the polymesh.
     hash = TfHash::Combine(hash, GetDisplayStyle(sceneDelegate).refineLevel);
+    // Creases and corners are applied to the polymesh by ArnoldUsdReadCreases, and they do NOT
+    // travel with the topology: hydra delivers them separately, through GetSubdivTags() and
+    // DirtySubdivTags. Without this two meshes differing only in their creasing would hash
+    // equal and the duplicate would silently render with the canonical's creases.
+    hash = TfHash::Combine(hash, GetSubdivTags(sceneDelegate).ComputeHash());
     // Every primvar ends up on the polymesh (uvs, normals, custom, and constant arnold
     // parameters), so two meshes are only interchangeable if all of them match.
+    // _primvars is an unordered_map, so its iteration order is unspecified and can differ
+    // between two prims holding the same primvars (different insertion history / bucket
+    // layout). Combine each primvar's own hash commutatively so the result depends only on the
+    // set of primvars, not on the order we happen to walk them in - otherwise identical
+    // geometries would fail to deduplicate, unpredictably and differently from run to run.
+    size_t primvarsHash = 0;
     for (const auto& primvar : _primvars) {
-        hash = TfHash::Combine(hash, primvar.first, static_cast<int>(primvar.second.interpolation));
+        size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
         if (primvar.second.value.CanHash())
-            hash = TfHash::Combine(hash, primvar.second.value.GetHash());
+            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
         if (!primvar.second.valueIndices.empty())
-            hash = TfHash::Combine(hash, primvar.second.valueIndices);
+            ph = TfHash::Combine(ph, primvar.second.valueIndices);
+        primvarsHash += ph;
     }
+    hash = TfHash::Combine(hash, primvarsHash);
     // A ginstance can override the surface shader per instance but not the displacement,
     // which lives on the shared polymesh. Fold the resolved displacement shader in so that
     // meshes with different displacement are never deduplicated.

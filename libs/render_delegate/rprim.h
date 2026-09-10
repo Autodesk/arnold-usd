@@ -205,6 +205,20 @@ protected:
     /// wiring below are shared by every geometry rprim (mesh, curves): the type-specific Sync
     /// only has to decide eligibility and compute a geometry hash, then call _ApplyGeometryDedup.
 
+    /// Everything that has to be re-applied when the dedup replaces or re-wires this rprim's
+    /// Arnold node. A recreated node keeps none of the old node's state, so every scene-driven
+    /// dirty bit must be set again - forcing only topology/points/primvars silently dropped the
+    /// state applied under the other bits, notably the subdivision level (DirtyDisplayStyle,
+    /// which _CreateRealGeometryNode resets to 0) and the creases (DirtySubdivTags), leaving a
+    /// rebuilt subdiv mesh rendering as a flat cage. The repr bits are excluded: swapping the
+    /// Arnold node does not affect the rprim's hydra reprs.
+    ///
+    /// Anything skipped for a duplicate is guarded by !_isInstance in the type-specific Sync,
+    /// so setting the full mask never rebuilds geometry an rprim does not own.
+    static constexpr HdDirtyBits _rebuiltNodeDirtyBits =
+        HdChangeTracker::AllSceneDirtyBits &
+        ~(HdChangeTracker::InitRepr | HdChangeTracker::Varying | HdChangeTracker::DirtyRepr);
+
     /// Hands this rprim's Arnold node over to the render delegate if it is a dedup canonical
     /// still referenced by instances (so the node outlives this rprim); otherwise the delegate
     /// just cleans up its registry entry and the node is destroyed normally. Call this early
@@ -223,7 +237,7 @@ protected:
     /// for interrupting the render first (Arnold nodes are created and destroyed here).
     void _CreateRealGeometryNode(const SdfPath& id, const AtString& realShapeType)
     {
-        _shape.SetShapeType(realShapeType, id);
+        _shape.SetShapeType(realShapeType, id, HydraType::GetPrimId());
         // Whatever ginstance we had is gone with the old node.
         _ginstancePrototype = nullptr;
         // A freshly created polymesh must reset its subdivision: unlike the one built in
@@ -291,15 +305,18 @@ protected:
         // is gone). Otherwise we keep it and ReleaseCanonicalGeometry just drops the entry.
         const bool handedOff = _HandOffCanonicalGeometry(id, realShapeType);
         const bool wasInstance = _isInstance;
+        // Drop our own instance wiring BEFORE releasing the registry entry. Releasing can
+        // destroy an adopted canonical (we may be its last instance), and until this call our
+        // Arnold node is still a ginstance pointing at that canonical and aliasing its geometry
+        // arrays - releasing first would free a prototype that one of our own nodes references.
+        _RebuildRealGeometryNode(id, realShapeType);
         _renderDelegate->ReleaseCanonicalGeometry(id);
         _dedupRegistered = false;
         _dedupHash = 0;
-        _RebuildRealGeometryNode(id, realShapeType);
         // Whether we handed our node over or were rendering another rprim's geometry, we are
         // now sitting on a node with no geometry at all: rebuild all of it.
         if (handedOff || wasInstance) {
-            *dirtyBits |=
-                HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
+            *dirtyBits |= _rebuiltNodeDirtyBits;
             dirtyPrimvars = true;
         }
     }
@@ -345,8 +362,7 @@ protected:
             // Arnold instances share with it - the crash this dedup path used to hit after a
             // few interactive edits (ARNOLD-17180).
             if (_HandOffCanonicalGeometry(id, realShapeType)) {
-                *dirtyBits |=
-                    HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
+                *dirtyBits |= _rebuiltNodeDirtyBits;
                 dirtyPrimvars = true;
             }
         }
@@ -410,19 +426,21 @@ protected:
                 // prototype (see HdArnoldShape::SetShapeType), which is why the no-op fast
                 // path above matters.
                 param.Interrupt();
-                _shape.ConvertToInstanceOf(canonical, id);
+                _shape.ConvertToInstanceOf(canonical, id, HydraType::GetPrimId());
                 _ginstancePrototype = canonical;
             }
             _isInstance = true;
             // The duplicate must re-sync whenever its canonical changes or is removed; the
             // type-specific material assignment registers this dependency from _canonicalPath.
             _canonicalPath = canonicalPath;
-            // Make sure the duplicate gets its transform, visibility and shader (re)applied
-            // by the type-specific Sync (and, for the instanced case, its instancer rebuilt
-            // with the redirected prototype). Force primvars too: a ginstance is a fresh
-            // node that still needs its node-level constant primvars re-declared.
-            *dirtyBits |= HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility |
-                          HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar;
+            // Re-apply everything on the duplicate: the ginstance flavor is sitting on a
+            // brand new node, and the instanced flavor needs its arnold instancer rebuilt so
+            // it actually references the canonical we just set as the prototype override. Note
+            // that _SyncInstances only rebuilds on DirtyPoints / DirtyInstancer /
+            // DirtyInstanceIndex, so a narrower set would leave the override unapplied until
+            // some later edit happened to dirty one of those. The geometry blocks are all
+            // guarded by !_isInstance, so nothing rebuilds geometry we do not own.
+            *dirtyBits |= _rebuiltNodeDirtyBits;
             dirtyPrimvars = true;
             return true;
         }
@@ -443,8 +461,7 @@ protected:
             param.Interrupt();
             _RebuildRealGeometryNode(id, realShapeType);
             _renderDelegate->PublishCanonicalGeometry(id, typedHash, GetArnoldNode());
-            *dirtyBits |=
-                HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
+            *dirtyBits |= _rebuiltNodeDirtyBits;
             dirtyPrimvars = true;
         }
         return false;

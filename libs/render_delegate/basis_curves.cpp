@@ -481,13 +481,19 @@ uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
     }
     // Every primvar ends up on the curves node (widths/radius, orientations, uvs, custom and
     // constant arnold parameters), so two curves are only interchangeable if all of them match.
+    // _primvars is an unordered_map whose iteration order is unspecified, so combine each
+    // primvar's own hash commutatively: the result must depend on the set of primvars only,
+    // not on the order we happen to walk them in (see HdArnoldMesh::_ComputeGeometryHash).
+    size_t primvarsHash = 0;
     for (const auto& primvar : _primvars) {
-        hash = TfHash::Combine(hash, primvar.first, static_cast<int>(primvar.second.interpolation));
+        size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
         if (primvar.second.value.CanHash())
-            hash = TfHash::Combine(hash, primvar.second.value.GetHash());
+            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
         if (!primvar.second.valueIndices.empty())
-            hash = TfHash::Combine(hash, primvar.second.valueIndices);
+            ph = TfHash::Combine(ph, primvar.second.valueIndices);
+        primvarsHash += ph;
     }
+    hash = TfHash::Combine(hash, primvarsHash);
     // Curves have no displacement or subdivision. For an instanced prototype the shared canonical
     // curves node carries the prototype's own transform and its surface shader (its instancer
     // references it directly, and we merge conservatively on material), so fold both in. This
