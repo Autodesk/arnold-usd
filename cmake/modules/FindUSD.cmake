@@ -119,6 +119,12 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
             PATHS "${PXR_USD_LOCATION}/bin"
             DOC "USD Gen Schema executable")
 
+        # Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+        # support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+        if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+            set(USD_HAS_HGI_GL ON)
+        endif ()
+
         unset(PXR_USD_LOCATION)
         return()
     else()
@@ -192,6 +198,12 @@ if (pxr_FOUND)
 
     if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
         set(USD_HAS_FULLSCREEN_SHADER ON)
+    endif ()
+
+    # Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+    # support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+    if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hgiGL/texture.h")
+        set(USD_HAS_HGI_GL ON)
     endif ()
     return()
 
