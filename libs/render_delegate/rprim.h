@@ -224,6 +224,8 @@ protected:
     void _CreateRealGeometryNode(const SdfPath& id, const AtString& realShapeType)
     {
         _shape.SetShapeType(realShapeType, id);
+        // Whatever ginstance we had is gone with the old node.
+        _ginstancePrototype = nullptr;
         // A freshly created polymesh must reset its subdivision: unlike the one built in
         // HdArnoldMesh's constructor it would otherwise keep arnold's default of 1 iteration.
         // Curves have no subdiv_iterations parameter.
@@ -385,9 +387,13 @@ protected:
                 _sharedPrototype = canonical;
                 _shape.SetPrototypeOverride(canonical);
             } else {
-                AtNode* node = GetArnoldNode();
-                if (_isInstance && _sharedPrototype == nullptr && node != nullptr &&
-                    AiNodeGetPtr(node, str::node) == canonical) {
+                // Compare against the prototype we recorded rather than querying the node with
+                // AiNodeGetPtr(node, str::node): an initialized ginstance has mutated into its
+                // prototype's node type and no longer has a "node" parameter (see
+                // HdArnoldShape::SetShapeType), so that query always returned null after the
+                // first render. This fast path was therefore dead, and every duplicate was
+                // destroyed and recreated on every edit.
+                if (_isInstance && _sharedPrototype == nullptr && _ginstancePrototype == canonical) {
                     // Already a ginstance of this canonical: pure no-op, just track its
                     // (possibly updated) path.
                     _canonicalPath = canonicalPath;
@@ -399,10 +405,13 @@ protected:
                     _shape.SetPrototypeOverride(nullptr);
                     _sharedPrototype = nullptr;
                 }
-                // Turn this rprim into a ginstance of the canonical (re-pointing in place when
-                // it is already a ginstance).
+                // Turn this rprim into a ginstance of the canonical. This always creates a new
+                // Arnold node: an initialized ginstance cannot be re-pointed at another
+                // prototype (see HdArnoldShape::SetShapeType), which is why the no-op fast
+                // path above matters.
                 param.Interrupt();
                 _shape.ConvertToInstanceOf(canonical, id);
+                _ginstancePrototype = canonical;
             }
             _isInstance = true;
             // The duplicate must re-sync whenever its canonical changes or is removed; the
@@ -459,6 +468,7 @@ protected:
     bool _isInstance = false;           ///< True when this rprim is a dedup duplicate (geometry not built), either flavor below.
     bool _dedupRegistered = false;      ///< True while this rprim has an entry in the dedup registry (canonical or duplicate); lets the destructor skip OnGeometryDestroyed for the many rprims that never deduplicate.
     AtNode* _sharedPrototype = nullptr; ///< Canonical node this prototype's instancer references (instanced flavor); null for the ginstance flavor.
+    AtNode* _ginstancePrototype = nullptr; ///< Canonical node our ginstance was pointed at (ginstance flavor). Tracked here because an initialized ginstance no longer exposes a "node" parameter to query.
     SdfPath _canonicalPath;             ///< Path of the canonical this one shares (dedup), empty otherwise.
     uint64_t _dedupHash = 0;            ///< Typed geometry hash this rprim is registered under (dedup), 0 otherwise.
 };

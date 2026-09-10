@@ -71,6 +71,9 @@ public:
     /// This can happen e.g. with primitives of type ArnoldProceduralCustom
     /// where the node type is an attribute
     ///
+    /// The node is kept when it is already of @p shapeType, and destroyed and recreated
+    /// otherwise. A ginstance is always recreated: it cannot be reused once initialized.
+    ///
     /// @param shapeType New node entry for this Arnold shape node
     void SetShapeType(const AtString& shapeType, const SdfPath& id);
 
@@ -185,6 +188,7 @@ protected:
     AtNode* _shape = nullptr;                ///< Pointer to the Arnold Shape.
     AtNode* _prototypeOverride = nullptr;    ///< Shared canonical geometry the instancer references (mesh dedup); null = use _shape.
     bool _forceInstancerNode = false;        ///< Force the instancer-node path instead of shape-instancing (mesh dedup).
+    bool _isGinstance = false;               ///< True when _shape was created as a ginstance. Not the same as AiNodeIs(_shape, str::ginstance), which is false once the ginstance has been initialized (see SetShapeType).
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
 };
 

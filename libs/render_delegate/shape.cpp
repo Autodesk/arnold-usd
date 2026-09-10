@@ -35,6 +35,7 @@ HdArnoldShape::HdArnoldShape(
 {
     if (!shapeType.empty()) {
         _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
+        _isGinstance = shapeType == str::ginstance;
         _SetPrimId(primId);
     }
 }
@@ -51,12 +52,24 @@ HdArnoldShape::~HdArnoldShape()
 
 void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id)
 {
-    if (_shape != nullptr && !AiNodeIs(_shape, shapeType)) {
+    // An initialized ginstance can never be reused, and AiNodeIs must not be trusted on one:
+    // during its node_initialize a ginstance mutates itself into a copy of its prototype
+    // (copyFromNode assigns the prototype's node entry), so after the first render it answers
+    // AiNodeIs(node, "polymesh") == true, it no longer exposes the "node" parameter it was
+    // pointed at, and it has no node_update at all (MsgUnreachableCode - arnold assumes no
+    // ginstance survives to update time, which interactive editing breaks). Asking arnold here
+    // therefore turned both "turn this instance back into real geometry" and "point it at
+    // another prototype" into silent no-ops, leaving the rprim believing it owned geometry
+    // while its node still aliased the prototype's vlist/vidxs/nsides (ARNOLD-17180). So we
+    // always recreate when either side is a ginstance; no other node type morphs, which keeps
+    // AiNodeIs the right test for e.g. ArnoldProceduralCustom changing its node entry.
+    if (_shape != nullptr && (_isGinstance || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
+        _isGinstance = shapeType == str::ginstance;
     }
 }
 
@@ -77,6 +90,7 @@ AtNode* HdArnoldShape::ReleaseShapeOwnership()
 {
     AtNode* node = _shape;
     _shape = nullptr;
+    _isGinstance = false;
     return node;
 }
 
