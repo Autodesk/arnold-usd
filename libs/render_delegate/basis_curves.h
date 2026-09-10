@@ -64,10 +64,9 @@ public:
 
 protected:
     /// Computes a hash uniquely identifying the geometry that ends up on the Arnold curves
-    /// node: curve topology (vertex counts, indices, type, basis, wrap), points (every motion
-    /// key and its sample time, so deformation motion blur is deduplicated only when identical
-    /// across the whole shutter) and all primvars (widths/radius, orientations, uvs, custom,
-    /// constant). Curves have no displacement or subdivision.
+    /// node: the curve-specific part (vertex counts, indices, type, basis, wrap - curves have
+    /// no displacement or subdivision) plus the part common to every geometry type (points,
+    /// primvars, render tag, light linking - see HdArnoldRprim::_HashCommonGeometryState).
     ///
     /// When @p instanced is true (a point-instancer prototype), the prototype's own transform
     /// and its resolved surface shader are also folded in: the shared canonical curves node

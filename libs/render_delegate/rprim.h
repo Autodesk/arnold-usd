@@ -219,6 +219,56 @@ protected:
         HdChangeTracker::AllSceneDirtyBits &
         ~(HdChangeTracker::InitRepr | HdChangeTracker::Varying | HdChangeTracker::DirtyRepr);
 
+    /// Folds into @p hash the part of a geometry's identity that is the same for every
+    /// geometry type, so the type-specific _ComputeGeometryHash only has to hash its own
+    /// topology (and, for meshes, subdivision and displacement). Covers:
+    ///
+    ///  - @p points across the whole shutter: the number of motion keys, each sample time and
+    ///    each sample's values. Two geometries are merged only if their deformation is
+    ///    identical at every key - Arnold interpolates linearly between keys, so matching keys
+    ///    and times make the merge exact rather than a current-frame approximation.
+    ///  - every entry of @p primvars, which all end up on the shared geometry node (uvs,
+    ///    normals or widths, custom, and constant arnold parameters). The map is unordered, so
+    ///    its iteration order can differ between two prims holding the same primvars
+    ///    (different insertion history / bucket layout); each primvar's own hash is therefore
+    ///    combined commutatively, making the result depend only on the set of primvars. Folding
+    ///    them in walk order instead made identical geometries fail to deduplicate,
+    ///    unpredictably and differently from run to run.
+    ///  - the render tag (usd purpose), which drives AiNodeSetDisabled on the shape and is
+    ///    applied by Hydra through UpdateRenderTag() outside of Sync(), so it cannot be
+    ///    reliably reproduced on a freshly converted instance.
+    ///  - the light-linking categories (collections), which configure light_group /
+    ///    shadow_group. An instance could carry its own, but folding them in keeps the dedup
+    ///    conservative and race-free regardless of which duplicate becomes the canonical.
+    ///    Re-rooted point-instancer prototype copies share these, so they still deduplicate.
+    uint64_t _HashCommonGeometryState(
+        uint64_t hash, HdSceneDelegate* sceneDelegate, const SdfPath& id,
+        const HdArnoldSampledPrimvarType& points, const HdArnoldPrimvarMap& primvars) const
+    {
+        hash = TfHash::Combine(hash, points.count);
+        for (size_t i = 0; i < points.count && i < points.values.size(); ++i) {
+            if (i < points.times.size())
+                hash = TfHash::Combine(hash, points.times[i]);
+            if (points.values[i].CanHash())
+                hash = TfHash::Combine(hash, points.values[i].GetHash());
+        }
+        size_t primvarsHash = 0;
+        for (const auto& primvar : primvars) {
+            size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
+            if (primvar.second.value.CanHash())
+                ph = TfHash::Combine(ph, primvar.second.value.GetHash());
+            if (!primvar.second.valueIndices.empty())
+                ph = TfHash::Combine(ph, primvar.second.valueIndices);
+            primvarsHash += ph;
+        }
+        hash = TfHash::Combine(hash, primvarsHash);
+        hash = TfHash::Combine(hash, sceneDelegate->GetRenderTag(id));
+        for (const TfToken& category : sceneDelegate->GetCategories(id)) {
+            hash = TfHash::Combine(hash, category);
+        }
+        return hash;
+    }
+
     /// Hands this rprim's Arnold node over to the render delegate if it is a dedup canonical
     /// still referenced by instances (so the node outlives this rprim); otherwise the delegate
     /// just cleans up its registry entry and the node is destroyed normally. Call this early
@@ -238,8 +288,8 @@ protected:
     void _CreateRealGeometryNode(const SdfPath& id, const AtString& realShapeType)
     {
         _shape.SetShapeType(realShapeType, id, HydraType::GetPrimId());
-        // Whatever ginstance we had is gone with the old node.
-        _ginstancePrototype = nullptr;
+        // Whatever instance node we had is gone with the old node.
+        _instancePrototype = nullptr;
         // A freshly created polymesh must reset its subdivision: unlike the one built in
         // HdArnoldMesh's constructor it would otherwise keep arnold's default of 1 iteration.
         // Curves have no subdiv_iterations parameter.
@@ -275,10 +325,9 @@ protected:
     {
         if (!_isInstance)
             return;
-        if (_sharedPrototype != nullptr) {
+        if (_shape.GetPrototypeOverride() != nullptr) {
             // Instanced-prototype flavor: stop redirecting the instancer to the shared canonical.
             _shape.SetPrototypeOverride(nullptr);
-            _sharedPrototype = nullptr;
         } else {
             // Ginstance flavor: recreate a real geometry node in place of the ginstance.
             _CreateRealGeometryNode(id, realShapeType);
@@ -386,12 +435,12 @@ protected:
             // render interruption) - this is what keeps broadcast edits (e.g. authoring a
             // primvar on every prim at once) cheap and safe.
             if (instanced) {
-                if (_isInstance && _sharedPrototype == canonical) {
+                if (_isInstance && _shape.GetPrototypeOverride() == canonical) {
                     // Same canonical node: pure no-op, just track its (possibly updated) path.
                     _canonicalPath = canonicalPath;
                     return true;
                 }
-                if (_isInstance && _sharedPrototype == nullptr) {
+                if (_isInstance && _shape.GetPrototypeOverride() == nullptr) {
                     // Flavor switch (ginstance -> instanced prototype): rebuild a real node for
                     // the instancer path to reference alongside the prototype override.
                     param.Interrupt();
@@ -400,7 +449,6 @@ protected:
                 // Redirect this prototype's instancer to the shared canonical node and skip
                 // building this prototype's own geometry (member-only; the instancer rebuild
                 // in HdArnoldShape interrupts the render itself before touching nodes).
-                _sharedPrototype = canonical;
                 _shape.SetPrototypeOverride(canonical);
             } else {
                 // Compare against the prototype we recorded rather than querying the node with
@@ -409,17 +457,16 @@ protected:
                 // HdArnoldShape::SetShapeType), so that query always returned null after the
                 // first render. This fast path was therefore dead, and every duplicate was
                 // destroyed and recreated on every edit.
-                if (_isInstance && _sharedPrototype == nullptr && _ginstancePrototype == canonical) {
+                if (_isInstance && _shape.GetPrototypeOverride() == nullptr && _instancePrototype == canonical) {
                     // Already a ginstance of this canonical: pure no-op, just track its
                     // (possibly updated) path.
                     _canonicalPath = canonicalPath;
                     return true;
                 }
-                if (_sharedPrototype != nullptr) {
+                if (_shape.GetPrototypeOverride() != nullptr) {
                     // Flavor switch (instanced prototype -> ginstance): drop the override; the
                     // node is converted to a ginstance right below.
                     _shape.SetPrototypeOverride(nullptr);
-                    _sharedPrototype = nullptr;
                 }
                 // Turn this rprim into a ginstance of the canonical. This always creates a new
                 // Arnold node: an initialized ginstance cannot be re-pointed at another
@@ -427,7 +474,7 @@ protected:
                 // path above matters.
                 param.Interrupt();
                 _shape.ConvertToInstanceOf(canonical, id, HydraType::GetPrimId());
-                _ginstancePrototype = canonical;
+                _instancePrototype = canonical;
             }
             _isInstance = true;
             // The duplicate must re-sync whenever its canonical changes or is removed; the
@@ -482,10 +529,13 @@ protected:
     bool _skipped = false;
 
     // Geometry deduplication state (shared by mesh/curves; see _ApplyGeometryDedup).
-    bool _isInstance = false;           ///< True when this rprim is a dedup duplicate (geometry not built), either flavor below.
+    bool _isInstance = false;           ///< True when this rprim is a dedup duplicate (geometry not built), either flavor.
     bool _dedupRegistered = false;      ///< True while this rprim has an entry in the dedup registry (canonical or duplicate); lets the destructor skip OnGeometryDestroyed for the many rprims that never deduplicate.
-    AtNode* _sharedPrototype = nullptr; ///< Canonical node this prototype's instancer references (instanced flavor); null for the ginstance flavor.
-    AtNode* _ginstancePrototype = nullptr; ///< Canonical node our ginstance was pointed at (ginstance flavor). Tracked here because an initialized ginstance no longer exposes a "node" parameter to query.
+    /// Canonical node our own instance node was pointed at (non-instanced flavor). Tracked
+    /// here because an initialized arnold instance no longer exposes a "node" parameter to
+    /// query. The instanced-prototype flavor needs no equivalent: its canonical is
+    /// HdArnoldShape::GetPrototypeOverride(), which is also what tells the two flavors apart.
+    AtNode* _instancePrototype = nullptr;
     SdfPath _canonicalPath;             ///< Path of the canonical this one shares (dedup), empty otherwise.
     uint64_t _dedupHash = 0;            ///< Typed geometry hash this rprim is registered under (dedup), 0 otherwise.
 };

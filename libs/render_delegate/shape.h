@@ -110,6 +110,14 @@ public:
     /// @param proto The canonical geometry node to instance, or nullptr.
     void SetPrototypeOverride(AtNode* proto) { _prototypeOverride = proto; }
 
+    /// Returns the shared canonical geometry node this shape's instancer references, or
+    /// nullptr when it references this shape's own node (i.e. no dedup override is active).
+    /// This is also what identifies the instanced-prototype dedup flavor (see
+    /// HdArnoldRprim::_ApplyGeometryDedup).
+    ///
+    /// @return The canonical geometry node the instancer references, or nullptr.
+    AtNode* GetPrototypeOverride() const { return _prototypeOverride; }
+
     /// Forces this shape's instances to be built through an Arnold instancer node rather
     /// than shape-instancing (baking instance_matrix onto the polymesh).
     ///
@@ -192,7 +200,12 @@ protected:
     AtNode* _shape = nullptr;                ///< Pointer to the Arnold Shape.
     AtNode* _prototypeOverride = nullptr;    ///< Shared canonical geometry the instancer references (mesh dedup); null = use _shape.
     bool _forceInstancerNode = false;        ///< Force the instancer-node path instead of shape-instancing (mesh dedup).
-    bool _isGinstance = false;               ///< True when _shape was created as a ginstance. Not the same as AiNodeIs(_shape, str::ginstance), which is false once the ginstance has been initialized (see SetShapeType).
+    /// True when _shape was created as an arnold instance node. Two things it is NOT:
+    /// AiNodeIs(_shape, str::ginstance), which turns false as soon as the node is initialized
+    /// (see SetShapeType), and HdArnoldRprim::_isInstance, which is also set for a
+    /// deduplicated prototype whose instancer references a shared canonical - that one owns a
+    /// plain geometry node, not an instance node.
+    bool _isInstance = false;
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
 };
 

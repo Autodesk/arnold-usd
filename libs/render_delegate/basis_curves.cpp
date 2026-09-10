@@ -416,7 +416,7 @@ void HdArnoldBasisCurves::Sync(
     // primvars here (orientations/basis and any vertex/uniform/varying primvars belong to the
     // shared geometry and must not be touched). Only the non-instanced ginstance flavor owns
     // such a node; the instanced-prototype flavor renders through the shared canonical.
-    if (dirtyPrimvars && _isInstance && _sharedPrototype == nullptr) {
+    if (dirtyPrimvars && _isInstance && GetShape().GetPrototypeOverride() == nullptr) {
         param.Interrupt();
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
@@ -468,32 +468,6 @@ uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
         topology.GetCurveWrap());
     if (!topology.GetCurveIndices().empty())
         hash = TfHash::Combine(hash, VtValue(topology.GetCurveIndices()).GetHash());
-    // Points across the whole shutter: fold in the number of motion keys, each sample time and
-    // each sample's values. Two curves are merged only if their deformation is identical at
-    // every key - Arnold interpolates points linearly between keys, so matching keys (and times)
-    // guarantee matching motion, making the merge exact rather than a current-frame approximation.
-    hash = TfHash::Combine(hash, points.count);
-    for (size_t i = 0; i < points.count && i < points.values.size(); ++i) {
-        if (i < points.times.size())
-            hash = TfHash::Combine(hash, points.times[i]);
-        if (points.values[i].CanHash())
-            hash = TfHash::Combine(hash, points.values[i].GetHash());
-    }
-    // Every primvar ends up on the curves node (widths/radius, orientations, uvs, custom and
-    // constant arnold parameters), so two curves are only interchangeable if all of them match.
-    // _primvars is an unordered_map whose iteration order is unspecified, so combine each
-    // primvar's own hash commutatively: the result must depend on the set of primvars only,
-    // not on the order we happen to walk them in (see HdArnoldMesh::_ComputeGeometryHash).
-    size_t primvarsHash = 0;
-    for (const auto& primvar : _primvars) {
-        size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
-        if (primvar.second.value.CanHash())
-            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
-        if (!primvar.second.valueIndices.empty())
-            ph = TfHash::Combine(ph, primvar.second.valueIndices);
-        primvarsHash += ph;
-    }
-    hash = TfHash::Combine(hash, primvarsHash);
     // Curves have no displacement or subdivision. For an instanced prototype the shared canonical
     // curves node carries the prototype's own transform and its surface shader (its instancer
     // references it directly, and we merge conservatively on material), so fold both in. This
@@ -509,15 +483,9 @@ uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
             hash, reinterpret_cast<uintptr_t>(material != nullptr ? material->GetCachedSurfaceShader(coordSysBinding)
                                                                   : nullptr));
     }
-    // The render tag (usd purpose) drives AiNodeSetDisabled on the shape and is applied outside
-    // Sync (UpdateRenderTag), so it cannot be reliably reproduced on a freshly converted
-    // ginstance; light-linking categories configure light_group / shadow_group. Fold both in to
-    // keep dedup conservative and race-free regardless of which duplicate becomes the canonical.
-    hash = TfHash::Combine(hash, sceneDelegate->GetRenderTag(id));
-    for (const TfToken& category : sceneDelegate->GetCategories(id)) {
-        hash = TfHash::Combine(hash, category);
-    }
-    return hash;
+    // Points, primvars, render tag and light-linking categories are hashed the same way for
+    // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
+    return _HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

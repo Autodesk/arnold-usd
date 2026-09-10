@@ -988,27 +988,26 @@ private:
     struct CanonicalGeometry {
         AtNode* node = nullptr;             ///< Arnold node acting as the shared prototype; null while the canonical rprim has not published its node yet (pending).
         SdfPath canonicalPath;              ///< Path of the rprim owning the node (empty once adopted).
-        uint32_t refcount = 0;              ///< Number of instances registered against this entry.
-        uint32_t generation = 0;            ///< Registry-unique stamp identifying this entry; recreating an entry for the same hash yields a new generation, so releases carrying a stale record never touch an unrelated entry.
         bool adopted = false;               ///< True once the owning rprim was destroyed and the delegate owns the node.
-        std::vector<SdfPath> pendingDuplicates; ///< Rprims that acquired while the entry was pending; dirtied on publish so they convert on their next Sync.
-    };
-    /// What an rprim is registered against: its geometry hash plus the generation of the
-    /// registry entry it was counted on (see CanonicalGeometry::generation).
-    struct GeometryHashRecord {
-        uint64_t hash = 0;
-        uint32_t generation = 0;
+        /// Rprims registered as instances of this entry. Holding the paths rather than just a
+        /// count is what keeps _geometryHashes and this map consistent: dropping an entry can
+        /// drop its duplicates' registrations at the same time, so a release can never carry a
+        /// path that was counted on an entry which no longer exists.
+        SdfPathSet duplicates;
     };
     std::mutex _canonicalGeometryMutex;
-    std::unordered_map<uint64_t, CanonicalGeometry> _canonicalGeometry;         ///< geometry hash -> canonical
-    std::unordered_map<SdfPath, GeometryHashRecord, SdfPath::Hash> _geometryHashes; ///< rprim id -> its registered {hash, generation}
-    uint32_t _canonicalGeometryGeneration = 0; ///< Source for CanonicalGeometry::generation stamps.
-    DependencyChangesQueue _dedupDirtyQueue;   ///< Duplicates queued on a pending canonical, dirtied in HasPendingChanges once it publishes.
-    /// Releases the canonical relationship of @p id (associated with @p record). Assumes
-    /// _canonicalGeometryMutex is held. If a canonical node becomes destroyable, it is
-    /// returned so the caller can destroy it outside the lock. A @p record whose generation
-    /// doesn't match the live entry is stale (the entry was recreated since) and is a no-op.
-    AtNode* _ReleaseCanonicalGeometryLocked(const SdfPath& id, const GeometryHashRecord& record);
+    std::unordered_map<uint64_t, CanonicalGeometry> _canonicalGeometry;   ///< geometry hash -> canonical
+    /// rprim id -> the hash it is registered under. Invariant, on which the whole registry
+    /// relies for node lifetime: an entry here always designates a live _canonicalGeometry
+    /// entry that lists this rprim, as either its canonicalPath or one of its duplicates.
+    /// Every mutation of one map must therefore keep the other in step - in particular,
+    /// dropping a canonical drops its duplicates' registrations too.
+    std::unordered_map<SdfPath, uint64_t, SdfPath::Hash> _geometryHashes;
+    DependencyChangesQueue _dedupDirtyQueue;   ///< Duplicates that must be dirtied in HasPendingChanges so they re-evaluate their canonical.
+    /// Releases the registration of @p id against the entry for @p hash, and drops @p id from
+    /// _geometryHashes. Assumes _canonicalGeometryMutex is held. If a canonical node becomes
+    /// destroyable, it is returned so the caller can destroy it outside the lock.
+    AtNode* _ReleaseCanonicalGeometryLocked(const SdfPath& id, uint64_t hash);
 
     /// Detaches a canonical node that the render delegate just adopted from the rprim @p id
     /// that created it, so that it can outlive it as a pure shared prototype. Must be called

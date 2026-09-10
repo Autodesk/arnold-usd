@@ -35,7 +35,7 @@ HdArnoldShape::HdArnoldShape(
 {
     if (!shapeType.empty()) {
         _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
-        _isGinstance = shapeType == str::ginstance;
+        _isInstance = shapeType == str::ginstance;
         _SetPrimId(primId);
     }
 }
@@ -63,13 +63,13 @@ void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, i
     // while its node still aliased the prototype's vlist/vidxs/nsides (ARNOLD-17180). So we
     // always recreate when either side is a ginstance; no other node type morphs, which keeps
     // AiNodeIs the right test for e.g. ArnoldProceduralCustom changing its node entry.
-    if (_shape != nullptr && (_isGinstance || !AiNodeIs(_shape, shapeType))) {
+    if (_shape != nullptr && (_isInstance || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
-        _isGinstance = shapeType == str::ginstance;
+        _isInstance = shapeType == str::ginstance;
         // A brand new node carries none of the previous one's state, and the hydra prim ID is
         // not re-applied by Sync unless DirtyPrimID happens to be set - which it is not on the
         // dedup conversions, nor when ArnoldProceduralCustom swaps its node entry. Without
@@ -96,7 +96,7 @@ AtNode* HdArnoldShape::ReleaseShapeOwnership()
 {
     AtNode* node = _shape;
     _shape = nullptr;
-    _isGinstance = false;
+    _isInstance = false;
     return node;
 }
 

@@ -747,7 +747,7 @@ void HdArnoldMesh::Sync(
     // constant primvars here (vertex/uniform/face-varying primvars belong to the shared
     // geometry and must not be touched). Only the non-instanced ginstance flavor owns such a
     // node; the instanced-prototype flavor renders through the shared canonical + instancer.
-    if (dirtyPrimvars && _isInstance && _sharedPrototype == nullptr) {
+    if (dirtyPrimvars && _isInstance && GetShape().GetPrototypeOverride() == nullptr) {
         param.Interrupt();
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
@@ -854,18 +854,6 @@ uint64_t HdArnoldMesh::_ComputeGeometryHash(
 {
     // Topology covers face-vertex counts/indices, scheme, orientation, holes and subdiv tags.
     size_t hash = topology.ComputeHash();
-    // Points across the whole shutter: fold in the number of motion keys, each sample time and
-    // each sample's values. Two meshes are merged only if their deformation is identical at
-    // every key - Arnold interpolates vlist linearly between keys, so matching keys (and times)
-    // guarantee matching motion everywhere in the shutter, making the merge exact rather than a
-    // current-frame approximation.
-    hash = TfHash::Combine(hash, points.count);
-    for (size_t i = 0; i < points.count && i < points.values.size(); ++i) {
-        if (i < points.times.size())
-            hash = TfHash::Combine(hash, points.times[i]);
-        if (points.values[i].CanHash())
-            hash = TfHash::Combine(hash, points.values[i].GetHash());
-    }
     // The display style drives the subdivision iterations set on the polymesh.
     hash = TfHash::Combine(hash, GetDisplayStyle(sceneDelegate).refineLevel);
     // Creases and corners are applied to the polymesh by ArnoldUsdReadCreases, and they do NOT
@@ -873,23 +861,6 @@ uint64_t HdArnoldMesh::_ComputeGeometryHash(
     // DirtySubdivTags. Without this two meshes differing only in their creasing would hash
     // equal and the duplicate would silently render with the canonical's creases.
     hash = TfHash::Combine(hash, GetSubdivTags(sceneDelegate).ComputeHash());
-    // Every primvar ends up on the polymesh (uvs, normals, custom, and constant arnold
-    // parameters), so two meshes are only interchangeable if all of them match.
-    // _primvars is an unordered_map, so its iteration order is unspecified and can differ
-    // between two prims holding the same primvars (different insertion history / bucket
-    // layout). Combine each primvar's own hash commutatively so the result depends only on the
-    // set of primvars, not on the order we happen to walk them in - otherwise identical
-    // geometries would fail to deduplicate, unpredictably and differently from run to run.
-    size_t primvarsHash = 0;
-    for (const auto& primvar : _primvars) {
-        size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
-        if (primvar.second.value.CanHash())
-            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
-        if (!primvar.second.valueIndices.empty())
-            ph = TfHash::Combine(ph, primvar.second.valueIndices);
-        primvarsHash += ph;
-    }
-    hash = TfHash::Combine(hash, primvarsHash);
     // A ginstance can override the surface shader per instance but not the displacement,
     // which lives on the shared polymesh. Fold the resolved displacement shader in so that
     // meshes with different displacement are never deduplicated.
@@ -912,20 +883,9 @@ uint64_t HdArnoldMesh::_ComputeGeometryHash(
             hash, reinterpret_cast<uintptr_t>(material != nullptr ? material->GetCachedSurfaceShader(coordSysBinding)
                                                                   : nullptr));
     }
-    // The render tag (usd purpose) drives AiNodeSetDisabled on the shape, and is applied by
-    // Hydra through UpdateRenderTag() outside of Sync() - so it cannot be reliably reproduced
-    // on a freshly converted ginstance. Fold it in so meshes with a different purpose (e.g. a
-    // proxy vs a render cube of identical geometry) are never deduplicated.
-    hash = TfHash::Combine(hash, sceneDelegate->GetRenderTag(id));
-    // Light-linking categories (collections) configure the shape's light_group / shadow_group.
-    // A ginstance could carry its own, but to keep dedup conservative (and race-free regardless
-    // of which duplicate becomes the canonical) we fold them in: only meshes with matching light
-    // linking are merged. Re-rooted point-instancer prototype copies share these, so they still
-    // deduplicate.
-    for (const TfToken& category : sceneDelegate->GetCategories(id)) {
-        hash = TfHash::Combine(hash, category);
-    }
-    return hash;
+    // Points, primvars, render tag and light-linking categories are hashed the same way for
+    // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
+    return _HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
