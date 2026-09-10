@@ -275,8 +275,7 @@ void HdArnoldMesh::Sync(
     // lights. For the instanced flavor we merge conservatively (geometry + transform +
     // material must match).
     if (GetRenderDelegate()->DeduplicateGeometry()) {
-        const bool geomDirty = HdChangeTracker::IsTopologyDirty(*dirtyBits, id) ||
-                               HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points) || dirtyPrimvars;
+        const bool geomDirty = (*dirtyBits & _geometryHashDirtyBits) != 0 || dirtyPrimvars;
         if (geomDirty) {
             // The primary duplicated-geometry problem is prototype flattening: UsdImaging
             // re-roots a copy of each instancer's prototype, so geometrically identical
@@ -321,8 +320,11 @@ void HdArnoldMesh::Sync(
             // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
             // may be recreated (ginstance conversion, or reverting to a plain polymesh), so
             // refresh the local pointer afterwards.
+            AtNode* const nodeBeforeDedup = node;
             _ApplyGeometryDedup(id, eligible, instanced, hash, str::polymesh, dirtyBits, dirtyPrimvars, param);
             node = GetArnoldNode();
+            if (node != nodeBeforeDedup)
+                _ForcePrimvarReapplication(_primvars);
             if (_isInstance) {
                 // A duplicate builds no geometry of its own, so it has no geom subsets either
                 // (eligibility above requires none). Clear the cached list: the block that

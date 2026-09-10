@@ -139,7 +139,7 @@ void HdArnoldBasisCurves::Sync(
     // Handles static and deformation-motion-blurred curves; excludes computed/skinned points
     // and velocity/acceleration motion blur.
     if (GetRenderDelegate()->DeduplicateGeometry()) {
-        const bool geomDirty = dirtyTopology || dirtyPoints || dirtyPrimvars;
+        const bool geomDirty = (*dirtyBits & _geometryHashDirtyBits) != 0 || dirtyPrimvars;
         if (geomDirty) {
             // Populate the instancer id (lazily set by _UpdateInstancer, normally later in
             // SyncShape) on a throwaway copy of the dirty bits so GetInstancerId() is valid here.
@@ -175,8 +175,11 @@ void HdArnoldBasisCurves::Sync(
             // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
             // may be recreated (ginstance conversion, or reverting to a plain curves node), so
             // refresh the local pointer afterwards.
+            AtNode* const nodeBeforeDedup = node;
             _ApplyGeometryDedup(id, eligible, instanced, hash, str::curves, dirtyBits, dirtyPrimvars, param);
             node = GetArnoldNode();
+            if (node != nodeBeforeDedup)
+                _ForcePrimvarReapplication(_primvars);
             // _ApplyGeometryDedup may have forced dirty bits (a fresh ginstance to configure, or
             // a revert that needs a full rebuild); refresh the local flags so the blocks below
             // honor them.

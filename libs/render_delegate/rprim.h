@@ -219,6 +219,45 @@ protected:
         HdChangeTracker::AllSceneDirtyBits &
         ~(HdChangeTracker::InitRepr | HdChangeTracker::Varying | HdChangeTracker::DirtyRepr);
 
+    /// The dirty bits that can change a geometry hash, and therefore have to re-run the dedup
+    /// evaluation. Everything a _ComputeGeometryHash folds in must appear here: when a hash
+    /// input changes without the evaluation running, the rprim goes on sharing a canonical it
+    /// no longer matches (or goes on lending its node to duplicates that no longer match it),
+    /// and the difference renders silently - whichever value the shared node happens to hold
+    /// wins for every rprim in the group.
+    ///
+    /// Deliberately one mask rather than a per-case assembly, even though DirtyTransform and
+    /// DirtyMaterialId only feed an instanced prototype's hash and DirtyDisplayStyle /
+    /// DirtySubdivTags only a mesh's: the eligibility test this gates is cheap, only the
+    /// hashing beyond it is not, and an incomplete gate is a silently-wrong-render bug.
+    ///
+    /// One gap remains and is not closable here: from USD 24.08 on, render tags no longer
+    /// travel as a Sync dirty bit (Hydra delivers them through UpdateRenderTag), so a purpose
+    /// change does not re-run this even though the hash folds the render tag in.
+    static constexpr HdDirtyBits _geometryHashDirtyBits =
+        HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar |
+        HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtySubdivTags |
+        HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyTransform |
+        HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyRenderTag;
+
+    /// Forces every primvar in @p primvars to be applied again on the next pass of the
+    /// type-specific primvar block. Call this whenever the dedup has replaced this rprim's
+    /// Arnold node with a fresh one.
+    ///
+    /// HdArnoldPrimvar::dirtied tracks "changed in USD since we last looked", and
+    /// HdArnoldPrimvar::NeedsUpdate() consumes it - which was equivalent to "not yet applied
+    /// to the Arnold node" only while a node lived exactly as long as its rprim. The dedup
+    /// breaks that: HdArnoldGetPrimvars has already run (and the flags were consumed by an
+    /// earlier Sync that had a node to apply them to) by the time we swap the node here, so
+    /// without this a Sync that recreates the node while no primvar happens to be dirty gives
+    /// the new node no primvars at all - uvs, normals and any arnold: constant parameters
+    /// silently disappear.
+    static void _ForcePrimvarReapplication(HdArnoldPrimvarMap& primvars)
+    {
+        for (auto& primvar : primvars)
+            primvar.second.dirtied = true;
+    }
+
     /// Folds into @p hash the part of a geometry's identity that is the same for every
     /// geometry type, so the type-specific _ComputeGeometryHash only has to hash its own
     /// topology (and, for meshes, subdivision and displacement). Covers:
