@@ -1,0 +1,30 @@
+Geometry deduplication modes (HDARNOLD_GEOM_DEDUP) produce the expected Arnold scene
+
+The render delegate can render geometrically identical geometries (meshes or curves) as
+instances of a single canonical Arnold node instead of duplicating the geometry. This is
+controlled by the HDARNOLD_GEOM_DEDUP environment variable, with three modes:
+  0 = None       : every mesh keeps its own geometry;
+  1 = Instances  : only point-instancer prototypes are deduplicated (the default, and the
+                   case that matters - UsdImaging re-roots a copy of each instancer's
+                   prototype, so identical prototypes arrive as separate polymeshes);
+  2 = All        : plain non-instanced duplicates are deduplicated too (as ginstances).
+
+This test expands the same scene once per mode (through the usd procedural's Hydra path,
+where the deduplication lives) and checks the resulting Arnold scene directly, without any
+image comparison: it counts polymeshes and curves that actually carry geometry, and ginstance
+nodes. scene.usda has parallel mesh and curve groups: two point instancers with identical
+prototypes (deduplicated in modes 1 and 2), one point instancer whose prototype differs by
+one point (never merged), and two identical non-instanced shapes (merged only in mode 2). The
+ginstance count is the total across meshes and curves. Expected results:
+  mode 0 : 5 geometry polymeshes, 5 geometry curves, 0 ginstances
+  mode 1 : 4 geometry polymeshes, 4 geometry curves, 0 ginstances
+  mode 2 : 3 geometry polymeshes, 3 geometry curves, 2 ginstances (1 mesh + 1 curve)
+
+The mode is read fresh from the environment on each render-delegate construction, so all
+three modes can be exercised in a single process. The test links only against Arnold and
+goes through the procedural (like a real render), so it never loads the render delegate's
+static USD into its own process.
+
+See ARNOLD-17180
+
+author: sebastien.blaineau.ortega@autodesk.com

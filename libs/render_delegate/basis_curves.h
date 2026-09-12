@@ -45,7 +45,7 @@ public:
     /// Destructor for HdArnoldBasisCurves.
     ///
     /// Destory all Arnold curves and ginstances.
-    ~HdArnoldBasisCurves() override = default;
+    ~HdArnoldBasisCurves() override;
 
     /// Syncs the Hydra Basis Curves to the Arnold Curves.
     ///
@@ -63,6 +63,19 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
 protected:
+    /// Computes a hash uniquely identifying the geometry that ends up on the Arnold curves
+    /// node: the curve-specific part (vertex counts, indices, type, basis, wrap - curves have
+    /// no displacement or subdivision) plus the part common to every geometry type (points,
+    /// primvars, render tag, light linking - see HdArnoldRprim::_HashCommonGeometryState).
+    ///
+    /// When @p instanced is true (a point-instancer prototype), the prototype's own transform
+    /// and its resolved surface shader are also folded in: the shared canonical curves node
+    /// carries both (its instancer references it directly), so only prototypes that match on
+    /// those too may be merged.
+    uint64_t _ComputeGeometryHash(
+        const HdBasisCurvesTopology& topology, const HdArnoldSampledPrimvarType& points,
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, bool instanced);
+
     HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
     TfToken _interpolation;       ///< Interpolation of the curve.
     VtIntArray _vertexCounts;     ///< Stored vertex counts for curves.
