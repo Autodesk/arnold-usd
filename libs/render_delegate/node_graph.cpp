@@ -174,26 +174,6 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
 
 }
 
-bool HdArnoldNodeGraph::_TerminalsOnlyFeedImagers() const
-{
-#if ARNOLD_VERSION_NUM >= 70504
-    // Nothing translated yet: there is no shader to ask about, and the first translation of a graph
-    // can't be an edit to one an imager already reads.
-    if (_nodeGraphCache.terminals.empty())
-        return false;
-
-    for (const auto& terminal : _nodeGraphCache.terminals) {
-        // A null terminal, or one Arnold reports as reachable from something other than an imager
-        // (or as not being in an imager tree at all), means this graph may affect the beauty pass.
-        if (!AiShaderInImagerTree(terminal.second))
-            return false;
-    }
-    return true;
-#else
-    return false;
-#endif
-}
-
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
@@ -208,11 +188,11 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         HdArnoldRenderParamInterrupt param(renderParam);
         // Editing a graph nothing but an imager reads doesn't invalidate the image already
         // rendered, so instead of interrupting and restarting the render we quiesce the imagers,
-        // edit, and let Arnold re-run them over that image (#2452). This covers the imager graph
-        // itself as well as a shading tree an imager_shader points at. Resumed by the destructor,
-        // at the end of this scope.
+        // edit, and let Arnold re-run them over that image (#2452). Resumed by the destructor, at
+        // the end of this scope. _imagerGraph is the whole test: a shading tree an imager_shader
+        // points at lives inside the imager node graph, so it is translated as part of this same
+        // HdArnoldNodeGraph rather than as a separate one.
         HdArnoldImagerInterrupt imagerParam(_renderDelegate);
-        const bool imagerOnly = _imagerGraph || _TerminalsOnlyFeedImagers();
         const VtValue value = sceneDelegate->GetMaterialResource(GetId());
         bool nodeGraphChanged = false;
 
@@ -236,10 +216,10 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         }
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
-            // Do not interrupt the render if only imagers read this graph, as imagers
+            // Do not interrupt the render if this is an imager graph, as imagers
             // can be refreshed independantly of the render itself. We still have to stop
             // them from reading the nodes we're about to edit, see imagerParam above.
-            if (imagerOnly)
+            if (_imagerGraph)
                 imagerParam.Interrupt();
             else
                 param.Interrupt();

@@ -344,17 +344,6 @@ protected:
         using Terminals = std::vector<Terminal>;
         Terminals terminals; ///< Terminal entries to the node graph.
     };
-    /// Whether every terminal of this graph is consumed exclusively by imager nodes, so editing it
-    /// only affects the imager pipeline and the render doesn't need to be interrupted and restarted
-    /// (see AiShaderInImagerTree and HdArnoldImagerInterrupt). This is about a shading tree an
-    /// imager_shader points at; the imager graph itself is flagged by SetImagerGraph() instead,
-    /// since its terminal is an imager node rather than a shader.
-    ///
-    /// Answered from the terminals of the previous translation, because the decision has to be made
-    /// before this graph is re-translated. Returns false before the first one, and false on Arnold
-    /// versions without AiShaderInImagerTree().
-    bool _TerminalsOnlyFeedImagers() const;
-
     /// Convert a Hydra Material Network to an Arnold Shader Network.
     ///
     /// The newly created Arnold Nodes are stored in the class instance. Every
