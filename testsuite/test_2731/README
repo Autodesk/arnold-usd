@@ -1,0 +1,19 @@
+Extend Hydra coordSys support to MaterialX transform node fromspace/tospace
+
+test_13221 taught the Hydra render delegate to resolve a USD coordSys named by
+a MaterialX geometric node's "space" input (position/normal/tangent/
+bitangent). That rewrite never covered "fromspace"/"tospace", the inputs used
+by the transform nodes (transformpoint/transformvector/transformnormal), so a
+coordSys referenced through one of those was passed straight to Arnold's OSL
+layer as an unresolved string.
+
+grid_tospace transforms a world-space point into "warp_space" (exercises
+"tospace"); grid_fromspace transforms a point out of "warp_space" into world
+(exercises "fromspace"). warp_space is a plain locator (not a camera),
+rotated and offset from the origin, so a correctly resolved coordinate system
+skews the colour ramp on both grids; an unresolved space string would leave
+it as a plain diagonal gradient instead.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /World/Cameras/renderCamera'}

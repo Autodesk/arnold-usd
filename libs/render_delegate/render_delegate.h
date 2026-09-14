@@ -43,9 +43,10 @@
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
+#include <pxr/imaging/hgi/hgi.h>
 
 #include <tbb/concurrent_queue.h>
-
+#include <functional>
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
@@ -56,7 +57,7 @@
 class HydraArnoldReader;
 
 PXR_NAMESPACE_OPEN_SCOPE
-
+class HdArnoldRenderBuffer;
 struct HdArnoldRenderVar {
     /// Settings for the RenderVar.
     HdAovSettingsMap settings;
@@ -100,6 +101,7 @@ public:
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
+    const std::string& GetOcioConfigPath() const override;
 
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
@@ -368,12 +370,23 @@ public:
         _delegateRenderProductsDirty = true;
     }
     /// Advertise whether this delegate supports pausing and resuming of
-    /// background render threads. Default implementation returns false.
+    /// background render threads. True when Arnold provides the resumable
+    /// AiRenderPause()/AiRenderResume() API, false otherwise.
     ///
-    /// @return True if pause/restart is supported.
+    /// @return True if pause/resume is supported.
     HDARNOLD_API
     bool IsPauseSupported() const override;
-    
+
+    // HdRenderDelegate::IsPaused()/IsStopped() were only added in USD 22.03.
+#if PXR_VERSION >= 2203
+    /// Query the delegate's pause state.
+    ///
+    /// @return True if a Pause() call is currently in effect (i.e. no Resume(),
+    ///  Restart(), or scene edit has cancelled it since).
+    HDARNOLD_API
+    bool IsPaused() const override;
+#endif
+
     /// Advertise whether this delegate supports stopping and restarting of
     /// background render threads. Default implementation returns false.
     ///
@@ -406,9 +419,18 @@ public:
     HDARNOLD_API
     bool Restart() override;
 
+    /// Pause all of this delegate's background rendering threads. Only takes
+    /// effect when IsPauseSupported() returns true; preserves render progress
+    /// via AiRenderPause() rather than interrupting the render.
+    ///
+    /// @return True if successful.
+    HDARNOLD_API
+    bool Pause() override;
+
     /// Resume all of this delegate's background rendering threads previously
-    /// paused by a call to Pause. Default implementation does nothing. This is
-    /// currently doing the same as restart
+    /// paused by a call to Pause.
+    ///
+    /// @return True if successful.
     HDARNOLD_API
     bool Resume() override;
 
@@ -548,6 +570,16 @@ public:
 
     bool IsBatchContext() const {return _isBatch;}
 
+    /// Receives the host application's Hgi instance via the standard
+    /// HdRenderDelegate driver interface. Stored as a borrowed pointer.
+    HDARNOLD_API
+    void SetDrivers(HdDriverVector const& drivers) override;
+
+    /// Returns the borrowed Hgi instance, or nullptr if the host application
+    /// did not provide one (e.g. batch / husk without a GL context).
+    Hgi* GetHgi() const { return _hgi; }
+
+
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
     /// @brief Get the procedural parent
@@ -623,10 +655,12 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        // if we have a procedural parent, we should avoid deleting nodes
-        // as this can happen in batch sessions during procedural_update, 
-        // which is not allowed
-        if (_procParent) {
+        // If we have a procedural parent and the parent render is a batch render,
+        // we must avoid deleting nodes: this can happen during procedural_update,
+        // which is not allowed in batch sessions. For interactive renders we do
+        // want to destroy the node, otherwise regenerating a node with the same
+        // name later on causes naming conflicts (see #2277).
+        if (_procParent && _isBatch) {
             AiNodeSetDisabled(node, true);
         }
         else
@@ -705,6 +739,24 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
+    /// Register a coordinate-system projection camera together with its aperture
+    /// ratio (verticalAperture / horizontalAperture). The vertical screen window
+    /// of these cameras is (re)computed from the actual render resolution in
+    /// UpdateCoordSysCameraProjections(), so the projection stays independent of
+    /// the render camera aspect / resolution (see HdArnoldCoordSys).
+    void RegisterCoordSysCamera(AtNode* camera, float apertureRatio) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras[camera] = apertureRatio;
+    }
+    void UnregisterCoordSysCamera(AtNode* camera) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras.erase(camera);
+    }
+    /// Recompute the vertical screen window of every registered coordinate-system
+    /// camera from the current render frame aspect ratio. Must be called after the
+    /// options' xres/yres are set for the render (see HdArnoldRenderPass).
+    void UpdateCoordSysCameraProjections();
+
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
     // Return true if the render delegate supports shape instancing
@@ -720,13 +772,31 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
+    bool IsAcceleratedViewport() const {return _acceleratedViewport;}
     bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
+
+    /// Path to the OCIO config file, as provided by the host application through the
+    /// "ocioConfigPath" render setting. It is only meant to be used when the OCIO
+    /// environment variable is not set, which always takes precedence (#2730).
+    const std::string& GetOcioConfigPath() const {return _ocioConfigPath;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    /// Returns the color manager to be used for this render, creating it if needed.
+    ///
+    /// The OCIO config is looked up in the OCIO environment variable first, then in the
+    /// "ocioConfigPath" render setting (#2730). When neither is set, arnold's default
+    /// color manager is returned, which can be a null pointer if it doesn't exist.
+    AtNode* _GetOrCreateColorManager();
+
+    /// Applies the color spaces received through the render settings to the given color
+    /// manager. This is needed as the color manager can be created after the color spaces
+    /// were set, in which case they would otherwise be lost.
+    void _ApplyColorSpaces(AtNode* colorManager);
 
     void _ParseDelegateRenderProducts(const VtValue& value);
 
@@ -818,6 +888,12 @@ private:
     std::string _reportFile;
     std::string _statsFile;
     std::string _profileFile;
+    /// OCIO config file path set by the host application, see GetOcioConfigPath.
+    std::string _ocioConfigPath;
+    /// Color spaces received through the render settings, kept so that they can be applied
+    /// to a color manager that is created after them.
+    std::string _colorSpaceLinear;
+    std::string _colorSpaceNarrow;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
@@ -825,6 +901,9 @@ private:
 
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
+
+    std::mutex _coordSysCamerasMutex;
+    std::unordered_map<AtNode*, float> _coordSysCameras; ///< coordSys camera node -> aperture ratio (vAp/hAp)
 
     /// FPS value from render settings.
     float _fps;
@@ -836,7 +915,7 @@ private:
     int _nodeId = 0;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
-    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
+    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk, or a batch parent render when running under a procedural)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
@@ -851,8 +930,12 @@ private:
     bool _forceIgnoreMotionBlur = false;
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+    bool _acceleratedViewport = false;
+    Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;
+
 
     // We store a list of functions that must be run once all the prims are synced
     // They will be ran in HasPendingChanges

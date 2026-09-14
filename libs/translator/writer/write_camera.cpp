@@ -35,6 +35,86 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
+
+// Cameras reference their shaders (uv_remap on generic cameras, ray_origin /
+// ray_direction on the uv_camera) through an ArnoldNodeGraph primitive, the same
+// indirection lights and render settings use. The node graph is created lazily
+// and shared across the camera's shader parameters.
+UsdPrim _GetCameraNodeGraph(UsdPrim& prim, UsdArnoldWriter& writer)
+{
+    std::string nodeGraphName = prim.GetPath().GetString() + "/camera_shaders";
+    SdfPath nodeGraphPath(nodeGraphName);
+    UsdStageRefPtr stage = writer.GetUsdStage();
+    UsdPrim nodeGraphPrim = stage->GetPrimAtPath(nodeGraphPath);
+    if (!nodeGraphPrim) {
+        nodeGraphPrim = stage->DefinePrim(nodeGraphPath, str::t_ArnoldNodeGraph);
+        // Author the local path under primvars:arnold:name so the prim can still
+        // be resolved when this file is referenced and the runtime path gets
+        // remapped under a different namespace (see the node-graph name map).
+        nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+            .Set(nodeGraphName);
+    }
+    return nodeGraphPrim;
+}
+
+// If the camera parameter paramName is linked to a shader, author an
+// ArnoldNodeGraph output terminal named after the parameter, connected to that
+// shader, and reference it from the camera attribute both as a USD connection
+// (preferred, resolved by the translator) and as a string path (fallback,
+// resolved by the Hydra render delegate which can't follow the connection).
+// Returns true if a link was written (in which case the caller must flag
+// paramName as exported so the generic parameter writer doesn't author it again
+// as a direct shader link).
+bool _WriteCameraShaderLink(const AtNode* node, const char* paramName,
+    UsdPrim& prim, UsdArnoldWriter& writer)
+{
+    const AtString paramNameStr(paramName);
+    // ray_origin / ray_direction only exist on the uv_camera, so skip cameras
+    // that don't have this parameter.
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), paramNameStr) == nullptr)
+        return false;
+    if (!AiNodeIsLinked(node, paramNameStr))
+        return false;
+    // Resolve the linked shader. Component-level links (attr.x, attr.r, …) return
+    // a null node here; those aren't supported through the node graph, so we let
+    // the generic parameter writer handle them.
+    int outComp = -1;
+    int outParam = -1;
+    AtNode* target = AiNodeGetLinkOutput(node, paramNameStr, outParam, outComp);
+    if (target == nullptr)
+        return false;
+
+    UsdStageRefPtr stage = writer.GetUsdStage();
+    UsdPrim nodeGraphPrim = _GetCameraNodeGraph(prim, writer);
+    const std::string nodeGraphName = nodeGraphPrim.GetPath().GetString();
+
+    // Author the target shader and make sure it exposes an output to connect to.
+    writer.WritePrimitive(target);
+    const std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target, writer);
+    UsdPrim targetPrim = stage->GetPrimAtPath(SdfPath(targetName));
+    if (!targetPrim)
+        return false;
+    targetPrim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
+
+    // Create the node graph output terminal named after the arnold parameter and
+    // connect it to the shader. The terminal only carries a connection (like the
+    // light / render-settings node graphs), so it stays a Token.
+    const std::string terminalName = std::string("outputs:") + paramName;
+    UsdAttribute terminalAttr = nodeGraphPrim.CreateAttribute(TfToken(terminalName),
+        SdfValueTypeNames->Token, false);
+    terminalAttr.AddConnection(SdfPath(targetName + std::string(".outputs:out")));
+
+    // Reference the node graph terminal from the camera attribute.
+    const std::string usdAttrName = std::string("primvars:arnold:") + paramName;
+    UsdAttribute camAttr = prim.CreateAttribute(TfToken(usdAttrName), SdfValueTypeNames->String, false);
+    camAttr.Set(nodeGraphName);
+    camAttr.AddConnection(SdfPath(nodeGraphName + std::string(".") + terminalName));
+    return true;
+}
+
+} // namespace
+
 void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
@@ -119,5 +199,15 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
         _exportedAttrs.insert("up");
         _exportedAttrs.insert("position");
     }
+
+    // Camera shaders linked through an ArnoldNodeGraph (uv_remap, and the
+    // uv_camera ray_origin / ray_direction). These must be authored before
+    // _WriteArnoldParameters, and flagged as exported so the generic writer
+    // doesn't author them again as a direct shader link.
+    for (const char* shaderParam : {"uv_remap", "ray_origin", "ray_direction"}) {
+        if (_WriteCameraShaderLink(node, shaderParam, prim, writer))
+            _exportedAttrs.insert(shaderParam);
+    }
+
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }

@@ -1,0 +1,165 @@
+#usda 1.0
+(
+    defaultPrim = "grid_0"
+    doc = """Exercises Hydra CoordSys support with a *shared material bound to
+             different cameras*. Two grids reference the same </gridTemplate>
+             (so each has its own projector camera), but they all bind the same
+             single MaterialX material </mtl/projected> - one node graph shared by
+             both rprims. Each grid binds the 'map_proj' coordinate system to its
+             own projector camera.
+
+             Arnold resolves named coordinate spaces globally by camera node
+             name, so the single shared shader 'space' input cannot resolve to
+             two cameras at once. arnold-usd keeps the shared material for the
+             first binding and re-translates a per-rprim variant of the network
+             for the conflicting binding, so each grid projects from its own
+             camera. Without this, both grids would project from a single camera
+             and the second grid's gradient would be shifted off-centre.
+
+             The projector cameras live inside the grid template (as in
+             test_13221) so the coordinate-system camera resolves identically
+             under both the legacy scene delegate and the scene index.
+
+             See #32 / ARNOLD-13221."""
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Scope "mtl"
+{
+    def Material "projected"
+    {
+        token outputs:mtlx:surface.connect = </mtl/projected/surface.outputs:out>
+
+        def Shader "surface"
+        {
+            uniform token info:id = "ND_surface_unlit"
+            float inputs:emission = 1
+            color3f inputs:emission_color.connect = </mtl/projected/rgb.outputs:out>
+            token outputs:out
+        }
+
+        def Shader "rgb"
+        {
+            uniform token info:id = "ND_combine3_color3"
+            float inputs:in1.connect = </mtl/projected/range_u.outputs:out>
+            float inputs:in2.connect = </mtl/projected/range_v.outputs:out>
+            float inputs:in3 = 0
+            color3f outputs:out
+        }
+
+        def Shader "range_u"
+        {
+            uniform token info:id = "ND_range_float"
+            float inputs:in.connect = </mtl/projected/separate.outputs:outx>
+            float inputs:inhigh = 5
+            float inputs:inlow = -5
+            float inputs:outhigh = 1
+            float inputs:outlow = 0
+            float outputs:out
+        }
+
+        def Shader "range_v"
+        {
+            uniform token info:id = "ND_range_float"
+            float inputs:in.connect = </mtl/projected/separate.outputs:outy>
+            float inputs:inhigh = 5
+            float inputs:inlow = -5
+            float inputs:outhigh = 1
+            float inputs:outlow = 0
+            float outputs:out
+        }
+
+        def Shader "separate"
+        {
+            uniform token info:id = "ND_separate3_vector3"
+            vector3f inputs:in.connect = </mtl/projected/position.outputs:out>
+            float outputs:outx
+            float outputs:outy
+            float outputs:outz
+        }
+
+        def Shader "position"
+        {
+            uniform token info:id = "ND_position_vector3"
+            string inputs:space = "map_proj"
+            vector3f outputs:out
+        }
+    }
+}
+
+def Xform "gridTemplate" (
+    active = false
+    prepend apiSchemas = ["CoordSysAPI:map_proj"]
+    kind = "component"
+)
+{
+    rel coordSys:map_proj:binding = </gridTemplate/proj_cam>
+
+    def Mesh "mesh" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        rel material:binding = </mtl/projected>
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Camera "proj_cam"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 36
+        token projection = "perspective"
+        float verticalAperture = 27
+        float xformOp:rotateX = -56
+        double3 xformOp:translate = (0, 12, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+}
+
+def "grid_0" (
+    active = true
+    append references = </gridTemplate>
+)
+{
+    double3 xformOp:translate = (0, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def "grid_1" (
+    active = true
+    append references = </gridTemplate>
+)
+{
+    double3 xformOp:translate = (12, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    # Roll grid_1's projector 90 degrees about its view axis so its projected
+    # gradient is visibly rotated relative to grid_0's. Both grids share one
+    # material, so a correct result shows two *differently* oriented gradients;
+    # if the shared material collapsed onto a single camera they would match.
+    over "proj_cam"
+    {
+        float xformOp:rotateZ = 90
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX", "xformOp:rotateZ"]
+    }
+}
+
+def Scope "Cameras"
+{
+    def Camera "renderCamera"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 24
+        token projection = "perspective"
+        float verticalAperture = 18
+        float xformOp:rotateX = -90
+        double3 xformOp:translate = (6, 36, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+}

@@ -26,6 +26,7 @@
 #include <pxr/usd/usdRender/tokens.h>
 #include "render_delegate.h"
 #include "render_pass.h"
+#include "utils.h"
 
 #include "rendersettings_utils.h"
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -172,28 +173,30 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 {
     static AtMutex s_renderIndexCreationMutex;
     static AtMutex s_renderDelegateCreationMutex;
-#ifdef ARNOLD_SCENE_INDEX
-    if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
-    {
-        // The environment variable is defined, it takes precedence on any other setting
-        std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
-        std::string::size_type i = useSceneIndex.find(" ");
-        while(i != std::string::npos) {
-            useSceneIndex.erase(i, 1);
-            i = useSceneIndex.find(" ");
-        }
-        _useSceneIndex = (useSceneIndex != "0");
-    }
+#ifdef ENABLE_SCENE_INDEX
+    _useSceneIndex = HdArnoldIsSceneIndexEnabled();
 #endif
 
     //
     // Create the render delegate using the plugin system. This allows the correct initialisation of the scene indices in hydra1
     //
+    // Determine the actual session mode of the parent render we're expanding into,
+    // so that the render delegate knows whether it runs inside a batch or an
+    // interactive render. We used to hardcode is_batch=true / session_type=INTERACTIVE
+    // here, which was wrong: an interactive Maya render also goes through this
+    // procedural path, and reporting it as batch prevented nodes from being properly
+    // destroyed on regeneration (naming conflicts). The procedural-specific behavior
+    // that relied on these values is now guarded on the procedural_parent instead.
+    const AtRenderSession* parentRenderSession = AiUniverseGetRenderSession(_universe);
+    const AtSessionMode parentSessionMode =
+        parentRenderSession ? AiGetSessionMode(parentRenderSession) : AI_SESSION_INTERACTIVE;
+    const bool parentIsBatch = (parentSessionMode == AI_SESSION_BATCH);
+
     HdRenderSettingsMap settingsMap;
-    settingsMap[TfToken("arnold:is_batch")] = VtValue(true);
+    settingsMap[TfToken("arnold:is_batch")] = VtValue(parentIsBatch);
     settingsMap[TfToken("arnold:context")] = VtValue(TfToken("kick"));
     settingsMap[TfToken("arnold:universe")] = VtValue(static_cast<void*>(_universe));
-    settingsMap[TfToken("arnold:session_type")] = VtValue(AI_SESSION_INTERACTIVE);
+    settingsMap[TfToken("arnold:session_type")] = VtValue(parentSessionMode);
     settingsMap[TfToken("arnold:procedural_parent")] = VtValue(static_cast<void*>(procParent));
     {
         // We must lock the render delegate creation as if multiple procedurals create HdArnoldRendererPlugin, we end up with a messed up plugin registry.
@@ -212,7 +215,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
         UsdImagingCreateSceneIndicesInfo info;
         info.displayUnloadedPrimsWithBounds = false;
         info.overridesSceneIndexCallback =
@@ -228,10 +231,11 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
         _sceneIndex = _displayStyleSceneIndex =
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
-        {
-            std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
-            _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
-        }
+        // Note: the Arnold renderer scene-index plugins are applied by
+        // HdRenderIndex itself (at its terminal scene index) for any delegate
+        // with a renderer display name. Applying them again here would run every
+        // plugin twice; harmless for filtering plugins but the coordSys plugin
+        // adds prims, so a second pass produced a duplicate coordSys camera.
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
         _stageSceneIndex->SetTime(UsdTimeCode(_time.frame));
 #endif        
@@ -477,7 +481,7 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
     if (_sceneGlobalsSceneIndex) {
         SdfPath renderPassPrimPath(renderPass);
         if (!renderPassPrimPath.IsEmpty()) {
@@ -491,7 +495,7 @@ void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
     if (_useSceneIndex) {
-#ifdef ARNOLD_SCENE_INDEX        
+#ifdef ENABLE_SCENE_INDEX
         _stageSceneIndex->ApplyPendingUpdates();
 #endif
     }
@@ -518,7 +522,7 @@ void HydraArnoldReader::WriteDebugScene() const
 }
 
 
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
 
 HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
@@ -536,9 +540,14 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
             HdsiPrimTypePruningSceneIndexTokens->bindingToken,
             HdRetainedTypedSampledDataSource<TfToken>::New(
                 HdMaterialBindingsSchema::GetSchemaToken()));
+    // Note: coordSys prims (needed for named coordinate spaces) are added by the
+    // Arnold renderer scene-index plugin (HdArnoldCoordSysSceneIndexPlugin,
+    // applied below via AppendSceneIndicesForRenderer), so that every Hydra host
+    // gets them, not just the procedural.
+
     // Add a SceneGlobals scene index that we can use to set the render pass, render settings
     // shutter, frame, etc.
-    sceneIndex = _sceneGlobalsSceneIndex = 
+    sceneIndex = _sceneGlobalsSceneIndex =
         HdsiSceneGlobalsSceneIndex::New(sceneIndex);
 
     // Prune scene materials prior to flattening inherited

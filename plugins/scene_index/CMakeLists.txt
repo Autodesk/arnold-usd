@@ -11,6 +11,7 @@ set(SRC
     nurbsApproximatingSIP.cpp
     meshLightResolvingSIP.cpp
     renderPassSIP.cpp
+    coordSysSIP.cpp
 )
 
 set(HDR

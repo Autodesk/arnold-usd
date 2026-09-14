@@ -90,6 +90,14 @@ protected:
     /// @param dirtyBits 
     void UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
 
+    /// @brief Link the shaders that can be connected to any camera through an
+    ///        ArnoldNodeGraph primitive (filtermap, uv_remap, and the uv_camera
+    ///        ray_origin / ray_direction)
+    /// @param sceneDelegate
+    /// @param renderParam
+    /// @param dirtyBits
+    void UpdateCameraShaders(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
+
     void SetClippingPlanes(HdSceneDelegate* sceneDelegate);
     
     void SetCameraParams(HdSceneDelegate* sceneDelegate, const CameraParamMap &cameraParams);

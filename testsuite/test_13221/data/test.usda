@@ -1,0 +1,254 @@
+#usda 1.0
+(
+    defaultPrim = "grid"
+    doc = """Exercises Hydra CoordSys support with *multiple coordinate systems
+             sharing a name*. Four grids each reference the same </grid>
+             template, so each has its own projector camera and its own copy of
+             the material overriding the projection space. All four coordinate
+             systems are named 'map_proj' but are bound to different cameras.
+
+             Arnold resolves named coordinate spaces globally by camera node
+             name, so a naive translation collides all four on a single camera
+             and three grids project from the wrong projector. arnold-usd names
+             each coord-sys camera uniquely and rewrites every material's
+             'space' input to the camera bound to its rprim, so each grid
+             projects from its own camera. The four grids additionally exercise
+             the .camera / .NDC / .raster / .screen projective spaces.
+
+             See #32 / ARNOLD-13221."""
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "grid" (
+    active = false
+    prepend apiSchemas = ["CoordSysAPI:map_proj"]
+    kind = "component"
+)
+{
+    rel coordSys:map_proj:binding = </grid/proj_cam>
+
+    def Mesh "mesh" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        rel material:binding = </grid/mtl/projected>
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        uniform token subdivisionScheme = "none"
+    }
+
+    def Camera "proj_cam"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 36
+        token projection = "perspective"
+        float verticalAperture = 27
+        float xformOp:rotateX = -56
+        double3 xformOp:translate = (0, 12, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+
+    def Scope "mtl"
+    {
+        def Material "projected"
+        {
+            token outputs:mtlx:surface.connect = </grid/mtl/projected/surface.outputs:out>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </grid/mtl/projected/rgb.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "rgb"
+            {
+                uniform token info:id = "ND_combine3_color3"
+                float inputs:in1.connect = </grid/mtl/projected/range_u.outputs:out>
+                float inputs:in2.connect = </grid/mtl/projected/range_v.outputs:out>
+                float inputs:in3 = 0
+                color3f outputs:out
+            }
+
+            def Shader "range_u"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </grid/mtl/projected/separate.outputs:outx>
+                float inputs:inhigh = 5
+                float inputs:inlow = -5
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "range_v"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </grid/mtl/projected/separate.outputs:outy>
+                float inputs:inhigh = 5
+                float inputs:inlow = -5
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "separate"
+            {
+                uniform token info:id = "ND_separate3_vector3"
+                vector3f inputs:in.connect = </grid/mtl/projected/position.outputs:out>
+                float outputs:outx
+                float outputs:outy
+                float outputs:outz
+            }
+
+            def Shader "position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                string inputs:space = "map_proj"
+                vector3f outputs:out
+            }
+        }
+    }
+}
+
+def "grid_0" (
+    active = true
+    append references = </grid>
+)
+{
+    double3 xformOp:translate = (0, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj"
+            }
+        }
+    }
+}
+
+def "grid_1" (
+    active = true
+    append references = </grid>
+)
+{
+    double3 xformOp:translate = (12, 0, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj:ndc"
+            }
+            # NDC is normalised to 0..1 over the projector frustum, so the ramp window
+            # must be 0..1: with the default -5..5 the whole projection collapses into
+            # a flat patch of colour that would hide a wrong projection.
+            over "range_u"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
+            over "range_v"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = 0
+            }
+        }
+    }
+}
+
+def "grid_2" (
+    active = true
+    append references = </grid>
+)
+{
+    double3 xformOp:translate = (0, 0, 12)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj:raster"
+            }
+            # Raster space scales with the render resolution, so this window is tied to
+            # the testsuite's 160x120 and was chosen empirically to keep the projection
+            # inside the ramp. Note it is NOT simply NDC times the resolution - diffing
+            # this grid against the NDC one (with a 0..1 window) does not match, and
+            # Arnold's exact raster matrix lives in arnold-core's osl_rendserv.cpp.
+            # Either way the resolution is baked into the expected image here: unlike
+            # the other three spaces raster cannot be made resolution-independent, so
+            # rendering this scene at another resolution legitimately changes this grid.
+            over "range_u"
+            {
+                float inputs:inhigh = 160
+                float inputs:inlow = 0
+            }
+            over "range_v"
+            {
+                float inputs:inhigh = 120
+                float inputs:inlow = 0
+            }
+        }
+    }
+}
+
+def "grid_3" (
+    active = true
+    append references = </grid>
+)
+{
+    double3 xformOp:translate = (12, 0, 12)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    over "mtl"
+    {
+        over "projected"
+        {
+            over "position"
+            {
+                string inputs:space = "map_proj:screen"
+            }
+            # Screen space is normalised to -1..1 over the projector frustum.
+            over "range_u"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = -1
+            }
+            over "range_v"
+            {
+                float inputs:inhigh = 1
+                float inputs:inlow = -1
+            }
+        }
+    }
+}
+
+def Scope "Cameras"
+{
+    def Camera "renderCamera"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 24
+        float horizontalAperture = 24
+        token projection = "perspective"
+        float verticalAperture = 18
+        float xformOp:rotateX = -90
+        double3 xformOp:translate = (6, 36, 6)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+    }
+}

@@ -55,6 +55,15 @@ public:
     virtual AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) = 0;
     virtual const AtString& GetPxrMtlxPath() = 0;
 
+    /// Path to the OCIO config file, as provided by the host application. It is only meant
+    /// to be used when the OCIO environment variable is not set, which always takes
+    /// precedence (#2730). Only hydra hosts can provide it, hence the empty default.
+    virtual const std::string& GetOcioConfigPath() const
+    {
+        static const std::string empty;
+        return empty;
+    }
+
     virtual void ProcessConnections()
     {
         std::lock_guard<AtMutex> lock(_connectionMutex);

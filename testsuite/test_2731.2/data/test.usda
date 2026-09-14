@@ -1,0 +1,160 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    doc = """Regression test for coordSys per-rprim binding: ONE shared MaterialX
+             material bound to TWO meshes that each bind the same coordinate
+             system name 'cs' to a DIFFERENT Xform.
+
+             Both meshes shade with </World/mtl/shared>, which reads the object
+             position and runs it through ND_transformpoint_vector3 world->cs.
+             grid_a binds cs -> </World/frameA>; grid_b binds cs -> </World/frameB>.
+             frameA and frameB are different rotations/translations, so the two
+             grids MUST show different colour ramps. Because the meshes shade with
+             the same object position, the only thing distinguishing the grids is
+             which coordinate system their binding resolves to.
+
+             The render delegate handles this by giving the second (conflicting)
+             binding its own re-translated variant of the shader network. A bug in
+             HdArnoldNodeGraph::RemapCoordSysSpaces could let one binding's remap
+             capture the other network's nodes (order-dependent), collapsing both
+             grids to the same frame. This test guards against that: if the grids
+             render identically, the per-binding resolution is broken."""
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Xform "frameA"
+    {
+        double3 xformOp:translate = (1, 0, 0)
+        float xformOp:rotateY = 35
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY"]
+    }
+
+    def Xform "frameB"
+    {
+        double3 xformOp:translate = (0, 0, 1)
+        float xformOp:rotateY = -50
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY"]
+    }
+
+    def Mesh "grid_a" (
+        prepend apiSchemas = ["MaterialBindingAPI", "CoordSysAPI:cs"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        rel material:binding = </World/mtl/shared>
+        rel coordSys:cs:binding = </World/frameA>
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (-6, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "grid_b" (
+        prepend apiSchemas = ["MaterialBindingAPI", "CoordSysAPI:cs"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        rel material:binding = </World/mtl/shared>
+        rel coordSys:cs:binding = </World/frameB>
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (6, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Scope "mtl"
+    {
+        def Material "shared"
+        {
+            token outputs:mtlx:surface.connect = </World/mtl/shared/surface.outputs:out>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </World/mtl/shared/rgb.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "rgb"
+            {
+                uniform token info:id = "ND_combine3_color3"
+                float inputs:in1.connect = </World/mtl/shared/range_u.outputs:out>
+                float inputs:in2.connect = </World/mtl/shared/range_v.outputs:out>
+                float inputs:in3 = 0
+                color3f outputs:out
+            }
+
+            def Shader "range_u"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/shared/separate.outputs:outx>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "range_v"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/shared/separate.outputs:outy>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "separate"
+            {
+                uniform token info:id = "ND_separate3_vector3"
+                vector3f inputs:in.connect = </World/mtl/shared/xform.outputs:out>
+                float outputs:outx
+                float outputs:outy
+                float outputs:outz
+            }
+
+            # Object position expressed in coordSys "cs". Each mesh binds "cs" to
+            # a different frame, so the resolved transform differs per mesh.
+            def Shader "xform"
+            {
+                uniform token info:id = "ND_transformpoint_vector3"
+                vector3f inputs:in.connect = </World/mtl/shared/position.outputs:out>
+                string inputs:fromspace = "world"
+                string inputs:tospace = "cs"
+                vector3f outputs:out
+            }
+
+            def Shader "position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                string inputs:space = "object"
+                vector3f outputs:out
+            }
+        }
+    }
+
+    def Scope "Cameras"
+    {
+        def Camera "renderCamera"
+        {
+            float2 clippingRange = (0.1, 10000)
+            float focalLength = 24
+            float horizontalAperture = 36
+            token projection = "perspective"
+            float verticalAperture = 27
+            float xformOp:rotateX = -90
+            double3 xformOp:translate = (0, 20, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+        }
+    }
+}

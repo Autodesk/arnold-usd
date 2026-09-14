@@ -1,0 +1,10 @@
+A polymesh rendered as an implicit volume (step_size > 0) with a standard_volume
+shader must export the shader through the material's volume output, not the
+surface output. Otherwise the shape is treated as a volume on import, the
+surface-bound shader is dropped, and it falls back to _fallbackVolume (a black,
+non-emissive volume).
+
+Follow-up to #2615 (ARNOLD-17642), which only handled native volume nodes.
+See MAXTOA-2033.
+
+author: zap.andersson and Claude

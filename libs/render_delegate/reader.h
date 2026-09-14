@@ -14,7 +14,6 @@
 #include "render_delegate.h"
 
 #ifdef ENABLE_SCENE_INDEX
-#define ARNOLD_SCENE_INDEX
 
 #include "pxr/usdImaging/usdImaging/sceneIndices.h"
 #include "pxr/imaging/hdsi/legacyDisplayStyleOverrideSceneIndex.h"
@@ -79,7 +78,7 @@ private:
     HdsiLegacyDisplayStyleOverrideSceneIndexRefPtr _displayStyleSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _materialPruningSceneIndex;
     HdsiPrimTypePruningSceneIndexRefPtr _lightPruningSceneIndex;
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
     HdsiSceneGlobalsSceneIndexRefPtr _sceneGlobalsSceneIndex;
 #endif
     AtUniverse *_universe = nullptr;
@@ -94,7 +93,7 @@ private:
     TimeSettings _time;
     SdfPath _renderCameraPath;
 
-#ifdef ARNOLD_SCENE_INDEX
+#ifdef ENABLE_SCENE_INDEX
     HdSceneIndexBaseRefPtr
     _AppendOverridesSceneIndices(
         const HdSceneIndexBaseRefPtr &inputScene);

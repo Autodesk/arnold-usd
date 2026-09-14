@@ -97,7 +97,7 @@ else () # USD shared lib build
         if (LINUX)
             target_link_libraries(translator INTERFACE dl pthread)
         endif ()
-        target_link_libraries(translator INTERFACE gf sdf tf usd ar arch pcp vt work)
+        target_link_libraries(translator INTERFACE gf sdf tf usd ar arch pcp vt work hgi hgiGL js)
         target_link_libraries(translator INTERFACE usdGeom usdShade usdUtils usdLux usdVol usdSkel usdRender)
     endif ()
 endif ()

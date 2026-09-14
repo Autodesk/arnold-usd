@@ -1,0 +1,227 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    doc = """Exercises the Hydra coordSys 'fromspace'/'tospace' rewrite on
+             MaterialX transform nodes (ND_transformpoint_vector3). The
+             existing coordSys support (test_13221) only rewrote the single
+             'space' input of position/normal/tangent/bitangent nodes; this
+             extends the same mechanism to 'fromspace'/'tospace'.
+
+             'warp_space' is a plain Xform (not a camera) rotated and
+             translated away from the origin. Two grids each read a point
+             through a transformpoint node referencing it by name:
+               - grid_tospace:   world -> warp_space (exercises 'tospace')
+               - grid_fromspace: warp_space -> world (exercises 'fromspace')
+             The result is visualized as a colour ramp on each grid. Because
+             warp_space is rotated and offset from the origin, a correctly
+             resolved coordinate system produces a skewed/shifted ramp on
+             both grids rather than the plain diagonal gradient a raw,
+             unresolved space string (or an identity fallback) would give.
+
+             See ARNOLD-2731."""
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World" (
+    prepend apiSchemas = ["CoordSysAPI:warp_space"]
+)
+{
+    # UsdShadeCoordSysAPI bindings are inherited by descendants of the prim
+    # they're authored on, so the binding lives here on "World" (the common
+    # ancestor of both consuming meshes below) rather than on "warp_space"
+    # itself, which is only a sibling of the meshes and would not apply to
+    # them.
+    rel coordSys:warp_space:binding = </World/warp_space>
+
+    def Xform "warp_space"
+    {
+        float3 xformOp:rotateXYZ = (0, 40, 0)
+        double3 xformOp:translate = (3, 0, -2)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+
+    def Mesh "grid_tospace" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        rel material:binding = </World/mtl/to_space>
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (-6, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Mesh "grid_fromspace" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        rel material:binding = </World/mtl/from_space>
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (6, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Scope "mtl"
+    {
+        def Material "to_space"
+        {
+            token outputs:mtlx:surface.connect = </World/mtl/to_space/surface.outputs:out>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </World/mtl/to_space/rgb.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "rgb"
+            {
+                uniform token info:id = "ND_combine3_color3"
+                float inputs:in1.connect = </World/mtl/to_space/range_u.outputs:out>
+                float inputs:in2.connect = </World/mtl/to_space/range_v.outputs:out>
+                float inputs:in3 = 0
+                color3f outputs:out
+            }
+
+            def Shader "range_u"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/to_space/separate.outputs:outx>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "range_v"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/to_space/separate.outputs:outy>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "separate"
+            {
+                uniform token info:id = "ND_separate3_vector3"
+                vector3f inputs:in.connect = </World/mtl/to_space/xform.outputs:out>
+                float outputs:outx
+                float outputs:outy
+                float outputs:outz
+            }
+
+            def Shader "xform"
+            {
+                uniform token info:id = "ND_transformpoint_vector3"
+                vector3f inputs:in.connect = </World/mtl/to_space/position.outputs:out>
+                string inputs:fromspace = "world"
+                string inputs:tospace = "warp_space"
+                vector3f outputs:out
+            }
+
+            def Shader "position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                string inputs:space = "world"
+                vector3f outputs:out
+            }
+        }
+
+        def Material "from_space"
+        {
+            token outputs:mtlx:surface.connect = </World/mtl/from_space/surface.outputs:out>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "ND_surface_unlit"
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </World/mtl/from_space/rgb.outputs:out>
+                token outputs:out
+            }
+
+            def Shader "rgb"
+            {
+                uniform token info:id = "ND_combine3_color3"
+                float inputs:in1.connect = </World/mtl/from_space/range_u.outputs:out>
+                float inputs:in2.connect = </World/mtl/from_space/range_v.outputs:out>
+                float inputs:in3 = 0
+                color3f outputs:out
+            }
+
+            def Shader "range_u"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/from_space/separate.outputs:outx>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "range_v"
+            {
+                uniform token info:id = "ND_range_float"
+                float inputs:in.connect = </World/mtl/from_space/separate.outputs:outy>
+                float inputs:inhigh = 8
+                float inputs:inlow = -8
+                float inputs:outhigh = 1
+                float inputs:outlow = 0
+                float outputs:out
+            }
+
+            def Shader "separate"
+            {
+                uniform token info:id = "ND_separate3_vector3"
+                vector3f inputs:in.connect = </World/mtl/from_space/xform.outputs:out>
+                float outputs:outx
+                float outputs:outy
+                float outputs:outz
+            }
+
+            def Shader "xform"
+            {
+                uniform token info:id = "ND_transformpoint_vector3"
+                vector3f inputs:in.connect = </World/mtl/from_space/position.outputs:out>
+                string inputs:fromspace = "warp_space"
+                string inputs:tospace = "world"
+                vector3f outputs:out
+            }
+
+            def Shader "position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                string inputs:space = "object"
+                vector3f outputs:out
+            }
+        }
+    }
+
+    def Scope "Cameras"
+    {
+        def Camera "renderCamera"
+        {
+            float2 clippingRange = (0.1, 10000)
+            float focalLength = 24
+            float horizontalAperture = 36
+            token projection = "perspective"
+            float verticalAperture = 27
+            float xformOp:rotateX = -90
+            double3 xformOp:translate = (0, 20, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+        }
+    }
+}

@@ -4,6 +4,7 @@ set(SRC
     basis_curves.cpp
     camera.cpp
     config.cpp
+    coord_sys.cpp
     gaussian_splat.cpp
     instancer.cpp
     light.cpp
@@ -31,6 +32,7 @@ set(HDR
     basis_curves.h
     camera.h
     config.h
+    coord_sys.h
     debug_codes.h
     rprim.h
     hdarnold.h
@@ -68,6 +70,10 @@ if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
+if (${USD_HAS_HGI_GL})
+    target_compile_definitions(render_delegate PUBLIC "USD_HAS_HGI_GL=1")
+endif ()
+
 target_link_libraries(render_delegate INTERFACE common)
 if (ENABLE_SHARED_ARRAYS)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SHARED_ARRAYS=1)
@@ -82,5 +88,12 @@ endif()
 target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
 if (BUILD_SCENE_INDEX_PLUGIN OR ENABLE_SCENE_INDEX_IN_BUNDLE)
     target_compile_definitions(render_delegate PUBLIC ENABLE_SCENE_INDEX=1)
+endif()
+# Whether Hydra 2 is the default traversal mode. Only HdArnoldIsSceneIndexEnabled() in
+# utils.cpp reads this, so it is enough to define it for this library.
+if (ENABLE_HYDRA2)
+    target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=1)
+else()
+    target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=0)
 endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})

@@ -1,0 +1,27 @@
+CoordSys on non-mesh rprims: curves and points projected from a bound camera
+
+A BasisCurves and a Points prim are projected through the 'map_proj' coordinate
+system. The per-rprim rewrite of the material 'space' inputs has to run for every
+rprim type: while only HdArnoldMesh performed it, curves and points kept the
+authored coordinate-system name, which matches no Arnold camera node, so the
+space did not resolve and the projection silently disappeared.
+
+Two copies of </fur> each reference the template, so each has its own projector
+camera and its own copy of the material, both coordinate systems being named
+'map_proj'. Within one copy the curves and the points share a single material and
+a single binding, covering two rprim types resolving one coordinate system. The
+copies use the .camera and .NDC spaces.
+
+The projector cameras live inside the template (as in test_13221) so the
+coordinate-system camera resolves identically under the legacy scene delegate
+(hydra) and the scene index (hydra2).
+
+The :ndc copy ramps its colour over 0..1 rather than the -5..5 used for .camera,
+since NDC is normalised over the projector frustum and would otherwise collapse
+into a flat patch of colour.
+
+See #32 / ARNOLD-13221
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /Cameras/renderCamera'}

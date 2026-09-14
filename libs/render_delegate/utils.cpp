@@ -31,6 +31,7 @@
 // limitations under the License.
 #include "utils.h"
 
+#include <pxr/base/arch/env.h>
 #include <pxr/base/gf/vec2d.h>
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec2h.h>
@@ -80,6 +81,30 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 }
 
 } // namespace
+
+// Build-time default for the Hydra 1 / Hydra 2 choice, set from the ENABLE_HYDRA2 build
+// option. This is deliberately independent of ENABLE_SCENE_INDEX: that one says whether the
+// scene index filters are compiled in at all, and Hydra 1 needs them just as much as Hydra 2
+// does (HdRenderIndex applies the per-renderer filters under scene index emulation, which is
+// on by default in either mode). Hosts that are not ready for Hydra 2 build with
+// ENABLE_HYDRA2=False and must keep BUILD_SCENE_INDEX_PLUGIN enabled.
+#ifndef ARNOLD_ENABLE_HYDRA2
+#define ARNOLD_ENABLE_HYDRA2 1
+#endif
+
+bool HdArnoldIsSceneIndexEnabled()
+{
+    if (!ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX"))
+        return ARNOLD_ENABLE_HYDRA2 != 0;
+
+    std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
+    std::string::size_type i = useSceneIndex.find(" ");
+    while (i != std::string::npos) {
+        useSceneIndex.erase(i, 1);
+        i = useSceneIndex.find(" ");
+    }
+    return useSceneIndex != "0";
+}
 
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {

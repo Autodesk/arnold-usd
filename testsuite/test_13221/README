@@ -1,0 +1,18 @@
+Add support for Hydra coordSys feature
+
+Each grid's colour ramp window is matched to the space it projects: -5..5 for
+.camera (world units), 0..1 for .NDC, -1..1 for .screen and 0..160/0..120 for
+.raster. A single window cannot suit all four - with -5..5 everywhere the .NDC
+grid collapsed to a flat patch and .raster was almost entirely clipped, so
+neither could show a wrong projection.
+
+.raster is in resolution-dependent units, so its window (and therefore the
+expected image for that grid) is tied to the testsuite's 160x120. Rendering this
+scene at another resolution legitimately changes that grid - and only that grid;
+the other three spaces are resolution-independent.
+
+See #32 / ARNOLD-13221
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /Cameras/renderCamera'}

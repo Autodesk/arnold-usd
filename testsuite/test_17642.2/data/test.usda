@@ -1,0 +1,46 @@
+#usda 1.0
+(
+    doc = """Reader regression for MAXTOA-2033.
+
+A polymesh rendered as an implicit volume (step_size > 0) is bound to a material
+that has BOTH an arnold:volume terminal (the real volume shader) AND a universal
+'surface' terminal wired to a UsdPreviewSurface (as MaxUSD authors for interop).
+The reader must bind the standard_volume to the shape, not the preview surface -
+otherwise the volume renders as a (black) surface."""
+    defaultPrim = "volume_box"
+)
+
+def Mesh "volume_box"
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+    int[] faceVertexIndices = [0, 1, 3, 2,  4, 6, 7, 5,  0, 4, 5, 1,
+                               2, 3, 7, 6,  0, 2, 6, 4,  1, 5, 7, 3]
+    point3f[] points = [(-1, -1, -1), (1, -1, -1), (-1, 1, -1), (1, 1, -1),
+                        (-1, -1, 1),  (1, -1, 1),  (-1, 1, 1),  (1, 1, 1)]
+    float primvars:arnold:step_size = 0.25
+    rel material:binding = </mtl/volume_mtl>
+}
+
+def Scope "mtl"
+{
+    def Material "volume_mtl"
+    {
+        token outputs:arnold:volume.connect = </mtl/volume_mtl/vol_shader.outputs:out>
+        token outputs:surface.connect = </mtl/volume_mtl/preview.outputs:surface>
+
+        def Shader "vol_shader"
+        {
+            uniform token info:id = "arnold:standard_volume"
+            float inputs:density = 1
+            token outputs:out
+        }
+
+        def Shader "preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0.8, 0.1, 0.1)
+            token outputs:surface
+        }
+    }
+}

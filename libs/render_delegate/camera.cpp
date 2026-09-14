@@ -30,6 +30,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
  (exposure)
  ((filtermap, "primvars:arnold:filtermap"))
  ((uv_remap, "primvars:arnold:uv_remap"))
+ ((ray_origin, "primvars:arnold:ray_origin"))
+ ((ray_direction, "primvars:arnold:ray_direction"))
 
 );
 // clang-format on
@@ -113,7 +115,7 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
         const AtString paramName = AiParamGetName(param);
         if (paramName == str::motion_start || paramName == str::motion_end)
             continue;
-        
+
         TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
         const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);
         if (!paramValue.IsEmpty()) {
@@ -121,6 +123,38 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
         }
     }
     AiParamIteratorDestroy(paramIter);
+}
+
+void HdArnoldCamera::UpdateCameraShaders(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
+    // Cameras can reference shaders through an ArnoldNodeGraph primitive, whose
+    // output terminal has the same name as the arnold parameter it drives.
+    // filtermap expects a node pointer, whereas uv_remap and the uv_camera
+    // ray_origin / ray_direction are linked to the shader.
+    const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
+    if (filtermap)
+        AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
+    else
+        AiNodeResetParameter(_camera, str::filtermap);
+
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(_camera);
+    const auto linkCameraShader = [&](const TfToken &attr, const AtString &paramName, const TfToken &terminal) {
+        // uv_remap is a generic camera parameter, but ray_origin and ray_direction
+        // only exist on the uv_camera, so we skip the parameters this camera type
+        // doesn't have.
+        if (AiNodeEntryLookUpParameter(nodeEntry, paramName) == nullptr)
+            return;
+        AtNode *shader = ReadCameraShader(sceneDelegate, renderParam, attr, terminal, dirtyBits);
+        if (shader)
+            AiNodeLink(shader, paramName, _camera);
+        else if (AiNodeIsLinked(_camera, paramName)) {
+            // The node graph was removed, but the attribute can also hold a plain
+            // value (see SetCameraParams above), so we only remove the link here.
+            AiNodeUnlink(_camera, paramName);
+        }
+    };
+    linkCameraShader(_tokens->uv_remap, str::uv_remap, str::t_uv_remap);
+    linkCameraShader(_tokens->ray_origin, str::ray_origin, str::t_ray_origin);
+    linkCameraShader(_tokens->ray_direction, str::ray_direction, str::t_ray_direction);
 }
 
 void HdArnoldCamera::UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
@@ -141,12 +175,7 @@ void HdArnoldCamera::UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRende
 
     SetCameraParams(sceneDelegate, cameraParams);
 
-    // Set the filter map
-    const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
-    if (filtermap)
-        AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
-    else 
-        AiNodeResetParameter(_camera, str::filtermap);
+    UpdateCameraShaders(sceneDelegate, renderParam, dirtyBits);
 }
 
 void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
@@ -202,16 +231,7 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
     }
 
-    const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
-    if (filtermap)
-        AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
-    else 
-        AiNodeResetParameter(_camera, str::filtermap);
-    AtNode *uv_remap = ReadCameraShader(sceneDelegate, renderParam, _tokens->uv_remap, str::t_uv_remap, dirtyBits);
-    if (uv_remap)
-        AiNodeLink(uv_remap, str::uv_remap, _camera);
-    else 
-        AiNodeResetParameter(_camera, str::uv_remap);
+    UpdateCameraShaders(sceneDelegate, renderParam, dirtyBits);
 }
 
 void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)

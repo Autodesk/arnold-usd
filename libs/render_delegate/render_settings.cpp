@@ -33,6 +33,7 @@
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <pxr/imaging/hd/sceneIndex.h>
 #include <pxr/imaging/hd/sceneIndexPrimView.h>
+#include <pxr/imaging/hd/renderSettingsSchema.h>
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/imaging/hdsi/renderSettingsFilteringSceneIndex.h>
 
@@ -319,17 +320,21 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
     // Get USD rendering color space from the data source
     UsdImagingUsdRenderSettingsSchema usdRss = UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
 
-    // Setup color manager - check for OCIO environment variable first
+    // Setup color manager - the OCIO environment variable takes precedence, then comes the
+    // config path the host application gave us through the render settings (#2730)
     AtNode* colorManager = nullptr;
     const char* ocio_path = std::getenv("OCIO");
-    if (ocio_path) {
-        colorManager = _renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
+    const AtString ocioConfig(ocio_path ? ocio_path : _renderDelegate->GetOcioConfigPath().c_str());
+    if (!ocioConfig.empty()) {
+        // This is called on every render settings update, and the render delegate might have
+        // created this color manager already, so we must not create a new one every time
+        colorManager = _renderDelegate->FindOrCreateArnoldNode(str::color_manager_ocio, str::color_manager_ocio);
         if (colorManager) {
-            AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+            AiNodeSetStr(colorManager, str::config, ocioConfig);
         }
     }
 
-    // If no OCIO environment variable, use the default color manager
+    // If we have no OCIO config, use the default color manager
     if (colorManager == nullptr) {
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
     }
@@ -338,8 +343,26 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
         // Set the color manager node in the options
         AiNodeSetPtr(options, str::color_manager, colorManager);
 
-        // Set rendering color space from USD if available
-        HdTokenDataSourceHandle renderingColorSpaceHandle = usdRss.GetRenderingColorSpace();
+        // Set rendering color space if available. mayaHydra (via
+        // MhRenderingColorSpaceResolvingSceneIndex) and the render-settings flattening
+        // scene index resolve the color space into the HdRenderSettingsSchema
+        // "renderSettings" locator, not the raw UsdImaging "__usdRenderSettings"
+        // locator, so read from HdRenderSettingsSchema first.
+        HdTokenDataSourceHandle renderingColorSpaceHandle;
+#if PXR_VERSION >= 2311
+        // HdRenderSettingsSchema::GetRenderingColorSpace was introduced in USD 23.11.
+        HdRenderSettingsSchema hdRss = HdRenderSettingsSchema::GetFromParent(prim.dataSource);
+        if (hdRss.IsDefined()) {
+            renderingColorSpaceHandle = hdRss.GetRenderingColorSpace();
+        }
+#endif
+        // Fall back to the UsdImaging schema if the resolved value is absent or empty.
+        if (!renderingColorSpaceHandle || renderingColorSpaceHandle->GetTypedValue(0.0f).IsEmpty()) {
+            HdTokenDataSourceHandle usdHandle = usdRss.GetRenderingColorSpace();
+            if (usdHandle && !usdHandle->GetTypedValue(0.0f).IsEmpty()) {
+                renderingColorSpaceHandle = usdHandle;
+            }
+        }
         if (renderingColorSpaceHandle) {
             TfToken renderingColorSpace = renderingColorSpaceHandle->GetTypedValue(0.0f);
             if (!renderingColorSpace.IsEmpty()) {
@@ -441,7 +464,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
 void HdArnoldRenderSettings::_Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
 {
-    if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
+    if (!HdArnoldIsSceneIndexEnabled())
         return;
 
     // If we're not using the hydra render settings, we shouldn't do anything here
@@ -470,6 +493,8 @@ void HdArnoldRenderSettings::_Sync(
     HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
     param->SetHydraRenderSettingsPrimPath(GetId());
 
+    HdArnoldRenderParamInterrupt paramInterrupt(renderParam);
+
     // TODO when do we need to read them ? just only once ?
     // What happens when the resolution is changed in the render settings ?
     _ReadUsdRenderSettings(sceneDelegate);
@@ -482,6 +507,7 @@ void HdArnoldRenderSettings::_Sync(
 
     if (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         // Generate and apply Arnold options from the render settings
+        paramInterrupt.Interrupt();
         _UpdateArnoldOptions(sceneDelegate);
     }
 
@@ -492,16 +518,19 @@ void HdArnoldRenderSettings::_Sync(
 	const auto DirtyShutter = HdRenderSettings::DirtyUnionedSamplingInterval;
 #endif
     if (*dirtyBits & DirtyShutter || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+        paramInterrupt.Interrupt();
         _UpdateShutterInterval(sceneDelegate, param);
     }
 #endif
 
     if (*dirtyBits & DirtyRenderProducts) {
         // TODO implement _UpdateRenderProduct
+        paramInterrupt.Interrupt();
         _UpdateRenderProducts(sceneDelegate, param);
     }
 
     if (*dirtyBits & DirtyRenderingColorSpace) {
+        paramInterrupt.Interrupt();
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
 
@@ -590,7 +619,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
         }
 
-        AtNode* driver = _renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
+        AtNode* driver = _renderDelegate->FindOrCreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
 
         if (!driver) {
             TF_WARN("Failed to create driver for render product %s\n", driverName.c_str());
@@ -675,6 +704,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         bool useLayerName = false;
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
+        std::vector<std::string> compressionList;
+        const std::string compressionKey = "arnold:" + driverType + ":compression";
 
         // Process render vars for this product
         for (const auto& renderVar : product.renderVars) {
@@ -698,11 +731,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
             }
 
-            AtNode* filter = AiNodeLookUpByName(AiNodeGetUniverse(options), AtString(filterName.c_str()));
-            if (!filter) {
-                filter = _renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
-            }
-
+            AtNode *filter = _renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+            
             if (!filter) {
                 TF_WARN("Failed to create filter for render var %s\n", varName.c_str());
                 continue;
@@ -849,7 +879,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 aovShaderName = varName;
                 aovShaderName += "_shader";
                 AtNode* aovShader =
-                    _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
+                    _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
 
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
@@ -866,13 +896,13 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                     
                     AtNode* reader = nullptr;
                     if (sourceName == "st" || sourceName == "uv") {
-                        reader = _renderDelegate->CreateArnoldNode(str::utility, AtString(readerName.c_str()));
+                        reader = _renderDelegate->FindOrCreateArnoldNode(str::utility, AtString(readerName.c_str()));
                         if (reader) {
                             AiNodeSetStr(reader, str::color_mode, str::uv);
                             AiNodeSetStr(reader, str::shade_mode, str::flat);
                         }
                     } else {
-                        reader = _renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
+                        reader = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
                         if (reader) {
                             AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
                         }
@@ -914,6 +944,15 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             layerNames.push_back(layerName);
             aovNamesList.push_back(sourceName);
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
+            std::string varCompression;
+            if (isDriverExr) {
+                auto compressionIt = renderVarSettings.find(compressionKey);
+                if (compressionIt != renderVarSettings.end())
+                    varCompression = VtValueGetString(compressionIt->second);
+            }
+            compressionList.push_back(varCompression);
         }
 
         // Add layer names for duplicated AOVs
@@ -939,6 +978,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 AiNodeSetBool(driver, AtString("half_precision"), true);
             }
         }
+
+        SetDriverExrCompressions(driver, compressionList);
     }
 
     // Set outputs array on options

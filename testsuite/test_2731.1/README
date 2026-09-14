@@ -1,0 +1,16 @@
+Hydra coordSys with a non-orthonormal frame (scale + shear)
+
+Companion to test_2731. Same two-grid coordSys transformpoint scene, but
+'warp_space' has a non-orthonormal transform (non-uniform scale + shear on top
+of rotation/translation). This exercises the affine coordSys path in the render
+delegate, which resolves a coordinate system through a matrix_multiply_vector
+shader driven by the coordSys's float_to_matrix (full matrix, scale/shear
+preserved) rather than the Arnold camera node (which strips scaling).
+
+grid_tospace warps world->warp_space ('tospace'); grid_fromspace warps
+warp_space->world ('fromspace'). The scale/shear skews the colour ramp on both
+grids more than the plain rotation in test_2731.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /World/Cameras/renderCamera'}
