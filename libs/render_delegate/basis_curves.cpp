@@ -28,6 +28,8 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
+#include <pxr/base/gf/matrix4d.h>
+#include <pxr/base/tf/hash.h>
 
 #include <pxr/usd/sdf/assetPath.h>
 #include <ai.h>
@@ -85,6 +87,14 @@ HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const
 {
 }
 
+HdArnoldBasisCurves::~HdArnoldBasisCurves()
+{
+    // Geometry deduplication: if this curve owns a canonical node still referenced by
+    // instances, hand it over to the render delegate so it outlives this rprim (see
+    // HdArnoldRprim). Only curves that actually registered in the dedup registry pay for this.
+    _HandOffDedupOnDestroy();
+}
+
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
@@ -119,7 +129,66 @@ void HdArnoldBasisCurves::Sync(
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
-        
+
+    // === Geometry deduplication ===
+    // Same mechanism as HdArnoldMesh (see the mesh Sync for the full rationale): if this curve
+    // is geometrically identical to a previously seen one, share a single canonical Arnold
+    // curves node instead of duplicating the geometry (and its BVH). The default "Instances"
+    // mode only deduplicates point-instancer prototypes (the flattening case), so plain curves
+    // pay no hashing cost; "All" mode also collapses non-instanced duplicates into ginstances.
+    // Handles static and deformation-motion-blurred curves; excludes computed/skinned points
+    // and velocity/acceleration motion blur.
+    if (GetRenderDelegate()->DeduplicateGeometry()) {
+        const bool geomDirty = (*dirtyBits & _geometryHashDirtyBits) != 0 || dirtyPrimvars;
+        if (geomDirty) {
+            // Populate the instancer id (lazily set by _UpdateInstancer, normally later in
+            // SyncShape) on a throwaway copy of the dirty bits so GetInstancerId() is valid here.
+            {
+                HdDirtyBits instancerDirtyBits = *dirtyBits;
+                _UpdateInstancer(sceneDelegate, &instancerDirtyBits);
+            }
+            const bool instanced = !GetInstancerId().IsEmpty();
+            bool eligible = instanced ||
+                GetRenderDelegate()->GetGeometryDedupMode() == HdArnoldRenderDelegate::GeometryDedupMode::All;
+            HdBasisCurvesTopology dedupTopology;
+            uint64_t hash = 0;
+            if (eligible) {
+                HdArnoldRenderParam* rp = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+                const bool computedPoints = _primvars.count(HdTokens->points) != 0;
+                eligible = !computedPoints && _primvars.count(HdTokens->velocities) == 0 &&
+                           _primvars.count(HdTokens->accelerations) == 0;
+                if (eligible && pointsSample.count == 0) {
+                    SamplePrimvar(sceneDelegate, id, HdTokens->points, rp->GetShutterRange(), &pointsSample);
+                }
+                // Deduplicate static and deformation-motion-blurred curves (one or more position
+                // keys); every key must hold a point array. Velocity/acceleration blur is
+                // excluded above - here we only need the sampled points to match across the shutter.
+                eligible = eligible && pointsSample.count >= 1 &&
+                           pointsSample.values.size() >= pointsSample.count;
+                for (size_t i = 0; eligible && i < pointsSample.count; ++i)
+                    eligible = pointsSample.values[i].IsHolding<VtVec3fArray>();
+                if (eligible) {
+                    dedupTopology = GetBasisCurvesTopology(sceneDelegate);
+                    hash = _ComputeGeometryHash(dedupTopology, pointsSample, sceneDelegate, id, instanced);
+                }
+            }
+            // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
+            // may be recreated (ginstance conversion, or reverting to a plain curves node), so
+            // refresh the local pointer afterwards.
+            AtNode* const nodeBeforeDedup = node;
+            _ApplyGeometryDedup(id, eligible, instanced, hash, str::curves, dirtyBits, dirtyPrimvars, param);
+            node = GetArnoldNode();
+            if (node != nodeBeforeDedup)
+                _ForcePrimvarReapplication(_primvars);
+            // _ApplyGeometryDedup may have forced dirty bits (a fresh ginstance to configure, or
+            // a revert that needs a full rebuild); refresh the local flags so the blocks below
+            // honor them.
+            dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
+            dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
+            dirtyPrimvars = dirtyPrimvars || (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+        }
+    }
+
     TfToken curveType;
     HdBasisCurvesTopology topology;
 
@@ -135,9 +204,11 @@ void HdArnoldBasisCurves::Sync(
     }
 
     // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
-    // If we already have a primvar for points, it will be translated below, in the 
-    // primvars conversion section
-    if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
+    // If we already have a primvar for points, it will be translated below, in the
+    // primvars conversion section.
+    // A deduplicated curve rendered as a ginstance shares its canonical's geometry, so points,
+    // topology and geometry primvars are all skipped for it (guarded by !_isInstance below).
+    if (dirtyPoints && _primvars.count(HdTokens->points) == 0 && !_isInstance) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
 
@@ -145,7 +216,7 @@ void HdArnoldBasisCurves::Sync(
         HdArnoldSetRadiusFromPrimvar(node, id, sceneDelegate);
     }
 
-    if (dirtyTopology) {
+    if (dirtyTopology && !_isInstance) {
         param.Interrupt();
         const auto curveBasis = topology.GetCurveBasis();            
         const auto curveWrap = topology.GetCurveWrap();
@@ -208,8 +279,13 @@ void HdArnoldBasisCurves::Sync(
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
-        // by the render delegate
-        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
+        // by the render delegate. A deduplicated curve must also re-sync whenever its
+        // canonical changes or is removed; register that dependency here (TrackDependencies
+        // replaces the full target list, so it has to go in the same call).
+        HdArnoldRenderDelegate::PathSetWithDirtyBits deps {{materialId, HdChangeTracker::DirtyMaterialId}};
+        if (_isInstance && !_canonicalPath.IsEmpty())
+            deps.insert({_canonicalPath, HdChangeTracker::AllDirty});
+        GetRenderDelegate()->TrackDependencies(id, deps);
         auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
             AiNodeSetPtr(node, str::shader, material->GetCachedSurfaceShader(HdArnoldGetCoordSysBinding(sceneDelegate, id)));
@@ -222,7 +298,10 @@ void HdArnoldBasisCurves::Sync(
         GetRenderDelegate()->ApplyLightLinking(sceneDelegate, node, id);
     }
 
-    if (dirtyPrimvars) {
+    // Geometry primvars (points, widths/radius, orientations, uvs, custom) all live on the
+    // curves node; a deduplicated ginstance shares the canonical's, so they are skipped for it
+    // (the node-level constant primvars it still needs are applied in the block just below).
+    if (dirtyPrimvars && !_isInstance) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
@@ -332,8 +411,35 @@ void HdArnoldBasisCurves::Sync(
         }
         UpdateVisibilityAndSidedness();
     }
-    // Set motion_start / motion_end if we have a non null shutter range
-    {    
+
+    // A deduplicated ginstance shares the canonical's geometry, so the geometry primvar block
+    // above is skipped for it - but it is still a distinct Arnold node that needs its own
+    // node-level state from constant primvars: ray visibility (arnold:visibility), sidedness,
+    // matte and any user-data attributes shaders read per instance. Apply just the constant
+    // primvars here (orientations/basis and any vertex/uniform/varying primvars belong to the
+    // shared geometry and must not be touched). Only the non-instanced ginstance flavor owns
+    // such a node; the instanced-prototype flavor renders through the shared canonical.
+    if (dirtyPrimvars && _isInstance && GetShape().GetPrototypeOverride() == nullptr) {
+        param.Interrupt();
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
+        for (auto& primvar : _primvars) {
+            auto& desc = primvar.second;
+            if (desc.interpolation != HdInterpolationConstant)
+                continue;
+            if (primvar.first == _tokens->orientations || primvar.first == _tokens->basis)
+                continue;
+            HdArnoldSetConstantPrimvar(
+                node, primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags, nullptr,
+                GetRenderDelegate());
+        }
+        UpdateVisibilityAndSidedness();
+    }
+
+    // Set motion_start / motion_end if we have a non null shutter range. Only genuine geometry
+    // nodes carry a deformation motion range; a ginstance shares its canonical's geometry (and
+    // gets its own transform motion blur through the instance matrix), so we skip it there.
+    if (!_isInstance) {
         HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
         if (renderParam->GetShutterRange()[0] != renderParam->GetShutterRange()[1]) {
             AiNodeSetFlt(node, str::motion_start, renderParam->GetShutterRange()[0]);
@@ -353,6 +459,36 @@ HdDirtyBits HdArnoldBasisCurves::GetInitialDirtyBitsMask() const
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths |
            HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories |
            HdArnoldShape::GetInitialDirtyBitsMask();
+}
+
+uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
+    const HdBasisCurvesTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
+    const SdfPath& id, bool instanced)
+{
+    // Curve topology: vertex counts, indices, type, basis and wrap all change the arnold node.
+    size_t hash = TfHash::Combine(
+        VtValue(topology.GetCurveVertexCounts()).GetHash(), topology.GetCurveType(), topology.GetCurveBasis(),
+        topology.GetCurveWrap());
+    if (!topology.GetCurveIndices().empty())
+        hash = TfHash::Combine(hash, VtValue(topology.GetCurveIndices()).GetHash());
+    // Curves have no displacement or subdivision. For an instanced prototype the shared canonical
+    // curves node carries the prototype's own transform and its surface shader (its instancer
+    // references it directly, and we merge conservatively on material), so fold both in. This
+    // collapses re-rooted point-instancer prototype copies that share the same asset and material.
+    if (instanced) {
+        const SdfPath materialId = sceneDelegate->GetMaterialId(id);
+        HdArnoldNodeGraph* material =
+            HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
+        const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
+        const GfMatrix4d xform = sceneDelegate->GetTransform(id);
+        hash = TfHash::Combine(hash, xform);
+        hash = TfHash::Combine(
+            hash, reinterpret_cast<uintptr_t>(material != nullptr ? material->GetCachedSurfaceShader(coordSysBinding)
+                                                                  : nullptr));
+    }
+    // Points, primvars, render tag and light-linking categories are hashed the same way for
+    // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
+    return _HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

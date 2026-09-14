@@ -766,6 +766,85 @@ public:
     // instead of using nested arnold instancer nodes
     bool FlattenInstancing () const {return _flattenInstancing;}
 
+    /// Geometry deduplication mode: which geometrically identical geometries (meshes or
+    /// curves) are rendered as instances of a single canonical Arnold node instead of being
+    /// duplicated.
+    enum class GeometryDedupMode {
+        None = 0,       ///< No deduplication.
+        Instances = 1,  ///< Only point-instancer prototypes (the flattening case). Default.
+        All = 2         ///< Every eligible geometry, including plain non-instanced duplicates.
+    };
+
+    // Returns the active geometry deduplication mode.
+    GeometryDedupMode GetGeometryDedupMode () const {return _geometryDedupMode;}
+
+    // Return true if any geometry deduplication is enabled.
+    bool DeduplicateGeometry () const {return _geometryDedupMode != GeometryDedupMode::None;}
+
+    /// Geometry deduplication registry (see DeduplicateGeometry). These are called from the
+    /// geometry rprims (HdArnoldMesh, HdArnoldBasisCurves) to share a single canonical Arnold
+    /// node between geometrically identical geometries, rendering the duplicates as instances.
+    /// The @p hash the caller passes must already distinguish the Arnold node type, so a curve
+    /// and a mesh with a colliding geometry hash are never merged (see HdArnoldRprim).
+    ///
+    /// Registers @p candidate as a candidate for the geometry identified by @p hash.
+    /// Returns nullptr if @p candidate is (or remains) the canonical for that geometry -
+    /// the caller builds it as a normal shape. Otherwise returns the existing canonical
+    /// Arnold node that @p candidate should instance, and outputs its path in
+    /// @p canonicalPath (empty if the canonical node was adopted by the render delegate).
+    ///
+    /// @p candidate must be null when the caller's node is currently a dedup instance (it
+    /// is not a shareable geometry node): if the caller then becomes the canonical (nullptr
+    /// returned, @p pending false), the registry entry stays unpublished - no other rprim
+    /// is handed the node - and the caller must rebuild a real geometry node and call
+    /// PublishCanonicalGeometry. When this returns nullptr with @p pending set to true,
+    /// another rprim claimed this geometry but has not published its node yet: the caller
+    /// must keep its current state (it was queued and will be dirtied when the canonical is
+    /// published, converting on its next Sync).
+    ///
+    /// The call is idempotent: re-acquiring the same @p hash for an @p id that is already
+    /// registered against the live entry refreshes the association without double-counting.
+    HDARNOLD_API
+    AtNode* AcquireCanonicalGeometry(
+        const SdfPath& id, AtNode* candidate, uint64_t hash, SdfPath* canonicalPath, bool* pending = nullptr);
+
+    /// Publishes the real geometry node of a canonical previously acquired with a null
+    /// candidate (see AcquireCanonicalGeometry). Dirties any rprims that were queued on the
+    /// pending entry so they convert to instances of @p node on their next Sync.
+    HDARNOLD_API
+    void PublishCanonicalGeometry(const SdfPath& id, uint64_t hash, AtNode* node);
+
+    /// Releases the canonical relationship held by @p id (called when a geometry stops being
+    /// an instance, or before it is re-evaluated because its geometry changed).
+    HDARNOLD_API
+    void ReleaseCanonicalGeometry(const SdfPath& id);
+
+    /// Hands @p node, the canonical node owned by the rprim @p id, over to the render delegate
+    /// when other rprims still reference it, and returns true if it did.
+    ///
+    /// An Arnold instance does not copy its prototype's array parameters, it points at them
+    /// (nsides, vlist, vidxs, ... are flagged _skip_copy_on_instance), and only the prototype's
+    /// destructor frees them. Destroying a node that has been handed out as a canonical
+    /// therefore leaves every rprim that instances it - through a ginstance or through an
+    /// instancer's "nodes" - dereferencing freed arrays, which crashes on the next
+    /// AiNodeSetArray. The rprim owning a canonical must call this before it destroys or
+    /// repurposes that node (its geometry changed, it is no longer eligible for dedup, or it is
+    /// being deleted): on success the node is kept alive here until the last instance releases
+    /// it and the caller must relinquish ownership of it (HdArnoldShape::ReleaseShapeOwnership)
+    /// without destroying it, then build its own state into a new node.
+    ///
+    /// Returns false when nothing references the node (the caller keeps and owns it as usual).
+    HDARNOLD_API
+    bool HandOffCanonicalGeometry(const SdfPath& id, AtNode* node);
+
+    /// Called when a geometry rprim is destroyed. If @p id owns a canonical node still
+    /// referenced by instances, the render delegate adopts @p node (keeping it alive until
+    /// the last instance is released) and dirties the dependents so they re-evaluate;
+    /// it returns true so the caller relinquishes ownership of the node. Returns false
+    /// otherwise (the caller destroys the node normally).
+    HDARNOLD_API
+    bool OnGeometryDestroyed(const SdfPath& id, AtNode* node);
+
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
     bool HasCryptomatte() const {return _hasCryptomatte;}
@@ -860,6 +939,9 @@ private:
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
+    /// Source of unique names for the canonical geometry nodes the delegate adopts, which
+    /// outlive the rprim that created them (see _DetachAdoptedGeometry).
+    std::atomic<uint32_t> _adoptedGeometryCounter{0};
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
@@ -902,6 +984,36 @@ private:
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
 
+    /// Geometry deduplication registry (see DeduplicateGeometry / AcquireCanonicalGeometry).
+    struct CanonicalGeometry {
+        AtNode* node = nullptr;             ///< Arnold node acting as the shared prototype; null while the canonical rprim has not published its node yet (pending).
+        SdfPath canonicalPath;              ///< Path of the rprim owning the node (empty once adopted).
+        bool adopted = false;               ///< True once the owning rprim was destroyed and the delegate owns the node.
+        /// Rprims registered as instances of this entry. Holding the paths rather than just a
+        /// count is what keeps _geometryHashes and this map consistent: dropping an entry can
+        /// drop its duplicates' registrations at the same time, so a release can never carry a
+        /// path that was counted on an entry which no longer exists.
+        SdfPathSet duplicates;
+    };
+    std::mutex _canonicalGeometryMutex;
+    std::unordered_map<uint64_t, CanonicalGeometry> _canonicalGeometry;   ///< geometry hash -> canonical
+    /// rprim id -> the hash it is registered under. Invariant, on which the whole registry
+    /// relies for node lifetime: an entry here always designates a live _canonicalGeometry
+    /// entry that lists this rprim, as either its canonicalPath or one of its duplicates.
+    /// Every mutation of one map must therefore keep the other in step - in particular,
+    /// dropping a canonical drops its duplicates' registrations too.
+    std::unordered_map<SdfPath, uint64_t, SdfPath::Hash> _geometryHashes;
+    DependencyChangesQueue _dedupDirtyQueue;   ///< Duplicates that must be dirtied in HasPendingChanges so they re-evaluate their canonical.
+    /// Releases the registration of @p id against the entry for @p hash, and drops @p id from
+    /// _geometryHashes. Assumes _canonicalGeometryMutex is held. If a canonical node becomes
+    /// destroyable, it is returned so the caller can destroy it outside the lock.
+    AtNode* _ReleaseCanonicalGeometryLocked(const SdfPath& id, uint64_t hash);
+
+    /// Detaches a canonical node that the render delegate just adopted from the rprim @p id
+    /// that created it, so that it can outlive it as a pure shared prototype. Must be called
+    /// outside _canonicalGeometryMutex, and only once per node.
+    void _DetachAdoptedGeometry(AtNode* node, const SdfPath& id);
+
     std::mutex _coordSysCamerasMutex;
     std::unordered_map<AtNode*, float> _coordSysCameras; ///< coordSys camera node -> aperture ratio (vAp/hAp)
 
@@ -927,6 +1039,7 @@ private:
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
     bool _flattenInstancing = false;
+    GeometryDedupMode _geometryDedupMode = GeometryDedupMode::Instances;
     bool _forceIgnoreMotionBlur = false;
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
