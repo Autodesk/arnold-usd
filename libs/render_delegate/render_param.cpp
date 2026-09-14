@@ -446,4 +446,34 @@ const SdfPath& HdArnoldRenderParam::GetHydraRenderSettingsPrimPath() const
     return _hydraRenderSettingsPrimPath;
 }
 
+void HdArnoldImagerInterrupt::Interrupt()
+{
+    if (_hasInterrupted || _delegate == nullptr || _delegate->IsBatchContext() ||
+        _delegate->GetProceduralParent() != nullptr) {
+        return;
+    }
+    _hasInterrupted = true;
+#if ARNOLD_VERSION_NUM >= 70504
+    // Blocks until no thread is inside an imager evaluation, so the imager nodes and the shading
+    // trees they read can be edited safely.
+    AiImagerInterrupt(_delegate->GetRenderSession());
+#endif
+}
+
+void HdArnoldImagerInterrupt::Resume()
+{
+    if (!_hasInterrupted) {
+        return;
+    }
+    _hasInterrupted = false;
+#if ARNOLD_VERSION_NUM >= 70504
+    AiImagerResume(_delegate->GetRenderSession());
+#else
+    // Before AiImagerInterrupt()/AiImagerResume() existed, this hint was the only way to refresh the
+    // imagers without restarting the render (#2452), and the edits above raced whatever imager was
+    // evaluating at the time.
+    AiRenderSetHintBool(_delegate->GetRenderSession(), str::request_imager_update, true);
+#endif
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
