@@ -516,6 +516,9 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+    // Hydra tasks execute on the thread holding the GL context, so this is a safe point to free
+    // the textures render buffers dropped while syncing on some other thread.
+    _renderDelegate->FlushTextureDestructions();
 #if PXR_VERSION >= 2308
     // _GetHydraRenderSettingsPrim and HdArnoldRenderSettings (the Bprim
     // subclass used below) are only available when building against USD 23.08+.
@@ -627,6 +630,43 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
+    // We are checking if the current aov bindings match the ones we already created, if not,
+    // then rebuild the driver setup. This has to happen before anything reads _renderBuffers:
+    // hydra owns the buffers and destroys them when the bindings change -- placing a render
+    // settings prim mid render does exactly that -- and we only hold raw pointers to them.
+    HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
+    // These buffers are not supported, but we still need to allocate and set them up for hydra.
+    aovBindings.erase(
+        std::remove_if(
+            aovBindings.begin(), aovBindings.end(),
+            [](const HdRenderPassAovBinding& binding) -> bool {
+                if (binding.aovName == HdAovTokens->elementId || binding.aovName == HdAovTokens->instanceId ||
+                    binding.aovName == HdAovTokens->pointId) {
+                    // Set these buffers to converged, as we never write any data.
+                    if (binding.renderBuffer != nullptr && !binding.renderBuffer->IsConverged()) {
+                        auto* renderBuffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+                        if (Ai_likely(renderBuffer != nullptr)) {
+                            renderBuffer->SetConverged(true);
+                        }
+                    }
+                    return true;
+                } else {
+                    return false;
+                }
+            }),
+        aovBindings.end());
+
+    TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
+
+    const bool renderBuffersChanged = _RenderBuffersChanged(aovBindings);
+    if (renderBuffersChanged) {
+        // The Arnold side is rebuilt further down, but the pointers we are holding may already
+        // be dangling, so forget them now rather than zeroing or resizing freed buffers.
+        for (auto& buffer : _renderBuffers) {
+            buffer.second.buffer = nullptr;
+        }
+    }
+
     CameraUtilFraming newFraming = _GetFraming(renderPassState);
     GfVec2i delegateResolution = _renderDelegate->GetResolution();
     int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
@@ -670,7 +710,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
-                renderBuffer->SetHgi(_renderDelegate->IsAcceleratedViewport() ? _renderDelegate->GetHgi() : nullptr);
                 if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, _zeroData.data());
@@ -916,39 +955,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetPtr(options, str::subdiv_dicing_camera, (void*)subdivDicingCamera);
     }
 
-    // We are checking if the current aov bindings match the ones we already created, if not,
-    // then rebuild the driver setup.
-    HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
-    // These buffers are not supported, but we still need to allocate and set them up for hydra.
-    aovBindings.erase(
-        std::remove_if(
-            aovBindings.begin(), aovBindings.end(),
-            [](const HdRenderPassAovBinding& binding) -> bool {
-                if (binding.aovName == HdAovTokens->elementId || binding.aovName == HdAovTokens->instanceId ||
-                    binding.aovName == HdAovTokens->pointId) {
-                    // Set these buffers to converged, as we never write any data.
-                    if (binding.renderBuffer != nullptr && !binding.renderBuffer->IsConverged()) {
-                        auto* renderBuffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
-                        if (Ai_likely(renderBuffer != nullptr)) {
-                            renderBuffer->SetConverged(true);
-                        }
-                    }
-                    return true;
-                } else {
-                    return false;
-                }
-            }),
-        aovBindings.end());
-
-    TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
-
     // AOV bindings exists, so first we are checking if anything has changed.
     // If something has changed, then we rebuild the local storage class, and the outputs definition.
     // We expect Hydra to resize the render buffers.
     const bool needsDelegateProductsUpdate = _renderDelegate->NeedsDelegateProductsUpdate();
     
-    if (_RenderBuffersChanged(aovBindings) || needsDelegateProductsUpdate ||
-        updateAovs || updateImagers) {
+    // Toggling the accelerated viewport changes which AOVs get an Arnold output, so the outputs
+    // must be rebuilt even when the bindings themselves are unchanged.
+    if (renderBuffersChanged || needsDelegateProductsUpdate ||
+        acceleratedViewportChanged || updateAovs || updateImagers) {
         
         renderParam->Interrupt();
         if (_mainDriver)
@@ -1008,15 +1023,32 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // and treat it as Arnold would expect.
             bool isBeauty = binding.aovName == HdAovTokens->color;
             
-            if (_acceleratedViewport && !isBeauty && sourceName != HdAovTokens->depth) {
-                buffer.buffer->SetValid(false);                
-                continue;
-            }
-
             // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
             // an aov with the same name. We can't just check for the source name; for example: using a primvar
             // type and displaying a "color" or a "depth" user data is a valid use case.
             const auto isRaw = sourceType == _tokens->raw;
+
+            // The accelerated viewport only feeds the main driver's color and depth pointers, so
+            // every other AOV is skipped. Hosts name the beauty binding after their render var
+            // (Houdini uses "C") and identify it through sourceName, not aovName.
+            const bool isColorOrDepth =
+                sourceName == HdAovTokens->color || sourceName == HdAovTokens->depth;
+
+            // The host depth tests its own viewport geometry against ours, so depth has to reach
+            // it as a texture too. Arnold serves it from the running closest depth it keeps for
+            // the direct outputs pipeline (Z_accumulated), at full frame resolution.
+            const bool isGpuBacked = _acceleratedViewport && isRaw && isColorOrDepth;
+            buffer.buffer->SetHgi(isGpuBacked ? _renderDelegate->GetHgi() : nullptr);
+            if (_acceleratedViewport && !isBeauty && !(isRaw && isColorOrDepth)) {
+                // No Arnold output means nothing to read back: clearing the name keeps
+                // GetResource from asking the GPU for an AOV that isn't there. Zero it too, or
+                // the host keeps reading whatever the last non-accelerated render left behind --
+                // stale ids in the primId AOV pick the wrong prims.
+                buffer.buffer->SetAovName(TfToken());
+                buffer.buffer->Clear();
+                continue;
+            }
+
             AtString output;
             if (isRaw && sourceName == HdAovTokens->color) {
                 output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
@@ -1551,7 +1583,10 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
     }
     for (const auto& binding : aovBindings) {
         const auto it = _renderBuffers.find(binding.aovName);
-        if (it == _renderBuffers.end() || it->second.settings != binding.aovSettings) {
+        // The buffer pointer is part of the comparison: hydra can hand us a new buffer under
+        // an unchanged name and settings, and the one we stored is freed memory by then.
+        if (it == _renderBuffers.end() || it->second.settings != binding.aovSettings ||
+            it->second.buffer != dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer)) {
             return true;
         }
     }

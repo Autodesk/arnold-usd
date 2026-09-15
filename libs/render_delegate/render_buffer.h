@@ -144,16 +144,31 @@ public:
     /// Returns true if this buffer is backed by a GPU texture.
     bool HasGpuTexture() const { return static_cast<bool>(_texture); }
 
+    /// Zero the buffer's contents, leaving its allocation alone.
+    ///
+    /// An AOV that Arnold stops writing keeps whatever the last render left in it, which the
+    /// host goes on reading -- stale ids pick the wrong prims.
+    HDARNOLD_API
+    void Clear();
+
     /// Provide the Arnold AOV name used when calling AiGetRenderOutput on this buffer.
     HDARNOLD_API
-    void SetAovName(const TfToken& aovName) { _aovName = aovName; }
-
-    void SetValid(bool b) {_valid = b;}
+    void SetAovName(const TfToken& aovName)
+    {
+        if (_aovName != aovName) {
+            _readbackWarned = false;
+            _hasReadback = false;
+        }
+        _aovName = aovName;
+    }
 
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
     void _Deallocate() override;
+
+    /// Hand any GPU textures to the delegate, which frees them on the GL thread.
+    void _QueueTexturesForDestruction();
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
     /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
@@ -173,8 +188,9 @@ private:
     HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
     TfToken _aovName;                                ///< AOV name passed to AiGetRenderOutput.
-    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
-    bool _valid = true;
+    mutable bool _readbackWarned = false;            ///< Keeps a failing readback from warning every frame.
+    mutable bool _hasReadback = false;               ///< A readback has filled the textures at least once.
+    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by Unmap().
 };
 
 using HdArnoldRenderBufferStorage =

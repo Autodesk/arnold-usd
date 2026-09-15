@@ -177,7 +177,7 @@ driver_process_bucket
             bufferName = outputName;
         
         auto it = driverData->buffers.find(bufferName);
-        if (it != driverData->buffers.end()) {
+        if (it != driverData->buffers.end() && it->second != nullptr) {
             it->second->WriteBucket(
             bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
         } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
