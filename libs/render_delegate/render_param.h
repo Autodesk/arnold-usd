@@ -122,6 +122,37 @@ public:
     HDARNOLD_API
     void Restart();
 
+    /// End the render session so the next update begins a new one.
+    ///
+    /// The render device is bound when the session begins: AiRenderRestart() restarts the
+    /// passes of the existing session, so a session begun on the CPU keeps rendering on the CPU
+    /// however the options change. Ending it is the only way to pick up a new device.
+    void EndSession();
+
+    /// Whether the running session can serve AiGetRenderOutput.
+    ///
+    /// Both the render device and the direct outputs pipeline are bound when the session begins,
+    /// so this is not the same question as reading the options: those describe the session that
+    /// would be begun now.
+    ///
+    /// @return True if a GPU session with direct outputs is active
+    bool IsGpuSessionActive() const
+    {
+        return _sessionGpu.load(std::memory_order_acquire) &&
+               _sessionDirectOutputs.load(std::memory_order_acquire);
+    }
+
+    /// Whether the running session was begun with the given device and direct outputs setting.
+    ///
+    /// @param gpu Whether the GPU device is wanted
+    /// @param directOutputs Whether the direct outputs pipeline is wanted
+    /// @return True if the running session already matches
+    bool SessionMatches(bool gpu, bool directOutputs) const
+    {
+        return _sessionGpu.load(std::memory_order_acquire) == gpu &&
+               _sessionDirectOutputs.load(std::memory_order_acquire) == directOutputs;
+    }
+
     /// Gets the shutter range.
     ///
     /// @return Constant reference to the shutter range.
@@ -208,6 +239,8 @@ private:
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
+    std::atomic<bool> _sessionGpu{false};           ///< The running session was begun on the GPU.
+    std::atomic<bool> _sessionDirectOutputs{false}; ///< ... and with direct outputs enabled.
     std::atomic<bool> _needsRestart{false};
     /// Indicate if rendering has been aborted at one point or another.
     std::atomic<bool> _aborted{false};

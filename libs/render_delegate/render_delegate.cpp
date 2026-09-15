@@ -751,6 +751,59 @@ void HdArnoldRenderDelegate::_ApplyColorSpaces(AtNode* colorManager)
         AiNodeSetStr(colorManager, str::color_space_narrow, AtString(_colorSpaceNarrow.c_str()));
 }
 
+namespace {
+
+/// Apply options.render_device to the render session, reporting why it could not be done.
+///
+/// Setting the option on its own leaves the session on whatever device it was begun with, which
+/// is how a GPU viewport ends up quietly rendering on the CPU.
+///
+/// @param renderSession Session to select the device on
+void _ReportDeviceSelectError(AtDeviceSelectErrorCode errorCode)
+{
+    if (errorCode == AtDeviceSelectErrorCode::SUCCESS) {
+        return;
+    }
+    const char* reason = "unknown error";
+    switch (errorCode) {
+        case AtDeviceSelectErrorCode::FAILURE_NO_DEVICES_FOUND:
+            reason = "no compatible devices found";
+            break;
+        case AtDeviceSelectErrorCode::FAILURE_NAME:
+            reason = "no device matches options.gpu_default_names";
+            break;
+        case AtDeviceSelectErrorCode::FAILURE_MEMORY:
+            reason = "no device has options.gpu_default_min_memory_MB free";
+            break;
+        case AtDeviceSelectErrorCode::FAILURE_INVALID_ID:
+            reason = "invalid device id";
+            break;
+        case AtDeviceSelectErrorCode::FAILURE_UNSUPPORTED:
+            reason = "unsupported device";
+            break;
+        default:
+            break;
+    }
+    AiMsgWarning("[usd] could not select the render device, rendering on the CPU: %s", reason);
+}
+
+} // namespace
+
+void HdArnoldRenderDelegate::_SelectRenderDevice()
+{
+    AtRenderSession* renderSession = GetRenderSession();
+    _ReportDeviceSelectError(AiDeviceAutoSelect(renderSession));
+    // The device and the direct outputs pipeline are both bound when the session begins, and
+    // AiRenderRestart() restarts the passes of that same session. So a session begun on the CPU,
+    // or begun without direct outputs, keeps rendering that way however the options change --
+    // and AiGetRenderOutput refuses to serve it. Only a new session picks these up.
+    const bool wantsGpu = AiDeviceGetSelectedType(renderSession) == AI_DEVICE_TYPE_GPU;
+    const bool wantsDirectOutputs = AiNodeGetBool(_options, str::direct_outputs);
+    if (!_renderParam->SessionMatches(wantsGpu, wantsDirectOutputs)) {
+        _renderParam->EndSession();
+    }
+}
+
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
     // When husk/houdini changes frame, they set the new frame number via the render settings.
@@ -818,12 +871,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_acceleratedViewport) {
             AiNodeSetStr(_options, str::render_device, str::GPU);
             AiNodeSetBool(_options, str::direct_outputs, true);
+            _SelectRenderDevice();
         }
         else
         {
             _CheckForBoolValue(value, [&](const bool b) {
                 AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
-                AiDeviceAutoSelect(GetRenderSession());
+                _SelectRenderDevice();
             });
         }
     } else if (key == str::t_log_verbosity) {
@@ -976,14 +1030,19 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     else if (key == str::t_accelerated_viewport) {
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
         _CheckForBoolValue(value, [&](const bool b) {
+            if (b == _acceleratedViewport) {
+                // Hosts re-send the whole settings dict on every update, and reselecting the
+                // device tears the GPU context down and back up.
+                return;
+            }
             _acceleratedViewport = b;
             AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
             if (_acceleratedViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
             } else {
                 AiNodeSetStr(_options, str::render_device, _gpuRenderingEnabled ? str::GPU : str::CPU);
-                AiDeviceAutoSelect(GetRenderSession());
             }
+            _SelectRenderDevice();
         });
 #else
         AiMsgWarning(
@@ -1515,10 +1574,92 @@ HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
     return CreateBprim(typeId, SdfPath());
 }
 
+bool HdArnoldRenderDelegate::IsGpuSessionActive() const { return _renderParam->IsGpuSessionActive(); }
+
+void HdArnoldRenderDelegate::QueueTextureDestruction(HgiTextureHandle& texture)
+{
+    if (!texture) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+    _texturesToDestroy.push_back(texture);
+    texture = HgiTextureHandle();
+}
+
+void HdArnoldRenderDelegate::FlushTextureDestructions()
+{
+    std::vector<HgiTextureHandle> textures;
+    {
+        std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+        if (_texturesToDestroy.empty()) {
+            return;
+        }
+        textures.swap(_texturesToDestroy);
+    }
+    if (_hgi == nullptr) {
+        return;
+    }
+    for (auto& texture : textures) {
+        _hgi->DestroyTexture(&texture);
+    }
+}
+
+void HdArnoldRenderDelegate::_ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer)
+{
+    if (renderBuffer == nullptr || _universe == nullptr) {
+        return;
+    }
+    AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_DRIVER);
+    while (!AiNodeIteratorFinished(nodeIter)) {
+        AtNode* driver = AiNodeIteratorGetNext(nodeIter);
+        if (driver == nullptr || !AiNodeIs(driver, str::HdArnoldDriverMain)) {
+            continue;
+        }
+        for (const AtString& pointer : {str::color_pointer, str::depth_pointer, str::id_pointer}) {
+            if (AiNodeGetPtr(driver, pointer) == renderBuffer) {
+                AiNodeSetPtr(driver, pointer, nullptr);
+            }
+        }
+        AtArray* pointers = AiNodeGetArray(driver, str::buffer_pointers);
+        const unsigned int pointerCount = pointers != nullptr ? AiArrayGetNumElements(pointers) : 0;
+        for (unsigned int i = 0; i < pointerCount; ++i) {
+            if (AiArrayGetPtr(pointers, i) == renderBuffer) {
+                AiArraySetPtr(pointers, i, nullptr);
+            }
+        }
+        // node_update copied the parameters above into the driver's local data when the render
+        // started, and it only runs again on the next render restart.
+        auto* driverData = static_cast<DriverMainData*>(AiNodeGetLocalData(driver));
+        if (driverData == nullptr) {
+            continue;
+        }
+        if (driverData->colorBuffer == renderBuffer) {
+            driverData->colorBuffer = nullptr;
+        }
+        if (driverData->depthBuffer == renderBuffer) {
+            driverData->depthBuffer = nullptr;
+        }
+        if (driverData->idBuffer == renderBuffer) {
+            driverData->idBuffer = nullptr;
+        }
+        for (auto& buffer : driverData->buffers) {
+            if (buffer.second == renderBuffer) {
+                buffer.second = nullptr;
+            }
+        }
+    }
+    AiNodeIteratorDestroy(nodeIter);
+}
+
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 {
     // RenderBuffers can be in use in drivers.
     _renderParam->Interrupt();
+    // Interrupting parks the render threads, but the drivers keep pointing at this buffer, both
+    // on their parameters and in the local data node_update cached. The render pass only rewires
+    // them on its next execute, and the render can be restarted before that -- by which point
+    // these pointers are freed memory that Arnold happily writes buckets into.
+    _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
     delete bPrim;
 }
 
