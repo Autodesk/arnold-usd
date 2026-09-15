@@ -516,4 +516,60 @@ const SdfPath& HdArnoldRenderParam::GetHydraRenderSettingsPrimPath() const
     return _hydraRenderSettingsPrimPath;
 }
 
+// The interrupt/resume pair itself lives on HdArnoldRenderParam: a deferred resume (DeferResume)
+// outlives this object, and the refresh it requests has to be visible to UpdateRender(), which
+// decides whether the render still counts as converging.
+HdArnoldRenderParam* HdArnoldImagerInterrupt::_GetRenderParam() const
+{
+    if (_delegate == nullptr) {
+        return nullptr;
+    }
+    return reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
+}
+
+void HdArnoldImagerInterrupt::Interrupt()
+{
+    if (_hasInterrupted) {
+        return;
+    }
+    // Nothing to bracket in a batch render or under a procedural parent, matching
+    // HdArnoldRenderParam::Interrupt(): there we don't own the render loop and the host brackets its
+    // own edits. Under a procedural parent it would also deadlock, since this runs from inside the
+    // render's scene update, which Arnold counts as an imager reader - so it would wait on itself.
+    HdArnoldRenderParam* param = _GetRenderParam();
+    if (param == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
+        return;
+    }
+    _hasInterrupted = true;
+    // Blocks until no thread is inside an imager evaluation, so the imager nodes and the shading
+    // trees they read can be edited safely.
+    param->InterruptImagers();
+}
+
+void HdArnoldImagerInterrupt::Resume()
+{
+    if (!_hasInterrupted) {
+        return;
+    }
+    _hasInterrupted = false;
+    if (HdArnoldRenderParam* param = _GetRenderParam()) {
+        param->ResumeImagers();
+    }
+}
+
+void HdArnoldImagerInterrupt::DeferResume()
+{
+    if (!_hasInterrupted) {
+        return;
+    }
+    // Disarm this instance: the delegate owes the resume from here on, and issues it from
+    // HasPendingChanges() once the queued connections have been applied. HdArnoldRenderParam
+    // keeps the barrier's state, so UpdateRender() can lift it as a last resort if a frame ever
+    // takes a path that never gets there.
+    _hasInterrupted = false;
+    if (_delegate != nullptr) {
+        _delegate->RequestImagerUpdate();
+    }
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

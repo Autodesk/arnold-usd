@@ -739,7 +739,7 @@ public:
     /// incomplete - an imager evaluated in that window sees a null imager_shader.shader and passes
     /// the image through untouched. So the request is recorded here and issued from
     /// HasPendingChanges(), immediately after the connections are applied.
-    void RequestImagerUpdate() { _imagerUpdatePending.store(true, std::memory_order_release); }
+    void RequestImagerUpdate() const { _imagerUpdatePending.store(true, std::memory_order_release); }
 
 #if ARNOLD_VERSION_NUM > 70203
     const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
@@ -893,7 +893,9 @@ private:
     /// rendering.
     std::unique_ptr<HdArnoldRenderParam> _renderParam;
     /// Set by RequestImagerUpdate(), consumed by HasPendingChanges() once connections are applied.
-    std::atomic<bool> _imagerUpdatePending{false};
+    /// Mutable so a request can be recorded through a const delegate: it is a pending-work flag,
+    /// not part of the delegate's observable state.
+    mutable std::atomic<bool> _imagerUpdatePending{false};
     SdfPath _id;           ///< Path of the Render Delegate.
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
@@ -955,6 +957,7 @@ private:
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     bool _acceleratedViewport = false;
+    bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
 
     mutable std::mutex _nodeGraphNamesMutex;

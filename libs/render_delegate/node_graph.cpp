@@ -186,6 +186,14 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
+        // Editing a graph nothing but an imager reads doesn't invalidate the image already
+        // rendered, so instead of interrupting and restarting the render we quiesce the imagers,
+        // edit, and let Arnold re-run them over that image (#2452). Resumed once this frame's queued
+        // connections are applied, see the DeferResume() at the end of this scope; the destructor
+        // is the backstop. _imagerGraph is the whole test: a shading tree an imager_shader
+        // points at lives inside the imager node graph, so it is translated as part of this same
+        // HdArnoldNodeGraph rather than as a separate one.
+        HdArnoldImagerInterrupt imagerParam(_renderDelegate);
         const VtValue value = sceneDelegate->GetMaterialResource(GetId());
         bool nodeGraphChanged = false;
 
@@ -210,17 +218,12 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             // Do not interrupt the render if this is an imager graph, as imagers
-            // can be refreshed independantly of the render itself. The nodes are
-            // still about to be reset, re-created and possibly destroyed below,
-            // which an in-flight imager evaluation cannot be reading while it
-            // happens -- with imager_shader that includes a whole shader network
-            // behind the imager -- so park the imagers instead of the render.
-            if (_imagerGraph) {
-                if (param() != nullptr)
-                    param()->InterruptImagers();
-            } else {
+            // can be refreshed independantly of the render itself. We still have to stop
+            // them from reading the nodes we're about to edit, see imagerParam above.
+            if (_imagerGraph)
+                imagerParam.Interrupt();
+            else
                 param.Interrupt();
-            }
 
             const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
             // Before translation starts, we store the previous list of AtNodes
@@ -325,14 +328,14 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         if (_wasSyncedOnce && nodeGraphChanged) {
             _renderDelegate->DirtyDependency(id);
         }
-        // If this node graph is an imager graph, the render won't be interrupted / restarted
-        // and instead we ask for an imager-only update, which re-runs the imagers over the
-        // image already rendered #2452. The request cannot be issued here: the nodes above were
-        // reset and their connections are only applied later, by ProcessConnections(), so an
-        // imager evaluated now would see a null imager_shader.shader and pass the image through.
-        // HasPendingChanges() issues it (and resumes imager evaluation) once that has happened.
+        // Resuming imager evaluation here, where imagerParam goes out of scope, would refresh the
+        // imagers against a half-connected graph: the nodes above were reset by CreateArnoldNode
+        // and their connections are still queued, only applied later by ProcessConnections(). An
+        // imager evaluated in that window reads a null imager_shader.shader and passes the image
+        // through untouched. So hand the resume over to the render delegate, which issues it once
+        // the connections have been applied.
         if (_imagerGraph)
-            _renderDelegate->RequestImagerUpdate();
+            imagerParam.DeferResume();
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;

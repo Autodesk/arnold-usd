@@ -317,4 +317,69 @@ private:
     HdArnoldRenderParam* _param = nullptr;
 };
 
+/// Utility class to bracket edits to nodes that are only read by imagers.
+///
+/// An imager evaluation reads the imager nodes and, for imager_shader, the shading tree they point
+/// at. Those nodes must not be mutated while an evaluation is in flight, for the same reason the
+/// render has to be interrupted before editing render nodes - but unlike a render node, editing them
+/// does not invalidate what has already been rendered. So instead of interrupting and restarting the
+/// render (HdArnoldRenderParamInterrupt), Interrupt() quiesces imager evaluation only, and Resume()
+/// re-runs the imagers over the image already computed. The render threads keep going throughout.
+///
+/// Resume() is also called by the destructor, so the barrier Interrupt() closes is always reopened -
+/// leaving it closed would hold the render at its next pass. Like HdArnoldRenderParamInterrupt, only
+/// the first Interrupt() of an instance does anything, so it can be called on every edit.
+///
+/// A caller whose edits are not complete when this object goes out of scope calls DeferResume()
+/// instead, which hands the resume to the render delegate.
+class HdArnoldImagerInterrupt {
+public:
+    /// Constructor for HdArnoldImagerInterrupt.
+    ///
+    /// @param delegate Pointer to the Render Delegate owning the render session.
+    HdArnoldImagerInterrupt(const HdArnoldRenderDelegate* delegate) : _delegate(delegate) {}
+
+    /// Resumes imager evaluation if this instance interrupted it.
+    ~HdArnoldImagerInterrupt() { Resume(); }
+
+    HdArnoldImagerInterrupt(const HdArnoldImagerInterrupt&) = delete;
+    HdArnoldImagerInterrupt& operator=(const HdArnoldImagerInterrupt&) = delete;
+
+    /// Pauses imager evaluation, blocking until nothing is reading the imager shaders.
+    ///
+    /// Does nothing when called more than once, and nothing at all in a batch render or under a
+    /// procedural parent, matching HdArnoldRenderParam::Interrupt(): there we don't own the render
+    /// loop, and the host brackets its own edits. It would also deadlock under a procedural parent,
+    /// where this runs from inside the render's scene update, which Arnold counts as an imager
+    /// reader - so it would be waiting on itself.
+    HDARNOLD_API
+    void Interrupt();
+
+    /// Resumes imager evaluation and requests an imager refresh, so the edits show up. Does nothing
+    /// unless a preceding Interrupt() on this instance actually paused the imagers.
+    HDARNOLD_API
+    void Resume();
+
+    /// Hands this instance's pending Resume() to the render delegate, which issues it once the
+    /// frame's queued shader connections have been applied (HdArnoldRenderDelegate::HasPendingChanges).
+    ///
+    /// A shading tree is translated in two steps: the nodes are created and their parameters set,
+    /// then the connections between them are applied, later and in bulk. Between those steps the
+    /// graph is incomplete - an imager evaluated then reads a null imager_shader.shader and passes
+    /// the image through untouched - so a caller that translates a graph cannot resume at the end of
+    /// its own scope. Does nothing unless a preceding Interrupt() actually paused the imagers.
+    HDARNOLD_API
+    void DeferResume();
+
+private:
+    /// Returns the render param behind the delegate, or nullptr if there is none. The
+    /// interrupt/resume pair lives there, since a deferred resume outlives this object.
+    HdArnoldRenderParam* _GetRenderParam() const;
+
+    /// The render delegate, used to reach the render param. Never dereferenced without a null check.
+    const HdArnoldRenderDelegate* _delegate = nullptr;
+    /// Indicate if this instance paused imager evaluation, and so owes a Resume().
+    bool _hasInterrupted = false;
+};
+
 PXR_NAMESPACE_CLOSE_SCOPE
