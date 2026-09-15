@@ -813,6 +813,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
+        _CheckForBoolValue(value, [&](const bool b) { _gpuRenderingEnabled = b; });
 
         if (_acceleratedViewport) {
             AiNodeSetStr(_options, str::render_device, str::GPU);
@@ -974,13 +975,20 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     }
     else if (key == str::t_accelerated_viewport) {
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
-        if (value.IsHolding<bool>()) {
-            _acceleratedViewport = value.UncheckedGet<bool>();
+        _CheckForBoolValue(value, [&](const bool b) {
+            _acceleratedViewport = b;
             AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
             if (_acceleratedViewport) {
                 AiNodeSetStr(_options, str::render_device, str::GPU);
+            } else {
+                AiNodeSetStr(_options, str::render_device, _gpuRenderingEnabled ? str::GPU : str::CPU);
+                AiDeviceAutoSelect(GetRenderSession());
             }
-        }    
+        });
+#else
+        AiMsgWarning(
+            "[usd] accelerated_viewport render setting ignored - "
+            "SUPPORT_ACCELERATED_VIEWPORT was not defined at build time");
 #endif
     } else if (key == _tokens->batchCommandLine) {
         // Solaris-specific command line, it can have an argument "-o output.exr" to override
@@ -1180,6 +1188,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     _RemoveArnoldGlobalPrefix(_key, key);
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
+    } else if (key == str::t_accelerated_viewport) {
+        return VtValue(_acceleratedViewport);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
         AiRenderGetHintBool(GetRenderSession(), str::progressive, v);
