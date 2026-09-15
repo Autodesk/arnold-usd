@@ -931,6 +931,7 @@ private:
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     bool _acceleratedViewport = false;
+    bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
 
     mutable std::mutex _nodeGraphNamesMutex;
