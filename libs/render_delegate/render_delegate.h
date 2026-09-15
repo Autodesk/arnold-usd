@@ -663,8 +663,20 @@ public:
         if (_procParent && _isBatch) {
             AiNodeSetDisabled(node, true);
         }
-        else
+        else {
+            // Arnold refuses AiNodeDestroy() while the render is in flight, and used to leave the
+            // node alive but already dropped from our bookkeeping: the next translation created a
+            // node under the same name, collided with the survivor and got renamed to "", so the
+            // graph filled up with unreachable nodes. Every other caller interrupts the render
+            // before getting here, but an imager graph is deliberately re-translated without
+            // interrupting it (see HdArnoldNodeGraph::Sync) -- and AiImagerInterrupt() only gates
+            // imager evaluation, not the render threads -- so the interrupt has to happen here.
+            // A node being destroyed means the graph's topology changed, which needs a restart
+            // anyway; a parameter-only imager edit never reaches this point.
+            if (_renderParam != nullptr)
+                _renderParam->Interrupt();
             AiNodeDestroy(node);
+        }
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
@@ -718,6 +730,16 @@ public:
     }
 
     void ProcessConnections();
+
+    /// Requests an imager-only refresh of the image, to be issued once this frame's queued shader
+    /// connections have been applied.
+    ///
+    /// An imager graph re-translation (HdArnoldNodeGraph::Sync) resets its Arnold nodes and only
+    /// queues their connections, so between that Sync and ProcessConnections() the graph is
+    /// incomplete - an imager evaluated in that window sees a null imager_shader.shader and passes
+    /// the image through untouched. So the request is recorded here and issued from
+    /// HasPendingChanges(), immediately after the connections are applied.
+    void RequestImagerUpdate() { _imagerUpdatePending.store(true, std::memory_order_release); }
 
 #if ARNOLD_VERSION_NUM > 70203
     const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
@@ -870,6 +892,8 @@ private:
     /// This is shared with all the primitives, so they can control the flow of
     /// rendering.
     std::unique_ptr<HdArnoldRenderParam> _renderParam;
+    /// Set by RequestImagerUpdate(), consumed by HasPendingChanges() once connections are applied.
+    std::atomic<bool> _imagerUpdatePending{false};
     SdfPath _id;           ///< Path of the Render Delegate.
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.

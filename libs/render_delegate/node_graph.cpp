@@ -210,9 +210,17 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             // Do not interrupt the render if this is an imager graph, as imagers
-            // can be refreshed independantly of the render itself
-            if (!_imagerGraph)
+            // can be refreshed independantly of the render itself. The nodes are
+            // still about to be reset, re-created and possibly destroyed below,
+            // which an in-flight imager evaluation cannot be reading while it
+            // happens -- with imager_shader that includes a whole shader network
+            // behind the imager -- so park the imagers instead of the render.
+            if (_imagerGraph) {
+                if (param() != nullptr)
+                    param()->InterruptImagers();
+            } else {
                 param.Interrupt();
+            }
 
             const HdMaterialNetworkMap& materialNetworkmap = value.UncheckedGet<HdMaterialNetworkMap>();
             // Before translation starts, we store the previous list of AtNodes
@@ -318,9 +326,13 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             _renderDelegate->DirtyDependency(id);
         }
         // If this node graph is an imager graph, the render won't be interrupted / restarted
-        // and instead we just call this render hint that updates the imagers #2452
+        // and instead we ask for an imager-only update, which re-runs the imagers over the
+        // image already rendered #2452. The request cannot be issued here: the nodes above were
+        // reset and their connections are only applied later, by ProcessConnections(), so an
+        // imager evaluated now would see a null imager_shader.shader and pass the image through.
+        // HasPendingChanges() issues it (and resumes imager evaluation) once that has happened.
         if (_imagerGraph)
-            AiRenderSetHintBool(_renderDelegate->GetRenderSession(), str::request_imager_update, true);
+            _renderDelegate->RequestImagerUpdate();
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;

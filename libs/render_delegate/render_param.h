@@ -47,6 +47,7 @@
 #include "hdarnold.h"
 
 #include <chrono>
+#include <cstdint>
 #include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -121,6 +122,26 @@ public:
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
+
+    /// Parks imager evaluation so the imager nodes -- and, with imager_shader, the shader network they
+    /// point at -- can be edited while the render keeps going. Blocks until nothing is reading them, the
+    /// same way a render has to be interrupted before its nodes are edited. Pair it with ResumeImagers().
+    HDARNOLD_API
+    void InterruptImagers();
+    /// Lets imager evaluation continue and asks Arnold for an imager-only refresh: the imagers re-run over
+    /// the samples already computed, so nothing is re-rendered and no render progress is lost. Also starts
+    /// the IsImagerUpdateInFlight() window.
+    HDARNOLD_API
+    void ResumeImagers();
+    /// Whether the refresh requested by the last ResumeImagers() call may still be landing in the render
+    /// buffers. An imager refresh never goes through the render status: Arnold re-runs the imagers on its
+    /// own threads and the driver writes the new pixels straight into the render buffers, so a render that
+    /// has already reported Converged would never be read by the host again and the refreshed image would
+    /// stay invisible until something else restarted the render.
+    ///
+    /// @return True while the last requested imager refresh is still considered in flight.
+    HDARNOLD_API
+    bool IsImagerUpdateInFlight() const;
 
     /// Gets the shutter range.
     ///
@@ -219,6 +240,14 @@ private:
     /// constructor explicitly stores false into _needsRestart and _aborted but not into _paused — so the first
     /// UpdateRender call read uninitialized memory. Initialize all of them here for safety.
     std::atomic<bool> _paused{false};
+    /// Whether InterruptImagers() has parked imager evaluation and no ResumeImagers() has lifted it
+    /// yet. Keeps the interrupt idempotent across the several node graph Syncs a single frame can
+    /// carry, and lets UpdateRender() catch a park that was never lifted.
+    std::atomic<bool> _imagersInterrupted{false};
+    /// Steady-clock nanoseconds of the last ResumeImagers() call, 0 if there was none. See
+    /// IsImagerUpdateInFlight(). Stored as a plain integer count so it stays a lock-free atomic
+    /// everywhere, rather than relying on std::atomic<time_point> being one.
+    std::atomic<int64_t> _imagerUpdateTime{0};
     /// Indicate if rendering has been stopped by Stop() and must stay stopped until Restart()/Resume(). Distinct
     /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
     /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.

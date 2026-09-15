@@ -2053,6 +2053,16 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     // If we have connections in our stack, it means that some nodes were re-exported, 
     // and therefore that the render was already interrupted
     ProcessConnections();
+
+    // An imager graph is the exception to the comment above: it is re-translated without
+    // interrupting the render (see HdArnoldNodeGraph::Sync), so its refresh cannot be requested
+    // from Sync - at that point its nodes have been reset and their connections are still sitting
+    // in the queue that ProcessConnections() has only just drained. Request it here, with the
+    // graph whole again; the imagers have been parked since Sync, so nothing evaluated the
+    // half-connected state in between.
+    if (_imagerUpdatePending.exchange(false, std::memory_order_acq_rel) && _renderParam != nullptr) {
+        _renderParam->ResumeImagers();
+    }
     return changes;
 }
 
