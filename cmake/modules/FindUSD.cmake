@@ -58,16 +58,33 @@ macro(setup_usd_python)
 endmacro()
 
 macro(check_compositor)
-    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
-        file(STRINGS
-            "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
-            _usd_tmp
-            REGEX "UpdateColor\([^)]*\)")
-        # Check if `HdFormat format` is in the found string.
-        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
-            set(USD_HAS_UPDATED_COMPOSITOR ON)
+    # USD_INCLUDE_DIR can be a semicolon-separated list of include directories (e.g. when
+    # sourced from Houdini's INTERFACE_INCLUDE_DIRECTORIES), so check each entry individually
+    # rather than concatenating the whole list into a single, invalid path.
+    foreach (_usd_include_dir ${USD_INCLUDE_DIR})
+        if (EXISTS "${_usd_include_dir}/pxr/imaging/hdx/compositor.h")
+            file(STRINGS
+                "${_usd_include_dir}/pxr/imaging/hdx/compositor.h"
+                _usd_tmp
+                REGEX "UpdateColor\([^)]*\)")
+            # Check if `HdFormat format` is in the found string.
+            if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
+                set(USD_HAS_UPDATED_COMPOSITOR ON)
+            endif ()
         endif ()
-    endif ()
+    endforeach ()
+endmacro()
+
+# Some USD distributions (e.g. headless/static builds) are compiled without OpenGL
+# support and therefore don't ship the hgiGL headers needed for the fast viewport code path.
+macro(check_hgi_gl)
+    # See check_compositor() above for why USD_INCLUDE_DIR must be iterated rather than
+    # used directly as a single path.
+    foreach (_usd_include_dir ${USD_INCLUDE_DIR})
+        if (EXISTS "${_usd_include_dir}/pxr/imaging/hgiGL/texture.h")
+            set(USD_HAS_HGI_GL ON)
+        endif ()
+    endforeach ()
 endmacro()
 
 if (MAYA_LOCATION AND MAYAUSD_LOCATION)
@@ -223,7 +240,9 @@ if (HOUDINI_LOCATION)
         message(STATUS "USD version: ${USD_VERSION}")
 
         # List of usd libraries we need for this project
-        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL)
+        # garch is needed alongside hgi/hgiGL by the accelerated viewport code path
+        # (SUPPORT_ACCELERATED_VIEWPORT), which references garch's GLApi (glGetIntegerv, ...).
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js;hgi;hgiGL;garch)
         # H21 is USD 0.25.5 but still needs the separate ndr lib, so a version check is the
         # wrong discriminator. H22 drops it, and the loop below then defines no target.
         list(APPEND ARNOLD_USD_LIBS_ ndr)
@@ -300,6 +319,7 @@ if (HOUDINI_LOCATION)
         endif()
         
         check_compositor()
+        check_hgi_gl()
 
         # usdGenSchema
         # HINTS, not PATHS: CMake searches PATHS *after* the default system paths, so a
