@@ -51,6 +51,19 @@ void _MsgStatusCallback(int logmask, int severity, const char* msgString, AtPara
     static_cast<HdArnoldRenderParam*>(userPtr)->SetCachedLogMessage(msgString);
 }
 
+// How long an imager-only refresh is considered to be still in flight after it was requested, see
+// IsImagerUpdateInFlight(). Imagers are a post-process over the image already rendered and normally land
+// within a couple of milliseconds; the window only has to be wide enough for the host to tick us at least
+// once more, so the refreshed buffers get read and presented.
+constexpr auto k_imager_update_window = std::chrono::milliseconds(250);
+
+int64_t NowNs()
+{
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
 } // namespace
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_DEBUG_SCENE, "", "Optionally save out the arnold scene before rendering.");
@@ -84,6 +97,14 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
     if (_delegate == nullptr) {
         return Status::Aborted;
     }
+    // An imager graph Sync parks imager evaluation and HasPendingChanges() lifts it once the graph's
+    // connections have been applied - which is always before this point in a frame. Finding it still
+    // parked here means that frame took a path that never got there, so lift it rather than leave
+    // imager evaluation gated for the rest of the render.
+    if (_imagersInterrupted.load(std::memory_order_acquire)) {
+        ResumeImagers();
+    }
+
     const auto aborted = _aborted.load(std::memory_order_acquire);
     // Checking early if the render was aborted earlier.
     if (aborted) {
@@ -143,6 +164,13 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
                 
                 ResetStartTimer();
 
+                return Status::Converging;
+            }
+            // An imager-only refresh (see HdArnoldNodeGraph::Sync on an imager graph) deliberately does
+            // not restart the render, so the status stays FINISHED throughout. Keep reporting Converging
+            // until the refresh has had a chance to land in the render buffers, otherwise the host stops
+            // reading them and never presents the new image.
+            if (IsImagerUpdateInFlight()) {
                 return Status::Converging;
             }
             StopRenderMsgLog();
@@ -226,6 +254,48 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             break;
     }
     return Status::Converging;
+}
+
+void HdArnoldRenderParam::InterruptImagers()
+{
+    // Same exclusions as Interrupt(): in a batch render nothing is being displayed as it is computed, and
+    // under a procedural parent we do not own the render session driving the imagers.
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr)
+        return;
+#if ARNOLD_VERSION_NUM >= 70504
+    // Every imager graph Sync in a frame asks for this, but a single ResumeImagers() lifts it, so only
+    // park once.
+    if (_imagersInterrupted.exchange(true, std::memory_order_acq_rel))
+        return;
+    AtRenderSession* session = _delegate->GetRenderSession();
+    // AiImagerInterrupt() blocks until no imager evaluation is reading the imager shaders. There cannot be
+    // one before AiRenderBegin(), and calling into a session that has not started has nothing to park.
+    if (AiRenderGetStatus(session) != AI_RENDER_STATUS_NOT_STARTED)
+        AiImagerInterrupt(session);
+#endif
+}
+
+void HdArnoldRenderParam::ResumeImagers()
+{
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr)
+        return;
+    AtRenderSession* session = _delegate->GetRenderSession();
+#if ARNOLD_VERSION_NUM >= 70504
+    _imagersInterrupted.store(false, std::memory_order_release);
+    // Resuming is equivalent to setting the request_imager_update hint, there is no need to do both.
+    AiImagerResume(session);
+#else
+    AiRenderSetHintBool(session, str::request_imager_update, true);
+#endif
+    _imagerUpdateTime.store(NowNs(), std::memory_order_release);
+}
+
+bool HdArnoldRenderParam::IsImagerUpdateInFlight() const
+{
+    const int64_t requested = _imagerUpdateTime.load(std::memory_order_acquire);
+    if (requested == 0)
+        return false;
+    return std::chrono::nanoseconds(NowNs() - requested) < k_imager_update_window;
 }
 
 void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus, bool clearPaused)
@@ -446,18 +516,34 @@ const SdfPath& HdArnoldRenderParam::GetHydraRenderSettingsPrimPath() const
     return _hydraRenderSettingsPrimPath;
 }
 
+// The interrupt/resume pair itself lives on HdArnoldRenderParam: a deferred resume (DeferResume)
+// outlives this object, and the refresh it requests has to be visible to UpdateRender(), which
+// decides whether the render still counts as converging.
+HdArnoldRenderParam* HdArnoldImagerInterrupt::_GetRenderParam() const
+{
+    if (_delegate == nullptr) {
+        return nullptr;
+    }
+    return reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
+}
+
 void HdArnoldImagerInterrupt::Interrupt()
 {
-    if (_hasInterrupted || _delegate == nullptr || _delegate->IsBatchContext() ||
-        _delegate->GetProceduralParent() != nullptr) {
+    if (_hasInterrupted) {
+        return;
+    }
+    // Nothing to bracket in a batch render or under a procedural parent, matching
+    // HdArnoldRenderParam::Interrupt(): there we don't own the render loop and the host brackets its
+    // own edits. Under a procedural parent it would also deadlock, since this runs from inside the
+    // render's scene update, which Arnold counts as an imager reader - so it would wait on itself.
+    HdArnoldRenderParam* param = _GetRenderParam();
+    if (param == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
         return;
     }
     _hasInterrupted = true;
-#if ARNOLD_VERSION_NUM >= 70504
     // Blocks until no thread is inside an imager evaluation, so the imager nodes and the shading
     // trees they read can be edited safely.
-    AiImagerInterrupt(_delegate->GetRenderSession());
-#endif
+    param->InterruptImagers();
 }
 
 void HdArnoldImagerInterrupt::Resume()
@@ -466,14 +552,24 @@ void HdArnoldImagerInterrupt::Resume()
         return;
     }
     _hasInterrupted = false;
-#if ARNOLD_VERSION_NUM >= 70504
-    AiImagerResume(_delegate->GetRenderSession());
-#else
-    // Before AiImagerInterrupt()/AiImagerResume() existed, this hint was the only way to refresh the
-    // imagers without restarting the render (#2452), and the edits above raced whatever imager was
-    // evaluating at the time.
-    AiRenderSetHintBool(_delegate->GetRenderSession(), str::request_imager_update, true);
-#endif
+    if (HdArnoldRenderParam* param = _GetRenderParam()) {
+        param->ResumeImagers();
+    }
+}
+
+void HdArnoldImagerInterrupt::DeferResume()
+{
+    if (!_hasInterrupted) {
+        return;
+    }
+    // Disarm this instance: the delegate owes the resume from here on, and issues it from
+    // HasPendingChanges() once the queued connections have been applied. HdArnoldRenderParam
+    // keeps the barrier's state, so UpdateRender() can lift it as a last resort if a frame ever
+    // takes a path that never gets there.
+    _hasInterrupted = false;
+    if (_delegate != nullptr) {
+        _delegate->RequestImagerUpdate();
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

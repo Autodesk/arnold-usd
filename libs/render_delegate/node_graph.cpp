@@ -188,8 +188,9 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         HdArnoldRenderParamInterrupt param(renderParam);
         // Editing a graph nothing but an imager reads doesn't invalidate the image already
         // rendered, so instead of interrupting and restarting the render we quiesce the imagers,
-        // edit, and let Arnold re-run them over that image (#2452). Resumed by the destructor, at
-        // the end of this scope. _imagerGraph is the whole test: a shading tree an imager_shader
+        // edit, and let Arnold re-run them over that image (#2452). Resumed once this frame's queued
+        // connections are applied, see the DeferResume() at the end of this scope; the destructor
+        // is the backstop. _imagerGraph is the whole test: a shading tree an imager_shader
         // points at lives inside the imager node graph, so it is translated as part of this same
         // HdArnoldNodeGraph rather than as a separate one.
         HdArnoldImagerInterrupt imagerParam(_renderDelegate);
@@ -327,6 +328,14 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         if (_wasSyncedOnce && nodeGraphChanged) {
             _renderDelegate->DirtyDependency(id);
         }
+        // Resuming imager evaluation here, where imagerParam goes out of scope, would refresh the
+        // imagers against a half-connected graph: the nodes above were reset by CreateArnoldNode
+        // and their connections are still queued, only applied later by ProcessConnections(). An
+        // imager evaluated in that window reads a null imager_shader.shader and passes the image
+        // through untouched. So hand the resume over to the render delegate, which issues it once
+        // the connections have been applied.
+        if (_imagerGraph)
+            imagerParam.DeferResume();
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;
