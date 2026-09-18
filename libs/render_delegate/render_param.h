@@ -122,6 +122,23 @@ public:
     HDARNOLD_API
     void Restart();
 
+    /// Quiesces imager evaluation (blocking) so nodes only an imager reads can be edited, without
+    /// interrupting the render. Deferred like Interrupt()/_needsRestart, and for the same reason:
+    /// HdArnoldNodeGraph::Sync only queues its connections, ProcessConnections() applies them later,
+    /// so the reopen can't be scoped to the caller. Inert in batch or under a procedural parent
+    /// (where it would deadlock), matching Interrupt(); ResumeImagers() repeats those guards.
+    HDARNOLD_API
+    void ImagerInterrupt();
+    /// Reopens the barrier closed by ImagerInterrupt() and refreshes the imagers. Does nothing
+    /// unless a resume is owed: on a finished render AiImagerResume() restarts an imager-only pass,
+    /// so an unconditional call would knock a converged render back to converging every frame.
+    HDARNOLD_API
+    void ResumeImagers();
+    /// Drops any queued restart / imager resume without acting on it, for teardown. Leaves _paused
+    /// and _stopped alone - they are state, and clearing _stopped would *permit* a restart.
+    HDARNOLD_API
+    void ClearPendingUpdates();
+
     /// Gets the shutter range.
     ///
     /// @return Constant reference to the shutter range.
@@ -223,6 +240,10 @@ private:
     /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
     /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.
     std::atomic<bool> _stopped{false};
+    /// Indicate that ImagerInterrupt() closed Arnold's imager barrier, so a ResumeImagers() is owed. A debt, not a
+    /// latch on the interrupt itself: Syncs run in parallel and each caller needs AiImagerInterrupt()'s blocking
+    /// drain, so the call is always issued, and Arnold's flag-based barrier balances N interrupts with one resume.
+    std::atomic<bool> _imagerInterrupted{false};
 
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
@@ -271,6 +292,17 @@ public:
         }
     }
 
+    /// The counterpart of Interrupt() for imager graphs: closes Arnold's imager barrier instead of
+    /// stopping the render, latched once per instance the same way. Unlike Interrupt() the reopen
+    /// is not scoped here - see HdArnoldRenderParam::ImagerInterrupt().
+    void ImagerInterrupt()
+    {
+        if (_param != nullptr && !_hasImagerInterrupted) {
+            _hasImagerInterrupted = true;
+            _param->ImagerInterrupt();
+        }
+    }
+
     /// Returns a constant pointer to HdArnoldRenderParam.
     ///
     /// @return Const pointer to HdArnoldRenderParam.
@@ -284,55 +316,10 @@ public:
 private:
     /// Indicate if the render has been interrupted already.
     bool _hasInterrupted = false;
+    /// Indicate if the imager barrier has been closed already by this instance.
+    bool _hasImagerInterrupted = false;
     /// Pointer to the Arnold Render Param struct held inside.
     HdArnoldRenderParam* _param = nullptr;
-};
-
-/// Utility class to bracket edits to nodes that are only read by imagers.
-///
-/// An imager evaluation reads the imager nodes and, for imager_shader, the shading tree they point
-/// at. Those nodes must not be mutated while an evaluation is in flight, for the same reason the
-/// render has to be interrupted before editing render nodes - but unlike a render node, editing them
-/// does not invalidate what has already been rendered. So instead of interrupting and restarting the
-/// render (HdArnoldRenderParamInterrupt), Interrupt() quiesces imager evaluation only, and Resume()
-/// re-runs the imagers over the image already computed. The render threads keep going throughout.
-///
-/// Resume() is also called by the destructor, so the barrier Interrupt() closes is always reopened -
-/// leaving it closed would hold the render at its next pass. Like HdArnoldRenderParamInterrupt, only
-/// the first Interrupt() of an instance does anything, so it can be called on every edit.
-class HdArnoldImagerInterrupt {
-public:
-    /// Constructor for HdArnoldImagerInterrupt.
-    ///
-    /// @param delegate Pointer to the Render Delegate owning the render session.
-    HdArnoldImagerInterrupt(const HdArnoldRenderDelegate* delegate) : _delegate(delegate) {}
-
-    /// Resumes imager evaluation if this instance interrupted it.
-    ~HdArnoldImagerInterrupt() { Resume(); }
-
-    HdArnoldImagerInterrupt(const HdArnoldImagerInterrupt&) = delete;
-    HdArnoldImagerInterrupt& operator=(const HdArnoldImagerInterrupt&) = delete;
-
-    /// Pauses imager evaluation, blocking until nothing is reading the imager shaders.
-    ///
-    /// Does nothing when called more than once, and nothing at all in a batch render or under a
-    /// procedural parent, matching HdArnoldRenderParam::Interrupt(): there we don't own the render
-    /// loop, and the host brackets its own edits. It would also deadlock under a procedural parent,
-    /// where this runs from inside the render's scene update, which Arnold counts as an imager
-    /// reader - so it would be waiting on itself.
-    HDARNOLD_API
-    void Interrupt();
-
-    /// Resumes imager evaluation and requests an imager refresh, so the edits show up. Does nothing
-    /// unless a preceding Interrupt() on this instance actually paused the imagers.
-    HDARNOLD_API
-    void Resume();
-
-private:
-    /// The render delegate, used to reach the render session. Never dereferenced without a null check.
-    const HdArnoldRenderDelegate* _delegate = nullptr;
-    /// Indicate if this instance paused imager evaluation, and so owes a Resume().
-    bool _hasInterrupted = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

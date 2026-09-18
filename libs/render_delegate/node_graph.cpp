@@ -166,6 +166,12 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
     // a camera_projection shader connected to a camera.
     _renderDelegate->ClearDependencies(GetId());
 
+    HdArnoldRenderParamInterrupt param(_renderDelegate->GetRenderParam());
+    if (_imagerGraph)
+        param.ImagerInterrupt();
+    else
+        param.Interrupt();
+
     // Ensure all AtNodes created for this node graph are properly deleted
     for (const auto& node : _nodes) {
         if (node.second)
@@ -186,13 +192,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
-        // Editing a graph nothing but an imager reads doesn't invalidate the image already
-        // rendered, so instead of interrupting and restarting the render we quiesce the imagers,
-        // edit, and let Arnold re-run them over that image (#2452). Resumed by the destructor, at
-        // the end of this scope. _imagerGraph is the whole test: a shading tree an imager_shader
-        // points at lives inside the imager node graph, so it is translated as part of this same
-        // HdArnoldNodeGraph rather than as a separate one.
-        HdArnoldImagerInterrupt imagerParam(_renderDelegate);
+        
         const VtValue value = sceneDelegate->GetMaterialResource(GetId());
         bool nodeGraphChanged = false;
 
@@ -216,11 +216,11 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         }
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
-            // Do not interrupt the render if this is an imager graph, as imagers
-            // can be refreshed independantly of the render itself. We still have to stop
-            // them from reading the nodes we're about to edit, see imagerParam above.
+            // Do not interrupt the render if this is an imager graph, as imagers can be refreshed
+            // independantly of the render itself. We still have to stop them from reading the nodes
+            // we're about to edit; that barrier is reopened after ProcessConnections().
             if (_imagerGraph)
-                imagerParam.Interrupt();
+                param.ImagerInterrupt();
             else
                 param.Interrupt();
 
