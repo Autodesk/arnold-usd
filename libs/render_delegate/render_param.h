@@ -138,6 +138,13 @@ public:
     /// and _stopped alone - they are state, and clearing _stopped would *permit* a restart.
     HDARNOLD_API
     void ClearPendingUpdates();
+    /// Returns whether Arnold's render threads are running, i.e. whether the scene is unsafe to
+    /// edit in ways that need the render parked - destroying a node in particular. Interrupt()
+    /// parks the render, ImagerInterrupt() deliberately does not.
+    ///
+    /// @return True if a render is in progress.
+    HDARNOLD_API
+    bool IsRenderInProgress() const;
 
     /// Gets the shutter range.
     ///

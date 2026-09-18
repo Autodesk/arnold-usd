@@ -166,11 +166,10 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
     // a camera_projection shader connected to a camera.
     _renderDelegate->ClearDependencies(GetId());
 
+    // A real interrupt even for an imager graph: we destroy the nodes below, which needs the render
+    // parked, and the graph going away changes the driver's imager chain anyway.
     HdArnoldRenderParamInterrupt param(_renderDelegate->GetRenderParam());
-    if (_imagerGraph)
-        param.ImagerInterrupt();
-    else
-        param.Interrupt();
+    param.Interrupt();
 
     // Ensure all AtNodes created for this node graph are properly deleted
     for (const auto& node : _nodes) {
@@ -308,9 +307,13 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             _RebuildCoordSysRemaps(sceneDelegate->GetRenderIndex());
             // Loop through previous AtNodes that were created for this node graph.
             // If they're not empty in this list, it means that they're not used anymore.
-            // Let's delete the unused ones
+            // Let's delete the unused ones.
+            // An imager edit doesn't park the render, and Arnold refuses to destroy a node while it
+            // is running. Leave them registered in _nodes instead, so they stay reusable by name:
+            // an imager graph is small, so what this leaks until the graph is removed is bounded.
+            const bool canDestroy = !_imagerGraph || param() == nullptr || !param()->IsRenderInProgress();
             for (const auto& previousNode : _previousNodes) {
-                if (previousNode.second) {
+                if (previousNode.second && canDestroy) {
                     // Destroy the arnold node
                     _renderDelegate->DestroyArnoldNode(previousNode.second);
                     // Remove this pointer from our list of nodes

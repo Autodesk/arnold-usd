@@ -485,6 +485,15 @@ void HdArnoldRenderParam::ResumeImagers()
 #endif
 }
 
+bool HdArnoldRenderParam::IsRenderInProgress() const
+{
+    if (_delegate == nullptr) {
+        return false;
+    }
+    const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
+    return status == AI_RENDER_STATUS_RENDERING || status == AI_RENDER_STATUS_RESTARTING;
+}
+
 void HdArnoldRenderParam::ClearPendingUpdates()
 {
     _needsRestart.store(false, std::memory_order_release);
