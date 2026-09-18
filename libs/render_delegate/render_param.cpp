@@ -67,6 +67,7 @@ HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _de
     _aborted.store(false, std::memory_order::memory_order_release);
     _paused.store(false, std::memory_order::memory_order_release);
     _stopped.store(false, std::memory_order::memory_order_release);
+    _imagerInterrupted.store(false, std::memory_order::memory_order_release);
 
     ResetStartTimer();
 
@@ -446,34 +447,57 @@ const SdfPath& HdArnoldRenderParam::GetHydraRenderSettingsPrimPath() const
     return _hydraRenderSettingsPrimPath;
 }
 
-void HdArnoldImagerInterrupt::Interrupt()
+void HdArnoldRenderParam::ImagerInterrupt()
 {
-    if (_hasInterrupted || _delegate == nullptr || _delegate->IsBatchContext() ||
-        _delegate->GetProceduralParent() != nullptr) {
+    // Same guards as Interrupt(), repeated in ResumeImagers().
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
         return;
     }
-    _hasInterrupted = true;
+    // Raise the debt before closing the barrier: storing it afterwards leaves a window where the
+    // barrier is closed and nothing knows a resume is owed, gating the imagers for good.
+    _imagerInterrupted.store(true, std::memory_order_release);
 #if ARNOLD_VERSION_NUM >= 70504
-    // Blocks until no thread is inside an imager evaluation, so the imager nodes and the shading
-    // trees they read can be edited safely.
+    // Blocks until no thread is inside an imager evaluation. Issued on every call, not just the
+    // first: each caller needs that drain to have returned before it edits a node.
     AiImagerInterrupt(_delegate->GetRenderSession());
 #endif
 }
 
-void HdArnoldImagerInterrupt::Resume()
+void HdArnoldRenderParam::ResumeImagers()
 {
-    if (!_hasInterrupted) {
+    // Claim the debt, so concurrent callers can't double-resume. No lock of ours is held across the
+    // Arnold call below.
+    if (!_imagerInterrupted.exchange(false, std::memory_order_acq_rel)) {
         return;
     }
-    _hasInterrupted = false;
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
+        return;
+    }
+    // A failed render has been through AiRenderEnd(): no pass is left to serve the refresh.
+    if (_aborted.load(std::memory_order_acquire)) {
+        return;
+    }
 #if ARNOLD_VERSION_NUM >= 70504
     AiImagerResume(_delegate->GetRenderSession());
 #else
-    // Before AiImagerInterrupt()/AiImagerResume() existed, this hint was the only way to refresh the
-    // imagers without restarting the render (#2452), and the edits above raced whatever imager was
-    // evaluating at the time.
+    // Pre-7.5.4 there is no barrier, only this refresh hint (#2452).
     AiRenderSetHintBool(_delegate->GetRenderSession(), str::request_imager_update, true);
 #endif
+}
+
+bool HdArnoldRenderParam::IsRenderInProgress() const
+{
+    if (_delegate == nullptr) {
+        return false;
+    }
+    const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
+    return status == AI_RENDER_STATUS_RENDERING || status == AI_RENDER_STATUS_RESTARTING;
+}
+
+void HdArnoldRenderParam::ClearPendingUpdates()
+{
+    _needsRestart.store(false, std::memory_order_release);
+    _imagerInterrupted.store(false, std::memory_order_release);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

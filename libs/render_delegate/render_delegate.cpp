@@ -698,6 +698,10 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
         }
     }
     _renderParam->Interrupt();
+    // Drop anything queued instead of acting on it: nothing will poll for it again. We can't be
+    // holding an imager barrier for a session that outlives us - only the procedural passes an
+    // external universe, always with a procedural parent, which ImagerInterrupt() skips.
+    _renderParam->ClearPendingUpdates();
     if (_renderDelegateOwnsUniverse) {
         AiRenderSessionDestroy(GetRenderSession());
         AiUniverseDestroy(_universe);
@@ -2060,9 +2064,12 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         }
     }
 
-    // If we have connections in our stack, it means that some nodes were re-exported, 
+    // If we have connections in our stack, it means that some nodes were re-exported,
     // and therefore that the render was already interrupted
     ProcessConnections();
+    // Now the queued links are applied, it's safe for an imager to read those nodes again. This
+    // can't live in UpdateRender(), which our callers skip for the whole frame when we return true.
+    _renderParam->ResumeImagers();
     return changes;
 }
 
