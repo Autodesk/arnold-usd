@@ -527,7 +527,12 @@ VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
     if (_renderDelegate != nullptr && _renderDelegate->IsAcceleratedViewport()) {
         AtRenderSession *rs = _renderDelegate->GetRenderSession();
         const auto status = rs ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
-        if (status != AI_RENDER_STATUS_NOT_STARTED) {
+        // A started render is not enough: AiGetRenderOutput() must not be called before Arnold has actually
+        // produced a viewport frame, which the render update callback reports (see
+        // HdArnoldRenderParam::HasViewportUpdate). Until then there is no resource to hand back.
+        auto* renderParam = static_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+        if (status != AI_RENDER_STATUS_NOT_STARTED && renderParam != nullptr &&
+            renderParam->HasViewportUpdate()) {
             auto* self = const_cast<HdArnoldRenderBuffer*>(this);
             self->EnsureGpuTexture();
             std::lock_guard<std::mutex> guard(self->_mutex);
