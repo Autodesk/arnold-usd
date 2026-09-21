@@ -222,11 +222,31 @@ namespace {
 //
 // The texture format hard-coded to HgiFormatFloat32Vec4 (GL_RGBA32F) regardless of the
 // Hd-side format, because that is what AiGetRenderOutput expects to write into. The Hd-side
-// _format is unchanged so CPU consumers (and Hydra's format introspection) keep seeing
-// what was requested; the actual GL texture sampled by the compositor reads its format
-// from the Hgi descriptor, which is always RGBA32F.
+/// Map an AOV's format onto the texture it is copied into.
+///
+/// The texture has to match the data byte for byte: a single channel float AOV copied into an
+/// RGBA32F texture lands in the first quarter of every row.
+///
+/// @param format AOV format
+/// @return Matching Hgi format
+HgiFormat _GetHgiFormat(HdFormat format)
+{
+    switch (format) {
+        case HdFormatFloat32:
+            return HgiFormatFloat32;
+        case HdFormatFloat32Vec2:
+            return HgiFormatFloat32Vec2;
+        case HdFormatFloat32Vec3:
+            return HgiFormatFloat32Vec3;
+        case HdFormatInt32:
+            return HgiFormatInt32;
+        default:
+            return HgiFormatFloat32Vec4;
+    }
+}
+
 uint32_t _CreateGpuTexture(
-    Hgi* hgi, HgiTextureHandle& outTexture, unsigned int width, unsigned int height, HdFormat /*format*/,
+    Hgi* hgi, HgiTextureHandle& outTexture, unsigned int width, unsigned int height, HdFormat format,
     const TfToken& aovName, const char* suffix)
 {
     if (hgi == nullptr) return 0;
@@ -240,7 +260,7 @@ uint32_t _CreateGpuTexture(
     desc.debugName = debugName;
     desc.type = HgiTextureType2D;
     desc.dimensions = GfVec3i(static_cast<int>(width), static_cast<int>(height), 1);
-    desc.format = HgiFormatFloat32Vec4;
+    desc.format = _GetHgiFormat(format);
     desc.layerCount = 1;
     desc.mipLevels = 1;
     desc.sampleCount = HgiSampleCount1;
@@ -439,14 +459,9 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     // So deallocate won't lock.
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
-    if (_hgi != nullptr) {
-        if (_aovTexture) {
-            _hgi->DestroyTexture(&_aovTexture);
-        }
-        if (_texture) {
-            _hgi->DestroyTexture(&_texture);
-        }
-    }
+    // Allocate runs on whichever thread the host syncs hydra on, so the textures are only
+    // ever touched through the delegate's queue, and recreated by EnsureGpuTexture().
+    _QueueTexturesForDestruction();
     if (!_SupportedComponentFormat(format)) {
         _width = 0;
         _height = 0;
@@ -458,17 +473,6 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     _width = dimensions[0];
     _height = dimensions[1];
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
-    if (_hgi != nullptr) {
-        // --GPU buffers--
-        // Best-effort: try to create the GPU texture now. If GL context isn't current the
-        // resulting GL id will be 0 — the render pass will call EnsureGpuTexture() later
-        // from a GL-active context to retry.
-        _CreateGpuTexture(_hgi, _aovTexture, _width, _height, _format, _aovName, "aov");
-        _CreateGpuTexture(_hgi, _texture, _width, _height, _format, _aovName, "display");
-    }
-#endif
-
     // --CPU buffers--
     const auto byteCount = _width * _height * HdDataSizeOfFormat(format);
     if (byteCount != 0) {
@@ -478,8 +482,23 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
 }
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
+void HdArnoldRenderBuffer::_QueueTexturesForDestruction()
+{
+    if (_renderDelegate == nullptr) {
+        return;
+    }
+    _renderDelegate->QueueTextureDestruction(_aovTexture);
+    _renderDelegate->QueueTextureDestruction(_texture);
+    _gpuInit = false;
+}
+
 void HdArnoldRenderBuffer::EnsureGpuTexture()
 {
+    // The only Hgi calls left are here and in GetResource, both of which the host runs on the
+    // thread holding the GL context.
+    if (_renderDelegate != nullptr) {
+        _renderDelegate->FlushTextureDestructions();
+    }
     if (_hgi == nullptr || _width == 0 || _height == 0 || _gpuInit) {
         return;
     }
@@ -497,6 +516,7 @@ void HdArnoldRenderBuffer::EnsureGpuTexture()
         if (tex) {
             _hgi->DestroyTexture(&tex);
         }
+        // Creating is safe here: this runs on the GL thread.
         _CreateGpuTexture(_hgi, tex, _width, _height, _format, _aovName, suffix);
     };
 
@@ -519,61 +539,86 @@ bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
 {
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
-    if (!_valid)
-        return VtValue();
     // GetResource() is called by Hydra/Solaris from the main thread with the GL context
     // current. AiGetRenderOutput does CUDA<->GL interop that requires a current GL context, so
     // this is the right place to pull Arnold's latest AOV data into the GL texture.
-    if (_renderDelegate != nullptr && _renderDelegate->IsAcceleratedViewport()) {
-        AtRenderSession *rs = _renderDelegate->GetRenderSession();
-        const auto status = rs ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
-        if (status != AI_RENDER_STATUS_NOT_STARTED) {
-            auto* self = const_cast<HdArnoldRenderBuffer*>(this);
-            self->EnsureGpuTexture();
-            std::lock_guard<std::mutex> guard(self->_mutex);
-            if (_aovTexture && _texture) {
-                const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
-                if (aovGlId != 0) {
-                    // glFinish() ensures all pending GL/CUDA interop operations on this texture
-                    // are complete before Arnold maps it again via cuGraphicsMapResources.
-                    // Without this, successive AiGetRenderOutput calls on the same texture AV inside
-                    // Arnold because the previous async CUDA write hasn't finished unmapping.
-                    glFinish();
-                    const AtRenderErrorCode rc = AiGetRenderOutput(rs, AtString(_aovName.GetText()), aovGlId, AtGetRenderOutputHandleType::OPENGL);
-                    if (rc == AI_SUCCESS) {
-                        // Sync CUDA/GL interop before sampling the AOV texture in our blit.
-                        glFinish();
-                        if (self->_FlipAovToDisplayTexture() && _GetGlTextureId(_texture) != 0) {
-                            return VtValue(_texture);
-                        }
+    if (_renderDelegate == nullptr || !_renderDelegate->IsAcceleratedViewport() || _aovName.IsEmpty()) {
+        return VtValue();
+    }
 
-                    } else {
-                        TF_WARN(
-                            "AiGetRenderOutput failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
+    auto* self = const_cast<HdArnoldRenderBuffer*>(this);
+
+    AtRenderSession* rs = _renderDelegate->GetRenderSession();
+    // Only a GPU session that is actually rendering can hand back an AOV. Asking one that is
+    // starting up, restarting or mid scene-update just earns a warning and a wasted glFinish --
+    // and this runs for every buffer on every redraw, so the cost is not academic.
+    const auto status = rs != nullptr ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
+    const bool canReadBack = rs != nullptr &&
+        (status == AI_RENDER_STATUS_RENDERING || status == AI_RENDER_STATUS_FINISHED) &&
+        _renderDelegate->IsGpuSessionActive();
+
+    if (canReadBack) {
+        self->EnsureGpuTexture();
+        std::lock_guard<std::mutex> guard(self->_mutex);
+        if (_aovTexture && _texture) {
+            const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
+            if (aovGlId != 0) {
+                // glFinish() ensures all pending GL/CUDA interop operations on this texture
+                // are complete before Arnold maps it again via cuGraphicsMapResources.
+                // Without this, successive AiGetRenderOutput calls on the same texture AV inside
+                // Arnold because the previous async CUDA write hasn't finished unmapping.
+                glFinish();
+                const AtRenderErrorCode rc = AiGetRenderOutput(rs, AtString(_aovName.GetText()), aovGlId, AtGetRenderOutputHandleType::OPENGL);
+                if (rc == AI_SUCCESS) {
+                    // Sync CUDA/GL interop before sampling the AOV texture in our blit.
+                    glFinish();
+                    self->_readbackWarned = false;
+                    if (self->_FlipAovToDisplayTexture() && _GetGlTextureId(_texture) != 0) {
+                        self->_hasReadback = true;
+                        return VtValue(_texture);
                     }
+                    // Flip failed - show the AOV as-is (may be Y-inverted).
+                    self->_hasReadback = true;
+                    return VtValue(_aovTexture);
                 }
-                // Flip failed or display texture unavailable — show AOV as-is (may be Y-inverted).
-                return VtValue(_aovTexture);
+                // Arnold reports a transient "no GPU session" / "scene update in progress" the
+                // same way it reports a missing AOV, so keep retrying but only say so once.
+                if (!_readbackWarned) {
+                    self->_readbackWarned = true;
+                    TF_WARN(
+                        "AiGetRenderOutput failed for AOV \"%s\" (code %d)", _aovName.GetText(),
+                        static_cast<int>(rc));
+                }
             }
         }
     }
 
+    // Nothing new landed this frame. Hand back the last frame we did read rather than an empty
+    // value, which would drop the host onto the CPU buffer that the GPU path never writes.
+    if (_hasReadback && _texture && _GetGlTextureId(_texture) != 0) {
+        return VtValue(_texture);
+    }
 #endif
     return VtValue();
 }
 
-void HdArnoldRenderBuffer::SetHgi(Hgi* hgi) { 
-    if (_hgi != hgi)
-        _gpuInit = false;
+void HdArnoldRenderBuffer::SetHgi(Hgi* hgi)
+{
+    if (_hgi != hgi) {
+        // The textures belong to the Hgi that made them, so let them go with it.
+        _QueueTexturesForDestruction();
+    }
+    _hgi = hgi;
+}
 
-    _hgi = hgi; 
+void HdArnoldRenderBuffer::Clear()
+{
+    std::lock_guard<std::mutex> _guard(_mutex);
+    std::fill(_buffer.begin(), _buffer.end(), uint8_t{0});
 }
 
 void* HdArnoldRenderBuffer::Map()
 {
-    if (!_valid)
-        return nullptr;
-
     _mutex.lock();
     if (_buffer.empty()) {
         // Leaving the mutex unlocked here means a subsequent Unmap() must NOT
@@ -604,15 +649,7 @@ void HdArnoldRenderBuffer::_Deallocate()
     std::lock_guard<std::mutex> _guard(_mutex);
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
-    if (_hgi != nullptr) {
-        if (_aovTexture) {
-            _hgi->DestroyTexture(&_aovTexture);
-        }
-        if (_texture) {
-            _hgi->DestroyTexture(&_texture);
-        }
-    }
-    _gpuInit = false;
+    _QueueTexturesForDestruction();
 }
 
 void HdArnoldRenderBuffer::WriteBucket(
@@ -622,7 +659,7 @@ void HdArnoldRenderBuffer::WriteBucket(
     // When backed by a GPU texture, bucket data is delivered via AiGetRenderOutput, not the driver path.
     if (_hgi != nullptr)
         return;
-    
+
     if (!_SupportedComponentFormat(format)) {
         return;
     }

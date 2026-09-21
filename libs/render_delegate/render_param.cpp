@@ -177,6 +177,8 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             // observes _aborted == true via acquire load also sees the writes
             // performed before the release — including the new _errorCode.
             _errorCode = AiRenderEnd(_delegate->GetRenderSession());
+            _sessionGpu.store(false, std::memory_order_release);
+            _sessionDirectOutputs.store(false, std::memory_order_release);
             _aborted.store(true, std::memory_order_release);
             if (_errorCode == AI_ABORT) {
                 TF_WARN("[arnold-usd] Render was aborted.");
@@ -218,6 +220,12 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             if (!_debugScene.empty())
                 WriteDebugScene();
             AiRenderBegin(_delegate->GetRenderSession());
+            // Both are bound now, for as long as this session lives.
+            _sessionGpu.store(
+                AiDeviceGetSelectedType(_delegate->GetRenderSession()) == AI_DEVICE_TYPE_GPU,
+                std::memory_order_release);
+            _sessionDirectOutputs.store(
+                AiNodeGetBool(_delegate->GetOptions(), str::direct_outputs), std::memory_order_release);
             ResetStartTimer();
             StartRenderMsgLog();
             return Status::Converging;
@@ -317,6 +325,23 @@ void HdArnoldRenderParam::Stop()
     // requested before AiRenderBegin() has to keep UpdateRender() from starting one.
     _stopped.store(true, std::memory_order_release);
     Interrupt(false, false);
+}
+
+void HdArnoldRenderParam::EndSession()
+{
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
+        return;
+    }
+    AtRenderSession* renderSession = _delegate->GetRenderSession();
+    if (AiRenderGetStatus(renderSession) != AI_RENDER_STATUS_NOT_STARTED) {
+        AiRenderInterrupt(renderSession, AI_BLOCKING);
+        AiRenderEnd(renderSession);
+    }
+    _sessionGpu.store(false, std::memory_order_release);
+    _sessionDirectOutputs.store(false, std::memory_order_release);
+    // UpdateRender() begins the new session on its next tick, which is where the new device is
+    // picked up; the queued restart keeps anything polling us reporting "not converged".
+    _needsRestart.store(true, std::memory_order_release);
 }
 
 void HdArnoldRenderParam::Restart()

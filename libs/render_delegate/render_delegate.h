@@ -579,6 +579,26 @@ public:
     /// did not provide one (e.g. batch / husk without a GL context).
     Hgi* GetHgi() const { return _hgi; }
 
+    /// Whether the running Arnold session was begun on the GPU, which is what the accelerated
+    /// viewport's AiGetRenderOutput readback requires.
+    ///
+    /// @return True if a GPU session is active
+    HDARNOLD_API
+    bool IsGpuSessionActive() const;
+
+    /// Queue a GPU texture for destruction on the thread that owns the GL context.
+    ///
+    /// Hosts sync hydra -- and so allocate and destroy render buffers -- on a background
+    /// thread, and an Hgi call from a thread without the GL context takes the driver down.
+    ///
+    /// @param texture Texture to destroy, left empty
+    HDARNOLD_API
+    void QueueTextureDestruction(HgiTextureHandle& texture);
+
+    /// Destroy every queued texture. Only call this with the GL context current.
+    HDARNOLD_API
+    void FlushTextureDestructions();
+
 
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
@@ -786,6 +806,14 @@ private:
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
 
+    /// Apply options.render_device to the render session, restarting it when the device changes.
+    void _SelectRenderDevice();
+
+    /// Drop every reference the main drivers hold to a render buffer that is about to die.
+    ///
+    /// @param renderBuffer Render buffer being destroyed
+    void _ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer);
+
     /// Returns the color manager to be used for this render, creating it if needed.
     ///
     /// The OCIO config is looked up in the OCIO environment variable first, then in the
@@ -933,6 +961,8 @@ private:
     bool _acceleratedViewport = false;
     bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+    std::vector<HgiTextureHandle> _texturesToDestroy; ///< Textures waiting for the GL thread.
+    std::mutex _texturesToDestroyMutex;               ///< Guards _texturesToDestroy.
 
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;
