@@ -35,6 +35,7 @@
 #include <pxr/base/tf/getenv.h>
 #include <pxr/base/tf/envSetting.h>
 
+#include <pxr/imaging/hd/version.h>
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/extComputation.h>
@@ -145,6 +146,14 @@ TF_DEFINE_ENV_SETTING(
     "Set to 1 to flatten nested instances into shape instancing instead of using nested arnold instancer nodes");
 
 namespace {
+
+const bool IsSceneIndexEmulationEnabled() {
+#if HD_API_VERSION >= 99
+    return true;
+#else
+    return HdRenderIndex::IsSceneIndexEmulationEnabled();
+#endif
+}
 
 const HdFormat _GetHdFormatFromToken(const TfToken& token)
 {
@@ -1860,7 +1869,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
 #ifdef ENABLE_SCENE_INDEX
         // Unfortunately the MarkAllRprimsDirty doesn't work as we would expect in USD 25.05 with hydra 2, it marks dirty the prims of the legacy scene index which doesn't contain rprims, so all
         // the dirty notifications get discarded. We have to use a workaround to get the same behaviour as before by propagating the dirtyness to a dedicated scene index filter.
-        if (HdRenderIndex::IsSceneIndexEmulationEnabled()) {
+        if (IsSceneIndexEmulationEnabled()) {
             if (HdSceneIndexBaseRefPtr sceneIndex = renderIndex->GetTerminalSceneIndex()) {
                 // Regarding the used of TfHashMap to carry the dirtyness, we unfortunately can't pass
                 // directly HdSceneIndexObserver::DirtiedPrimEntries due to template functions implementation
@@ -1908,7 +1917,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     // is dropped. We instead push the dirtiness through the terminal scene index, the same way the
     // bulk Rprim dirtying above does. Resolve the terminal scene index once for the lambda to use.
     HdSceneIndexBaseRefPtr terminalSceneIndex =
-        HdRenderIndex::IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
+        IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
 #endif
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
         // Marking a primitive as being dirty. The conversion to data source locators and the
