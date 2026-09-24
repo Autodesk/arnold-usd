@@ -35,8 +35,6 @@
 #include <pxr/base/trace/trace.h>
 
 #include <pxr/base/gf/vec2f.h>
-#include <pxr/base/gf/matrix4d.h>
-#include <pxr/base/tf/hash.h>
 #include <pxr/imaging/pxOsd/tokens.h>
 
 #include <constant_strings.h>
@@ -181,11 +179,7 @@ HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath
 }
 
 HdArnoldMesh::~HdArnoldMesh() {
-    // Geometry deduplication: if this mesh owns a canonical node still referenced by instances,
-    // hand it over to the render delegate so it outlives this rprim. This must run before the
-    // shared-array reset below (on adoption GetArnoldNode() becomes null, so that reset is
-    // correctly skipped and the adopted node's geometry is left intact).
-    _HandOffDedupOnDestroy();
+    _ReleaseGeometryDedup();
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
@@ -214,7 +208,6 @@ HdArnoldMesh::~HdArnoldMesh() {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
-    
     AiProfileBlock("hydra_proc:HdArnoldMesh:Sync"); 
     TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
@@ -251,9 +244,7 @@ void HdArnoldMesh::Sync(
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
 
-    // GetMeshTopology() is a full round trip to the scene delegate. Both the dedup eligibility
-    // check below and the topology translation further down need it, so fetch it at most once
-    // per Sync and hand out a reference; nothing mutates the scene while we sync.
+    // Fetched at most once per Sync, for both the deduplication and the topology translation.
     std::optional<HdMeshTopology> topologyCache;
     auto getMeshTopology = [&]() -> const HdMeshTopology& {
         if (!topologyCache.has_value())
@@ -261,102 +252,38 @@ void HdArnoldMesh::Sync(
         return *topologyCache;
     };
 
-    // === Geometry deduplication ===
-    // If this mesh is geometrically identical to a previously seen one, share a single
-    // canonical Arnold polymesh instead of duplicating the geometry (and its BVH). The
-    // decision is made from the USD data, before any geometry is translated to Arnold, so a
-    // duplicate skips the whole geometry-building path below. Two flavors are handled:
-    //  - non-instanced mesh: the node is turned into a ginstance of the canonical (its own
-    //    transform and surface shader are applied per-instance);
-    //  - point-instancer prototype (the common flattening case): this prototype's instancer
-    //    is redirected to the shared canonical polymesh (see HdArnoldShape::SetPrototypeOverride).
-    // Handles static meshes and deformation-motion-blurred meshes (any number of position
-    // keys, deduplicated only when identical across the whole shutter); excludes
-    // computed/skinned points, velocity/acceleration motion blur, geom subsets and mesh
-    // lights. For the instanced flavor we merge conservatively (geometry + transform +
-    // material must match).
-    if (GetRenderDelegate()->DeduplicateGeometry()) {
-        const bool geomDirty = (*dirtyBits & _geometryHashDirtyBits) != 0 || dirtyPrimvars;
-        if (geomDirty) {
-            // The primary duplicated-geometry problem is prototype flattening: UsdImaging
-            // re-roots a copy of each instancer's prototype, so geometrically identical
-            // prototypes reach the render delegate as separate polymeshes. In the default
-            // "Instances" mode only those (instanced) prototypes are deduplicated, so the
-            // common non-instanced meshes - the bulk of a typical scene - are left untouched
-            // and never pay the geometry hashing cost. In "All" mode plain non-instanced
-            // duplicates are considered too (rendered as ginstances of a canonical).
-            //
-            // Hydra populates the instancer id lazily through _UpdateInstancer (normally only
-            // later in SyncShape); run it here first, on a throwaway copy of the dirty bits so
-            // the real ones are left intact for SyncShape, so GetInstancerId() is valid below.
-            {
-                HdDirtyBits instancerDirtyBits = *dirtyBits;
-                _UpdateInstancer(sceneDelegate, &instancerDirtyBits);
-            }
-            const bool instanced = !GetInstancerId().IsEmpty();
-            bool eligible = instanced ||
-                GetRenderDelegate()->GetGeometryDedupMode() == HdArnoldRenderDelegate::GeometryDedupMode::All;
-            uint64_t hash = 0;
-            if (eligible) {
-                HdArnoldRenderParam* rp = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
-                const bool computedPoints = _primvars.count(HdTokens->points) != 0;
-                const HdMeshTopology& topology = getMeshTopology();
-                eligible = !computedPoints && topology.GetGeomSubsets().empty() &&
-                           _primvars.count(HdTokens->velocities) == 0 &&
-                           _primvars.count(HdTokens->accelerations) == 0 && !_HasMeshLight(sceneDelegate, id);
-                if (eligible && _pointsSample.count == 0) {
-                    SamplePrimvar(sceneDelegate, id, HdTokens->points, rp->GetShutterRange(), &_pointsSample);
-                }
-                // Deduplicate static meshes and deformation-motion-blurred meshes (one or more
-                // position keys); every key must hold a point array. Velocity/acceleration blur
-                // is excluded above - here we only need the sampled vlist to match across the
-                // whole shutter (see _ComputeGeometryHash).
-                eligible = eligible && _pointsSample.count >= 1 &&
-                           _pointsSample.values.size() >= _pointsSample.count;
-                for (size_t i = 0; eligible && i < _pointsSample.count; ++i)
-                    eligible = _pointsSample.values[i].IsHolding<VtVec3fArray>();
-                // The hash can fail on a geometry holding a value that cannot be hashed; the
-                // mesh is then not eligible (see HdArnoldRprim::_HashCommonGeometryState).
-                if (eligible)
-                    eligible = _ComputeGeometryHash(topology, _pointsSample, sceneDelegate, id, instanced, hash);
-            }
-            // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
-            // may be recreated (ginstance conversion, or reverting to a plain polymesh), so
-            // refresh the local pointer afterwards.
-            AtNode* const nodeBeforeDedup = node;
-            _ApplyGeometryDedup(id, eligible, instanced, hash, str::polymesh, dirtyBits, dirtyPrimvars, param);
-            node = GetArnoldNode();
-            if (node != nodeBeforeDedup)
-                _ForcePrimvarReapplication(_primvars);
-            if (_isInstance) {
-                // A duplicate builds no geometry of its own, so it has no geom subsets either
-                // (eligibility above requires none). Clear the cached list: the block that
-                // recomputes it is skipped while we are an instance, and a stale non-empty
-                // _subsets would make assignMaterials build an oversized shader array from
-                // the previous subset materials.
-                _subsets.clear();
-            }
-        }
-    }
+    _SyncGeometryDedup(
+        sceneDelegate, id, str::polymesh, _primvars, _pointsSample, true, dirtyBits, dirtyPrimvars, param,
+        [&](uint64_t& hash) {
+            // Geom subsets and mesh lights are not supported.
+            const HdMeshTopology& topology = getMeshTopology();
+            if (!topology.GetGeomSubsets().empty() || _HasMeshLight(sceneDelegate, id))
+                return false;
+            // Creases are not part of the topology, and the display style sets the subdivision.
+            hash = TfHash::Combine(
+                topology.ComputeHash(), GetSubdivTags(sceneDelegate).ComputeHash(),
+                GetDisplayStyle(sceneDelegate).refineLevel);
+            return true;
+        });
+    node = GetArnoldNode();
 
-    // Geometry (points and topology) is only translated for genuine polymeshes. A mesh
-    // rendered as a ginstance (dedup) shares its canonical's geometry, so we skip it here.
-    if (!_isInstance) {
-        if (_primvars.count(HdTokens->points) != 0) {
-            _numberOfPositionKeys = 1;
-        } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-            param.Interrupt();
-            _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
-            // If the points were extrapolated, _pointsSample is now empty
-            if (_pointsSample.count) {
-                AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
-            }
+    // A duplicate shares the geometry of its canonical, and has no geom subsets.
+    if (_IsDuplicate()) {
+        _subsets.clear();
+    } else if (_primvars.count(HdTokens->points) != 0) {
+        _numberOfPositionKeys = 1;
+    } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param.Interrupt();
+        _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
+        // If the points were extrapolated, _pointsSample is now empty
+        if (_pointsSample.count) {
+            AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
     TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
-    if (dirtyTopology && !_isInstance) {
+    if (dirtyTopology && !_IsDuplicate()) {
         const HdMeshTopology& topology = getMeshTopology();
         _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         param.Interrupt();
@@ -457,7 +384,7 @@ void HdArnoldMesh::Sync(
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
-    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id) && !_isInstance) {
+    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto displayStyle = GetDisplayStyle(sceneDelegate);
         // In Hydra, GetDisplayStyle will return a refine level between [0, 8]. 
@@ -476,7 +403,7 @@ void HdArnoldMesh::Sync(
         transformDirtied = true;
     }
 
-    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id) && !_isInstance) {
+    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto subdivTags = GetSubdivTags(sceneDelegate);
         ArnoldUsdReadCreases(
@@ -497,9 +424,7 @@ void HdArnoldMesh::Sync(
         materialsAssigned = true;
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
-        // A ginstance is never a volume boundary, and querying step_size on it would be
-        // meaningless; only genuine polymeshes can carry a volume shader.
-        const auto isVolume = !_isInstance && _IsVolume();
+        const auto isVolume = !_IsDuplicate() && _IsVolume();
         // Shared materials bound by different rprims to different cameras each
         // resolve to their own camera through this per-rprim remap (see the
         // remap-aware HdArnoldNodeGraph::GetCached*Shader).
@@ -526,34 +451,26 @@ void HdArnoldMesh::Sync(
             setMaterial(_subsets[subset], subset);
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
-        // When this mesh is a deduplicated instance, it must also be re-synced whenever its
-        // canonical mesh changes or is removed. We register that dependency here (rather
-        // than separately) because TrackDependencies replaces the full target list.
-        if (_isInstance && !_canonicalPath.IsEmpty()) {
-            nodeGraphs.insert({_canonicalPath, HdChangeTracker::AllDirty});
-        }
         // Keep track of the materials assigned to this mesh
         GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
 
-        // A ginstance shares the canonical mesh's displacement (it cannot override it), so
-        // we only assign disp_map on genuine polymeshes.
-        const bool hasDisp =
-            !_isInstance && std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; });
-        AiArrayUnmap(dispMapArray);
-        if (hasDisp) {
+        // The displacement belongs to the geometry, shared by a duplicate.
+        if (_IsDuplicate()) {
+            AiArrayUnmap(dispMapArray);
+            AiArrayDestroy(dispMapArray);
+        } else if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
+            AiArrayUnmap(dispMapArray);
             AiNodeSetArray(node, str::disp_map, dispMapArray);
         } else {
+            AiArrayUnmap(dispMapArray);
             AiArrayDestroy(dispMapArray);
-            if (!_isInstance)
-                AiNodeResetParameter(node, str::disp_map);
+            AiNodeResetParameter(node, str::disp_map);
         }
         AiArrayUnmap(shaderArray);
         AiNodeSetArray(node, str::shader, shaderArray);
     };
 
-    // Primvars (points, uvs, normals, custom, and constant arnold parameters) all live on
-    // the polymesh; a deduplicated instance shares the canonical's, so we skip them here.
-    if (dirtyPrimvars && !_isInstance) {
+    if (dirtyPrimvars && !_IsDuplicate()) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         _autobumpVisibilityFlags.ClearPrimvarFlags();
@@ -742,33 +659,11 @@ void HdArnoldMesh::Sync(
         // if subdiv iterations is equal to 0
         if (AiNodeGetByte(node, str::subdiv_iterations) == 0) {
             AiNodeSetStr(node, str::subdiv_type, str::none);
-        }
+        }        
     }
 
-    // A deduplicated ginstance shares the canonical's geometry, so the geometry primvar block
-    // above is skipped for it - but it is still a distinct Arnold node that needs its own
-    // node-level state configured by constant primvars: ray visibility (arnold:visibility),
-    // sidedness, matte and any user-data attributes shaders read per instance. Apply just the
-    // constant primvars here (vertex/uniform/face-varying primvars belong to the shared
-    // geometry and must not be touched). Only the non-instanced ginstance flavor owns such a
-    // node; the instanced-prototype flavor renders through the shared canonical + instancer.
-    if (dirtyPrimvars && _isInstance && GetShape().GetPrototypeOverride() == nullptr) {
-        param.Interrupt();
-        _visibilityFlags.ClearPrimvarFlags();
-        _sidednessFlags.ClearPrimvarFlags();
-        _autobumpVisibilityFlags.ClearPrimvarFlags();
-        for (auto& primvar : _primvars) {
-            auto& desc = primvar.second;
-            if (desc.interpolation != HdInterpolationConstant)
-                continue;
-            // Autobump belongs to the subdivided/displaced geometry, which lives on the shared
-            // canonical: a ginstance has no autobump_visibility parameter at all, and setting
-            // it here only produced an arnold error per deduplicated mesh.
-            HdArnoldSetConstantPrimvar(
-                node, primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags, nullptr,
-                _renderDelegate);
-        }
-        UpdateVisibilityAndSidedness();
+    if (dirtyPrimvars && _shape.IsInstanceNode()) {
+        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken&) { return false; });
     }
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
@@ -803,21 +698,7 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    bool hasMeshLight = false;
-    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
-    if (lightValue.IsHolding<bool>()) {
-        hasMeshLight = lightValue.UncheckedGet<bool>();
-    }
-#ifndef ENABLE_SCENE_INDEX
-    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
-    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
-    if (!hasMeshLight) {
-        VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
-        if (isLightValue.IsHolding<bool>())
-            hasMeshLight = isLightValue.UncheckedGet<bool>();
-    }
-#endif
-    
+    const bool hasMeshLight = _HasMeshLight(sceneDelegate, id);
     if (hasMeshLight) {
         if (_geometryLight == nullptr) {
             // We need to create the mesh light, pointing to the current mesh.
@@ -829,71 +710,28 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
         AiNodeSetPtr(_geometryLight, str::mesh, (void*)GetArnoldNode());
         _renderDelegate->RegisterMeshLight(_geometryLight);
     } else if (_geometryLight) {
-        // if a geometry light was previously set and it's not there anymore,
+        // if a geometry light was previously set and it's not there anymore, 
         // we need to unregister and clear it now
         _renderDelegate->UnregisterMeshLight(_geometryLight);
         _renderDelegate->DestroyArnoldNode(_geometryLight);
-        _geometryLight = nullptr;
+        _geometryLight = nullptr;    
     }
     return _geometryLight;
 }
 
 bool HdArnoldMesh::_HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const
 {
-    if (_geometryLight != nullptr)
-        return true;
     VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
     if (lightValue.IsHolding<bool>() && lightValue.UncheckedGet<bool>())
         return true;
 #ifndef ENABLE_SCENE_INDEX
+    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
+    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
     VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
     if (isLightValue.IsHolding<bool>() && isLightValue.UncheckedGet<bool>())
         return true;
 #endif
     return false;
-}
-
-bool HdArnoldMesh::_ComputeGeometryHash(
-    const HdMeshTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
-    const SdfPath& id, bool instanced, uint64_t& outHash)
-{
-    // Topology covers face-vertex counts/indices, scheme, orientation, holes and subdiv tags.
-    uint64_t hash = topology.ComputeHash();
-    // The display style drives the subdivision iterations set on the polymesh.
-    hash = TfHash::Combine(hash, GetDisplayStyle(sceneDelegate).refineLevel);
-    // Creases and corners are applied to the polymesh by ArnoldUsdReadCreases, and they do NOT
-    // travel with the topology: hydra delivers them separately, through GetSubdivTags() and
-    // DirtySubdivTags. Without this two meshes differing only in their creasing would hash
-    // equal and the duplicate would silently render with the canonical's creases.
-    hash = TfHash::Combine(hash, GetSubdivTags(sceneDelegate).ComputeHash());
-    // A ginstance can override the surface shader per instance but not the displacement,
-    // which lives on the shared polymesh. Fold the resolved displacement shader in so that
-    // meshes with different displacement are never deduplicated.
-    const SdfPath materialId = sceneDelegate->GetMaterialId(id);
-    HdArnoldNodeGraph* material =
-        HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
-    const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
-    if (material != nullptr) {
-        hash = TfHash::Combine(hash, reinterpret_cast<uintptr_t>(material->GetCachedDisplacementShader(coordSysBinding)));
-    }
-    // For an instanced prototype the shared canonical polymesh carries the prototype's own
-    // transform and its surface shader (its instancer references the polymesh directly, and
-    // we merge conservatively on material). Fold both in so only prototypes matching on those
-    // are merged; this collapses re-rooted point-instancer prototype copies that share the
-    // same asset and material.
-    if (instanced) {
-        const GfMatrix4d xform = sceneDelegate->GetTransform(id);
-        hash = TfHash::Combine(hash, xform);
-        hash = TfHash::Combine(
-            hash, reinterpret_cast<uintptr_t>(material != nullptr ? material->GetCachedSurfaceShader(coordSysBinding)
-                                                                  : nullptr));
-    }
-    // Points, primvars, render tag and light-linking categories are hashed the same way for
-    // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
-    if (!_HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars, instanced))
-        return false;
-    outHash = hash;
-    return true;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

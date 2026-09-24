@@ -33,6 +33,7 @@
 
 #include <constant_strings.h>
 
+#include "coord_sys.h"
 #include "render_delegate.h"
 #include "shape.h"
 #include "utils.h"
@@ -120,9 +121,6 @@ public:
         if (GetArnoldNode() == nullptr)
             return skip;
 
-        // Ask the shape rather than the rprim's own node: with an instancer, or once the
-        // geometry dedup is involved, that node is not necessarily what renders (see
-        // HdArnoldShape::SetHidden).
         const bool wasHidden = _shape.IsHidden();
         if (skip == wasHidden)
             return skip;
@@ -135,10 +133,8 @@ public:
                 return false;
         }
         param.Interrupt();
-        // A real geometry node registered with the dedup is (or may become) a canonical other
-        // rprims instance, so it must not be disabled. This reflects the node as it is now:
-        // the dedup evaluation for this Sync only runs further down, and not at all if we skip.
-        _shape.SetHidden(skip, _dedupRegistered && !_isInstance);
+        // A deduplication canonical can be instanced by other rprims.
+        _shape.SetHidden(skip, _dedupHash != 0 && !_IsDuplicate());
 
         return skip;
     }
@@ -206,39 +202,19 @@ public:
 
 
 protected:
-    /// Geometry deduplication (see HdArnoldRenderDelegate::DeduplicateGeometry). The state and
-    /// wiring below are shared by every geometry rprim (mesh, curves): the type-specific Sync
-    /// only has to decide eligibility and compute a geometry hash, then call _ApplyGeometryDedup.
+    /// Geometry deduplication (see HdArnoldRenderDelegate::DeduplicateGeometry), shared by the
+    /// mesh and curves rprims. A duplicate renders the node of the rprim owning its geometry
+    /// (the canonical) instead of building its own: as a ginstance of it when not instanced,
+    /// or through its instancer when it is a point-instancer prototype.
 
-    /// Everything that has to be re-applied when the dedup replaces or re-wires this rprim's
-    /// Arnold node. A recreated node keeps none of the old node's state, so every scene-driven
-    /// dirty bit must be set again - forcing only topology/points/primvars silently dropped the
-    /// state applied under the other bits, notably the subdivision level (DirtyDisplayStyle,
-    /// which _CreateRealGeometryNode resets to 0) and the creases (DirtySubdivTags), leaving a
-    /// rebuilt subdiv mesh rendering as a flat cage. The repr bits are excluded: swapping the
-    /// Arnold node does not affect the rprim's hydra reprs.
-    ///
-    /// Anything skipped for a duplicate is guarded by !_isInstance in the type-specific Sync,
-    /// so setting the full mask never rebuilds geometry an rprim does not own.
+    /// Dirty bits to re-apply when the dedup replaces or rewires the Arnold node, which keeps
+    /// none of the previous node's state. The geometry blocks are skipped for a duplicate.
     static constexpr HdDirtyBits _rebuiltNodeDirtyBits =
         HdChangeTracker::AllSceneDirtyBits &
         ~(HdChangeTracker::InitRepr | HdChangeTracker::Varying | HdChangeTracker::DirtyRepr);
 
-    /// The dirty bits that can change a geometry hash, and therefore have to re-run the dedup
-    /// evaluation. Everything a _ComputeGeometryHash folds in must appear here: when a hash
-    /// input changes without the evaluation running, the rprim goes on sharing a canonical it
-    /// no longer matches (or goes on lending its node to duplicates that no longer match it),
-    /// and the difference renders silently - whichever value the shared node happens to hold
-    /// wins for every rprim in the group.
-    ///
-    /// Deliberately one mask rather than a per-case assembly, even though DirtyTransform and
-    /// DirtyMaterialId only feed an instanced prototype's hash and DirtyDisplayStyle /
-    /// DirtySubdivTags only a mesh's: the eligibility test this gates is cheap, only the
-    /// hashing beyond it is not, and an incomplete gate is a silently-wrong-render bug.
-    ///
-    /// One gap remains and is not closable here: from USD 24.08 on, render tags no longer
-    /// travel as a Sync dirty bit (Hydra delivers them through UpdateRenderTag), so a purpose
-    /// change does not re-run this even though the hash folds the render tag in.
+    /// Dirty bits that can change the geometry hash, and so re-run the dedup evaluation. Render
+    /// tags are hashed too, but they are not a Sync dirty bit anymore from USD 24.08.
     static constexpr HdDirtyBits _geometryHashDirtyBits =
         HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar |
         HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtySubdivTags |
@@ -246,359 +222,251 @@ protected:
         HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyRenderTag |
         HdChangeTracker::DirtyDoubleSided;
 
-    /// Forces every primvar in @p primvars to be applied again on the next pass of the
-    /// type-specific primvar block. Call this whenever the dedup has replaced this rprim's
-    /// Arnold node with a fresh one.
+    /// Returns true if this rprim renders the geometry of another rprim.
+    bool _IsDuplicate() const { return _shape.GetSharedGeometry() != nullptr; }
+
+    /// Evaluates the geometry deduplication of this rprim, and makes it a canonical, a duplicate
+    /// or a plain geometry accordingly. When the Arnold node is replaced or rewired, the dirty
+    /// bits and primvars are all dirtied again.
     ///
-    /// HdArnoldPrimvar::dirtied tracks "changed in USD since we last looked", and
-    /// HdArnoldPrimvar::NeedsUpdate() consumes it - which was equivalent to "not yet applied
-    /// to the Arnold node" only while a node lived exactly as long as its rprim. The dedup
-    /// breaks that: HdArnoldGetPrimvars has already run (and the flags were consumed by an
-    /// earlier Sync that had a node to apply them to) by the time we swap the node here, so
-    /// without this a Sync that recreates the node while no primvar happens to be dirty gives
-    /// the new node no primvars at all - uvs, normals and any arnold: constant parameters
-    /// silently disappear.
-    static void _ForcePrimvarReapplication(HdArnoldPrimvarMap& primvars)
+    /// @param shapeType Arnold node type of the geometry.
+    /// @param primvars Primvars of the rprim, all applied to the geometry node.
+    /// @param points Points sampled over the shutter; sampled here if empty.
+    /// @param displaceable Whether the geometry node carries a displacement shader.
+    /// @param hashTopology Callable `bool(uint64_t& hash)` setting @p hash to the hash of the
+    ///  type-specific geometry, or returning false if it cannot be deduplicated.
+    template <typename HashTopologyFn>
+    void _SyncGeometryDedup(
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, const AtString& shapeType, HdArnoldPrimvarMap& primvars,
+        HdArnoldSampledPrimvarType& points, bool displaceable, HdDirtyBits* dirtyBits, bool& dirtyPrimvars,
+        HdArnoldRenderParamInterrupt& param, HashTopologyFn&& hashTopology)
     {
-        for (auto& primvar : primvars)
-            primvar.second.dirtied = true;
+        if (!_renderDelegate->DeduplicateGeometry() ||
+            (!dirtyPrimvars && (*dirtyBits & _geometryHashDirtyBits) == 0))
+            return;
+        // The instancer id is only set by _UpdateInstancer, which SyncShape calls later with the
+        // actual dirty bits.
+        HdDirtyBits instancerDirtyBits = *dirtyBits;
+        HydraType::_UpdateInstancer(sceneDelegate, &instancerDirtyBits);
+        const bool instanced = !HydraType::GetInstancerId().IsEmpty();
+        // By default only point-instancer prototypes are deduplicated (UsdImaging makes a copy of
+        // each prototype per instancer), so that the other geometries don't pay for hashing.
+        bool eligible =
+            (instanced || _renderDelegate->GetGeometryDedupMode() == HdArnoldRenderDelegate::GeometryDedupMode::All) &&
+            primvars.count(HdTokens->points) == 0 && primvars.count(HdTokens->velocities) == 0 &&
+            primvars.count(HdTokens->accelerations) == 0;
+        if (eligible && points.count == 0) {
+            auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+            SamplePrimvar(sceneDelegate, id, HdTokens->points, renderParam->GetShutterRange(), &points);
+        }
+        eligible = eligible && points.count > 0 && points.values.size() >= points.count;
+        for (size_t i = 0; eligible && i < points.count; ++i)
+            eligible = points.values[i].IsHolding<VtVec3fArray>();
+        uint64_t hash = 0;
+        eligible = eligible && hashTopology(hash) &&
+                   _HashGeometryState(hash, sceneDelegate, id, points, primvars, instanced, displaceable);
+        if (_ApplyGeometryDedup(id, shapeType, eligible, instanced, hash, param)) {
+            *dirtyBits |= _rebuiltNodeDirtyBits;
+            for (auto& primvar : primvars)
+                primvar.second.dirtied = true;
+            dirtyPrimvars = true;
+        }
     }
 
-    /// Folds into @p hash the part of a geometry's identity that is the same for every
-    /// geometry type, so the type-specific _ComputeGeometryHash only has to hash its own
-    /// topology (and, for meshes, subdivision and displacement). Returns false when the
-    /// geometry cannot be hashed reliably, in which case @p hash is meaningless and the
-    /// caller must treat the rprim as ineligible for dedup. Covers:
+    /// Applies the constant primvars to the ginstance of a duplicate: unlike its geometry, its
+    /// node-level state (visibility, sidedness, matte, user data) is its own.
     ///
-    ///  - @p points across the whole shutter: the number of motion keys, each sample time and
-    ///    each sample's values. Two geometries are merged only if their deformation is
-    ///    identical at every key - Arnold interpolates linearly between keys, so matching keys
-    ///    and times make the merge exact rather than a current-frame approximation.
-    ///  - every entry of @p primvars, which all end up on the shared geometry node (uvs,
-    ///    normals or widths, custom, and constant arnold parameters). The map is unordered, so
-    ///    its iteration order can differ between two prims holding the same primvars
-    ///    (different insertion history / bucket layout); each primvar's own hash is therefore
-    ///    combined commutatively, making the result depend only on the set of primvars. Folding
-    ///    them in walk order instead made identical geometries fail to deduplicate,
-    ///    unpredictably and differently from run to run.
-    ///  - the render tag (usd purpose), which drives AiNodeSetDisabled on the shape and is
-    ///    applied by Hydra through UpdateRenderTag() outside of Sync(), so it cannot be
-    ///    reliably reproduced on a freshly converted instance.
-    ///  - the light-linking categories (collections), which configure light_group /
-    ///    shadow_group. An instance could carry its own, but folding them in keeps the dedup
-    ///    conservative and race-free regardless of which duplicate becomes the canonical.
-    ///    Re-rooted point-instancer prototype copies share these, so they still deduplicate.
-    ///    The instancer's categories are hashed too: HdArnoldRenderDelegate::ApplyLightLinking
-    ///    concatenates them with the prim's own, so two identical prototypes under differently
-    ///    light-linked instancers do not have the same light_group even though their prim
-    ///    categories match.
-    ///
-    /// When @p instanced is true the shared canonical node is referenced by this prototype's
-    /// arnold instancer, so it - not this rprim's own node - is what renders, and any per-prim
-    /// state written to this rprim's node after the dedup runs is silently dropped in favor of
-    /// the canonical's. That is why the sidedness (usd doubleSided), written to this rprim's
-    /// node by CheckVisibilityAndSidedness, is part of the identity here. The non-instanced
-    /// (ginstance) flavor does not need it: it owns a real arnold instance node that carries
-    /// its own sidedness.
-    ///
-    /// Two other pieces of per-prim node state are deliberately NOT hashed, because the
-    /// instancer republishes them per instance instead - which keeps them correct without
-    /// splitting geometries that are otherwise identical (see HdArnoldShape::_SyncInstances):
-    /// hydra_primId and the cryptomatte object name (crypto_object).
-    bool _HashCommonGeometryState(
-        uint64_t& hash, HdSceneDelegate* sceneDelegate, const SdfPath& id,
-        const HdArnoldSampledPrimvarType& points, const HdArnoldPrimvarMap& primvars, bool instanced) const
+    /// @param skip Callable `bool(const TfToken& name)` returning true for primvars to ignore.
+    template <typename SkipFn>
+    void _SyncInstanceNodePrimvars(HdArnoldPrimvarMap& primvars, HdArnoldRenderParamInterrupt& param, SkipFn&& skip)
+    {
+        param.Interrupt();
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
+        for (auto& primvar : primvars) {
+            const auto& desc = primvar.second;
+            if (desc.interpolation == HdInterpolationConstant && !skip(primvar.first)) {
+                HdArnoldSetConstantPrimvar(
+                    GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                    nullptr, _renderDelegate);
+            }
+        }
+        UpdateVisibilityAndSidedness();
+    }
+
+    /// Leaves the dedup registry when this rprim is destroyed. Must be called from the derived
+    /// destructor before anything else touches the Arnold node.
+    void _ReleaseGeometryDedup()
+    {
+        if (_dedupHash == 0)
+            return;
+        if (_IsDuplicate()) {
+            // Our nodes go first, releasing can destroy the canonical node they reference.
+            _shape.DestroyNodes();
+            _renderDelegate->ReleaseCanonicalGeometry(_dedupHash);
+        } else if (_renderDelegate->LeaveCanonicalGeometry(_dedupHash, GetArnoldNode(), HydraType::GetId())) {
+            _shape.ReleaseShapeOwnership();
+        }
+    }
+
+private:
+    /// Folds into @p hash everything but the type-specific topology that ends up on the geometry
+    /// node, or returns false if the geometry cannot be hashed reliably:
+    ///  - the points at every motion key, and all the primvars (combined commutatively, as
+    ///    their map order is not deterministic);
+    ///  - the render tag and the light-linking categories of the prim and its instancer;
+    ///  - the displacement shader, which a ginstance cannot override;
+    ///  - for a point-instancer prototype, the transform, surface shader and sidedness, as its
+    ///    instancer renders the canonical node itself. Its prim id and cryptomatte name are
+    ///    overridden per instance instead (see HdArnoldShape::_SyncInstances).
+    bool _HashGeometryState(
+        uint64_t& hash, HdSceneDelegate* sceneDelegate, const SdfPath& id, const HdArnoldSampledPrimvarType& points,
+        const HdArnoldPrimvarMap& primvars, bool instanced, bool displaceable) const
     {
         hash = TfHash::Combine(hash, points.count);
-        for (size_t i = 0; i < points.count && i < points.values.size(); ++i) {
-            if (i < points.times.size())
-                hash = TfHash::Combine(hash, points.times[i]);
-            // A value we cannot hash cannot be part of the identity, and leaving it out would
-            // merge geometries that only differ by it - the canonical's value would silently
-            // win for all of them. Refuse to deduplicate instead.
+        for (size_t i = 0; i < points.count; ++i) {
             if (!points.values[i].CanHash())
                 return false;
             hash = TfHash::Combine(hash, points.values[i].GetHash());
+            if (i < points.times.size())
+                hash = TfHash::Combine(hash, points.times[i]);
         }
         size_t primvarsHash = 0;
         for (const auto& primvar : primvars) {
-            // The role is hashed along with the name and the interpolation: it selects how
-            // HdArnoldSetConstantPrimvar and friends convert the value (a color role turns an
-            // array into RGB user data), so the same value under two roles is not the same
-            // user data on the shared node.
-            size_t ph = TfHash::Combine(
-                primvar.first, primvar.second.role, static_cast<int>(primvar.second.interpolation));
-            if (!primvar.second.value.CanHash())
-                return false; // see the points comment above
-            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
-            if (!primvar.second.valueIndices.empty())
-                ph = TfHash::Combine(ph, primvar.second.valueIndices);
-            primvarsHash += ph;
+            const auto& desc = primvar.second;
+            if (!desc.value.CanHash())
+                return false;
+            // The role changes how the value is converted.
+            size_t primvarHash = TfHash::Combine(
+                primvar.first, desc.role, static_cast<int>(desc.interpolation), desc.value.GetHash());
+            if (!desc.valueIndices.empty())
+                primvarHash = TfHash::Combine(primvarHash, desc.valueIndices);
+            primvarsHash += primvarHash;
         }
-        hash = TfHash::Combine(hash, primvarsHash);
-        hash = TfHash::Combine(hash, sceneDelegate->GetRenderTag(id));
-        for (const TfToken& category : sceneDelegate->GetCategories(id)) {
+        hash = TfHash::Combine(hash, primvarsHash, sceneDelegate->GetRenderTag(id));
+        for (const TfToken& category : sceneDelegate->GetCategories(id))
             hash = TfHash::Combine(hash, category);
-        }
-        // The instancer id is already resolved by the time the dedup hashes (the caller ran
-        // _UpdateInstancer to decide whether this rprim is an instanced prototype), so read
-        // the cached one rather than going back to the scene delegate.
-        const SdfPath& instancerId = HydraType::GetInstancerId();
-        if (!instancerId.IsEmpty()) {
-            for (const TfToken& category : sceneDelegate->GetCategories(instancerId)) {
+        if (instanced) {
+            for (const TfToken& category : sceneDelegate->GetCategories(HydraType::GetInstancerId()))
                 hash = TfHash::Combine(hash, category);
+            hash = TfHash::Combine(hash, sceneDelegate->GetTransform(id), sceneDelegate->GetDoubleSided(id));
+        }
+        if (instanced || displaceable) {
+            auto* material = HdArnoldNodeGraph::GetNodeGraph(
+                sceneDelegate->GetRenderIndex(), sceneDelegate->GetMaterialId(id), _renderDelegate);
+            if (material != nullptr) {
+                const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
+                if (displaceable)
+                    hash = TfHash::Combine(
+                        hash, reinterpret_cast<uintptr_t>(material->GetCachedDisplacementShader(coordSysBinding)));
+                if (instanced)
+                    hash = TfHash::Combine(
+                        hash, reinterpret_cast<uintptr_t>(material->GetCachedSurfaceShader(coordSysBinding)));
             }
         }
-        if (instanced)
-            hash = TfHash::Combine(hash, sceneDelegate->GetDoubleSided(id));
         return true;
     }
 
-    /// Hands this rprim's Arnold node over to the render delegate if it is a dedup canonical
-    /// still referenced by instances (so the node outlives this rprim); otherwise the delegate
-    /// just cleans up its registry entry and the node is destroyed normally. Call this early
-    /// from the derived destructor, before any code that resets shared arrays on the node:
-    /// on adoption ReleaseShapeOwnership() clears the shape so GetArnoldNode() becomes null and
-    /// that cleanup is (correctly) skipped, keeping the adopted node's geometry intact.
-    void _HandOffDedupOnDestroy()
-    {
-        if (_dedupRegistered && _renderDelegate->OnGeometryDestroyed(HydraType::GetId(), GetArnoldNode()))
-            _shape.ReleaseShapeOwnership();
-    }
-
-    /// Creates a fresh, real (non-instanced) node of @p realShapeType (str::polymesh /
-    /// str::curves) for this rprim, replacing whatever node it currently owns. The new node is
-    /// empty, so the caller must force a full geometry rebuild. The caller is also responsible
-    /// for interrupting the render first (Arnold nodes are created and destroyed here).
-    void _CreateRealGeometryNode(const SdfPath& id, const AtString& realShapeType)
-    {
-        _shape.SetShapeType(realShapeType, id, HydraType::GetPrimId());
-        // Whatever instance node we had is gone with the old node.
-        _instancePrototype = nullptr;
-        // A freshly created polymesh must reset its subdivision: unlike the one built in
-        // HdArnoldMesh's constructor it would otherwise keep arnold's default of 1 iteration.
-        // Curves have no subdiv_iterations parameter.
-        if (realShapeType == str::polymesh)
-            AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
-    }
-
-    /// Hands this rprim's Arnold node over to the render delegate if it is a dedup canonical
-    /// that other rprims instance, and gives this rprim a new, empty node of @p realShapeType
-    /// to build into. Returns true if that happened, in which case the caller must force a
-    /// full geometry rebuild (see _HandOffDedupOnDestroy for the same operation on destroy).
-    ///
-    /// Must be called before anything destroys or repurposes the node this rprim owns while it
-    /// is registered as a canonical - Arnold instances point at their prototype's geometry
-    /// arrays instead of copying them, so destroying a prototype dangles all of them (see
-    /// HdArnoldRenderDelegate::HandOffCanonicalGeometry).
-    bool _HandOffCanonicalGeometry(const SdfPath& id, const AtString& realShapeType)
-    {
-        // Only a real geometry node can have been published as a canonical.
-        if (_isInstance || !_renderDelegate->HandOffCanonicalGeometry(id, GetArnoldNode()))
-            return false;
-        // The node belongs to the render delegate now: drop it without destroying it.
-        _shape.ReleaseShapeOwnership();
-        _CreateRealGeometryNode(id, realShapeType);
-        return true;
-    }
-
-    /// Turns this rprim's dedup instance state back into a real, non-instanced node of
-    /// @p realShapeType (str::polymesh / str::curves). No-op if this rprim is not currently a
-    /// dedup instance. The caller is responsible for interrupting the render first (the
-    /// ginstance flavor destroys and recreates the Arnold node).
-    void _RebuildRealGeometryNode(const SdfPath& id, const AtString& realShapeType)
-    {
-        if (!_isInstance)
-            return;
-        if (_shape.GetPrototypeOverride() != nullptr) {
-            // Instanced-prototype flavor: stop redirecting the instancer to the shared canonical.
-            _shape.SetPrototypeOverride(nullptr);
-        } else {
-            // Ginstance flavor: recreate a real geometry node in place of the ginstance.
-            _CreateRealGeometryNode(id, realShapeType);
-        }
-        _isInstance = false;
-        _canonicalPath = SdfPath();
-    }
-
-    /// Reverts any dedup state (registry entry and instance wiring) so this rprim can be
-    /// built as a real, non-instanced node of @p realShapeType. Sets @p dirtyBits /
-    /// @p dirtyPrimvars when the geometry has to be rebuilt from scratch afterwards. No-op if
-    /// this rprim is not registered with the dedup registry.
-    void _RevertGeometryDedup(
-        const SdfPath& id, const AtString& realShapeType, HdDirtyBits* dirtyBits, bool& dirtyPrimvars,
+    /// Registers this rprim as the canonical or a duplicate of the geometry identified by
+    /// @p hash, or makes it a plain geometry again if not @p eligible. Returns true if the
+    /// Arnold node was replaced or rewired. Nothing is touched, and the render is not
+    /// interrupted, when the dedup state does not change.
+    bool _ApplyGeometryDedup(
+        const SdfPath& id, const AtString& shapeType, bool eligible, bool instanced, uint64_t hash,
         HdArnoldRenderParamInterrupt& param)
     {
-        if (!_dedupRegistered)
-            return;
-        // Leaving the registry can destroy an adopted canonical node, and rebuilding the real
-        // node destroys/creates this rprim's node; neither may happen while rendering.
-        param.Interrupt();
-        // If our node is a canonical other rprims instance, it must outlive us: hand it over
-        // and continue on a new one (the render delegate destroys it once the last instance
-        // is gone). Otherwise we keep it and ReleaseCanonicalGeometry just drops the entry.
-        const bool handedOff = _HandOffCanonicalGeometry(id, realShapeType);
-        const bool wasInstance = _isInstance;
-        // Drop our own instance wiring BEFORE releasing the registry entry. Releasing can
-        // destroy an adopted canonical (we may be its last instance), and until this call our
-        // Arnold node is still a ginstance pointing at that canonical and aliasing its geometry
-        // arrays - releasing first would free a prototype that one of our own nodes references.
-        _RebuildRealGeometryNode(id, realShapeType);
-        _renderDelegate->ReleaseCanonicalGeometry(id);
-        _dedupRegistered = false;
-        _dedupHash = 0;
-        // Whether we handed our node over or were rendering another rprim's geometry, we are
-        // now sitting on a node with no geometry at all: rebuild all of it.
-        if (handedOff || wasInstance) {
-            *dirtyBits |= _rebuiltNodeDirtyBits;
-            dirtyPrimvars = true;
-        }
-    }
-
-    /// Registers this rprim with the geometry-dedup registry using the caller-computed
-    /// eligibility and geometry @p hash, and wires up instancing. Returns true if this rprim
-    /// is a dedup instance - the caller must then refresh its local node pointer
-    /// (GetArnoldNode()) and skip translating geometry. @p realShapeType is the node type to
-    /// restore on revert (str::polymesh / str::curves); it is also folded into the registry key
-    /// so a mesh and a curve with a colliding geometry hash are never merged. @p param is used
-    /// to interrupt the render before any Arnold node is created, destroyed or re-pointed;
-    /// when nothing about this rprim's dedup status changes, no node is touched and the render
-    /// is not interrupted.
-    bool _ApplyGeometryDedup(
-        const SdfPath& id, bool eligible, bool instanced, uint64_t hash, const AtString& realShapeType,
-        HdDirtyBits* dirtyBits, bool& dirtyPrimvars, HdArnoldRenderParamInterrupt& param)
-    {
-        // A prototype that might itself be shared as a canonical must stay a plain, shareable
-        // node (shape-instancing would bake instance_matrix onto it); force the arnold
-        // instancer-node path for every eligible instanced prototype (see SetForceInstancerNode).
         _shape.SetForceInstancerNode(eligible && instanced);
-        if (!eligible) {
-            // No longer eligible for dedup: leave the registry (dirtying any duplicates if we
-            // were their canonical) and, if we were an instance, force a full geometry rebuild
-            // on the freshly recreated node.
-            if (_dedupRegistered)
-                _RevertGeometryDedup(id, realShapeType, dirtyBits, dirtyPrimvars, param);
-            return false;
-        }
-
-        // Distinguish node types in the shared registry: AtString interns its storage, so
-        // equal shape types share a pointer and different ones never collide.
-        const uint64_t typedHash = TfHash::Combine(hash, reinterpret_cast<uintptr_t>(realShapeType.c_str()));
-        // When the geometry identity changed, acquiring below releases the old association,
-        // which can destroy an adopted canonical node.
-        if (_dedupRegistered && _dedupHash != typedHash) {
+        if (!eligible)
+            return _LeaveGeometryDedup(id, shapeType, param);
+        // Keep meshes and curves apart in the registry, and 0 for "not registered".
+        uint64_t typedHash = TfHash::Combine(hash, reinterpret_cast<uintptr_t>(shapeType.c_str()));
+        typedHash += typedHash == 0;
+        AtNode* const canonical = _shape.GetSharedGeometry();
+        if (typedHash == _dedupHash) {
+            // Still the canonical, or a duplicate of the same node. Only the way a duplicate
+            // instances it can change, when the prim becomes instanced or not.
+            if (canonical == nullptr || instanced != _shape.IsInstanceNode())
+                return false;
             param.Interrupt();
-            // We are leaving the geometry we were registered against. If we own its canonical
-            // node and other rprims instance it, that node cannot follow us: hand it over to
-            // the render delegate and continue on a new one. Without this, becoming a
-            // duplicate below (ConvertToInstanceOf destroys and recreates this rprim's node)
-            // would destroy a node those rprims point at, dangling the geometry arrays their
-            // Arnold instances share with it - the crash this dedup path used to hit after a
-            // few interactive edits (ARNOLD-17180).
-            if (_HandOffCanonicalGeometry(id, realShapeType)) {
-                *dirtyBits |= _rebuiltNodeDirtyBits;
-                dirtyPrimvars = true;
-            }
-        }
-        SdfPath canonicalPath;
-        bool pending = false;
-        // Only offer our node as a canonical candidate if it is a real geometry node; while we
-        // are an instance we have no geometry to share, so if we become the canonical the entry
-        // stays pending until we have rebuilt a real node and published it (below).
-        AtNode* canonical = _renderDelegate->AcquireCanonicalGeometry(
-            id, _isInstance ? nullptr : GetArnoldNode(), typedHash, &canonicalPath, &pending);
-        // AcquireCanonicalGeometry always records this rprim in the registry (as the
-        // canonical or as a duplicate), so from now on the destructor must call
-        // OnGeometryDestroyed to clean up / hand off the node.
-        _dedupRegistered = true;
-        _dedupHash = typedHash;
-
-        if (canonical != nullptr) {
-            // This rprim is a duplicate of an existing canonical. Wire up the instancing, but
-            // only touch the Arnold nodes when something actually changed: a duplicate that
-            // stays a duplicate of the same canonical is a strict no-op (no node churn, no
-            // render interruption) - this is what keeps broadcast edits (e.g. authoring a
-            // primvar on every prim at once) cheap and safe.
-            if (instanced) {
-                if (_isInstance && _shape.GetPrototypeOverride() == canonical) {
-                    // Same canonical node: pure no-op, just track its (possibly updated) path.
-                    _canonicalPath = canonicalPath;
-                    return true;
-                }
-                if (_isInstance && _shape.GetPrototypeOverride() == nullptr) {
-                    // Flavor switch (ginstance -> instanced prototype): rebuild a real node for
-                    // the instancer path to reference alongside the prototype override.
-                    param.Interrupt();
-                    _RebuildRealGeometryNode(id, realShapeType);
-                }
-                // Redirect this prototype's instancer to the shared canonical node and skip
-                // building this prototype's own geometry (member-only; the instancer rebuild
-                // in HdArnoldShape interrupts the render itself before touching nodes).
-                _shape.SetPrototypeOverride(canonical);
-            } else {
-                // Compare against the prototype we recorded rather than querying the node with
-                // AiNodeGetPtr(node, str::node): an initialized ginstance has mutated into its
-                // prototype's node type and no longer has a "node" parameter (see
-                // HdArnoldShape::SetShapeType), so that query always returned null after the
-                // first render. This fast path was therefore dead, and every duplicate was
-                // destroyed and recreated on every edit.
-                if (_isInstance && _shape.GetPrototypeOverride() == nullptr && _instancePrototype == canonical) {
-                    // Already a ginstance of this canonical: pure no-op, just track its
-                    // (possibly updated) path.
-                    _canonicalPath = canonicalPath;
-                    return true;
-                }
-                if (_shape.GetPrototypeOverride() != nullptr) {
-                    // Flavor switch (instanced prototype -> ginstance): drop the override; the
-                    // node is converted to a ginstance right below.
-                    _shape.SetPrototypeOverride(nullptr);
-                }
-                // Turn this rprim into a ginstance of the canonical. This always creates a new
-                // Arnold node: an initialized ginstance cannot be re-pointed at another
-                // prototype (see HdArnoldShape::SetShapeType), which is why the no-op fast
-                // path above matters.
-                param.Interrupt();
-                _shape.ConvertToInstanceOf(canonical, id, HydraType::GetPrimId());
-                _instancePrototype = canonical;
-            }
-            _isInstance = true;
-            // The duplicate must re-sync whenever its canonical changes or is removed; the
-            // type-specific material assignment registers this dependency from _canonicalPath.
-            _canonicalPath = canonicalPath;
-            // Re-apply everything on the duplicate: the ginstance flavor is sitting on a
-            // brand new node, and the instanced flavor needs its arnold instancer rebuilt so
-            // it actually references the canonical we just set as the prototype override. Note
-            // that _SyncInstances only rebuilds on DirtyPoints / DirtyInstancer /
-            // DirtyInstanceIndex, so a narrower set would leave the override unapplied until
-            // some later edit happened to dirty one of those. The geometry blocks are all
-            // guarded by !_isInstance, so nothing rebuilds geometry we do not own.
-            *dirtyBits |= _rebuiltNodeDirtyBits;
-            dirtyPrimvars = true;
+            _InstanceSharedGeometry(id, shapeType, canonical, instanced);
             return true;
         }
-
-        if (pending) {
-            // Another rprim claimed this geometry as canonical in this same parallel Sync pass
-            // but has not published its node yet. Keep our current state - the registry queued
-            // us and we will be dirtied (and convert) once the canonical is published; attaching
-            // now would hand us a node that is mid-rebuild on another thread.
-            return _isInstance;
+        param.Interrupt();
+        bool rebuilt = false;
+        // A duplicate stays registered to its previous geometry until it is rewired below, as
+        // releasing it can destroy the node it references.
+        if (_dedupHash != 0 && canonical == nullptr)
+            rebuilt = _LeaveCanonicalGeometry(id, shapeType);
+        AtNode* shared = _renderDelegate->AcquireCanonicalGeometry(typedHash, canonical ? nullptr : GetArnoldNode());
+        if (shared == nullptr && canonical != nullptr) {
+            // Nobody owns this geometry: become its canonical, which requires a real node.
+            _RestoreRealGeometryNode(id, shapeType);
+            shared = _renderDelegate->AcquireCanonicalGeometry(typedHash, GetArnoldNode());
+            rebuilt = true;
         }
-
-        // This rprim is (or remains) the canonical for this geometry.
-        if (_isInstance) {
-            // We were an instance and just became the canonical: rebuild a real geometry node,
-            // publish it (un-pending the registry entry and dirtying any queued duplicates),
-            // and force a full rebuild of the freshly created, empty node.
-            param.Interrupt();
-            _RebuildRealGeometryNode(id, realShapeType);
-            _renderDelegate->PublishCanonicalGeometry(id, typedHash, GetArnoldNode());
-            *dirtyBits |= _rebuiltNodeDirtyBits;
-            dirtyPrimvars = true;
+        if (shared != nullptr) {
+            _InstanceSharedGeometry(id, shapeType, shared, instanced);
+            rebuilt = true;
         }
-        return false;
+        if (canonical != nullptr)
+            _renderDelegate->ReleaseCanonicalGeometry(_dedupHash);
+        _dedupHash = typedHash;
+        return rebuilt;
     }
 
+    /// Leaves the dedup registry and makes this rprim a plain geometry. Returns true if the
+    /// Arnold node was replaced or rewired.
+    bool _LeaveGeometryDedup(const SdfPath& id, const AtString& shapeType, HdArnoldRenderParamInterrupt& param)
+    {
+        if (_dedupHash == 0)
+            return false;
+        param.Interrupt();
+        bool rebuilt = true;
+        if (_IsDuplicate()) {
+            // Unwire first, releasing can destroy the canonical node.
+            _RestoreRealGeometryNode(id, shapeType);
+            _renderDelegate->ReleaseCanonicalGeometry(_dedupHash);
+        } else {
+            rebuilt = _LeaveCanonicalGeometry(id, shapeType);
+        }
+        _dedupHash = 0;
+        return rebuilt;
+    }
+
+    /// Releases the canonical registration of this rprim. If duplicates still reference its
+    /// node, the render delegate keeps it and this rprim gets a new, empty node: returns true.
+    bool _LeaveCanonicalGeometry(const SdfPath& id, const AtString& shapeType)
+    {
+        if (!_renderDelegate->LeaveCanonicalGeometry(_dedupHash, GetArnoldNode(), id))
+            return false;
+        _shape.ReleaseShapeOwnership();
+        _shape.SetShapeType(shapeType, id, HydraType::GetPrimId());
+        return true;
+    }
+
+    /// Makes this rprim render the canonical node @p shared.
+    void _InstanceSharedGeometry(const SdfPath& id, const AtString& shapeType, AtNode* shared, bool instanced)
+    {
+        if (instanced) {
+            // The instancer references the shared node, this rprim keeps an empty node of its own.
+            if (_shape.IsInstanceNode())
+                _shape.SetShapeType(shapeType, id, HydraType::GetPrimId());
+            _shape.SetPrototypeOverride(shared);
+        } else {
+            _shape.ConvertToInstanceOf(shared, id, HydraType::GetPrimId());
+        }
+    }
+
+    /// Stops rendering a shared geometry, leaving this rprim with an empty node of its own.
+    void _RestoreRealGeometryNode(const SdfPath& id, const AtString& shapeType)
+    {
+        if (_shape.IsInstanceNode())
+            _shape.SetShapeType(shapeType, id, HydraType::GetPrimId());
+        else
+            _shape.SetPrototypeOverride(nullptr);
+    }
+
+protected:
     /// Returns true if step size is bigger than zero, false otherwise.
     ///
     /// @return True if prim is a volume boundary.
@@ -612,17 +480,7 @@ protected:
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
     int _deformKeys = 2;                                      ///< Number of deform keys. Used with velocity and accelerations
     bool _skipped = false;
-
-    // Geometry deduplication state (shared by mesh/curves; see _ApplyGeometryDedup).
-    bool _isInstance = false;           ///< True when this rprim is a dedup duplicate (geometry not built), either flavor.
-    bool _dedupRegistered = false;      ///< True while this rprim has an entry in the dedup registry (canonical or duplicate); lets the destructor skip OnGeometryDestroyed for the many rprims that never deduplicate.
-    /// Canonical node our own instance node was pointed at (non-instanced flavor). Tracked
-    /// here because an initialized arnold instance no longer exposes a "node" parameter to
-    /// query. The instanced-prototype flavor needs no equivalent: its canonical is
-    /// HdArnoldShape::GetPrototypeOverride(), which is also what tells the two flavors apart.
-    AtNode* _instancePrototype = nullptr;
-    SdfPath _canonicalPath;             ///< Path of the canonical this one shares (dedup), empty otherwise.
-    uint64_t _dedupHash = 0;            ///< Typed geometry hash this rprim is registered under (dedup), 0 otherwise.
+    uint64_t _dedupHash = 0;                                  ///< Geometry hash registered for deduplication, 0 if none.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -88,27 +88,8 @@ protected:
     HDARNOLD_API
     AtNode *_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
-    /// Returns true if this mesh carries an Arnold mesh light (which excludes it from
-    /// geometry deduplication). Unlike _GetMeshLight this has no side effects.
+    /// Returns true if this mesh has a mesh light.
     bool _HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const;
-
-    /// Computes a hash uniquely identifying the geometry that ends up on the Arnold
-    /// polymesh: the mesh-specific part (topology, the display-style refinement, the subdiv
-    /// tags and the resolved displacement shader - a ginstance cannot override displacement,
-    /// so meshes with different displacement must not be merged) plus the part common to
-    /// every geometry type (points, primvars, render tag, light linking - see
-    /// HdArnoldRprim::_HashCommonGeometryState).
-    ///
-    /// When @p instanced is true (a point-instancer prototype), the prototype's own
-    /// transform and its resolved surface shader are also folded in: the shared canonical
-    /// polymesh carries both (its instancer references it directly), so only prototypes
-    /// that match on those too may be merged.
-    ///
-    /// @return True and the hash in @p outHash, or false when this mesh cannot be hashed
-    ///  reliably and must not be deduplicated.
-    bool _ComputeGeometryHash(
-        const HdMeshTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
-        const SdfPath& id, bool instanced, uint64_t& outHash);
 
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
@@ -119,8 +100,6 @@ protected:
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     MeshHoleFilter _holeFilter;       ///< Cached membership/offset tables for USD holeIndices filtering.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
-    // Geometry deduplication state (_isInstance, _dedupRegistered, _canonicalPath, ...) lives
-    // in the HdArnoldRprim base, shared with the curves rprim.
     ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays of the scene
 };
 

@@ -29,29 +29,30 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-bool HdArnoldGetPrimOriginPath(HdSceneDelegate* sceneDelegate, const SdfPath& id, SdfPath& originPath)
+namespace {
+
+/// Returns the scene path of a point-instancer prototype copy re-rooted by UsdImaging, whose
+/// own path carries a hash suffix, or an empty path for any other prim (and without Hydra 2).
+SdfPath _GetPrototypeOriginPath(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
 #ifdef ENABLE_SCENE_INDEX // Hydra2
     HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-    if (!sceneIndex)
-        return false;
-    // Only a prim that is instanced by a point instancer is a re-rooted prototype copy.
-    HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
-    HdInstancedBySchema instancedBy = HdInstancedBySchema::GetFromParent(prim.dataSource).GetContainer();
-    if (!instancedBy)
-        return false;
-    HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
-    if (!primOrigin)
-        return false;
-    originPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
-    return true;
+    if (sceneIndex) {
+        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+        if (HdInstancedBySchema::GetFromParent(prim.dataSource).GetContainer()) {
+            HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
+            if (primOrigin)
+                return primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+        }
+    }
 #else
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(id);
-    TF_UNUSED(originPath);
-    return false;
 #endif // ENABLE_SCENE_INDEX // Hydra2
+    return {};
 }
+
+} // namespace
 
 HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
@@ -66,27 +67,14 @@ HdArnoldShape::HdArnoldShape(
 
 HdArnoldShape::~HdArnoldShape()
 {
-    if (_shape) {
-        _renderDelegate->DestroyArnoldNode(_shape);
-    }
-    for (auto &instancer : _instancers) {
-        _renderDelegate->DestroyArnoldNode(instancer);
-    }
+    DestroyNodes();
 }
 
 void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId)
 {
-    // An initialized ginstance can never be reused, and AiNodeIs must not be trusted on one:
-    // during its node_initialize a ginstance mutates itself into a copy of its prototype
-    // (copyFromNode assigns the prototype's node entry), so after the first render it answers
-    // AiNodeIs(node, "polymesh") == true, it no longer exposes the "node" parameter it was
-    // pointed at, and it has no node_update at all (MsgUnreachableCode - arnold assumes no
-    // ginstance survives to update time, which interactive editing breaks). Asking arnold here
-    // therefore turned both "turn this instance back into real geometry" and "point it at
-    // another prototype" into silent no-ops, leaving the rprim believing it owned geometry
-    // while its node still aliased the prototype's vlist/vidxs/nsides (ARNOLD-17180). So we
-    // always recreate when either side is a ginstance; no other node type morphs, which keeps
-    // AiNodeIs the right test for e.g. ArnoldProceduralCustom changing its node entry.
+    // An initialized ginstance mutates into a copy of its prototype, so AiNodeIs cannot be
+    // trusted on it, and it cannot be updated nor pointed at another prototype: always
+    // recreate it.
     if (_shape != nullptr && (_isInstance || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
@@ -94,36 +82,37 @@ void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, i
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
         _isInstance = shapeType == str::ginstance;
-        // A fresh node is enabled and visible, whatever SetHidden did to the previous one.
+        _sharedGeometry = nullptr;
         _hiddenBy = HiddenBy::None;
-        // A brand new node carries none of the previous one's state, and the hydra prim ID is
-        // not re-applied by Sync unless DirtyPrimID happens to be set - which it is not on the
-        // dedup conversions, nor when ArnoldProceduralCustom swaps its node entry. Without
-        // this the node has no hydra_primId user data at all, the primId AOV reads 0 for it,
-        // and the driver treats those pixels as background: the prim becomes unpickable.
+        // Sync only applies the prim id when it is dirty.
         _SetPrimId(primId);
     }
 }
 
 void HdArnoldShape::ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId)
 {
-    if (proto == nullptr)
-        return;
     SetShapeType(str::ginstance, id, primId);
-    if (_shape == nullptr)
-        return;
-    // The instance positions itself with its own matrix (set later during Sync), so it
-    // must not inherit the prototype transform.
+    // The instance gets its own matrix during Sync.
     AiNodeSetBool(_shape, str::inherit_xform, false);
     AiNodeSetPtr(_shape, str::node, proto);
+    _sharedGeometry = proto;
 }
 
-AtNode* HdArnoldShape::ReleaseShapeOwnership()
+void HdArnoldShape::ReleaseShapeOwnership()
 {
-    AtNode* node = _shape;
     _shape = nullptr;
     _isInstance = false;
-    return node;
+    _sharedGeometry = nullptr;
+}
+
+void HdArnoldShape::DestroyNodes()
+{
+    for (auto& instancer : _instancers) {
+        _renderDelegate->DestroyArnoldNode(instancer);
+    }
+    _instancers.clear();
+    _renderDelegate->DestroyArnoldNode(_shape);
+    ReleaseShapeOwnership();
 }
 
 void HdArnoldShape::Sync(
@@ -136,15 +125,12 @@ void HdArnoldShape::Sync(
         return;
 
     auto& id = rprim->GetId();
-    // Identify if this rprim comes from a prototype in a point instancer, then set the
-    // metadata to override it's cryptomatte id with the prototype path minus the hash suffix.
-    // Remembered so _SyncInstances can republish it per instance when the geometry dedup makes
-    // our instancer reference another rprim's canonical node (see HdArnoldGetPrimOriginPath).
-    SdfPath primOriginPath;
-    if (HdArnoldGetPrimOriginPath(sceneDelegate, id, primOriginPath)) {
+    // Identify if this rprim comes from a prototype in a point instancer,
+    // then set the metadata to override it's cryptomatte id with the
+    // prototype path minus the hash suffix
+    const SdfPath primOriginPath = _GetPrototypeOriginPath(sceneDelegate, id);
+    if (!primOriginPath.IsEmpty()) {
         param.Interrupt();
-        _cryptoObjectPath = primOriginPath;
-
         if (AiNodeLookUpUserParameter(_shape, str::crypto_object) == nullptr) {
             AiNodeDeclare(_shape, str::crypto_object, str::constantString);
         }
@@ -167,7 +153,9 @@ void HdArnoldShape::Sync(
      }
 #endif
 
-    _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    _SyncInstances(
+        dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force, rprim->GetPrimId(),
+        primOriginPath);
 }
 
 void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelegate, HdArnoldRenderParamInterrupt& param){
@@ -211,14 +199,10 @@ void HdArnoldShape::SetHidden(bool hidden, bool nodeIsShared)
     }
     switch (_hiddenBy) {
         case HiddenBy::Instancers:
-            // The full resync a shown prim gets rebuilds the instancers anyway (_SyncInstances
-            // rebuilds on DirtyInstancer / DirtyPoints); re-enable them so that nothing depends
-            // on it.
             for (AtNode* instancer : _instancers)
                 AiNodeSetDisabled(instancer, false);
             break;
         case HiddenBy::Visibility:
-            // Refreshed right after by that same resync; this only stops hiding it until then.
             AiNodeSetByte(_shape, str::visibility, _instancers.empty() ? _visibility : 0);
             break;
         case HiddenBy::Disabled:
@@ -277,12 +261,12 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
         AiNodeDeclare(_shape, str::hydraPrimId, str::constantInt);
     }
     AiNodeSetInt(_shape, str::hydraPrimId, primId + 1);
-    _primId = primId;
 }
 
 void HdArnoldShape::_SyncInstances(
     HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force)
+    HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force,
+    int32_t primId, const SdfPath& cryptoObject)
 {
     if (_shape == nullptr)
         return;
@@ -309,12 +293,8 @@ void HdArnoldShape::_SyncInstances(
     // Rebuild the instancer
     param.Interrupt();
 
-    // A deduplicated prototype (mesh dedup) references a shared canonical polymesh instead
-    // of its own geometry; that requires the arnold instancer-node path (which lets us
-    // redirect the referenced node), so we force it whenever an override is set. Likewise a
-    // prototype that may itself be shared as a canonical must not bake instance_matrix onto
-    // its polymesh (shape-instancing), so _forceInstancerNode keeps it a plain shareable node.
-    if (_prototypeOverride != nullptr || _forceInstancerNode ||
+    // Only an instancer node can reference a shared geometry (geometry deduplication).
+    if (_sharedGeometry != nullptr || _forceInstancerNode ||
         UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
         for (auto &instancerNode : _instancers) {
@@ -335,32 +315,19 @@ void HdArnoldShape::_SyncInstances(
 
         const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
-        // For a deduplicated prototype the leaf instancer references the shared canonical
-        // polymesh rather than this shape's own (empty) node.
-        AtNode* const leafPrototype = (_prototypeOverride != nullptr) ? _prototypeOverride : _shape;
-        // The hydra prim ID and the cryptomatte object name are normally read off the
-        // prototype, which is this shape's own node - but a deduplicated prototype references
-        // a canonical node belonging to another rprim, so arnold would find that other rprim's
-        // values: every one of these instances would resolve to the wrong prim when picked,
-        // and would matte as the wrong cryptomatte object. Republish ours as per-instance user
-        // data on the leaf instancer, which takes precedence over the prototype's - the same
-        // mechanism HdArnoldRenderDelegate::SetInstancerCryptoOffset already relies on for
-        // instance_crypto_object_offset. A single element is broadcast to every instance, like
-        // instance_inherit_xform above. The instancers are destroyed and recreated on every
-        // pass through this branch, so nothing has to undo this when the override goes away.
-        if (_prototypeOverride != nullptr && !_instancers.empty()) {
+        AtNode* const leafPrototype = (_sharedGeometry != nullptr) ? _sharedGeometry : _shape;
+        // A shared geometry carries another rprim's prim id and cryptomatte object name:
+        // override them per instance on the leaf instancer (a single value applies to all).
+        if (_sharedGeometry != nullptr && !_instancers.empty()) {
             AtNode* const leafInstancer = _instancers[0];
             if (AiNodeLookUpUserParameter(leafInstancer, str::instance_hydraPrimId) == nullptr)
                 AiNodeDeclare(leafInstancer, str::instance_hydraPrimId, str::constantArrayInt);
-            AiNodeSetArray(leafInstancer, str::instance_hydraPrimId, AiArray(1, 1, AI_TYPE_INT, _primId + 1));
-            // Not gated on HasCryptomatte(): unlike the crypto offsets, which are back-filled
-            // on every instancer when the first cryptomatte driver registers, nothing would
-            // come back for this one if cryptomatte were enabled after the instancer is built.
-            if (!_cryptoObjectPath.IsEmpty()) {
+            AiNodeSetArray(leafInstancer, str::instance_hydraPrimId, AiArray(1, 1, AI_TYPE_INT, primId + 1));
+            if (!cryptoObject.IsEmpty()) {
                 if (AiNodeLookUpUserParameter(leafInstancer, str::instance_crypto_object) == nullptr)
                     AiNodeDeclare(leafInstancer, str::instance_crypto_object, str::constantArrayString);
                 AtArray* cryptoArray = AiArrayAllocate(1, 1, AI_TYPE_STRING);
-                AiArraySetStr(cryptoArray, 0, AtString(_cryptoObjectPath.GetText()));
+                AiArraySetStr(cryptoArray, 0, AtString(cryptoObject.GetText()));
                 AiNodeSetArray(leafInstancer, str::instance_crypto_object, cryptoArray);
             }
         }
@@ -385,22 +352,13 @@ void HdArnoldShape::_SyncInstances(
         }
     } else
     {
-        // Shape-instancing path: instance_matrix is baked onto _shape and no arnold instancer
-        // node is involved. Any instancer built by a previous Sync has to go, otherwise it
-        // keeps rendering a second, stale copy of the instances - and its "nodes" may point at
-        // a node that has since been destroyed. This condition is not static: the mesh dedup
-        // flips _forceInstancerNode (and _prototypeOverride) as a prototype becomes eligible
-        // or ineligible, so a shape can genuinely move from the branch above to this one.
-        const bool hadInstancers = !_instancers.empty();
-        for (auto &instancerNode : _instancers) {
-            _renderDelegate->DestroyArnoldNode(instancerNode);
-        }
-        _instancers.clear();
-        // That instancer had hidden the source mesh (visibility 0 above). This branch renders
-        // the instances on _shape itself, so give it its visibility back - SetVisibility skips
-        // the shape while _instancers is non-empty, so nothing else would restore it until the
-        // next edit that happens to dirty visibility.
-        if (hadInstancers) {
+        // The geometry deduplication can switch a shape from the instancer-node path to this
+        // one: drop the previous instancers, and show the shape again which they had hidden.
+        if (!_instancers.empty()) {
+            for (auto &instancerNode : _instancers) {
+                _renderDelegate->DestroyArnoldNode(instancerNode);
+            }
+            _instancers.clear();
             AiNodeSetByte(_shape, str::visibility, _visibility);
         }
 
