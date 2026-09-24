@@ -24,7 +24,7 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
         AtNode* node = GetArnoldNode();
         AtString nodeEntryStr(nodeEntry.c_str());
         if (node == nullptr || !AiNodeIs(node, nodeEntryStr)) {
-            GetShape().SetShapeType(nodeEntryStr, GetId());
+            GetShape().SetShapeType(nodeEntryStr, GetId(), GetPrimId());
         }
     }
     HdArnoldNativeRprim::Sync(delegate, renderParam, dirtyBits, reprToken);

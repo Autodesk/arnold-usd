@@ -85,6 +85,11 @@ HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const
 {
 }
 
+HdArnoldBasisCurves::~HdArnoldBasisCurves()
+{
+    _ReleaseGeometryDedup();
+}
+
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
@@ -119,15 +124,29 @@ void HdArnoldBasisCurves::Sync(
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
-        
-    TfToken curveType;
+
     HdBasisCurvesTopology topology;
+    bool hasTopology = false;
+    _SyncGeometryDedup(
+        sceneDelegate, id, str::curves, _primvars, pointsSample, false, dirtyBits, dirtyPrimvars, param,
+        [&](uint64_t& hash) {
+            topology = GetBasisCurvesTopology(sceneDelegate);
+            hasTopology = true;
+            hash = topology.ComputeHash();
+            return true;
+        });
+    node = GetArnoldNode();
+    dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
+    dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
+
+    TfToken curveType;
 
     if (dirtyTopology || dirtyPoints || dirtyPrimvars) {
         // If topology / points / primvars have changed and this curve has a linear basis
         // then we need to ensure all of these attributes are updated, because
         // Arnold converts linear curves to bezier on the fly #1861
-        topology = GetBasisCurvesTopology(sceneDelegate);
+        if (!hasTopology)
+            topology = GetBasisCurvesTopology(sceneDelegate);
         curveType = topology.GetCurveType();
         if (curveType == HdTokens->linear) {
             dirtyTopology = dirtyPoints = dirtyPrimvars = true;
@@ -136,8 +155,8 @@ void HdArnoldBasisCurves::Sync(
 
     // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
     // If we already have a primvar for points, it will be translated below, in the 
-    // primvars conversion section
-    if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
+    // primvars conversion section. A duplicate shares the geometry of its canonical.
+    if (dirtyPoints && _primvars.count(HdTokens->points) == 0 && !_IsDuplicate()) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
 
@@ -145,7 +164,7 @@ void HdArnoldBasisCurves::Sync(
         HdArnoldSetRadiusFromPrimvar(node, id, sceneDelegate);
     }
 
-    if (dirtyTopology) {
+    if (dirtyTopology && !_IsDuplicate()) {
         param.Interrupt();
         const auto curveBasis = topology.GetCurveBasis();            
         const auto curveWrap = topology.GetCurveWrap();
@@ -222,7 +241,7 @@ void HdArnoldBasisCurves::Sync(
         GetRenderDelegate()->ApplyLightLinking(sceneDelegate, node, id);
     }
 
-    if (dirtyPrimvars) {
+    if (dirtyPrimvars && !_IsDuplicate()) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
@@ -332,8 +351,15 @@ void HdArnoldBasisCurves::Sync(
         }
         UpdateVisibilityAndSidedness();
     }
+
+    if (dirtyPrimvars && _shape.IsInstanceNode()) {
+        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken& name) {
+            return name == _tokens->orientations || name == _tokens->basis;
+        });
+    }
+
     // Set motion_start / motion_end if we have a non null shutter range
-    {    
+    if (!_IsDuplicate()) {
         HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
         if (renderParam->GetShutterRange()[0] != renderParam->GetShutterRange()[1]) {
             AiNodeSetFlt(node, str::motion_start, renderParam->GetShutterRange()[0]);

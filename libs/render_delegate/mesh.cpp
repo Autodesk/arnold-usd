@@ -44,6 +44,7 @@
 #include "instancer.h"
 #include "node_graph.h"
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -178,6 +179,7 @@ HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath
 }
 
 HdArnoldMesh::~HdArnoldMesh() {
+    _ReleaseGeometryDedup();
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
@@ -241,8 +243,34 @@ void HdArnoldMesh::Sync(
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
-    
-    if (_primvars.count(HdTokens->points) != 0) {
+
+    // Fetched at most once per Sync, for both the deduplication and the topology translation.
+    std::optional<HdMeshTopology> topologyCache;
+    auto getMeshTopology = [&]() -> const HdMeshTopology& {
+        if (!topologyCache.has_value())
+            topologyCache = GetMeshTopology(sceneDelegate);
+        return *topologyCache;
+    };
+
+    _SyncGeometryDedup(
+        sceneDelegate, id, str::polymesh, _primvars, _pointsSample, true, dirtyBits, dirtyPrimvars, param,
+        [&](uint64_t& hash) {
+            // Geom subsets and mesh lights are not supported.
+            const HdMeshTopology& topology = getMeshTopology();
+            if (!topology.GetGeomSubsets().empty() || _HasMeshLight(sceneDelegate, id))
+                return false;
+            // Creases are not part of the topology, and the display style sets the subdivision.
+            hash = TfHash::Combine(
+                topology.ComputeHash(), GetSubdivTags(sceneDelegate).ComputeHash(),
+                GetDisplayStyle(sceneDelegate).refineLevel);
+            return true;
+        });
+    node = GetArnoldNode();
+
+    // A duplicate shares the geometry of its canonical, and has no geom subsets.
+    if (_IsDuplicate()) {
+        _subsets.clear();
+    } else if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
@@ -255,8 +283,8 @@ void HdArnoldMesh::Sync(
     TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
-    if (dirtyTopology) {
-        const auto topology = GetMeshTopology(sceneDelegate);
+    if (dirtyTopology && !_IsDuplicate()) {
+        const HdMeshTopology& topology = getMeshTopology();
         _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         param.Interrupt();
         // Keep a reference on the vertex buffers as long as this object is live
@@ -356,7 +384,7 @@ void HdArnoldMesh::Sync(
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
-    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
+    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto displayStyle = GetDisplayStyle(sceneDelegate);
         // In Hydra, GetDisplayStyle will return a refine level between [0, 8]. 
@@ -375,7 +403,7 @@ void HdArnoldMesh::Sync(
         transformDirtied = true;
     }
 
-    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id)) {
+    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto subdivTags = GetSubdivTags(sceneDelegate);
         ArnoldUsdReadCreases(
@@ -396,7 +424,7 @@ void HdArnoldMesh::Sync(
         materialsAssigned = true;
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
-        const auto isVolume = _IsVolume();
+        const auto isVolume = !_IsDuplicate() && _IsVolume();
         // Shared materials bound by different rprims to different cameras each
         // resolve to their own camera through this per-rprim remap (see the
         // remap-aware HdArnoldNodeGraph::GetCached*Shader).
@@ -426,7 +454,11 @@ void HdArnoldMesh::Sync(
         // Keep track of the materials assigned to this mesh
         GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
 
-        if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
+        // The displacement belongs to the geometry, shared by a duplicate.
+        if (_IsDuplicate()) {
+            AiArrayUnmap(dispMapArray);
+            AiArrayDestroy(dispMapArray);
+        } else if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);
             AiNodeSetArray(node, str::disp_map, dispMapArray);
         } else {
@@ -438,7 +470,7 @@ void HdArnoldMesh::Sync(
         AiNodeSetArray(node, str::shader, shaderArray);
     };
 
-    if (dirtyPrimvars) {
+    if (dirtyPrimvars && !_IsDuplicate()) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         _autobumpVisibilityFlags.ClearPrimvarFlags();
@@ -630,6 +662,10 @@ void HdArnoldMesh::Sync(
         }        
     }
 
+    if (dirtyPrimvars && _shape.IsInstanceNode()) {
+        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken&) { return false; });
+    }
+
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
     // or if the coordinate-system bindings changed (assignMaterials rewrites each material's
     // "space" inputs to the cameras bound here - see the remap-aware GetCached*Shader).
@@ -662,21 +698,7 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    bool hasMeshLight = false;
-    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
-    if (lightValue.IsHolding<bool>()) {
-        hasMeshLight = lightValue.UncheckedGet<bool>();
-    }
-#ifndef ENABLE_SCENE_INDEX
-    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
-    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
-    if (!hasMeshLight) {
-        VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
-        if (isLightValue.IsHolding<bool>())
-            hasMeshLight = isLightValue.UncheckedGet<bool>();
-    }
-#endif
-    
+    const bool hasMeshLight = _HasMeshLight(sceneDelegate, id);
     if (hasMeshLight) {
         if (_geometryLight == nullptr) {
             // We need to create the mesh light, pointing to the current mesh.
@@ -695,6 +717,21 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
         _geometryLight = nullptr;    
     }
     return _geometryLight;
+}
+
+bool HdArnoldMesh::_HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const
+{
+    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
+    if (lightValue.IsHolding<bool>() && lightValue.UncheckedGet<bool>())
+        return true;
+#ifndef ENABLE_SCENE_INDEX
+    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
+    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
+    VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
+    if (isLightValue.IsHolding<bool>() && isLightValue.UncheckedGet<bool>())
+        return true;
+#endif
+    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

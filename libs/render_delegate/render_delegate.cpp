@@ -695,7 +695,16 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     // being handled by a chain of nested arnold instancer nodes. Defaults to disabled.
     std::string envFlattenInstancing = TfGetEnvSetting(HDARNOLD_FLATTEN_INSTANCING);
     _flattenInstancing = envFlattenInstancing == std::string("1");
-    
+
+    // Geometry deduplication mode: 0 off, 1 point-instancer prototypes only (default), 2 all
+    // geometries. Read with TfGetenvInt rather than a cached TfGetEnvSetting, so that it can
+    // change between two render delegates of the same process.
+    switch (TfGetenvInt("HDARNOLD_GEOM_DEDUP", 1)) {
+        case 0: _geometryDedupMode = GeometryDedupMode::None; break;
+        case 2: _geometryDedupMode = GeometryDedupMode::All; break;
+        default: _geometryDedupMode = GeometryDedupMode::Instances; break;
+    }
+
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -2172,6 +2181,64 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
             _dependencyRemovalQueue.emplace(target);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Geometry deduplication registry (meshes and curves).
+// ---------------------------------------------------------------------------
+
+AtNode* HdArnoldRenderDelegate::AcquireCanonicalGeometry(uint64_t hash, AtNode* candidate)
+{
+    std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+    const auto it = _canonicalGeometry.find(hash);
+    if (it != _canonicalGeometry.end()) {
+        ++it->second.duplicates;
+        return it->second.node;
+    }
+    if (candidate != nullptr)
+        _canonicalGeometry.emplace(hash, CanonicalGeometry{candidate});
+    return nullptr;
+}
+
+void HdArnoldRenderDelegate::ReleaseCanonicalGeometry(uint64_t hash)
+{
+    AtNode* toDestroy = nullptr;
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && it->second.duplicates > 0))
+            return;
+        if (--it->second.duplicates == 0 && it->second.adopted) {
+            toDestroy = it->second.node;
+            _canonicalGeometry.erase(it);
+        }
+    }
+    DestroyArnoldNode(toDestroy);
+}
+
+bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node, const SdfPath& id)
+{
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && !it->second.adopted && it->second.node == node))
+            return false;
+        if (it->second.duplicates == 0) {
+            _canonicalGeometry.erase(it);
+            return false;
+        }
+        it->second.adopted = true;
+    }
+    // Once the nodes belong to Arnold (see EnableNodesDestruction) they must not be touched.
+    if (_enableNodesDestruction) {
+        // Give the node's name back to the rprim, which creates its new node under it, and stop
+        // rendering it on its own. Its instances are unaffected, they set their own visibility.
+        const std::string name =
+            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
+        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        AiNodeSetByte(node, str::visibility, 0);
+    }
+    return true;
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)

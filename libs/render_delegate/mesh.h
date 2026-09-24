@@ -88,6 +88,9 @@ protected:
     HDARNOLD_API
     AtNode *_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
+    /// Returns true if this mesh has a mesh light.
+    bool _HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const;
+
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtValue _vertexCountsVtValue;      ///< Vertex nsides. We need to keep it alive for left handed geometries.
