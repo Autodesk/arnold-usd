@@ -29,6 +29,30 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+bool HdArnoldGetPrimOriginPath(HdSceneDelegate* sceneDelegate, const SdfPath& id, SdfPath& originPath)
+{
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+    if (!sceneIndex)
+        return false;
+    // Only a prim that is instanced by a point instancer is a re-rooted prototype copy.
+    HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+    HdInstancedBySchema instancedBy = HdInstancedBySchema::GetFromParent(prim.dataSource).GetContainer();
+    if (!instancedBy)
+        return false;
+    HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
+    if (!primOrigin)
+        return false;
+    originPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+    return true;
+#else
+    TF_UNUSED(sceneDelegate);
+    TF_UNUSED(id);
+    TF_UNUSED(originPath);
+    return false;
+#endif // ENABLE_SCENE_INDEX // Hydra2
+}
+
 HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
     : _renderDelegate(renderDelegate)
@@ -70,6 +94,8 @@ void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, i
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
         _isInstance = shapeType == str::ginstance;
+        // A fresh node is enabled and visible, whatever SetHidden did to the previous one.
+        _hiddenBy = HiddenBy::None;
         // A brand new node carries none of the previous one's state, and the hydra prim ID is
         // not re-applied by Sync unless DirtyPrimID happens to be set - which it is not on the
         // dedup conversions, nor when ArnoldProceduralCustom swaps its node entry. Without
@@ -110,29 +136,20 @@ void HdArnoldShape::Sync(
         return;
 
     auto& id = rprim->GetId();
-#ifdef ENABLE_SCENE_INDEX // Hydra2
-    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-    if (sceneIndex) {
-        // Identify if this rprim comes from a prototype in a point instancer,
-        // then set the metadata to override it's cryptomatte id with the
-        // prototype path minus the hash suffix
-        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
-        HdInstancedBySchema instancedBy = HdInstancedBySchema::GetFromParent(prim.dataSource).GetContainer();
-        if (instancedBy) {
-            HdPrimOriginSchema primOrigin = HdPrimOriginSchema::GetFromParent(prim.dataSource).GetContainer();
-            if (primOrigin) {
-                const SdfPath primOriginPath = primOrigin.GetOriginPath(HdPrimOriginSchemaTokens->scenePath);
+    // Identify if this rprim comes from a prototype in a point instancer, then set the
+    // metadata to override it's cryptomatte id with the prototype path minus the hash suffix.
+    // Remembered so _SyncInstances can republish it per instance when the geometry dedup makes
+    // our instancer reference another rprim's canonical node (see HdArnoldGetPrimOriginPath).
+    SdfPath primOriginPath;
+    if (HdArnoldGetPrimOriginPath(sceneDelegate, id, primOriginPath)) {
+        param.Interrupt();
+        _cryptoObjectPath = primOriginPath;
 
-                param.Interrupt();
-
-                if (AiNodeLookUpUserParameter(_shape, AtString("crypto_object")) == nullptr) {
-                    AiNodeDeclare(_shape, AtString("crypto_object"), AtString("constant STRING"));
-                }
-                AiNodeSetStr(_shape, AtString("crypto_object"), primOriginPath.GetText());
-            }
+        if (AiNodeLookUpUserParameter(_shape, str::crypto_object) == nullptr) {
+            AiNodeDeclare(_shape, str::crypto_object, str::constantString);
         }
+        AiNodeSetStr(_shape, str::crypto_object, AtString(primOriginPath.GetText()));
     }
-#endif // ENABLE_SCENE_INDEX // Hydra2
 
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         param.Interrupt();
@@ -174,6 +191,59 @@ void HdArnoldShape::SetVisibility(uint8_t visibility)
     _visibility = visibility;
 }
 
+void HdArnoldShape::SetHidden(bool hidden, bool nodeIsShared)
+{
+    if (_shape == nullptr)
+        return;
+    if (hidden) {
+        if (!_instancers.empty()) {
+            for (AtNode* instancer : _instancers)
+                AiNodeSetDisabled(instancer, true);
+            _hiddenBy = HiddenBy::Instancers;
+        } else if (nodeIsShared) {
+            AiNodeSetByte(_shape, str::visibility, 0);
+            _hiddenBy = HiddenBy::Visibility;
+        } else {
+            AiNodeSetDisabled(_shape, true);
+            _hiddenBy = HiddenBy::Disabled;
+        }
+        return;
+    }
+    switch (_hiddenBy) {
+        case HiddenBy::Instancers:
+            // The full resync a shown prim gets rebuilds the instancers anyway (_SyncInstances
+            // rebuilds on DirtyInstancer / DirtyPoints); re-enable them so that nothing depends
+            // on it.
+            for (AtNode* instancer : _instancers)
+                AiNodeSetDisabled(instancer, false);
+            break;
+        case HiddenBy::Visibility:
+            // Refreshed right after by that same resync; this only stops hiding it until then.
+            AiNodeSetByte(_shape, str::visibility, _instancers.empty() ? _visibility : 0);
+            break;
+        case HiddenBy::Disabled:
+            AiNodeSetDisabled(_shape, false);
+            break;
+        case HiddenBy::None:
+            // Hidden by the render tags, which the caller already checked now allow it.
+            AiNodeSetDisabled(_shape, false);
+            for (AtNode* instancer : _instancers)
+                AiNodeSetDisabled(instancer, false);
+            break;
+    }
+    _hiddenBy = HiddenBy::None;
+}
+
+bool HdArnoldShape::IsHidden() const
+{
+    if (_shape == nullptr)
+        return false;
+    if (_hiddenBy != HiddenBy::None)
+        return true;
+    // Not hidden by us, but the render tags can still have disabled what renders.
+    return AiNodeIsDisabled(_instancers.empty() ? _shape : _instancers.front());
+}
+
 static bool UseArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, HdInstancer *instancer, AtNode *node)
 {
     if (!renderDelegate->SupportShapeInstancing())
@@ -207,6 +277,7 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
         AiNodeDeclare(_shape, str::hydraPrimId, str::constantInt);
     }
     AiNodeSetInt(_shape, str::hydraPrimId, primId + 1);
+    _primId = primId;
 }
 
 void HdArnoldShape::_SyncInstances(
@@ -226,9 +297,9 @@ void HdArnoldShape::_SyncInstances(
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
     //  in USD. Alternatively, what happens if a prototype is not instanced in USD.
-    if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, HdTokens->points) 
-    && !HdChangeTracker::IsInstancerDirty(dirtyBits, id) 
-    && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) 
+    if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, HdTokens->points)
+    && !HdChangeTracker::IsInstancerDirty(dirtyBits, id)
+    && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id)
     && !force) {
         // Visibility still could have changed outside the shape.
         _UpdateInstanceVisibility(param);
@@ -267,6 +338,32 @@ void HdArnoldShape::_SyncInstances(
         // For a deduplicated prototype the leaf instancer references the shared canonical
         // polymesh rather than this shape's own (empty) node.
         AtNode* const leafPrototype = (_prototypeOverride != nullptr) ? _prototypeOverride : _shape;
+        // The hydra prim ID and the cryptomatte object name are normally read off the
+        // prototype, which is this shape's own node - but a deduplicated prototype references
+        // a canonical node belonging to another rprim, so arnold would find that other rprim's
+        // values: every one of these instances would resolve to the wrong prim when picked,
+        // and would matte as the wrong cryptomatte object. Republish ours as per-instance user
+        // data on the leaf instancer, which takes precedence over the prototype's - the same
+        // mechanism HdArnoldRenderDelegate::SetInstancerCryptoOffset already relies on for
+        // instance_crypto_object_offset. A single element is broadcast to every instance, like
+        // instance_inherit_xform above. The instancers are destroyed and recreated on every
+        // pass through this branch, so nothing has to undo this when the override goes away.
+        if (_prototypeOverride != nullptr && !_instancers.empty()) {
+            AtNode* const leafInstancer = _instancers[0];
+            if (AiNodeLookUpUserParameter(leafInstancer, str::instance_hydraPrimId) == nullptr)
+                AiNodeDeclare(leafInstancer, str::instance_hydraPrimId, str::constantArrayInt);
+            AiNodeSetArray(leafInstancer, str::instance_hydraPrimId, AiArray(1, 1, AI_TYPE_INT, _primId + 1));
+            // Not gated on HasCryptomatte(): unlike the crypto offsets, which are back-filled
+            // on every instancer when the first cryptomatte driver registers, nothing would
+            // come back for this one if cryptomatte were enabled after the instancer is built.
+            if (!_cryptoObjectPath.IsEmpty()) {
+                if (AiNodeLookUpUserParameter(leafInstancer, str::instance_crypto_object) == nullptr)
+                    AiNodeDeclare(leafInstancer, str::instance_crypto_object, str::constantArrayString);
+                AtArray* cryptoArray = AiArrayAllocate(1, 1, AI_TYPE_STRING);
+                AiArraySetStr(cryptoArray, 0, AtString(_cryptoObjectPath.GetText()));
+                AiNodeSetArray(leafInstancer, str::instance_crypto_object, cryptoArray);
+            }
+        }
         for (size_t i = 0; i < _instancers.size(); ++i) {
             AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? leafPrototype : _instancers[i - 1]);
             renderDelegate->TrackRenderTag(_instancers[i], renderTag);

@@ -214,6 +214,7 @@ HdArnoldMesh::~HdArnoldMesh() {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    
     AiProfileBlock("hydra_proc:HdArnoldMesh:Sync"); 
     TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
@@ -314,8 +315,10 @@ void HdArnoldMesh::Sync(
                            _pointsSample.values.size() >= _pointsSample.count;
                 for (size_t i = 0; eligible && i < _pointsSample.count; ++i)
                     eligible = _pointsSample.values[i].IsHolding<VtVec3fArray>();
+                // The hash can fail on a geometry holding a value that cannot be hashed; the
+                // mesh is then not eligible (see HdArnoldRprim::_HashCommonGeometryState).
                 if (eligible)
-                    hash = _ComputeGeometryHash(topology, _pointsSample, sceneDelegate, id, instanced);
+                    eligible = _ComputeGeometryHash(topology, _pointsSample, sceneDelegate, id, instanced, hash);
             }
             // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
             // may be recreated (ginstance conversion, or reverting to a plain polymesh), so
@@ -850,12 +853,12 @@ bool HdArnoldMesh::_HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& 
     return false;
 }
 
-uint64_t HdArnoldMesh::_ComputeGeometryHash(
+bool HdArnoldMesh::_ComputeGeometryHash(
     const HdMeshTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
-    const SdfPath& id, bool instanced)
+    const SdfPath& id, bool instanced, uint64_t& outHash)
 {
     // Topology covers face-vertex counts/indices, scheme, orientation, holes and subdiv tags.
-    size_t hash = topology.ComputeHash();
+    uint64_t hash = topology.ComputeHash();
     // The display style drives the subdivision iterations set on the polymesh.
     hash = TfHash::Combine(hash, GetDisplayStyle(sceneDelegate).refineLevel);
     // Creases and corners are applied to the polymesh by ArnoldUsdReadCreases, and they do NOT
@@ -887,7 +890,10 @@ uint64_t HdArnoldMesh::_ComputeGeometryHash(
     }
     // Points, primvars, render tag and light-linking categories are hashed the same way for
     // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
-    return _HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars);
+    if (!_HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars, instanced))
+        return false;
+    outHash = hash;
+    return true;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

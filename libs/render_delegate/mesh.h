@@ -103,9 +103,12 @@ protected:
     /// transform and its resolved surface shader are also folded in: the shared canonical
     /// polymesh carries both (its instancer references it directly), so only prototypes
     /// that match on those too may be merged.
-    uint64_t _ComputeGeometryHash(
+    ///
+    /// @return True and the hash in @p outHash, or false when this mesh cannot be hashed
+    ///  reliably and must not be deduplicated.
+    bool _ComputeGeometryHash(
         const HdMeshTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
-        const SdfPath& id, bool instanced);
+        const SdfPath& id, bool instanced, uint64_t& outHash);
 
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.

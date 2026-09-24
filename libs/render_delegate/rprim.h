@@ -117,15 +117,17 @@ public:
             *dirtyBits = HdChangeTracker::AllDirty;
         }
         _skipped = skip; // Remember if this prim was skipped for next iteration
-        AtNode* node = GetArnoldNode();
-        if (node == nullptr)
+        if (GetArnoldNode() == nullptr)
             return skip;
 
-        bool wasDisabled = AiNodeIsDisabled(node);
-        if (skip == wasDisabled)
+        // Ask the shape rather than the rprim's own node: with an instancer, or once the
+        // geometry dedup is involved, that node is not necessarily what renders (see
+        // HdArnoldShape::SetHidden).
+        const bool wasHidden = _shape.IsHidden();
+        if (skip == wasHidden)
             return skip;
 
-        if (wasDisabled) {
+        if (wasHidden) {
             // We're about to turn this disabled node into an active one.
             // But we must ensure it hadn't been disabled due to its render tags.
             // If so, we don't want to stop the render nor change its state
@@ -133,9 +135,12 @@ public:
                 return false;
         }
         param.Interrupt();
-        AiNodeSetDisabled(GetArnoldNode(), skip);
-    
-        return skip;        
+        // A real geometry node registered with the dedup is (or may become) a canonical other
+        // rprims instance, so it must not be disabled. This reflects the node as it is now:
+        // the dedup evaluation for this Sync only runs further down, and not at all if we skip.
+        _shape.SetHidden(skip, _dedupRegistered && !_isInstance);
+
+        return skip;
     }
     
     /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if
@@ -238,7 +243,8 @@ protected:
         HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar |
         HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtySubdivTags |
         HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyTransform |
-        HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyRenderTag;
+        HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyRenderTag |
+        HdChangeTracker::DirtyDoubleSided;
 
     /// Forces every primvar in @p primvars to be applied again on the next pass of the
     /// type-specific primvar block. Call this whenever the dedup has replaced this rprim's
@@ -260,7 +266,9 @@ protected:
 
     /// Folds into @p hash the part of a geometry's identity that is the same for every
     /// geometry type, so the type-specific _ComputeGeometryHash only has to hash its own
-    /// topology (and, for meshes, subdivision and displacement). Covers:
+    /// topology (and, for meshes, subdivision and displacement). Returns false when the
+    /// geometry cannot be hashed reliably, in which case @p hash is meaningless and the
+    /// caller must treat the rprim as ineligible for dedup. Covers:
     ///
     ///  - @p points across the whole shutter: the number of motion keys, each sample time and
     ///    each sample's values. Two geometries are merged only if their deformation is
@@ -280,22 +288,49 @@ protected:
     ///    shadow_group. An instance could carry its own, but folding them in keeps the dedup
     ///    conservative and race-free regardless of which duplicate becomes the canonical.
     ///    Re-rooted point-instancer prototype copies share these, so they still deduplicate.
-    uint64_t _HashCommonGeometryState(
-        uint64_t hash, HdSceneDelegate* sceneDelegate, const SdfPath& id,
-        const HdArnoldSampledPrimvarType& points, const HdArnoldPrimvarMap& primvars) const
+    ///    The instancer's categories are hashed too: HdArnoldRenderDelegate::ApplyLightLinking
+    ///    concatenates them with the prim's own, so two identical prototypes under differently
+    ///    light-linked instancers do not have the same light_group even though their prim
+    ///    categories match.
+    ///
+    /// When @p instanced is true the shared canonical node is referenced by this prototype's
+    /// arnold instancer, so it - not this rprim's own node - is what renders, and any per-prim
+    /// state written to this rprim's node after the dedup runs is silently dropped in favor of
+    /// the canonical's. That is why the sidedness (usd doubleSided), written to this rprim's
+    /// node by CheckVisibilityAndSidedness, is part of the identity here. The non-instanced
+    /// (ginstance) flavor does not need it: it owns a real arnold instance node that carries
+    /// its own sidedness.
+    ///
+    /// Two other pieces of per-prim node state are deliberately NOT hashed, because the
+    /// instancer republishes them per instance instead - which keeps them correct without
+    /// splitting geometries that are otherwise identical (see HdArnoldShape::_SyncInstances):
+    /// hydra_primId and the cryptomatte object name (crypto_object).
+    bool _HashCommonGeometryState(
+        uint64_t& hash, HdSceneDelegate* sceneDelegate, const SdfPath& id,
+        const HdArnoldSampledPrimvarType& points, const HdArnoldPrimvarMap& primvars, bool instanced) const
     {
         hash = TfHash::Combine(hash, points.count);
         for (size_t i = 0; i < points.count && i < points.values.size(); ++i) {
             if (i < points.times.size())
                 hash = TfHash::Combine(hash, points.times[i]);
-            if (points.values[i].CanHash())
-                hash = TfHash::Combine(hash, points.values[i].GetHash());
+            // A value we cannot hash cannot be part of the identity, and leaving it out would
+            // merge geometries that only differ by it - the canonical's value would silently
+            // win for all of them. Refuse to deduplicate instead.
+            if (!points.values[i].CanHash())
+                return false;
+            hash = TfHash::Combine(hash, points.values[i].GetHash());
         }
         size_t primvarsHash = 0;
         for (const auto& primvar : primvars) {
-            size_t ph = TfHash::Combine(primvar.first, static_cast<int>(primvar.second.interpolation));
-            if (primvar.second.value.CanHash())
-                ph = TfHash::Combine(ph, primvar.second.value.GetHash());
+            // The role is hashed along with the name and the interpolation: it selects how
+            // HdArnoldSetConstantPrimvar and friends convert the value (a color role turns an
+            // array into RGB user data), so the same value under two roles is not the same
+            // user data on the shared node.
+            size_t ph = TfHash::Combine(
+                primvar.first, primvar.second.role, static_cast<int>(primvar.second.interpolation));
+            if (!primvar.second.value.CanHash())
+                return false; // see the points comment above
+            ph = TfHash::Combine(ph, primvar.second.value.GetHash());
             if (!primvar.second.valueIndices.empty())
                 ph = TfHash::Combine(ph, primvar.second.valueIndices);
             primvarsHash += ph;
@@ -305,7 +340,18 @@ protected:
         for (const TfToken& category : sceneDelegate->GetCategories(id)) {
             hash = TfHash::Combine(hash, category);
         }
-        return hash;
+        // The instancer id is already resolved by the time the dedup hashes (the caller ran
+        // _UpdateInstancer to decide whether this rprim is an instanced prototype), so read
+        // the cached one rather than going back to the scene delegate.
+        const SdfPath& instancerId = HydraType::GetInstancerId();
+        if (!instancerId.IsEmpty()) {
+            for (const TfToken& category : sceneDelegate->GetCategories(instancerId)) {
+                hash = TfHash::Combine(hash, category);
+            }
+        }
+        if (instanced)
+            hash = TfHash::Combine(hash, sceneDelegate->GetDoubleSided(id));
+        return true;
     }
 
     /// Hands this rprim's Arnold node over to the render delegate if it is a dedup canonical

@@ -169,7 +169,9 @@ void HdArnoldBasisCurves::Sync(
                     eligible = pointsSample.values[i].IsHolding<VtVec3fArray>();
                 if (eligible) {
                     dedupTopology = GetBasisCurvesTopology(sceneDelegate);
-                    hash = _ComputeGeometryHash(dedupTopology, pointsSample, sceneDelegate, id, instanced);
+                    // The hash can fail on a geometry holding a value that cannot be hashed;
+                    // the curves are then not eligible (see _HashCommonGeometryState).
+                    eligible = _ComputeGeometryHash(dedupTopology, pointsSample, sceneDelegate, id, instanced, hash);
                 }
             }
             // Register/redirect through the shared dedup registry (see HdArnoldRprim). The node
@@ -461,12 +463,12 @@ HdDirtyBits HdArnoldBasisCurves::GetInitialDirtyBitsMask() const
            HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
-uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
+bool HdArnoldBasisCurves::_ComputeGeometryHash(
     const HdBasisCurvesTopology& topology, const HdArnoldSampledPrimvarType& points, HdSceneDelegate* sceneDelegate,
-    const SdfPath& id, bool instanced)
+    const SdfPath& id, bool instanced, uint64_t& outHash)
 {
     // Curve topology: vertex counts, indices, type, basis and wrap all change the arnold node.
-    size_t hash = TfHash::Combine(
+    uint64_t hash = TfHash::Combine(
         VtValue(topology.GetCurveVertexCounts()).GetHash(), topology.GetCurveType(), topology.GetCurveBasis(),
         topology.GetCurveWrap());
     if (!topology.GetCurveIndices().empty())
@@ -488,7 +490,10 @@ uint64_t HdArnoldBasisCurves::_ComputeGeometryHash(
     }
     // Points, primvars, render tag and light-linking categories are hashed the same way for
     // every geometry type (see HdArnoldRprim::_HashCommonGeometryState).
-    return _HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars);
+    if (!_HashCommonGeometryState(hash, sceneDelegate, id, points, _primvars, instanced))
+        return false;
+    outHash = hash;
+    return true;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
