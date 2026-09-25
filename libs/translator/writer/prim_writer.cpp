@@ -18,6 +18,7 @@
 #include "prim_writer.h"
 #include <constant_strings.h>
 #include <common_utils.h>
+#include <parameters_utils.h>
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/matrix4f.h>
@@ -1162,6 +1163,31 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     const UsdPrim &prim = xformable.GetPrim();
     const AtUniverse* universe = writer.GetUniverse();
 
+    // Nodes with no real matrix of their own - either no "matrix" array at all (e.g.
+    // shapes exported with mergeTransformAndShape=0), or one that's just the identity
+    // (e.g. the default top/front/side cameras, and lights, which get an explicit but
+    // all-identity matrix here) - are meant to inherit 100% of their placement from the
+    // USD parent hierarchy that mayaUsd already authored, so writing nothing is correct
+    // for them. Check this up front, before the parent-cancellation logic below: applying
+    // that cancellation to one of these nodes would author a bogus inverse-parent
+    // transform where none should exist, since there's no local contribution to cancel it
+    // against.
+    AtArray* array = AiNodeGetArray(node, AtString("matrix"));
+    unsigned int numKeys = array ? AiArrayGetNumKeys(array) : 1;
+    const AtMatrix* matrices = array ? (const AtMatrix*)AiArrayMapConst(array) : nullptr;
+    bool hasOwnMatrix = false;
+    for (unsigned int i = 0; matrices && i < numKeys; ++i) {
+        if (!AiM4IsIdentity(matrices[i])) {
+            hasOwnMatrix = true;
+            break;
+        }
+    }
+    if (!hasOwnMatrix) {
+        if (matrices)
+            AiArrayUnmapConst(array);
+        return;
+    }
+
     AtMatrix invParentMtx = AiM4Identity();
     bool applyInvParentMtx = false;
     // Iterator through USD parents until we find one matching an arnold node.
@@ -1181,8 +1207,36 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         }
         
         AtNode *parent = AiNodeLookUpByName(universe, AtString(parentName.c_str()));
-        if (parent == nullptr)
-            continue;
+        if (parent == nullptr) {
+            // No Arnold node was translated for this USD ancestor, so it wasn't authored
+            // by this writer. It can still carry its own transform if another tool/writer
+            // (e.g. mayaUsd's native camera export) authored it directly on the stage -
+            // in that case our node's world matrix already accounts for it, and skipping
+            // the cancellation here would double the transform once both opinions compose
+            // (parent's authored xformOps and our own baked world matrix on the child).
+            UsdGeomXformable ancestorXform(p);
+            bool ancestorHasAuthoredXform = false;
+            if (ancestorXform) {
+                bool resetsStack = false;
+                for (const UsdGeomXformOp& op : ancestorXform.GetOrderedXformOps(&resetsStack)) {
+                    if (op.GetAttr().HasAuthoredValue()) {
+                        ancestorHasAuthoredXform = true;
+                        break;
+                    }
+                }
+            }
+            if (!ancestorHasAuthoredXform)
+                continue;
+
+            GfMatrix4d ancestorWorldMtx = ancestorXform.ComputeLocalToWorldTransform(UsdTimeCode::Default());
+            AtMatrix atAncestorWorldMtx;
+            ConvertValue(atAncestorWorldMtx, ancestorWorldMtx);
+            if (!AiM4IsIdentity(atAncestorWorldMtx)) {
+                invParentMtx = AiM4Invert(atAncestorWorldMtx);
+                applyInvParentMtx = true;
+            }
+            break;
+        }
         // Special case for mesh lights pointing at our current mesh. Their transform will not be authored
         // to USD so we must skip it here.
         if (AiNodeIs(parent, str::mesh_light) && AiNodeGetPtr(parent, str::mesh) == (void*)node)
@@ -1195,28 +1249,9 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         }
         break;
     }
-    
-    AtArray* array = AiNodeGetArray(node, AtString("matrix"));
-    unsigned int numKeys = array ? AiArrayGetNumKeys(array) : 1;
-    const AtMatrix* matrices = array ? (const AtMatrix*)AiArrayMapConst(array) : nullptr;
-    if (matrices == nullptr && !applyInvParentMtx)
-        return;
 
-    bool hasMatrix = applyInvParentMtx;
-
-    if (matrices && !hasMatrix) {
-        for (unsigned int i = 0; i < numKeys; ++i) {
-            if (!AiM4IsIdentity(matrices[i])) {
-                hasMatrix = true;
-            }
-        }
-    }
-    // Identity matrix, nothing to write
-    if (!hasMatrix) {
-        if (matrices)
-            AiArrayUnmapConst(array);
-        return;
-    }
+    // hasOwnMatrix is already known true here (checked above), so there's always
+    // something to write in this branch.
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
     UsdAttribute attr = xformOp.GetAttr();
