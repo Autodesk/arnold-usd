@@ -127,16 +127,15 @@ public:
         
     };
 
-    /// Provide the host Hgi instance. Must be called before Allocate() to take the GPU path.
-    /// Passing nullptr keeps the CPU path active.
+    /// Provide the host Hgi instance to take the GPU path. Passing nullptr keeps the CPU path active.
+    /// The GPU textures are created lazily by EnsureGpuTexture().
     HDARNOLD_API
     void SetHgi(Hgi* hgi);
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
-    /// Ensures the GPU texture has been created with a valid GL id. Call this from a context
-    /// where the GL context is current (e.g. the render pass's _Execute). If the texture is
-    /// missing or its GL id is 0 (because the previous create-attempt ran without a GL
-    /// context), it is destroyed and recreated.
+    /// Ensures the GPU textures have been created with a valid GL id, and destroys the textures queued on the
+    /// render delegate. Only call this with the GL context current (GetResource() does): Hgi textures must be
+    /// created and destroyed on the main thread.
     HDARNOLD_API
     void EnsureGpuTexture();
 #endif
@@ -144,16 +143,32 @@ public:
     /// Returns true if this buffer is backed by a GPU texture.
     bool HasGpuTexture() const { return static_cast<bool>(_texture); }
 
-    /// Provide the Arnold AOV name used when calling AiGetRenderOutput on this buffer.
+    /// Provide the Arnold AOV name used when calling AiGetRenderOutput on this buffer. An empty name means the
+    /// buffer has no Arnold output to read back.
     HDARNOLD_API
-    void SetAovName(const TfToken& aovName) { _aovName = aovName; }
+    void SetAovName(const TfToken& aovName)
+    {
+        if (_aovName != aovName) {
+            _readbackWarned = false;
+            _hasReadback = false;
+        }
+        _aovName = aovName;
+    }
 
-    void SetValid(bool b) {_valid = b;}
+    /// Zeroes the CPU buffer, leaving its allocation alone.
+    ///
+    /// An AOV that Arnold stops writing keeps whatever the last render left in it, which the host keeps reading:
+    /// stale ids in the primId AOV pick the wrong prims.
+    HDARNOLD_API
+    void Clear();
 
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
     void _Deallocate() override;
+
+    /// Hands the GPU textures to the render delegate, which destroys them on the GL thread.
+    void _QueueTexturesForDestruction();
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
     /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
@@ -173,8 +188,9 @@ private:
     HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
     TfToken _aovName;                                ///< AOV name passed to AiGetRenderOutput.
-    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by 
-    bool _valid = true;
+    mutable bool _readbackWarned = false;            ///< Keeps a failing readback from warning on every redraw.
+    mutable bool _hasReadback = false;               ///< _texture holds the result of a successful readback.
+    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by Unmap().
 };
 
 using HdArnoldRenderBufferStorage =

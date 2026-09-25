@@ -127,6 +127,19 @@ public:
     ///
     /// @return True if an AI_RENDER_UPDATE_VIEWPORT update has been received for the current render.
     bool HasViewportUpdate() const { return _viewportUpdated.load(std::memory_order_acquire); }
+    /// Forgets any viewport update received so far, so AiGetRenderOutput() is not called again until Arnold
+    /// delivers a new one.
+    ///
+    /// Call this, with the render interrupted, whenever the outputs or the resolution change: Arnold only resizes
+    /// its direct output buffers when the next frame starts, and reading them into a texture already at the new
+    /// size before that reads past their end.
+    void ResetViewportUpdate() { _viewportUpdated.store(false, std::memory_order_release); }
+    /// Ends the render session, so the next UpdateRender() begins a new one.
+    ///
+    /// Arnold only creates the direct outputs pipeline when a GPU session is set up, so toggling
+    /// options.direct_outputs on a running session is not reliably picked up by AiRenderRestart().
+    HDARNOLD_API
+    void EndSession();
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();

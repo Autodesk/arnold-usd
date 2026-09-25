@@ -579,6 +579,18 @@ public:
     /// did not provide one (e.g. batch / husk without a GL context).
     Hgi* GetHgi() const { return _hgi; }
 
+    /// Queues a GPU texture for destruction on the thread that owns the GL context.
+    ///
+    /// Hgi textures must be created and destroyed on the main thread, but render buffers are allocated and
+    /// destroyed while Hydra syncs, which hosts may do on another thread.
+    ///
+    /// @param texture Texture to destroy, left empty.
+    HDARNOLD_API
+    void QueueTextureDestruction(HgiTextureHandle& texture);
+
+    /// Destroys every queued texture. Only call this with the GL context current.
+    HDARNOLD_API
+    void FlushTextureDestructions();
 
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
@@ -786,6 +798,11 @@ private:
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
 
+    /// Drops every reference the main drivers hold to a render buffer that is about to be destroyed.
+    ///
+    /// @param renderBuffer Render buffer being destroyed.
+    void _ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer);
+
     /// Returns the color manager to be used for this render, creating it if needed.
     ///
     /// The OCIO config is looked up in the OCIO environment variable first, then in the
@@ -933,6 +950,8 @@ private:
     bool _acceleratedViewport = false;
     bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+    std::vector<HgiTextureHandle> _texturesToDestroy; ///< Textures waiting for the GL thread.
+    std::mutex _texturesToDestroyMutex;               ///< Guards _texturesToDestroy.
 
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;
