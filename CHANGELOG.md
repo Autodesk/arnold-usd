@@ -24,6 +24,7 @@
 
 - [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
 - [usd#2728](https://github.com/Autodesk/arnold-usd/issues/2728) - Default USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX to enabled when unset, matching USD 26.03+ behavior.
+- Fix a shape/camera's transform being authored twice when a USD ancestor prim already has an authored transform from another writer (e.g. a native default-camera export), which composed into a doubled world transform.
 
 
 ## [7.5.3.2] (Unreleased)
