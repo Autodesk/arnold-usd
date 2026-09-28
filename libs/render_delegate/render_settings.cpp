@@ -24,7 +24,9 @@
 #if PXR_VERSION >= 2308
 
 #include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/range2f.h>
 #include <pxr/base/gf/vec2i.h>
+#include <pxr/base/gf/vec4f.h>
 #include <pxr/base/tf/debug.h>
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/registryManager.h>
@@ -42,6 +44,7 @@
 #include <pxr/usdImaging/usdImaging/usdRenderSettingsSchema.h>
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include "../common/rendersettings_utils.h"
@@ -420,25 +423,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
                 UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
             AtNode* options = _renderDelegate->GetOptions();
             if (!options) return;
-            HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio();
-            if (parHandle) {
-                AiNodeSetFlt(options, str::pixel_aspect_ratio, parHandle->GetTypedValue(0));
-            }
-
-            HdVec2iDataSourceHandle resHandle = usdRss.GetResolution();
-            if (resHandle) {
-                GfVec2i res = resHandle->GetTypedValue(0);
-                AiNodeSetInt(options, str::xres, res[0]);
-                AiNodeSetInt(options, str::yres, res[1]);
-            }
-
-            HdVec4fDataSourceHandle dwndcHandle = usdRss.GetDataWindowNDC();
-            if (dwndcHandle) {
-                GfVec2i resolution;
-                resolution[0] = AiNodeGetInt(options, str::xres);
-                resolution[1] = AiNodeGetInt(options, str::yres);
-                SetRegion(options, dwndcHandle->GetTypedValue(0), resolution);
-            }
+            // Resolution, pixel aspect ratio and data window are handled in _UpdateFraming
 
             // NOTE: Unfortunatelly we don't have access to instantaneousShutter which is deprecated but is
             // used in some of the tests. We use GetDisableMotionBlur which is the replacement for instantaneousShutter
@@ -534,6 +519,107 @@ void HdArnoldRenderSettings::_Sync(
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
 
+    // The framing must be applied after the namespaced settings and the render products.
+    // Changes to the render settings framing attributes dirty the render products, but we
+    // still check it on every sync (it's cheap and only interrupts on changes), e.g. when
+    // this prim becomes the active render settings without its products being dirtied.
+    // Force it when the namespaced settings changed, as they could have overwritten the
+    // arnold options framing parameters.
+    _UpdateFraming(sceneDelegate, paramInterrupt, (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) != 0);
+}
+
+void HdArnoldRenderSettings::_UpdateFraming(
+    HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& paramInterrupt, bool force)
+{
+    AtNode* options = _renderDelegate->GetOptions();
+    if (!options)
+        return;
+
+    GfVec2i resolution(AiNodeGetInt(options, str::xres), AiNodeGetInt(options, str::yres));
+    float pixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    GfVec4f windowNDC(0.f, 0.f, 1.f, 1.f);
+
+    // Arnold only supports a single resolution and region per render. The products received
+    // from hydra already have their values flattened with the render settings ones, so like
+    // hdPrman, we use the first product that has a valid resolution.
+    const HdRenderSettings::RenderProduct* framingProduct = nullptr;
+    for (const auto& product : GetRenderProducts()) {
+        if (product.resolution[0] > 0 && product.resolution[1] > 0) {
+            framingProduct = &product;
+            break;
+        }
+    }
+    if (framingProduct) {
+        resolution = framingProduct->resolution;
+        // RenderProduct::pixelAspectRatio has no default initializer in hydra and is left
+        // untouched when no data source provides it, so only trust sensible values
+        if (std::isfinite(framingProduct->pixelAspectRatio) && framingProduct->pixelAspectRatio > 0.f)
+            pixelAspectRatio = framingProduct->pixelAspectRatio;
+        const GfRange2f& dataWindowNDC = framingProduct->dataWindowNDC;
+        // A default constructed range means no data window was provided. Don't test IsEmpty,
+        // as an inverted window is valid and is reordered by SetRegion like in the procedural
+        if (dataWindowNDC != GfRange2f()) {
+            windowNDC = GfVec4f(
+                dataWindowNDC.GetMin()[0], dataWindowNDC.GetMin()[1], dataWindowNDC.GetMax()[0],
+                dataWindowNDC.GetMax()[1]);
+        }
+    } else {
+        // No render product with a resolution, fallback to the render settings prim values
+        HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+        HdSceneIndexPrim prim = terminalSi ? terminalSi->GetPrim(GetId()) : HdSceneIndexPrim();
+        if (prim.dataSource) {
+            UsdImagingUsdRenderSettingsSchema usdRss =
+                UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
+            if (HdVec2iDataSourceHandle resHandle = usdRss.GetResolution())
+                resolution = resHandle->GetTypedValue(0);
+            if (HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio())
+                pixelAspectRatio = parHandle->GetTypedValue(0);
+            if (HdVec4fDataSourceHandle dwndcHandle = usdRss.GetDataWindowNDC())
+                windowNDC = dwndcHandle->GetTypedValue(0);
+        }
+    }
+
+    // Framing options explicitly set in the arnold namespaced settings (e.g. arnold:global:xres)
+    // take precedence over the USD ones, like in the usd procedural. They were already applied
+    // to the options by _UpdateArnoldOptions, so we keep the current options values
+    bool hasRegionOverride = false;
+    for (const auto& pair : GetNamespacedSettings()) {
+        if (!TfStringStartsWith(pair.first, "arnold:"))
+            continue;
+        const std::string optionName = _GetArnoldOptionName(pair.first);
+        if (optionName == "xres") {
+            resolution[0] = AiNodeGetInt(options, str::xres);
+        } else if (optionName == "yres") {
+            resolution[1] = AiNodeGetInt(options, str::yres);
+        } else if (optionName == "pixel_aspect_ratio") {
+            pixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+        } else if (TfStringStartsWith(optionName, "region_")) {
+            hasRegionOverride = true;
+        }
+    }
+
+    const bool resolutionChanged = resolution[0] != AiNodeGetInt(options, str::xres) ||
+                                   resolution[1] != AiNodeGetInt(options, str::yres);
+    const bool pixelAspectRatioChanged = pixelAspectRatio != AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    const bool windowChanged = windowNDC != _windowNDC;
+    if (!force && !resolutionChanged && !pixelAspectRatioChanged && !windowChanged)
+        return;
+
+    paramInterrupt.Interrupt();
+    AiNodeSetInt(options, str::xres, resolution[0]);
+    AiNodeSetInt(options, str::yres, resolution[1]);
+    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    if (!hasRegionOverride) {
+        // The region is expressed in pixels, so it must be computed with the final resolution
+        SetRegion(options, windowNDC, resolution);
+    }
+    _windowNDC = windowNDC;
+
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+        .Msg(
+            "Framing: resolution %dx%d, pixel aspect ratio %f, data window (%f, %f, %f, %f)%s\n", resolution[0],
+            resolution[1], pixelAspectRatio, windowNDC[0], windowNDC[1], windowNDC[2], windowNDC[3],
+            hasRegionOverride ? " (region overridden by arnold settings)" : "");
 }
 
 #if PXR_VERSION <= 2308
@@ -573,16 +659,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     for (const auto& product : products) {
         if (product.renderVars.empty()) {
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Empty render product %s\n", product.name.GetText());
-        }
-
-        // Check if this product has a specific resolution set
-        // If so, use it instead of the global render settings resolution
-        // Note that this sets the last product resolution found.
-        if (product.resolution[0] > 0 && product.resolution[1] > 0) {
-            AiNodeSetInt(options, str::xres, product.resolution[0]);
-            AiNodeSetInt(options, str::yres, product.resolution[1]);
-            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
-                .Msg("Using product resolution: %dx%d\n", product.resolution[0], product.resolution[1]);
         }
 
         // Create driver node
@@ -694,7 +770,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 .Msg("Set imager on driver %s\n", driverNodeName);
             
         }
-        // TODO handle resolution / pixelAspectRatio / apertureSize / dataWindowNDC 
+        // Resolution / pixelAspectRatio / dataWindowNDC are handled in _UpdateFraming
         // Track AOV names to detect duplicates
         std::unordered_set<std::string> aovNames;
         std::unordered_set<std::string> duplicatedAovs;
