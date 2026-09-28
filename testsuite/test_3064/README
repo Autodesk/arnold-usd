@@ -1,5 +1,7 @@
 Fix camera/shape transform doubled when a USD ancestor already has an authored transform
 
+see MTOA-3064
+
 UsdArnoldPrimWriter::_WriteMatrix() cancels an exported node's own baked world
 matrix against an ancestor's transform by walking up the USD hierarchy looking
 for an ancestor prim that matches an Arnold node by name. When the ancestor was
