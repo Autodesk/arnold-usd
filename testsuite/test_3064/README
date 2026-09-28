@@ -18,4 +18,4 @@ authored transform exactly like USD would when consuming the stage, and checks
 the result against the node's actual intended world position. Before the fix,
 the composed result is off by the ancestor's transform.
 
-author: Cursor
+author: Ashley Handscomb Retallack
