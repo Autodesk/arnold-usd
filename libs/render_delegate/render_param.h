@@ -118,6 +118,28 @@ public:
     ///
     /// @return True if stopped.
     bool IsStopped() const { return _stopped.load(std::memory_order_acquire); }
+    /// Returns whether Arnold has delivered at least one viewport update since the render began.
+    ///
+    /// This only matters for accelerated rendering (options.direct_outputs), where the render result is pulled
+    /// with AiGetRenderOutput() instead of being pushed to us through a driver: that call is only valid once
+    /// Arnold has actually rendered something, and an AI_RENDER_UPDATE_VIEWPORT update is what tells us it has.
+    /// Set from Arnold's render thread and cleared right before AiRenderBegin().
+    ///
+    /// @return True if an AI_RENDER_UPDATE_VIEWPORT update has been received for the current render.
+    bool HasViewportUpdate() const { return _viewportUpdated.load(std::memory_order_acquire); }
+    /// Forgets any viewport update received so far, so AiGetRenderOutput() is not called again until Arnold
+    /// delivers a new one.
+    ///
+    /// Call this, with the render interrupted, whenever the outputs or the resolution change: Arnold only resizes
+    /// its direct output buffers when the next frame starts, and reading them into a texture already at the new
+    /// size before that reads past their end.
+    void ResetViewportUpdate() { _viewportUpdated.store(false, std::memory_order_release); }
+    /// Ends the render session, so the next UpdateRender() begins a new one.
+    ///
+    /// Arnold only creates the direct outputs pipeline when a GPU session is set up, so toggling
+    /// options.direct_outputs on a running session is not reliably picked up by AiRenderRestart().
+    HDARNOLD_API
+    void EndSession();
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
@@ -219,6 +241,21 @@ public:
     const SdfPath& GetHydraRenderSettingsPrimPath() const;
 
 private:
+    /// Render update callback handed to AiRenderBegin().
+    ///
+    /// Arnold invokes this from its render thread every time the render changes state. The only update we act on
+    /// is AI_RENDER_UPDATE_VIEWPORT, which flags that a viewport frame is available (see HasViewportUpdate()).
+    /// Every other update type is answered with the status Arnold expects for it -- the
+    /// render_update_type_to_status table in ai_render.h -- which is a no-op for the render's state machine, so
+    /// registering this callback leaves behaviour and interactivity exactly as they are without one.
+    ///
+    /// @param privateData Pointer to the HdArnoldRenderParam driving the render.
+    /// @param updateType Why Arnold is invoking the callback.
+    /// @param updateInfo Details about the current render state. Unused.
+    /// @return The status Arnold should carry on with.
+    static AtRenderStatus _UpdateCallback(
+        void* privateData, AtRenderUpdateType updateType, const AtRenderUpdateInfo* updateInfo);
+
     inline void ResetStartTimer()
     {
         // Use std::lock_guard so the mutex is released even if the time_point
@@ -247,6 +284,11 @@ private:
     /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
     /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.
     std::atomic<bool> _stopped{false};
+    /// Indicate whether Arnold has sent at least one AI_RENDER_UPDATE_VIEWPORT update for this render. Set by
+    /// _UpdateCallback() on the render thread, cleared just before AiRenderBegin(). Deliberately *not* cleared on
+    /// AiRenderRestart(): once Arnold has produced a viewport frame the outputs stay valid to fetch, and clearing
+    /// it would blank the viewport on every scene edit, which is the opposite of what accelerated rendering is for.
+    std::atomic<bool> _viewportUpdated{false};
     /// Indicate that ImagerInterrupt() closed Arnold's imager barrier, so a ResumeImagers() is owed. A debt, not a
     /// latch on the interrupt itself: Syncs run in parallel and each caller needs AiImagerInterrupt()'s blocking
     /// drain, so the call is always issued, and Arnold's flag-based barrier balances N interrupts with one resume.

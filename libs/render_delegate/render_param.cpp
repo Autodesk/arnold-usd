@@ -67,6 +67,7 @@ HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _de
     _aborted.store(false, std::memory_order::memory_order_release);
     _paused.store(false, std::memory_order::memory_order_release);
     _stopped.store(false, std::memory_order::memory_order_release);
+    _viewportUpdated.store(false, std::memory_order::memory_order_release);
     _imagerInterrupted.store(false, std::memory_order::memory_order_release);
 
     ResetStartTimer();
@@ -74,6 +75,36 @@ HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _de
     // If the HDARNOLD_DEBUG_SCENE env variable is defined, we'll want to 
     // save out the scene every time it's about to be rendered
     _debugScene = TfGetEnvSetting(HDARNOLD_DEBUG_SCENE);
+}
+
+AtRenderStatus HdArnoldRenderParam::_UpdateCallback(
+    void* privateData, AtRenderUpdateType updateType, const AtRenderUpdateInfo* /*updateInfo*/)
+{
+    switch (updateType) {
+#if ARNOLD_VERSION_NUM >= 70503
+        case AI_RENDER_UPDATE_VIEWPORT:
+            // The one update we are here for: a viewport frame has been rendered, so AiGetRenderOutput() can be
+            // called from now on. Arnold ignores the status returned for this update type.
+            if (privateData != nullptr) {
+                static_cast<HdArnoldRenderParam*>(privateData)->_viewportUpdated.store(
+                    true, std::memory_order_release);
+            }
+            return AI_RENDER_STATUS_RENDERING;
+#endif
+        // Everything below simply echoes back the status Arnold already put the session in, which leaves its
+        // state machine untouched -- see the render_update_type_to_status table in ai_render.h. Returning
+        // anything else (RESTARTING, PAUSED outside of an interrupt, ...) is how a host steers the render, and
+        // that is precisely what we do not want to do here.
+        case AI_RENDER_UPDATE_INTERRUPT: return AI_RENDER_STATUS_PAUSED;
+        case AI_RENDER_UPDATE_FINISHED: return AI_RENDER_STATUS_FINISHED;
+        case AI_RENDER_UPDATE_ERROR: return AI_RENDER_STATUS_FAILED;
+        case AI_RENDER_UPDATE_BEFORE_PASS:
+        case AI_RENDER_UPDATE_DURING_PASS:
+        case AI_RENDER_UPDATE_AFTER_PASS:
+        // Arnold sends IMAGERS instead of BEFORE_PASS when only the imagers have to be re-evaluated.
+        case AI_RENDER_UPDATE_IMAGERS:
+        default: return AI_RENDER_STATUS_RENDERING;
+    }
 }
 
 HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
@@ -178,6 +209,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             // observes _aborted == true via acquire load also sees the writes
             // performed before the release — including the new _errorCode.
             _errorCode = AiRenderEnd(_delegate->GetRenderSession());
+            _viewportUpdated.store(false, std::memory_order_release);
             _aborted.store(true, std::memory_order_release);
             if (_errorCode == AI_ABORT) {
                 TF_WARN("[arnold-usd] Render was aborted.");
@@ -218,7 +250,10 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
             }
             if (!_debugScene.empty())
                 WriteDebugScene();
-            AiRenderBegin(_delegate->GetRenderSession());
+            // Nothing has been rendered for this session yet, so anything an earlier render flagged is stale.
+            _viewportUpdated.store(false, std::memory_order_release);
+            AiRenderBegin(
+                _delegate->GetRenderSession(), AI_RENDER_MODE_CAMERA, &HdArnoldRenderParam::_UpdateCallback, this);
             ResetStartTimer();
             StartRenderMsgLog();
             return Status::Converging;
@@ -318,6 +353,21 @@ void HdArnoldRenderParam::Stop()
     // requested before AiRenderBegin() has to keep UpdateRender() from starting one.
     _stopped.store(true, std::memory_order_release);
     Interrupt(false, false);
+}
+
+void HdArnoldRenderParam::EndSession()
+{
+    if (_delegate == nullptr || _delegate->IsBatchContext() || _delegate->GetProceduralParent() != nullptr) {
+        return;
+    }
+    AtRenderSession* renderSession = _delegate->GetRenderSession();
+    if (AiRenderGetStatus(renderSession) != AI_RENDER_STATUS_NOT_STARTED) {
+        AiRenderInterrupt(renderSession, AI_BLOCKING);
+        AiRenderEnd(renderSession);
+    }
+    _viewportUpdated.store(false, std::memory_order_release);
+    // UpdateRender() begins the new session on its next tick, since the status is now NOT_STARTED.
+    _needsRestart.store(true, std::memory_order_release);
 }
 
 void HdArnoldRenderParam::Restart()

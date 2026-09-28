@@ -707,6 +707,8 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
         }
     }
     _renderParam->Interrupt();
+    // Hydra destroys the render buffers before the delegate, so this is the last chance to release their textures.
+    FlushTextureDestructions();
     // Drop anything queued instead of acting on it: nothing will poll for it again. We can't be
     // holding an imager barrier for a session that outlives us - only the procedural passes an
     // external universe, always with a procedural parent, which ImagerInterrupt() skips.
@@ -989,6 +991,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     else if (key == str::t_accelerated_viewport) {
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
         _CheckForBoolValue(value, [&](const bool b) {
+            if (b == _acceleratedViewport) {
+                // Hosts re-send every render setting on each update, and ending the session below is expensive.
+                return;
+            }
             _acceleratedViewport = b;
             AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
             if (_acceleratedViewport) {
@@ -997,6 +1003,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                 AiNodeSetStr(_options, str::render_device, _gpuRenderingEnabled ? str::GPU : str::CPU);
                 AiDeviceAutoSelect(GetRenderSession());
             }
+            // Arnold only builds the direct outputs pipeline when it sets up a GPU session, so a session that
+            // already has one ignores direct_outputs being turned on, and AiGetRenderOutput() never gets
+            // anything to serve. Start a new session instead of restarting this one.
+            _renderParam->EndSession();
         });
 #else
         AiMsgWarning(
@@ -1528,10 +1538,88 @@ HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
     return CreateBprim(typeId, SdfPath());
 }
 
+void HdArnoldRenderDelegate::QueueTextureDestruction(HgiTextureHandle& texture)
+{
+    if (!texture) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+    _texturesToDestroy.push_back(texture);
+    texture = HgiTextureHandle();
+}
+
+void HdArnoldRenderDelegate::FlushTextureDestructions()
+{
+    std::vector<HgiTextureHandle> textures;
+    {
+        std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+        if (_texturesToDestroy.empty()) {
+            return;
+        }
+        textures.swap(_texturesToDestroy);
+    }
+    if (_hgi == nullptr) {
+        return;
+    }
+    for (auto& texture : textures) {
+        _hgi->DestroyTexture(&texture);
+    }
+}
+
+void HdArnoldRenderDelegate::_ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer)
+{
+    if (renderBuffer == nullptr || _universe == nullptr) {
+        return;
+    }
+    AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_DRIVER);
+    while (!AiNodeIteratorFinished(nodeIter)) {
+        AtNode* driver = AiNodeIteratorGetNext(nodeIter);
+        if (driver == nullptr || !AiNodeIs(driver, str::HdArnoldDriverMain)) {
+            continue;
+        }
+        for (const AtString& pointer : {str::color_pointer, str::depth_pointer, str::id_pointer}) {
+            if (AiNodeGetPtr(driver, pointer) == renderBuffer) {
+                AiNodeSetPtr(driver, pointer, nullptr);
+            }
+        }
+        AtArray* pointers = AiNodeGetArray(driver, str::buffer_pointers);
+        const unsigned int pointerCount = pointers != nullptr ? AiArrayGetNumElements(pointers) : 0;
+        for (unsigned int i = 0; i < pointerCount; ++i) {
+            if (AiArrayGetPtr(pointers, i) == renderBuffer) {
+                AiArraySetPtr(pointers, i, nullptr);
+            }
+        }
+        // node_update copied the parameters above into the driver's local data, and only runs again when the
+        // render restarts.
+        auto* driverData = static_cast<DriverMainData*>(AiNodeGetLocalData(driver));
+        if (driverData == nullptr) {
+            continue;
+        }
+        if (driverData->colorBuffer == renderBuffer) {
+            driverData->colorBuffer = nullptr;
+        }
+        if (driverData->depthBuffer == renderBuffer) {
+            driverData->depthBuffer = nullptr;
+        }
+        if (driverData->idBuffer == renderBuffer) {
+            driverData->idBuffer = nullptr;
+        }
+        for (auto& buffer : driverData->buffers) {
+            if (buffer.second == renderBuffer) {
+                buffer.second = nullptr;
+            }
+        }
+    }
+    AiNodeIteratorDestroy(nodeIter);
+}
+
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 {
     // RenderBuffers can be in use in drivers.
     _renderParam->Interrupt();
+    // The render pass only rewires the drivers on its next execute, but the render can be restarted before that
+    // (e.g. by the Hydra render settings path), and Arnold would then write buckets into freed memory.
+    _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
     delete bPrim;
 }
 
