@@ -1,0 +1,21 @@
+Fix camera/shape transform doubled when a USD ancestor already has an authored transform
+
+UsdArnoldPrimWriter::_WriteMatrix() cancels an exported node's own baked world
+matrix against an ancestor's transform by walking up the USD hierarchy looking
+for an ancestor prim that matches an Arnold node by name. When the ancestor was
+instead authored directly by *another* writer/tool - e.g. mayaUsd's own native
+-defaultCameras export, which writes persp/top/front/side as plain Xform prims
+with real authored transforms and no matching Arnold node - the loop found no
+match and skipped cancellation entirely, so the child's own world matrix
+composed on top of the ancestor's authored transform, doubling it (MTOA-3064).
+
+This test reproduces that scenario directly with AiSceneWrite's "append" mode:
+data/existing.usda stands in for a stage a previous writer already touched (an
+Xform with an authored transform and no matching Arnold node), and the test
+appends a single Arnold polymesh underneath it. It then parses the resulting
+USD text, composes the child's authored matrix with the ancestor's own
+authored transform exactly like USD would when consuming the stage, and checks
+the result against the node's actual intended world position. Before the fix,
+the composed result is off by the ancestor's transform.
+
+author: Cursor
