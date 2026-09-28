@@ -69,7 +69,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
     ((compression, "arnold:driver_exr:compression"))
-    (request_imager_update)
     (sourceName)
     (sourceType)
     (dataType)
