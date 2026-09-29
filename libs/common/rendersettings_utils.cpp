@@ -547,6 +547,12 @@ void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolut
         AiNodeSetInt(options, str::region_max_x, int(std::ceil(adjustedWindow[2] * resolution[0] - 1)));
         AiNodeSetInt(options, str::region_min_y, resolution[1] - 1 - yMaxUp);
         AiNodeSetInt(options, str::region_max_y, resolution[1] - 1 - yMinUp);
+    } else {
+        // Full frame window, ensure a previously set region doesn't stick around
+        AiNodeResetParameter(options, str::region_min_x);
+        AiNodeResetParameter(options, str::region_min_y);
+        AiNodeResetParameter(options, str::region_max_x);
+        AiNodeResetParameter(options, str::region_max_y);
     }
 }
 
@@ -579,10 +585,38 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
-    GfVec4f windowNDC;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
-        SetRegion(options, windowNDC, resolution);
-    }    
+    GfVec4f windowNDC(0.f, 0.f, 1.f, 1.f);
+    renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame);
+
+    UsdRelationship productsRel = renderSettings.GetProductsRel();
+    SdfPathVector productTargets;
+    productsRel.GetTargets(&productTargets);
+
+    // Render products can override the framing attributes of the render settings.
+    // Arnold only supports a single resolution and region per render, so like the
+    // render delegate we use the values of the first render product.
+    for (const SdfPath& productPath : productTargets) {
+        UsdRenderProduct renderProduct(stage->GetPrimAtPath(productPath));
+        if (!renderProduct)
+            continue;
+        UsdAttribute productResolutionAttr = renderProduct.GetResolutionAttr();
+        GfVec2i productResolution;
+        if (productResolutionAttr.HasAuthoredValue() && productResolutionAttr.Get(&productResolution, time.frame) &&
+            productResolution[0] > 0 && productResolution[1] > 0) {
+            resolution = productResolution;
+            AiNodeSetInt(options, str::xres, resolution[0]);
+            AiNodeSetInt(options, str::yres, resolution[1]);
+        }
+        UsdAttribute productPixelAspectRatioAttr = renderProduct.GetPixelAspectRatioAttr();
+        if (productPixelAspectRatioAttr.HasAuthoredValue() && productPixelAspectRatioAttr.Get(&pixelAspectRatioValue, time.frame))
+            AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
+        UsdAttribute productDataWindowNDCAttr = renderProduct.GetDataWindowNDCAttr();
+        if (productDataWindowNDCAttr.HasAuthoredValue())
+            productDataWindowNDCAttr.Get(&windowNDC, time.frame);
+        break;
+    }
+    // The region is expressed in pixels, so it must be computed with the final resolution
+    SetRegion(options, windowNDC, resolution);
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
@@ -612,9 +646,6 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     std::set<AtNode *> beautyDrivers;
 
     // Every render product is translated as an arnold driver.
-    UsdRelationship productsRel = renderSettings.GetProductsRel();
-    SdfPathVector productTargets;
-    productsRel.GetTargets(&productTargets);
     for (size_t i = 0; i < productTargets.size(); ++i) {
 
         UsdPrim productPrim = renderSettingsPrim.GetStage()->GetPrimAtPath(productTargets[i]);
