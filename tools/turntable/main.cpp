@@ -1032,6 +1032,8 @@ static bool _FindAssetRenderSettings(const std::string &assetPath,
     }
 
     if (allSettings.empty()) {
+        // Reset the render settings path 
+        outSettingsPath = SdfPath();
         return false;
     }
 
