@@ -580,6 +580,12 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
     if (instanceIndices.empty()) {
         return;
     }
+    // If the sampling interval has changed we need to resample the translate, orientations and scales
+    // (see ComputeShapeInstancesTransforms). Resampling also updates the parent instancers.
+    HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    if (UpdateSamplingInterval(renderParam->GetShutterRange()))
+        ResampleInstancePrimvars();
+
     HdArnoldSampledMatrixArrayType sampleArray;
     ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
 
