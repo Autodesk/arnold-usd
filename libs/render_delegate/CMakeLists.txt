@@ -6,6 +6,7 @@ set(SRC
     config.cpp
     coord_sys.cpp
     gaussian_splat.cpp
+    houdini_logger.cpp
     instancer.cpp
     light.cpp
     mesh.cpp
@@ -36,6 +37,7 @@ set(HDR
     debug_codes.h
     rprim.h
     hdarnold.h
+    houdini_logger.h
     instancer.h
     light.h
     mesh.h
@@ -96,4 +98,24 @@ if (ENABLE_HYDRA2)
 else()
     target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=0)
 endif()
+
+if (BUILD_HOUDINI_LOGGER)
+    # PUBLIC, not PRIVATE: HOUDINI_LOGGER_BUILD gates a member (_houdiniLogger) on
+    # HdArnoldRenderDelegate itself (render_delegate.h), so every consumer that
+    # constructs/lays out that class - e.g. plugins/render_delegate's hdArnold target,
+    # which links render_delegate PRIVATE as a whole archive - must see the same
+    # definition render_delegate.cpp was compiled with. A PRIVATE definition here would
+    # never reach those consumers (PRIVATE never propagates, even to direct linkers),
+    # giving them a mismatched, undersized class layout. Matches the existing
+    # ENABLE_SCENE_INDEX / ARNOLD_ENABLE_HYDRA2 PUBLIC definitions above, for the same
+    # reason.
+    target_compile_definitions(render_delegate PUBLIC HOUDINI_LOGGER_BUILD=1)
+    if (HTOA_LOGGER_INCLUDE_DIR)
+        target_include_directories(render_delegate PRIVATE "${HTOA_LOGGER_INCLUDE_DIR}")
+    endif()
+    if (HTOA_LOGGER_LIBRARY)
+        target_link_libraries(render_delegate PRIVATE "${HTOA_LOGGER_LIBRARY}")
+    endif()
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})

@@ -52,6 +52,10 @@
 #include "api_adapter.h"
 #include "constant_strings.h"
 
+#if defined(HOUDINI_LOGGER_BUILD)
+#include "houdini_logger.h"
+#endif
+
 #include <ai.h>
 
 class HydraArnoldReader;
@@ -943,6 +947,10 @@ private:
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
     HydraArnoldReader *_reader = nullptr;
+
+#if defined(HOUDINI_LOGGER_BUILD)
+    std::unique_ptr<HdArnoldHoudiniLogger> _houdiniLogger;
+#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
