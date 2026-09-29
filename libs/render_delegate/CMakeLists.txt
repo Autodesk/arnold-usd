@@ -6,7 +6,7 @@ set(SRC
     config.cpp
     coord_sys.cpp
     gaussian_splat.cpp
-    houdini_logger.cpp
+    houdini/houdini_logger.cpp
     instancer.cpp
     light.cpp
     mesh.cpp
@@ -37,7 +37,7 @@ set(HDR
     debug_codes.h
     rprim.h
     hdarnold.h
-    houdini_logger.h
+    houdini/houdini_logger.h
     instancer.h
     light.h
     mesh.h
@@ -100,21 +100,24 @@ else()
 endif()
 
 if (BUILD_HOUDINI_LOGGER)
-    # PUBLIC, not PRIVATE: HOUDINI_LOGGER_BUILD gates a member (_houdiniLogger) on
-    # HdArnoldRenderDelegate itself (render_delegate.h), so every consumer that
-    # constructs/lays out that class - e.g. plugins/render_delegate's hdArnold target,
-    # which links render_delegate PRIVATE as a whole archive - must see the same
-    # definition render_delegate.cpp was compiled with. A PRIVATE definition here would
-    # never reach those consumers (PRIVATE never propagates, even to direct linkers),
-    # giving them a mismatched, undersized class layout. Matches the existing
-    # ENABLE_SCENE_INDEX / ARNOLD_ENABLE_HYDRA2 PUBLIC definitions above, for the same
-    # reason.
     target_compile_definitions(render_delegate PUBLIC HOUDINI_LOGGER_BUILD=1)
-    if (HTOA_LOGGER_INCLUDE_DIR)
-        target_include_directories(render_delegate PRIVATE "${HTOA_LOGGER_INCLUDE_DIR}")
+
+    if (NOT TARGET Houdini)
+        message(FATAL_ERROR "BUILD_HOUDINI_LOGGER requires building against Houdini (HOUDINI_LOCATION)")
     endif()
-    if (HTOA_LOGGER_LIBRARY)
-        target_link_libraries(render_delegate PRIVATE "${HTOA_LOGGER_LIBRARY}")
+    # USD_INCLUDE_DIR already contains the HDK headers, so only the HDK defines are
+    # missing. Copy them from the Houdini target rather than linking it, because linking
+    # it links every libHoudini* library.
+    get_target_property(_hdk_defines Houdini INTERFACE_COMPILE_DEFINITIONS)
+    set_property(SOURCE houdini/houdini_logger.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+        ${_hdk_defines} "HOUDINI_LOGGER_NAME=\"${HOUDINI_LOGGER_NAME}\"")
+    # On macOS, HoudiniConfig links the whole framework and creates no per-library
+    # targets.
+    if (TARGET Houdini::HoudiniUT)
+        target_link_libraries(render_delegate PRIVATE Houdini::HoudiniUT)
+    else()
+        target_link_libraries(render_delegate PRIVATE
+            "${HOUDINI_LIBS_LOCATION}/libHoudiniUT${CMAKE_SHARED_LIBRARY_SUFFIX}")
     endif()
 endif()
 

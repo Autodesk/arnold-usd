@@ -21,7 +21,8 @@
 
 #include <pxr/base/tf/diagnostic.h>
 
-#include <log_bridge_solaris.h>
+#include <UT/UT_UniversalLogEntry.h>
+#include <UT/UT_UniversalLogSource.h>
 
 #include <sstream>
 
@@ -52,6 +53,25 @@ std::string _FormatFileLine(const char* file, size_t line)
 std::string _FormatFileLine(const TfDiagnosticBase& diagnostic)
 {
     return _FormatFileLine(diagnostic.GetSourceFileName().c_str(), diagnostic.GetSourceLineNumber());
+}
+
+// Set by the HOUDINI_LOGGER_NAME CMake option.
+const UT_StringLit k_sourceName(HOUDINI_LOGGER_NAME);
+
+class _LogSource : public UT_UniversalLogSource {
+};
+
+const UT_UniversalLogSourceRegistration k_sourceRegistration(
+    k_sourceName.asHolder(), []() -> UT_UniversalLogSource* { return new _LogSource(); });
+
+// Houdini creates the source when the first Log Viewer connects to it, and destroys it
+// when the last one disconnects. Messages sent while no Log Viewer is connected are lost.
+void _SendToLogPanel(const char* msg, const std::string& context, UT_ErrorSeverity severity)
+{
+    UT_UniversalLogSource* source = UT_UniversalLogSourceRegistration::getSource(k_sourceName.asRef());
+    if (source != nullptr) {
+        source->sendToSinks(UT_UniversalLogEntry(k_sourceName.asHolder(), msg, context, severity));
+    }
 }
 
 } // namespace
@@ -105,23 +125,23 @@ void HdArnoldHoudiniLogger::_AiMsgCallback(
     // debug messages are otherwise reported with AI_SEVERITY_INFO, so we have
     // to check the category first to route them to the debug panel.
     if (logmask & AI_LOG_DEBUG) {
-        logPanelDebugSolaris(msg, "");
+        _SendToLogPanel(msg, {}, UT_ERROR_MESSAGE);
         return;
     }
 
     switch (severity) {
         case AI_SEVERITY_WARNING:
-            logPanelWarningSolaris(msg, "");
+            _SendToLogPanel(msg, {}, UT_ERROR_WARNING);
             break;
         case AI_SEVERITY_ERROR:
-            logPanelErrorSolaris(msg, "");
+            _SendToLogPanel(msg, {}, UT_ERROR_ABORT);
             break;
         case AI_SEVERITY_FATAL:
-            logPanelFatalSolaris(msg, "");
+            _SendToLogPanel(msg, {}, UT_ERROR_FATAL);
             break;
         case AI_SEVERITY_INFO:
         default:
-            logPanelInfoSolaris(msg, "");
+            _SendToLogPanel(msg, {}, UT_ERROR_PROMPT);
             break;
     }
 }
@@ -149,7 +169,7 @@ void HdArnoldHoudiniLogger::_TfDelegate::IssueError(const TfError& err)
     }
     const std::string message = err.GetCommentary();
     if (!message.empty()) {
-        logPanelErrorSolaris(message.c_str(), _FormatFileLine(err).c_str());
+        _SendToLogPanel(message.c_str(), _FormatFileLine(err), UT_ERROR_ABORT);
     }
 }
 
@@ -157,7 +177,7 @@ void HdArnoldHoudiniLogger::_TfDelegate::IssueFatalError(const TfCallContext& ct
 {
     // Kept minimal: the process aborts shortly after a fatal error, so this
     // must not do anything that could re-enter Tf/Arnold or block.
-    logPanelFatalSolaris(msg.c_str(), _FormatFileLine(ctx.GetFile(), static_cast<size_t>(ctx.GetLine())).c_str());
+    _SendToLogPanel(msg.c_str(), _FormatFileLine(ctx.GetFile(), static_cast<size_t>(ctx.GetLine())), UT_ERROR_FATAL);
 }
 
 void HdArnoldHoudiniLogger::_TfDelegate::IssueWarning(const TfWarning& warning)
@@ -167,7 +187,7 @@ void HdArnoldHoudiniLogger::_TfDelegate::IssueWarning(const TfWarning& warning)
     }
     const std::string message = warning.GetCommentary();
     if (!message.empty()) {
-        logPanelWarningSolaris(message.c_str(), _FormatFileLine(warning).c_str());
+        _SendToLogPanel(message.c_str(), _FormatFileLine(warning), UT_ERROR_WARNING);
     }
 }
 
@@ -175,7 +195,7 @@ void HdArnoldHoudiniLogger::_TfDelegate::IssueStatus(const TfStatus& status)
 {
     const std::string message = status.GetCommentary();
     if (!message.empty()) {
-        logPanelInfoSolaris(message.c_str(), _FormatFileLine(status).c_str());
+        _SendToLogPanel(message.c_str(), _FormatFileLine(status), UT_ERROR_PROMPT);
     }
 }
 

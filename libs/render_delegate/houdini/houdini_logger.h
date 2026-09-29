@@ -15,11 +15,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file houdini_logger.h
+/// @file houdini/houdini_logger.h
 ///
 /// Houdini-only helper, composed into HdArnoldRenderDelegate, that bridges
-/// Arnold's AiMsg log and Pixar's Tf diagnostics into HtoA's Houdini Log
-/// Viewer panel.
+/// Arnold's AiMsg log and Pixar's Tf diagnostics into Houdini's Log Viewer
+/// panel.
 #pragma once
 
 #include <pxr/pxr.h>
@@ -38,11 +38,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// \class HdArnoldHoudiniLogger
 ///
 /// Small helper, owned (via std::unique_ptr) by HdArnoldRenderDelegate, that
-/// forwards Arnold AiMsg log messages and Pixar Tf diagnostics into HtoA's
-/// Houdini Log Viewer panel (via the logPanel*Solaris functions declared in
-/// the externally supplied <log_bridge_solaris.h>). It is not a render
-/// delegate and does not subclass one - it is plain composition, so every
-/// DCC (Maya, Katana, Houdini, kick) keeps using the single, shared
+/// forwards Arnold AiMsg log messages and Pixar Tf diagnostics into Houdini's
+/// Log Viewer panel, as a log source named by the HOUDINI_LOGGER_NAME CMake
+/// option. It is not a render delegate and
+/// does not subclass one - it is plain composition, so every DCC (Maya,
+/// Katana, Houdini, kick) keeps using the single, shared
 /// HdArnoldRenderDelegate class.
 ///
 /// Arnold's message bus (AiMsgRegisterCallback) is global to the process:
@@ -65,8 +65,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// HOUDINI_LOGGER_BUILD is defined, which only libs/render_delegate's own
 /// CMakeLists.txt defines, and only when the BUILD_HOUDINI_LOGGER CMake
 /// option (default OFF) is enabled. Vanilla, Maya and Katana builds never
-/// compile or link this class, and have zero dependency on the htoa-supplied
-/// log_bridge_solaris.h.
+/// compile or link this class, and do not depend on the HDK.
 class HdArnoldHoudiniLogger {
 public:
     explicit HdArnoldHoudiniLogger(AtUniverse* universe);

@@ -53,7 +53,7 @@
 #include "constant_strings.h"
 
 #if defined(HOUDINI_LOGGER_BUILD)
-#include "houdini_logger.h"
+#include "houdini/houdini_logger.h"
 #endif
 
 #include <ai.h>
