@@ -91,6 +91,7 @@ struct Args {
     std::string studioSets;  // Comma-separated studio set names
     bool        listStudioSets = false;
     std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
+    std::string renderSettings = ""; // RenderSettings path to use.
 };
 
 struct LightRig {
@@ -265,6 +266,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--background-color", args.backgroundColor,
         "Solid background color as 3 linear floats: R G B (default: no background)")
         ->expected(3)->option_text("R G B");
+
+    app->add_option("--render-settings", args.renderSettings, "RenderSettings prim path to use")
+        ->option_text("PATH");
 
     app->add_option("input", args.input, "USD asset file to turntable")
         ->option_text("FILE");
@@ -997,24 +1001,42 @@ static bool _FindAssetRenderSettings(const std::string &assetPath,
         }
     }
 
-    if (allSettings.empty()) {
-        return false;
-    }
-
     // Prefer the prim named in the asset's renderSettingsPrimPath metadata.
-    UsdPrim chosen = allSettings.front();
+    UsdPrim chosen;
     VtValue metaVal;
-    if (assetStage->HasMetadata(UsdRenderTokens->renderSettingsPrimPath) &&
+    if (assetStage->HasAuthoredMetadata(UsdRenderTokens->renderSettingsPrimPath) &&
         assetStage->GetMetadata(UsdRenderTokens->renderSettingsPrimPath, &metaVal)) {
         const std::string metaPath = metaVal.IsHolding<std::string>()
             ? metaVal.UncheckedGet<std::string>()
             : metaVal.UncheckedGet<SdfPath>().GetString();
-        for (const UsdPrim &prim : allSettings) {
-            if (prim.GetPath().GetString() == metaPath) {
-                chosen = prim;
-                break;
-            }
+
+        const auto &it = std::find_if(allSettings.begin(), allSettings.end(), 
+                            [&](const UsdPrim &prim){ return prim.GetPath().GetString() == metaPath; });
+        if (it == allSettings.end()) {
+            fprintf(stderr, "turntable: unable to find stage metadata render settings prim %s\n", 
+                    metaPath.c_str());
+        } else {
+            chosen = *it;
         }
+    }
+
+    // Override the chosen prim if the user explicitly set an existing RenderSettings path.
+    if (!outSettingsPath.IsEmpty()) {
+        const auto &it = std::find_if(allSettings.begin(), allSettings.end(), 
+                            [&](const UsdPrim &prim){ return prim.GetPath() == outSettingsPath; });
+        if (it == allSettings.end()) {
+            fprintf(stderr, "turntable: unable to find render settings prim %s\n", outSettingsPath.GetString().c_str());
+        } else {
+            chosen = *it;
+        }      
+    }
+
+    if (allSettings.empty()) {
+        return false;
+    }
+
+    if (!chosen) {
+        chosen = allSettings.front();
     }
 
     printf("turntable: using asset render settings '%s'", chosen.GetPath().GetText());
@@ -1430,6 +1452,22 @@ int Run(const Args &args)
         return 1;
     }
 
+    if (!args.renderSettings.empty()) {
+        std::string errMsg;
+        if (!SdfPath::IsValidPathString(args.renderSettings, &errMsg)) {
+            fprintf(stderr, "turntable: malformed render settings path --render-settings '%s' '%s'\n",
+                    args.renderSettings.c_str(), errMsg.c_str());
+            return 1;
+        } else {
+            SdfPath renderSettingsPath(args.renderSettings);
+            if (!renderSettingsPath.IsAbsolutePath()) {
+                fprintf(stderr, "turntable: render settings argument is not an absolute path --render-settings '%s'\n",
+                        args.renderSettings.c_str());
+                return 1;
+            }            
+        }
+    }
+
     std::vector<StudioSetType> studioSets;
     if (!args.studioSets.empty()) {
         // Split comma-separated studio set names
@@ -1512,7 +1550,7 @@ int Run(const Args &args)
     }
 
     // Check for render settings in the asset.
-    SdfPath   assetSettingsPath;
+    SdfPath   assetSettingsPath = args.renderSettings.empty() ? SdfPath() : SdfPath(args.renderSettings);
     GfVec2i   assetResolution(args.width, args.height);
     bool      hasAssetSettings = _FindAssetRenderSettings(args.input, assetSettingsPath, assetResolution);
 
