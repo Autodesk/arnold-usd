@@ -24,7 +24,10 @@ if (LINUX)
 elseif (APPLE)
     if (BUILD_WITH_USD_STATIC)
         if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
-            string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
+            target_link_options(${PROC_NAME} PRIVATE
+                "LINKER:-S"
+                "LINKER:-x"
+                "LINKER:-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
         endif ()
     endif ()
 endif ()

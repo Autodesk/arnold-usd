@@ -35,6 +35,7 @@
 #include <pxr/base/tf/getenv.h>
 #include <pxr/base/tf/envSetting.h>
 
+#include <pxr/imaging/hd/version.h>
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/extComputation.h>
@@ -145,6 +146,14 @@ TF_DEFINE_ENV_SETTING(
     "Set to 1 to flatten nested instances into shape instancing instead of using nested arnold instancer nodes");
 
 namespace {
+
+const bool IsSceneIndexEmulationEnabled() {
+#if HD_API_VERSION >= 99
+    return true;
+#else
+    return HdRenderIndex::IsSceneIndexEmulationEnabled();
+#endif
+}
 
 const HdFormat _GetHdFormatFromToken(const TfToken& token)
 {
@@ -690,7 +699,16 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     // being handled by a chain of nested arnold instancer nodes. Defaults to disabled.
     std::string envFlattenInstancing = TfGetEnvSetting(HDARNOLD_FLATTEN_INSTANCING);
     _flattenInstancing = envFlattenInstancing == std::string("1");
-    
+
+    // Geometry deduplication mode: 0 off, 1 point-instancer prototypes only (default), 2 all
+    // geometries. Read with TfGetenvInt rather than a cached TfGetEnvSetting, so that it can
+    // change between two render delegates of the same process.
+    switch (TfGetenvInt("HDARNOLD_GEOM_DEDUP", 1)) {
+        case 0: _geometryDedupMode = GeometryDedupMode::None; break;
+        case 2: _geometryDedupMode = GeometryDedupMode::All; break;
+        default: _geometryDedupMode = GeometryDedupMode::Instances; break;
+    }
+
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -705,6 +723,12 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
         }
     }
     _renderParam->Interrupt();
+    // Hydra destroys the render buffers before the delegate, so this is the last chance to release their textures.
+    FlushTextureDestructions();
+    // Drop anything queued instead of acting on it: nothing will poll for it again. We can't be
+    // holding an imager barrier for a session that outlives us - only the procedural passes an
+    // external universe, always with a procedural parent, which ImagerInterrupt() skips.
+    _renderParam->ClearPendingUpdates();
     if (_renderDelegateOwnsUniverse) {
         AiRenderSessionDestroy(GetRenderSession());
         AiUniverseDestroy(_universe);
@@ -983,6 +1007,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     else if (key == str::t_accelerated_viewport) {
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
         _CheckForBoolValue(value, [&](const bool b) {
+            if (b == _acceleratedViewport) {
+                // Hosts re-send every render setting on each update, and ending the session below is expensive.
+                return;
+            }
             _acceleratedViewport = b;
             AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
             if (_acceleratedViewport) {
@@ -991,6 +1019,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                 AiNodeSetStr(_options, str::render_device, _gpuRenderingEnabled ? str::GPU : str::CPU);
                 AiDeviceAutoSelect(GetRenderSession());
             }
+            // Arnold only builds the direct outputs pipeline when it sets up a GPU session, so a session that
+            // already has one ignores direct_outputs being turned on, and AiGetRenderOutput() never gets
+            // anything to serve. Start a new session instead of restarting this one.
+            _renderParam->EndSession();
         });
 #else
         AiMsgWarning(
@@ -1522,10 +1554,88 @@ HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
     return CreateBprim(typeId, SdfPath());
 }
 
+void HdArnoldRenderDelegate::QueueTextureDestruction(HgiTextureHandle& texture)
+{
+    if (!texture) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+    _texturesToDestroy.push_back(texture);
+    texture = HgiTextureHandle();
+}
+
+void HdArnoldRenderDelegate::FlushTextureDestructions()
+{
+    std::vector<HgiTextureHandle> textures;
+    {
+        std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+        if (_texturesToDestroy.empty()) {
+            return;
+        }
+        textures.swap(_texturesToDestroy);
+    }
+    if (_hgi == nullptr) {
+        return;
+    }
+    for (auto& texture : textures) {
+        _hgi->DestroyTexture(&texture);
+    }
+}
+
+void HdArnoldRenderDelegate::_ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer)
+{
+    if (renderBuffer == nullptr || _universe == nullptr) {
+        return;
+    }
+    AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_DRIVER);
+    while (!AiNodeIteratorFinished(nodeIter)) {
+        AtNode* driver = AiNodeIteratorGetNext(nodeIter);
+        if (driver == nullptr || !AiNodeIs(driver, str::HdArnoldDriverMain)) {
+            continue;
+        }
+        for (const AtString& pointer : {str::color_pointer, str::depth_pointer, str::id_pointer}) {
+            if (AiNodeGetPtr(driver, pointer) == renderBuffer) {
+                AiNodeSetPtr(driver, pointer, nullptr);
+            }
+        }
+        AtArray* pointers = AiNodeGetArray(driver, str::buffer_pointers);
+        const unsigned int pointerCount = pointers != nullptr ? AiArrayGetNumElements(pointers) : 0;
+        for (unsigned int i = 0; i < pointerCount; ++i) {
+            if (AiArrayGetPtr(pointers, i) == renderBuffer) {
+                AiArraySetPtr(pointers, i, nullptr);
+            }
+        }
+        // node_update copied the parameters above into the driver's local data, and only runs again when the
+        // render restarts.
+        auto* driverData = static_cast<DriverMainData*>(AiNodeGetLocalData(driver));
+        if (driverData == nullptr) {
+            continue;
+        }
+        if (driverData->colorBuffer == renderBuffer) {
+            driverData->colorBuffer = nullptr;
+        }
+        if (driverData->depthBuffer == renderBuffer) {
+            driverData->depthBuffer = nullptr;
+        }
+        if (driverData->idBuffer == renderBuffer) {
+            driverData->idBuffer = nullptr;
+        }
+        for (auto& buffer : driverData->buffers) {
+            if (buffer.second == renderBuffer) {
+                buffer.second = nullptr;
+            }
+        }
+    }
+    AiNodeIteratorDestroy(nodeIter);
+}
+
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 {
     // RenderBuffers can be in use in drivers.
     _renderParam->Interrupt();
+    // The render pass only rewires the drivers on its next execute, but the render can be restarted before that
+    // (e.g. by the Hydra render settings path), and Arnold would then write buckets into freed memory.
+    _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
     delete bPrim;
 }
 
@@ -1863,7 +1973,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
 #ifdef ENABLE_SCENE_INDEX
         // Unfortunately the MarkAllRprimsDirty doesn't work as we would expect in USD 25.05 with hydra 2, it marks dirty the prims of the legacy scene index which doesn't contain rprims, so all
         // the dirty notifications get discarded. We have to use a workaround to get the same behaviour as before by propagating the dirtyness to a dedicated scene index filter.
-        if (HdRenderIndex::IsSceneIndexEmulationEnabled()) {
+        if (IsSceneIndexEmulationEnabled()) {
             if (HdSceneIndexBaseRefPtr sceneIndex = renderIndex->GetTerminalSceneIndex()) {
                 // Regarding the used of TfHashMap to carry the dirtyness, we unfortunately can't pass
                 // directly HdSceneIndexObserver::DirtiedPrimEntries due to template functions implementation
@@ -1911,7 +2021,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     // is dropped. We instead push the dirtiness through the terminal scene index, the same way the
     // bulk Rprim dirtying above does. Resolve the terminal scene index once for the lambda to use.
     HdSceneIndexBaseRefPtr terminalSceneIndex =
-        HdRenderIndex::IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
+        IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
 #endif
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
         // Marking a primitive as being dirty. The conversion to data source locators and the
@@ -2067,9 +2177,12 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         }
     }
 
-    // If we have connections in our stack, it means that some nodes were re-exported, 
+    // If we have connections in our stack, it means that some nodes were re-exported,
     // and therefore that the render was already interrupted
     ProcessConnections();
+    // Now the queued links are applied, it's safe for an imager to read those nodes again. This
+    // can't live in UpdateRender(), which our callers skip for the whole frame when we return true.
+    _renderParam->ResumeImagers();
     return changes;
 }
 
@@ -2163,6 +2276,64 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
             _dependencyRemovalQueue.emplace(target);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Geometry deduplication registry (meshes and curves).
+// ---------------------------------------------------------------------------
+
+AtNode* HdArnoldRenderDelegate::AcquireCanonicalGeometry(uint64_t hash, AtNode* candidate)
+{
+    std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+    const auto it = _canonicalGeometry.find(hash);
+    if (it != _canonicalGeometry.end()) {
+        ++it->second.duplicates;
+        return it->second.node;
+    }
+    if (candidate != nullptr)
+        _canonicalGeometry.emplace(hash, CanonicalGeometry{candidate});
+    return nullptr;
+}
+
+void HdArnoldRenderDelegate::ReleaseCanonicalGeometry(uint64_t hash)
+{
+    AtNode* toDestroy = nullptr;
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && it->second.duplicates > 0))
+            return;
+        if (--it->second.duplicates == 0 && it->second.adopted) {
+            toDestroy = it->second.node;
+            _canonicalGeometry.erase(it);
+        }
+    }
+    DestroyArnoldNode(toDestroy);
+}
+
+bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node, const SdfPath& id)
+{
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && !it->second.adopted && it->second.node == node))
+            return false;
+        if (it->second.duplicates == 0) {
+            _canonicalGeometry.erase(it);
+            return false;
+        }
+        it->second.adopted = true;
+    }
+    // Once the nodes belong to Arnold (see EnableNodesDestruction) they must not be touched.
+    if (_enableNodesDestruction) {
+        // Give the node's name back to the rprim, which creates its new node under it, and stop
+        // rendering it on its own. Its instances are unaffected, they set their own visibility.
+        const std::string name =
+            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
+        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        AiNodeSetByte(node, str::visibility, 0);
+    }
+    return true;
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)

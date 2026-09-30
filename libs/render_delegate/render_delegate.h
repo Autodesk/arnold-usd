@@ -583,6 +583,18 @@ public:
     /// did not provide one (e.g. batch / husk without a GL context).
     Hgi* GetHgi() const { return _hgi; }
 
+    /// Queues a GPU texture for destruction on the thread that owns the GL context.
+    ///
+    /// Hgi textures must be created and destroyed on the main thread, but render buffers are allocated and
+    /// destroyed while Hydra syncs, which hosts may do on another thread.
+    ///
+    /// @param texture Texture to destroy, left empty.
+    HDARNOLD_API
+    void QueueTextureDestruction(HgiTextureHandle& texture);
+
+    /// Destroys every queued texture. Only call this with the GL context current.
+    HDARNOLD_API
+    void FlushTextureDestructions();
 
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
@@ -770,6 +782,43 @@ public:
     // instead of using nested arnold instancer nodes
     bool FlattenInstancing () const {return _flattenInstancing;}
 
+    /// Which geometrically identical geometries (meshes or curves) are rendered as instances
+    /// of a single canonical Arnold node instead of being duplicated.
+    enum class GeometryDedupMode {
+        None = 0,       ///< No deduplication.
+        Instances = 1,  ///< Only point-instancer prototypes (the flattening case). Default.
+        All = 2         ///< Every eligible geometry, including plain non-instanced duplicates.
+    };
+
+    // Returns the active geometry deduplication mode.
+    GeometryDedupMode GetGeometryDedupMode () const {return _geometryDedupMode;}
+
+    // Return true if any geometry deduplication is enabled.
+    bool DeduplicateGeometry () const {return _geometryDedupMode != GeometryDedupMode::None;}
+
+    /// Geometry deduplication registry, used by the geometry rprims (see HdArnoldRprim) to
+    /// share a single canonical Arnold node between geometrically identical geometries. Each
+    /// rprim keeps the @p hash it is registered under, and calls these accordingly.
+    ///
+    /// Registers a duplicate of the geometry identified by @p hash and returns the canonical
+    /// node to instance. When no rprim owns this geometry yet, a non-null @p candidate becomes
+    /// its canonical and nullptr is returned; a null @p candidate registers nothing.
+    HDARNOLD_API
+    AtNode* AcquireCanonicalGeometry(uint64_t hash, AtNode* candidate);
+
+    /// Releases a duplicate registered with AcquireCanonicalGeometry. Destroys the canonical
+    /// node if it was adopted and this was its last duplicate.
+    HDARNOLD_API
+    void ReleaseCanonicalGeometry(uint64_t hash);
+
+    /// Releases the canonical @p node the rprim @p id owns for @p hash. Arnold instances point at
+    /// their prototype's arrays instead of copying them, so a canonical node cannot be destroyed
+    /// while duplicates reference it: in that case the render delegate adopts it until its last
+    /// duplicate is released, and returns true. The caller must then relinquish the node
+    /// without destroying it.
+    HDARNOLD_API
+    bool LeaveCanonicalGeometry(uint64_t hash, AtNode* node, const SdfPath& id);
+
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
     bool HasCryptomatte() const {return _hasCryptomatte;}
@@ -789,6 +838,11 @@ private:
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    /// Drops every reference the main drivers hold to a render buffer that is about to be destroyed.
+    ///
+    /// @param renderBuffer Render buffer being destroyed.
+    void _ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer);
 
     /// Returns the color manager to be used for this render, creating it if needed.
     ///
@@ -864,6 +918,7 @@ private:
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
+    std::atomic<uint32_t> _adoptedGeometryCounter{0}; ///< Unique names for adopted canonical nodes.
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
@@ -906,6 +961,15 @@ private:
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
 
+    /// Geometry deduplication registry entry (see AcquireCanonicalGeometry).
+    struct CanonicalGeometry {
+        AtNode* node = nullptr;  ///< Canonical node, instanced by the duplicates.
+        uint32_t duplicates = 0; ///< Number of rprims instancing node.
+        bool adopted = false;    ///< The owning rprim left: node is destroyed with the last duplicate.
+    };
+    std::mutex _canonicalGeometryMutex;
+    std::unordered_map<uint64_t, CanonicalGeometry> _canonicalGeometry; ///< geometry hash -> canonical
+
     std::mutex _coordSysCamerasMutex;
     std::unordered_map<AtNode*, float> _coordSysCameras; ///< coordSys camera node -> aperture ratio (vAp/hAp)
 
@@ -931,12 +995,15 @@ private:
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
     bool _flattenInstancing = false;
+    GeometryDedupMode _geometryDedupMode = GeometryDedupMode::Instances;
     bool _forceIgnoreMotionBlur = false;
     bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     bool _acceleratedViewport = false;
     bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+    std::vector<HgiTextureHandle> _texturesToDestroy; ///< Textures waiting for the GL thread.
+    std::mutex _texturesToDestroyMutex;               ///< Guards _texturesToDestroy.
 
     mutable std::mutex _nodeGraphNamesMutex;
     std::unordered_map<std::string, SdfPath> _nodeGraphNames;

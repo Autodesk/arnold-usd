@@ -16,15 +16,18 @@
 - [usd#2710](https://github.com/Autodesk/arnold-usd/issues/2710) - Support uv_camera ray_direction / ray_origin in hydra
 - [usd#2731](https://github.com/Autodesk/arnold-usd/issues/2731) - Per-renderVar EXR compression
 - [usd#2747](https://github.com/Autodesk/arnold-usd/issues/2747) - Fix nodes destruction during interactive sessions under a procedural
+- [usd#2749](https://github.com/Autodesk/arnold-usd/issues/2749) - Mesh geometry deduplication in the hydra render delegate
 - [usd#2754](https://github.com/Autodesk/arnold-usd/issues/2754) - Support for sequence rendering with hydra 2 render settings
 - [usd#2758](https://github.com/Autodesk/arnold-usd/issues/2758) - Support shader imagers with interactive updates
-- [usd#2777](https://github.com/Autodesk/arnold-usd/issues/2777) - Houdini logger support (optional)
-
+- [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
+- [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2775) - Forward arnold logs to the houdini logger
 
 ### Bug fixes
 
 - [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
 - [usd#2728](https://github.com/Autodesk/arnold-usd/issues/2728) - Default USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX to enabled when unset, matching USD 26.03+ behavior.
+- [usd#2770](https://github.com/Autodesk/arnold-usd/issues/2770) - Fix region rendering with the hydra2 render settings, and support the RenderProduct resolution, pixelAspectRatio and dataWindowNDC
+- [usd#2777](https://github.com/Autodesk/arnold-usd/issues/2777) - Fix linking the Houdini logger against libUT on Windows
 
 
 ## [7.5.3.2] (Unreleased)

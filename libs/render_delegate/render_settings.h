@@ -26,6 +26,8 @@
 
 #if PXR_VERSION >= 2308
 
+#include <pxr/base/gf/vec2i.h>
+#include <pxr/base/gf/vec4f.h>
 #include <pxr/imaging/hd/renderSettings.h>
 
 #include <ai.h>
@@ -36,6 +38,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdRenderIndex;
 class HdArnoldRenderParam;
+class HdArnoldRenderParamInterrupt;
 class HdArnoldRenderDelegate;
 /// Hydra 2.0 Render Settings Prim for Arnold.
 ///
@@ -120,10 +123,22 @@ private:
     /// @param sceneDelegate The scene delegate.
     void _ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate);
 
+    /// Applies the resolution, pixel aspect ratio and data window (region) to the Arnold options.
+    /// Values are taken from the first render product with a valid resolution (already flattened
+    /// with the render settings values by hydra), falling back to the render settings prim.
+    ///
+    /// @param sceneDelegate The scene delegate.
+    /// @param paramInterrupt Used to interrupt the render when the framing changes.
+    /// @param force Apply the framing even if it didn't change since the last call.
+    void _UpdateFraming(
+        HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& paramInterrupt, bool force);
+
 private:
     HdArnoldRenderDelegate* _renderDelegate = nullptr;
     SdfPath _hydraCameraPath;
     GfVec2f _hydraCameraShutter = GfVec2f(0.f, 0.f);
+    // Data window last applied to the options, used to avoid needless render interruptions
+    GfVec4f _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
