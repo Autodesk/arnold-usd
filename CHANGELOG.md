@@ -20,7 +20,7 @@
 - [usd#2754](https://github.com/Autodesk/arnold-usd/issues/2754) - Support for sequence rendering with hydra 2 render settings
 - [usd#2758](https://github.com/Autodesk/arnold-usd/issues/2758) - Support shader imagers with interactive updates
 - [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
-- [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2775) - Forward arnold logs to the houdini logger
+- [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2777) - Add Houdini logger support
 
 ### Bug fixes
 
