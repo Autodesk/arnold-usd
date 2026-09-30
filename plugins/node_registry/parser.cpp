@@ -69,6 +69,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (uisoftmax)
     (enumValues)
     (attrsOrder)
+    (nodeType)
+    (usdSchema)
+    (light)
     (binary));
 // clang-format on
 
@@ -408,21 +411,41 @@ ShaderNodeUniquePtr NdrArnoldParserPlugin::PARSE_FUNC(const ShaderNodeDiscoveryR
         _ReadShaderAttribute(attr, properties, "");
     }
 
+    // Resolve the SdrShaderNode context. The discovery plugin emits
+    // `discoveryResult.discoveryType == "arnold"` so the parser plugin is
+    // routed correctly (see GetDiscoveryTypes() below), but the *context*
+    // we register the node under should reflect its role in a USD material
+    // network. Lights tagged with `nodeType == "light"` in customData are
+    // registered under SdrNodeContext->Light ("light") so DCC-agnostic
+    // tools can enumerate them via `Sdr.Registry.GetShaderNodesByContext("light")`.
+    // Everything else stays under the legacy "arnold" context for backwards
+    // compatibility with existing consumers.
+    TfToken context = discoveryResult.discoveryType;
+    auto nodeTypeIt = primCustomData.find(_tokens->nodeType);
+    if (nodeTypeIt != primCustomData.end() &&
+        nodeTypeIt->second.IsHolding<std::string>() &&
+        nodeTypeIt->second.UncheckedGet<std::string>() == _tokens->light.GetString()) {
+        context = _tokens->light;
+    }
+
     // Now handle the metadatas at the node level
     ShaderTokenMap metadata;
     for (const auto &it : primCustomData) {
-        // uigroups was handled above
-        if (it.first == _tokens->uigroups || it.first == _tokens->attrsOrder)
+        // uigroups was handled above; nodeType is an internal routing marker
+        // (already consumed to compute `context`) and must not leak into the
+        // user-visible metadata map.
+        if (it.first == _tokens->uigroups || it.first == _tokens->attrsOrder ||
+            it.first == _tokens->nodeType)
             continue;
         metadata.insert({TfToken(it.first), TfStringify(it.second)});
     }
-    
+
     return ShaderNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
         discoveryResult.version,       // version
         discoveryResult.name,          // name
         discoveryResult.family,        // family
-        discoveryResult.discoveryType, // context
+        context,                       // context
         discoveryResult.sourceType,    // sourceType
         discoveryResult.uri,           // uri
         discoveryResult.uri, // resolvedUri
