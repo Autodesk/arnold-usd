@@ -115,6 +115,11 @@ if (BUILD_HOUDINI_LOGGER)
     # targets.
     if (TARGET Houdini::HoudiniUT)
         target_link_libraries(render_delegate PRIVATE Houdini::HoudiniUT)
+    elseif (WIN32)
+        # Windows names it libUT and the linker needs the import lib, which lives under
+        # custom/houdini/dsolib rather than next to the dll in bin/.
+        target_link_libraries(render_delegate PRIVATE
+            "${HOUDINI_LOCATION}/custom/houdini/dsolib/libUT${CMAKE_STATIC_LIBRARY_SUFFIX}")
     else()
         target_link_libraries(render_delegate PRIVATE
             "${HOUDINI_LIBS_LOCATION}/libHoudiniUT${CMAKE_SHARED_LIBRARY_SUFFIX}")
