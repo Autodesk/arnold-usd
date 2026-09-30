@@ -663,6 +663,10 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
+#if defined(HOUDINI_LOGGER_BUILD)
+    _houdiniLogger = std::make_unique<HdArnoldHoudiniLogger>(GetUniverse());
+#endif
+
     _renderParam = std::make_unique<HdArnoldRenderParam>(this);
     // To set the default value.
     _fps = _renderParam->GetFPS();
@@ -709,6 +713,9 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 {
+#if defined(HOUDINI_LOGGER_BUILD)
+    _houdiniLogger.reset();
+#endif
     {
         std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
         if (_counterResourceRegistry.fetch_sub(1) == 1) {

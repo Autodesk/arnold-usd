@@ -38,6 +38,15 @@ option(BUILD_PROCEDURAL "Builds the Procedural" ON)
 option(BUILD_PROC_SCENE_FORMAT "Enables the Procedural Scene format" ON)
 option(BUILD_USD_IMAGING_PLUGIN "Builds the USD Imaging plugins" ON)
 option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
+# Small helper class (HdArnoldHoudiniLogger, see libs/render_delegate/houdini/) composed
+# into the one shared HdArnoldRenderDelegate, that bridges Arnold's AiMsg log and Pixar's
+# Tf diagnostics into Houdini's Log Viewer panel. Not a separate delegate or
+# plugin. Off by default: only the htoa build turns this on, so vanilla/Maya/Katana builds
+# never compile or link it, and libs/common stays Houdini/HDK-free. Requires a Houdini
+# build (HOUDINI_LOCATION), and links libHoudiniUT.
+option(BUILD_HOUDINI_LOGGER "Build the Houdini-only Arnold/Tf log bridge helper" OFF)
+set(HOUDINI_LOGGER_NAME "Arnold Delegate" CACHE STRING
+    "Log Viewer source name used by BUILD_HOUDINI_LOGGER")
 
 
 # Build additions

@@ -6,6 +6,7 @@ set(SRC
     config.cpp
     coord_sys.cpp
     gaussian_splat.cpp
+    houdini/houdini_logger.cpp
     instancer.cpp
     light.cpp
     mesh.cpp
@@ -36,6 +37,7 @@ set(HDR
     debug_codes.h
     rprim.h
     hdarnold.h
+    houdini/houdini_logger.h
     instancer.h
     light.h
     mesh.h
@@ -96,4 +98,27 @@ if (ENABLE_HYDRA2)
 else()
     target_compile_definitions(render_delegate PUBLIC ARNOLD_ENABLE_HYDRA2=0)
 endif()
+
+if (BUILD_HOUDINI_LOGGER)
+    target_compile_definitions(render_delegate PUBLIC HOUDINI_LOGGER_BUILD=1)
+
+    if (NOT TARGET Houdini)
+        message(FATAL_ERROR "BUILD_HOUDINI_LOGGER requires building against Houdini (HOUDINI_LOCATION)")
+    endif()
+    # USD_INCLUDE_DIR already contains the HDK headers, so only the HDK defines are
+    # missing. Copy them from the Houdini target rather than linking it, because linking
+    # it links every libHoudini* library.
+    get_target_property(_hdk_defines Houdini INTERFACE_COMPILE_DEFINITIONS)
+    set_property(SOURCE houdini/houdini_logger.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+        ${_hdk_defines} "HOUDINI_LOGGER_NAME=\"${HOUDINI_LOGGER_NAME}\"")
+    # On macOS, HoudiniConfig links the whole framework and creates no per-library
+    # targets.
+    if (TARGET Houdini::HoudiniUT)
+        target_link_libraries(render_delegate PRIVATE Houdini::HoudiniUT)
+    else()
+        target_link_libraries(render_delegate PRIVATE
+            "${HOUDINI_LIBS_LOCATION}/libHoudiniUT${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    endif()
+endif()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
