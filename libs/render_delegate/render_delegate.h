@@ -625,6 +625,8 @@ public:
 #endif
 
     const std::string &GetOutputOverride() const {return _outputOverride;}
+    /// Current frame, as set by the host through the houdini:frame render setting.
+    float GetFrame() const {return _frame;}
     
     /// Method used to create any node in the context of the render delegate. 
     /// This method should always be called, instead of explicit AiNode() creations
@@ -987,6 +989,8 @@ private:
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
+    // Current frame. Only set on the options node in batch renders, see _SetRenderSetting.
+    float _frame = 0.f;
     int _mask = AI_NODE_ALL;  // mask for node types to be translated
     bool _hasCryptomatte = false;
     std::mutex _nodesMutex;
