@@ -27,7 +27,7 @@
 - [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
 - [usd#2728](https://github.com/Autodesk/arnold-usd/issues/2728) - Default USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX to enabled when unset, matching USD 26.03+ behavior.
 - [usd#2770](https://github.com/Autodesk/arnold-usd/issues/2770) - Fix region rendering with the hydra2 render settings, and support the RenderProduct resolution, pixelAspectRatio and dataWindowNDC
-
+- [usd#2781](https://github.com/Autodesk/arnold-usd/pull/2781) - Fix export of subdivisionScheme from MayaUSD
 
 ## [7.5.3.2] (Unreleased)
 
