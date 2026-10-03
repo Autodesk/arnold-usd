@@ -788,11 +788,15 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     if (_key == str::t_houdiniFrame) {
         if (_value.IsHolding<double>()) {
             const float frame = static_cast<float>(_value.UncheckedGet<double>());
-            AiNodeSetFlt(_options, str::frame, frame);
-            // Only restart when the frame actually changed. The previous
-            // unconditional Restart() would drop an in-progress render every
-            // time the host re-sent this setting with the wrong value type.
-            _renderParam->Restart();
+            // Only restart when the frame actually changed.
+            if (frame != _frame) {
+                _frame = frame;
+                // Modifying the options node is costly during interactive renders and slows down
+                // timeline playback, so we only set options.frame in batch renders.
+                if (_isBatch)
+                    AiNodeSetFlt(_options, str::frame, frame);
+                _renderParam->Restart();
+            }
         }
     }
     

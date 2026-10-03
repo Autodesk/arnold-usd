@@ -1242,8 +1242,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     // Note we can only use it once as multiple drivers pointing to the same filename
                     // will cause errors. outputOverride is resolved for frame tokens: $F/$FF/$F4, 
                     // <F>/<FF>/<F4>, and printf-style %d/%g/%04d.
-                    std::string resolved = ResolveFilenameTokens(outputOverride, 
-                        AiNodeGetFlt(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::frame));
+                    std::string resolved = ResolveFilenameTokens(outputOverride, _renderDelegate->GetFrame());
                     AiNodeSetStr(customProduct.driver, str::filename, AtString(resolved.c_str()));
                     hasOutputOverride = false;
                 } else {
