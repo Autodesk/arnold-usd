@@ -22,6 +22,11 @@ for opt in ['BOOST_INCLUDE', 'TBB_INCLUDE']:
         includePaths.append(val)
 local_env['CPPPATH'] = includePaths
 
+# Embed the extent computation of the Arnold procedural schemas, so that their bounding box
+# can be computed. Their configuration is installed next to the executable by the SConstruct.
+source_files += local_env.Object('compute_extent', os.path.join(local_env['ROOT_DIR'], 'schemas', 'compute_extent.cpp'),
+    CPPDEFINES = local_env.get('CPPDEFINES', []) + [('MFB_PACKAGE_NAME', 'usdArnold'), ('MFB_ALT_PACKAGE_NAME', 'usdArnold')])
+
 usd_deps = None
 # Shared monolithic
 if local_env['USD_BUILD_MODE'] == 'monolithic':
@@ -74,6 +79,7 @@ else:
     usd_libs = [
         'ar',
         'arch',
+        'gf',
         'plug',
         'tf',
         'vt',

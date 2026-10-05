@@ -279,6 +279,9 @@ class ArnoldNodeGraph "ArnoldNodeGraph" (
 '''
 )
 
+# Node entries whose schema extent is computed by the usdArnold library
+computeExtentEntries = ['procedural', 'usd']
+
 def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True, appendAttrs = None):
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
     attrScope = 'arnold:'
@@ -292,11 +295,20 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
         file.write('class "{}"(\n'.format(schemaName))
     
     file.write('    inherits = [</{}>]\n'.format(parentClass))
-    
+
+    extraPlugInfo = []
     if isAPI == False and entryName == 'options':
+        extraPlugInfo.append('bool providesUsdShadeConnectableAPIBehavior = 1')
+    # The usdArnold library registers a compute extent function for these procedurals,
+    # this tells USD to load it when an extent is needed (see compute_extent.cpp)
+    if isAPI == False and entryName in computeExtentEntries:
+        extraPlugInfo.append('bool implementsComputeExtent = 1')
+
+    if extraPlugInfo:
         file.write('    customData = {\n')
         file.write('        dictionary extraPlugInfo = {\n')
-        file.write('            bool providesUsdShadeConnectableAPIBehavior = 1')
+        for info in extraPlugInfo:
+            file.write('            {}\n'.format(info))
         file.write('        }\n')
         file.write('    }\n')
 
