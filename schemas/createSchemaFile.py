@@ -280,7 +280,7 @@ class ArnoldNodeGraph "ArnoldNodeGraph" (
 )
 
 # Node entries whose schema extent is computed by the usdArnold library
-computeExtentEntries = ['procedural', 'usd']
+computeExtentEntries = ['procedural', 'usd', 'procedural_custom']
 
 def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True, appendAttrs = None):
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))

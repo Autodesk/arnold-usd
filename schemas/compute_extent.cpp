@@ -3,7 +3,7 @@
 //
 
 // Copyright 2026 Autodesk, Inc.
-// Extent computation for the Arnold procedural schemas (ArnoldProcedural, ArnoldUsd).
+// Extent computation for the Arnold procedural schemas (ArnoldProcedural, ArnoldUsd, ArnoldProceduralCustom).
 //
 // These prims are Boundable, but their geometry only exists once Arnold expands the procedural,
 // so unless an extent is authored UsdGeomBBoxCache returns an empty bound for them. Registering a
@@ -12,6 +12,8 @@
 //   - USD files are opened and bounded with a UsdGeomBBoxCache,
 //   - .ass files are bounded from the "### bounds:" header that Arnold writes.
 // Other formats (e.g. alembic, compressed .ass) need Arnold to be expanded and are not handled.
+// For ArnoldProceduralCustom, only the custom procedurals loading such a file through a "filename"
+// parameter are handled, the bounds of other node types depend on their own semantics.
 //
 // The schema plugInfo.json flags these types with "implementsComputeExtent", so that USD loads
 // this library on demand the first time an extent is requested for one of them.
@@ -44,6 +46,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
+#include <initializer_list>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -54,9 +57,12 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldFilename, "arnold:filename"))
+    ((primvarsArnoldFilename, "primvars:arnold:filename"))
     (filename)
     ((arnoldObjectPath, "arnold:object_path"))
+    ((primvarsArnoldObjectPath, "primvars:arnold:object_path"))
     ((arnoldFrame, "arnold:frame"))
+    ((primvarsArnoldFrame, "primvars:arnold:frame"))
 );
 // clang-format on
 
@@ -74,27 +80,53 @@ std::unordered_map<std::string, GfRange3d> _boundsCache;
 std::mutex _chainsMutex;
 std::unordered_map<const UsdStage *, std::vector<std::string>> _chains;
 
+// Returns the first attribute with an authored value among the given names. Arnold parameters
+// can be authored as "arnold:<param>" or as "primvars:arnold:<param>" (e.g. ArnoldProceduralCustom).
+UsdAttribute _GetAuthoredAttribute(const UsdPrim &prim, std::initializer_list<TfToken> names)
+{
+    for (const TfToken &name : names) {
+        UsdAttribute attr = prim.GetAttribute(name);
+        if (attr && attr.HasAuthoredValue())
+            return attr;
+    }
+    return UsdAttribute();
+}
+
+// Primvars are often authored as arrays with a single element
+template <typename T>
+bool _GetSingleValue(const VtValue &value, T &result)
+{
+    if (value.IsHolding<T>()) {
+        result = value.UncheckedGet<T>();
+        return true;
+    }
+    if (value.IsHolding<VtArray<T>>()) {
+        const VtArray<T> &array = value.UncheckedGet<VtArray<T>>();
+        if (!array.empty()) {
+            result = array[0];
+            return true;
+        }
+    }
+    return false;
+}
+
 // Returns the path of the file loaded by the procedural, resolved if possible.
 std::string _GetProceduralFilename(const UsdPrim &prim, const UsdTimeCode &time)
 {
-    UsdAttribute attr = prim.GetAttribute(_tokens->arnoldFilename);
     // for backward compatibility, check the attribute without namespace
-    if (!attr || !attr.HasAuthoredValue())
-        attr = prim.GetAttribute(_tokens->filename);
+    UsdAttribute attr =
+        _GetAuthoredAttribute(prim, {_tokens->arnoldFilename, _tokens->primvarsArnoldFilename, _tokens->filename});
 
     VtValue value;
     if (!attr || !attr.Get(&value, time))
         return {};
 
-    if (value.IsHolding<SdfAssetPath>()) {
-        const SdfAssetPath &assetPath = value.UncheckedGet<SdfAssetPath>();
+    SdfAssetPath assetPath;
+    if (_GetSingleValue(value, assetPath))
         return assetPath.GetResolvedPath().empty() ? assetPath.GetAssetPath() : assetPath.GetResolvedPath();
-    }
-    if (!value.IsHolding<std::string>())
-        return {};
 
-    const std::string &filename = value.UncheckedGet<std::string>();
-    if (filename.empty())
+    std::string filename;
+    if (!_GetSingleValue(value, filename) || filename.empty())
         return {};
 
     // String attributes (e.g. ArnoldUsd's filename) aren't resolved by USD,
@@ -187,16 +219,24 @@ bool _ComputeProceduralExtent(
     if (filename.empty())
         return false;
 
+    VtValue value;
     std::string objectPath;
-    if (UsdAttribute attr = prim.GetAttribute(_tokens->arnoldObjectPath))
-        attr.Get(&objectPath, time);
+    if (UsdAttribute attr = _GetAuthoredAttribute(prim, {_tokens->arnoldObjectPath, _tokens->primvarsArnoldObjectPath})) {
+        if (attr.Get(&value, time))
+            _GetSingleValue(value, objectPath);
+    }
 
     // An authored frame overrides the time at which the procedural file is read
     UsdTimeCode fileTime = time;
-    if (UsdAttribute attr = prim.GetAttribute(_tokens->arnoldFrame)) {
+    if (UsdAttribute attr = _GetAuthoredAttribute(prim, {_tokens->arnoldFrame, _tokens->primvarsArnoldFrame})) {
         float frame = 0.f;
-        if (attr.HasAuthoredValue() && attr.Get(&frame, time))
-            fileTime = UsdTimeCode(frame);
+        double frameDouble = 0.0;
+        if (attr.Get(&value, time)) {
+            if (_GetSingleValue(value, frame))
+                fileTime = UsdTimeCode(frame);
+            else if (_GetSingleValue(value, frameDouble))
+                fileTime = UsdTimeCode(frameDouble);
+        }
     }
 
     const ArTimestamp timestamp = ArGetResolver().GetModificationTimestamp(filename, ArResolvedPath(filename));
@@ -246,7 +286,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(UsdGeomBoundable)
 {
     // The Arnold schemas are codeless, their types are only declared by the plugInfo.json
-    for (const char *typeName : {"UsdArnoldProcedural", "UsdArnoldUsd"}) {
+    for (const char *typeName : {"UsdArnoldProcedural", "UsdArnoldUsd", "UsdArnoldProceduralCustom"}) {
         const TfType type = PlugRegistry::FindTypeByName(typeName);
         if (!type.IsUnknown())
             UsdGeomRegisterComputeExtentFunction(type, _ComputeProceduralExtent);
