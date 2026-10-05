@@ -24,8 +24,9 @@ local_env['CPPPATH'] = includePaths
 
 # Embed the extent computation of the Arnold procedural schemas, so that their bounding box
 # can be computed. Their configuration is installed next to the executable by the SConstruct.
-source_files += local_env.Object('compute_extent', os.path.join(local_env['ROOT_DIR'], 'schemas', 'compute_extent.cpp'),
-    CPPDEFINES = local_env.get('CPPDEFINES', []) + [('MFB_PACKAGE_NAME', 'usdArnold'), ('MFB_ALT_PACKAGE_NAME', 'usdArnold')])
+schemas_env = local_env.Clone()
+schemas_env.Append(CPPDEFINES = {'MFB_PACKAGE_NAME': 'usdArnold', 'MFB_ALT_PACKAGE_NAME': 'usdArnold'})
+source_files += schemas_env.Object('compute_extent', os.path.join(local_env['ROOT_DIR'], 'schemas', 'compute_extent.cpp'))
 
 usd_deps = None
 # Shared monolithic
