@@ -181,20 +181,20 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     AtString subdivType = AiNodeGetStr(node, AtString("subdiv_type"));
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
-    // subdivisionScheme is a uniform attribute in USD and must not have time samples.
-    // Write it directly at default time to prevent the time-varying SetAttribute logic
-    // from creating timeSamples when subdiv_type changes between frames (e.g. when
-    // MayaUSD exports a frame range and the Arnold scene is rebuilt each frame).
-    // When subdiv_type is "none" (Arnold's default, no explicit subdivision requested),
-    // preserve any existing authored value rather than overwriting with "none" -- this
-    // avoids clobbering a "catmullClark" value already written by MayaUSD's native exporter.
+    // subdivisionScheme is a uniform attribute in USD and must not have time samples, so it is
+    // written directly at default time rather than through the time-varying SetAttribute logic.
+    // The default-time pass always authors it, so that subdiv_type wins over any value the host
+    // already wrote on this prim (e.g. MayaUSD's defaultMeshScheme). Per-frame passes only author
+    // it if nothing was written yet, so a frame range export keeps a single value.
     UsdAttribute subdivSchemeAttr = mesh.GetSubdivisionSchemeAttr();
-    if (subdivType == catclarkStr)
-        subdivSchemeAttr.Set(UsdGeomTokens->catmullClark);
-    else if (subdivType == linearStr)
-        subdivSchemeAttr.Set(UsdGeomTokens->bilinear);
-    else if (!subdivSchemeAttr.HasAuthoredValue())
-        subdivSchemeAttr.Set(UsdGeomTokens->none);
+    if (writer.GetTime().IsDefault() || !subdivSchemeAttr.HasAuthoredValue()) {
+        TfToken subdivScheme = UsdGeomTokens->none;
+        if (subdivType == catclarkStr)
+            subdivScheme = UsdGeomTokens->catmullClark;
+        else if (subdivType == linearStr)
+            subdivScheme = UsdGeomTokens->bilinear;
+        subdivSchemeAttr.Set(subdivScheme);
+    }
 
     // always write subdiv iterations even if it's set to default
     UsdAttribute attr = prim.CreateAttribute(
