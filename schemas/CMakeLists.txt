@@ -119,12 +119,12 @@ add_library(usdArnoldObjects OBJECT compute_extent.cpp)
 set_target_properties(usdArnoldObjects PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # Name under which the TF_REGISTRY_FUNCTIONs are registered
 target_compile_definitions(usdArnoldObjects PRIVATE MFB_PACKAGE_NAME=usdArnold MFB_ALT_PACKAGE_NAME=usdArnold)
-target_include_directories(usdArnoldObjects SYSTEM PRIVATE
-    "${USD_INCLUDE_DIR}"
-    "${USD_TRANSITIVE_INCLUDE_DIRS}"
-    "${TBB_INCLUDE_DIRS}"
-    "${Boost_INCLUDE_DIRS}"
-)
+# The USD headers can include the python ones (e.g. pySafePython.h), add_common_includes adds them.
+if (USD_MONOLITHIC_BUILD)
+    add_common_includes(TARGET_NAME usdArnoldObjects DEPENDENCIES usd_ms)
+else ()
+    add_common_includes(TARGET_NAME usdArnoldObjects DEPENDENCIES usd usdGeom)
+endif ()
 
 # The usdArnold library is loaded on demand by USD through the schema plugInfo.json.
 # With a static USD the schemas are embedded in the procedural, we don't build it.
