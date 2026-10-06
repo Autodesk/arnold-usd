@@ -128,7 +128,19 @@ target_include_directories(usdArnoldObjects SYSTEM PRIVATE
 
 # The usdArnold library is loaded on demand by USD through the schema plugInfo.json.
 # With a static USD the schemas are embedded in the procedural, we don't build it.
-if (NOT BUILD_WITH_USD_STATIC)
+if (ENABLE_SCHEMAS_IN_BUNDLE)
+    # The code is linked in the bundle, the plugInfo.json loads the bundle instead.
+    # LibraryPath is relative to the plugin root, i.e. the schema usdArnold folder.
+    set(_SCHEMA_ROOT "${PREFIX_SCHEMA}/usdArnold")
+    set(_BUNDLE_LIBRARY "${PREFIX_BUNDLE}/ArnoldUsdBundle${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    if (NOT IS_ABSOLUTE "${_SCHEMA_ROOT}")
+        set(_SCHEMA_ROOT "${CMAKE_INSTALL_PREFIX}/${_SCHEMA_ROOT}")
+    endif ()
+    if (NOT IS_ABSOLUTE "${_BUNDLE_LIBRARY}")
+        set(_BUNDLE_LIBRARY "${CMAKE_INSTALL_PREFIX}/${_BUNDLE_LIBRARY}")
+    endif ()
+    file(RELATIVE_PATH SCHEMAS_LIBRARY_PATH "${_SCHEMA_ROOT}" "${_BUNDLE_LIBRARY}")
+elseif (NOT BUILD_WITH_USD_STATIC)
     add_library(usdArnold SHARED $<TARGET_OBJECTS:usdArnoldObjects>)
     set_target_properties(usdArnold PROPERTIES PREFIX "")
     if (USD_MONOLITHIC_BUILD)
