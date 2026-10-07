@@ -806,17 +806,17 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     if (*dirtyBits & (DirtyParams | DirtyShadowParams | DirtyCollection)) {
         auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
             auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
-            if (linkValue.IsHolding<TfToken>()) {
-                const auto& link = linkValue.UncheckedGet<TfToken>();
-                if (currentLink != link) {
-                    param->Interrupt();
-                    // The empty link value only exists when creating the class, so link can never match emptyLink.
-                    if (currentLink != _tokens->emptyLink) {
-                        _delegate->DeregisterLightLinking(currentLink, this, isShadow);
-                    }
-                    _delegate->RegisterLightLinking(link, this, isShadow);
-                    currentLink = link;
+            // A light may not have a link value, in that case it illuminates everything.
+            // Initialize with empty TfToken value and register light linking.
+            const TfToken link = linkValue.IsHolding<TfToken>() ? linkValue.UncheckedGet<TfToken>() : TfToken{};
+            if (currentLink != link) {
+                param->Interrupt();
+                // The empty link value only exists when creating the class, so link can never match emptyLink.
+                if (currentLink != _tokens->emptyLink) {
+                    _delegate->DeregisterLightLinking(currentLink, this, isShadow);
                 }
+                _delegate->RegisterLightLinking(link, this, isShadow);
+                currentLink = link;
             }
         };
         updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
