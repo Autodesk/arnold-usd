@@ -294,8 +294,9 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
     std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
     VtValueGetString(productNameValue) : renderProductPrim.GetName().GetText();
 
-    // Set the filename for the output image
-    AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+    // Set the filename for the output image, if the driver writes one (driver_no_op doesn't)
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::filename))
+        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
     const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
     // All the attributes having the arnold:{driverType} prefix are the settings of the driver
     for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {        
