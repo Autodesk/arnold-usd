@@ -118,6 +118,11 @@ private:
     /// @param sceneDelegate The scene delegate.
     void _UpdateArnoldOptions(HdSceneDelegate* sceneDelegate);
 
+    /// Translates the primvars of the render settings as user data on the Arnold options.
+    ///
+    /// @param namespacedSettings The namespaced settings of the render settings prim.
+    void _UpdateOptionsPrimvars(const VtDictionary& namespacedSettings);
+
     /// Reads USD render settings and applies them to Arnold options.
     ///
     /// @param sceneDelegate The scene delegate.
