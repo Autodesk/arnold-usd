@@ -105,8 +105,7 @@ std::string _GetArnoldOptionName(std::string const& propertyName)
         return propertyName.substr(7); // strlen("arnold:")
     }
     if (TfStringStartsWith(propertyName, "primvars:")) {
-        // TODO : we should do AiNodeDeclare here so that primvars are authored
-        // as user data in the options
+        // Primvars are translated as user data on the options, see _UpdateOptionsPrimvars
         return "";
     }
 
@@ -190,10 +189,37 @@ void HdArnoldRenderSettings::Finalize(HdRenderParam* renderParam)
     }
 }
 
+void HdArnoldRenderSettings::_UpdateOptionsPrimvars(const VtDictionary& namespacedSettings)
+{
+    if (_renderDelegate == nullptr)
+        return;
+    AtNode* options = _renderDelegate->GetOptions();
+    if (options == nullptr)
+        return;
+
+    static const std::string primvarsPrefix("primvars:");
+    static const std::string indicesSuffix(":indices");
+    size_t numPrimvars = 0;
+    for (auto const& pair : namespacedSettings) {
+        const std::string& name = pair.first;
+        if (!TfStringStartsWith(name, primvarsPrefix) || TfStringEndsWith(name, indicesSuffix))
+            continue;
+        const TfToken primvarName(name.substr(primvarsPrefix.size()));
+        ++numPrimvars;
+        // primvars:arnold:xyz are set as builtin options parameters, other ones are declared
+        // as constant user data. We don't have the primvar role here, so color3f values
+        // end up declared as VECTOR user data.
+        HdArnoldSetConstantPrimvar(
+            options, primvarName, TfToken(), pair.second, nullptr, nullptr, nullptr, _renderDelegate);
+    }
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu primvars on options from render settings\n", numPrimvars);
+}
+
 void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate)
 {
     // Generate Arnold options from the namespaced settings
     const VtDictionary& namespacedSettings = GetNamespacedSettings();
+    _UpdateOptionsPrimvars(namespacedSettings);
     const VtDictionary arnoldOptions = _GenerateArnoldOptions(namespacedSettings);
 
     if (arnoldOptions.empty() || _renderDelegate == nullptr) {

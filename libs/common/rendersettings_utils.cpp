@@ -19,6 +19,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 
 #include <ai.h>
 
@@ -945,6 +946,21 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     ReadArnoldParameters(renderSettingsPrim, context, options, time, "arnold");
     // Solaris is exporting arnold options in the arnold:global: namespace
     ReadArnoldParameters(renderSettingsPrim, context, options, time, "arnold:global");
+
+    // Other primvars are translated as constant user data on the options
+    for (const UsdGeomPrimvar& primvar : UsdGeomPrimvarsAPI(renderSettingsPrim).GetPrimvars()) {
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::t_primvars_arnold))
+            continue;
+        const TfToken name = primvar.GetPrimvarName();
+        // If this attribute already exists in the options parameters list, we must skip it #1961
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), AtString(name.GetText())) != nullptr)
+            continue;
+        VtValue value;
+        if (!primvar.Get(&value, time.frame))
+            continue;
+        DeclareAndAssignParameter(options, name, str::t_constant, value, context,
+            primvar.GetTypeName().GetRole() == SdfValueRoleNames->Color);
+    }
 
     // Read eventual connections to a node graph
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context, time);
