@@ -702,7 +702,9 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             continue;
         }
 
-        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+        // Not every driver writes a file: driver_no_op has no filename
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::filename))
+            AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
         const char* driverNodeName = AiNodeGetName(driver);
 
         // Set driver parameters from product's arnold-namespaced settings

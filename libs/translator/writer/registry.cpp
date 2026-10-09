@@ -73,6 +73,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         RegisterWriter("driver_deepexr", new UsdArnoldWriteDriver());
         RegisterWriter("driver_jpeg", new UsdArnoldWriteDriver());
         RegisterWriter("driver_png", new UsdArnoldWriteDriver());
+        RegisterWriter("driver_no_op", new UsdArnoldWriteDriver());
     }
 
     // Now let's iterate over all the arnold classes known at this point

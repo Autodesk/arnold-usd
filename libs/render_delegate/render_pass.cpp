@@ -1237,7 +1237,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     continue;
                 }
 
-                if (hasOutputOverride && isBeauty) {
+                // Not every driver writes a file: driver_no_op has no filename, and must
+                // not use up the output image override meant for the beauty
+                const bool hasFilename =
+                    AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(customProduct.driver), str::filename) != nullptr;
+                if (!hasFilename) {
+                    // nothing to set
+                } else if (hasOutputOverride && isBeauty) {
                     // If the delegate has an output image override, we want to use this for this driver.
                     // Note we can only use it once as multiple drivers pointing to the same filename
                     // will cause errors. outputOverride is resolved for frame tokens: $F/$FF/$F4, 

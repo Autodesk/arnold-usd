@@ -574,15 +574,20 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
     std::string driverType = AiNodeEntryGetName(driverEntry);
     writer.SetAttribute(renderProductPrim.CreateAttribute(_tokens->aovDriver, SdfValueTypeNames->String),
         driverType);
-    AtString filename = AiNodeGetStr(node, str::filename);
-    _exportedAttrs.insert("filename");
-    writer.SetAttribute(renderProduct.CreateProductNameAttr(), TfToken(filename.c_str()));
+    // Not every driver writes a file: driver_no_op has neither filename nor color_space.
+    const bool hasFilename = AiNodeEntryLookUpParameter(driverEntry, str::filename) != nullptr;
+    if (hasFilename) {
+        AtString filename = AiNodeGetStr(node, str::filename);
+        _exportedAttrs.insert("filename");
+        writer.SetAttribute(renderProduct.CreateProductNameAttr(), TfToken(filename.c_str()));
+    }
     renderProduct.CreateOrderedVarsRel();
     // loop through driver attributes, set them in the render product with the driverType prefix
    std::string attrPrefix = std::string("arnold:") + driverType;
    
    // FIXME add color space as arnold:color_space
-   AtString colorSpace = AiNodeGetStr(node, str::color_space);
+   AtString colorSpace = AiNodeEntryLookUpParameter(driverEntry, str::color_space) ?
+        AiNodeGetStr(node, str::color_space) : AtString();
     if (!colorSpace.empty()) {
         writer.SetAttribute(
             renderProductPrim.CreateAttribute(_tokens->aovColorSpace, SdfValueTypeNames->String),
