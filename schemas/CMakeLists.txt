@@ -112,6 +112,50 @@ add_custom_target(generatedSchema
     DEPENDS "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
 )
 
+# The usdArnold code registers the compute extent functions of the Arnold procedural schemas.
+# It only depends on USD. The objects are shared by the usdArnold library and the executables
+# embedding the schemas (e.g. turntable).
+add_library(usdArnoldObjects OBJECT compute_extent.cpp)
+set_target_properties(usdArnoldObjects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# Name under which the TF_REGISTRY_FUNCTIONs are registered
+target_compile_definitions(usdArnoldObjects PRIVATE MFB_PACKAGE_NAME=usdArnold MFB_ALT_PACKAGE_NAME=usdArnold)
+# The USD headers can include the python ones (e.g. pySafePython.h), add_common_includes adds them.
+if (USD_MONOLITHIC_BUILD)
+    add_common_includes(TARGET_NAME usdArnoldObjects DEPENDENCIES usd_ms)
+else ()
+    add_common_includes(TARGET_NAME usdArnoldObjects DEPENDENCIES usd usdGeom)
+endif ()
+
+# The usdArnold library is loaded on demand by USD through the schema plugInfo.json.
+# With a static USD the schemas are embedded in the procedural, we don't build it.
+if (ENABLE_SCHEMAS_IN_BUNDLE)
+    # The code is linked in the bundle, the plugInfo.json loads the bundle instead.
+    # LibraryPath is relative to the plugin root, i.e. the schema usdArnold folder.
+    set(_SCHEMA_ROOT "${PREFIX_SCHEMA}/usdArnold")
+    set(_BUNDLE_LIBRARY "${PREFIX_BUNDLE}/ArnoldUsdBundle${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    if (NOT IS_ABSOLUTE "${_SCHEMA_ROOT}")
+        set(_SCHEMA_ROOT "${CMAKE_INSTALL_PREFIX}/${_SCHEMA_ROOT}")
+    endif ()
+    if (NOT IS_ABSOLUTE "${_BUNDLE_LIBRARY}")
+        set(_BUNDLE_LIBRARY "${CMAKE_INSTALL_PREFIX}/${_BUNDLE_LIBRARY}")
+    endif ()
+    file(RELATIVE_PATH SCHEMAS_LIBRARY_PATH "${_SCHEMA_ROOT}" "${_BUNDLE_LIBRARY}")
+elseif (NOT BUILD_WITH_USD_STATIC)
+    add_library(usdArnold SHARED $<TARGET_OBJECTS:usdArnoldObjects>)
+    set_target_properties(usdArnold PROPERTIES PREFIX "")
+    if (USD_MONOLITHIC_BUILD)
+        target_link_libraries(usdArnold PRIVATE usd_ms)
+    else ()
+        target_link_libraries(usdArnold PRIVATE ar;arch;gf;plug;tf;vt;sdf;usd;usdGeom)
+    endif ()
+    target_link_libraries(usdArnold PRIVATE ${USD_TRANSITIVE_SHARED_LIBS})
+
+    # Relative to the plugin root, i.e. the schema usdArnold folder
+    set(SCHEMAS_LIBRARY_PATH "usdArnold${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    install(TARGETS usdArnold
+        DESTINATION "${PREFIX_SCHEMA}/usdArnold")
+endif ()
+
 # Fixing the plugInfo.json.in file in post.
 add_custom_target(updatedPlugInfo
     BYPRODUCTS "${SCHEMAS_PLUGINFO}"
@@ -120,16 +164,34 @@ add_custom_target(updatedPlugInfo
     COMMAND
         ${PYTHON_EXECUTABLE} "${RUN_WITH_TIMEOUT_PY}" --timeout ${SCHEMA_GEN_TIMEOUT}
         --cleanup "${SCHEMAS_PLUGINFO}"
-        -- ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
+        -- ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}" ${SCHEMAS_LIBRARY_PATH}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tools"
     DEPENDS generatedSchema "${RUN_WITH_TIMEOUT_PY}"
+)
+
+# plugInfo.json for the executables linking the usdArnold objects, it doesn't load any library
+set(SCHEMAS_EMBEDDED_PLUGINFO "${SCHEMAS_OUT}/embedded/plugInfo.json")
+add_custom_target(embeddedPlugInfo
+    BYPRODUCTS "${SCHEMAS_EMBEDDED_PLUGINFO}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_OUT}/embedded"
+    COMMAND ${CMAKE_COMMAND} -E copy "${SCHEMAS_PLUGINFO}" "${SCHEMAS_EMBEDDED_PLUGINFO}"
+    COMMAND
+        ${PYTHON_EXECUTABLE} "${RUN_WITH_TIMEOUT_PY}" --timeout ${SCHEMA_GEN_TIMEOUT}
+        --cleanup "${SCHEMAS_EMBEDDED_PLUGINFO}"
+        -- ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_EMBEDDED_PLUGINFO}" --embedded
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tools"
+    DEPENDS updatedPlugInfo "${RUN_WITH_TIMEOUT_PY}"
 )
 
 # The final target is named schemas, it has the plugInfo updated and the generated schemas
 # It is always built if this file was included.
 add_custom_target(schemas ALL
-    DEPENDS generatedSchema updatedPlugInfo
+    DEPENDS generatedSchema updatedPlugInfo embeddedPlugInfo
 )
+
+# Used by the executables embedding the schemas
+set(SCHEMAS_EMBEDDED_PLUGINFO "${SCHEMAS_EMBEDDED_PLUGINFO}" PARENT_SCOPE)
+set(SCHEMAS_GENERATED_SCHEMA "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda" PARENT_SCOPE)
 
 install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
     DESTINATION "${PREFIX_SCHEMA}/usdArnold/resources")

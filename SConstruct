@@ -936,6 +936,9 @@ if SCHEMAS:
     INSTALL_SCHEMAS = env.Install(os.path.join(PREFIX_SCHEMAS), ['plugInfo.json'])
     INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources' ), [SCHEMAS[0], SCHEMAS[1]])
     INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[0], SCHEMAS[2]])
+    if SCHEMAS[3]:
+        # usdArnold library, loaded by USD through the plugInfo.json LibraryPath
+        INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold'), SCHEMAS[3])
     env.Alias('schemas-install', INSTALL_SCHEMAS)
 
 if DOCS:
@@ -948,6 +951,10 @@ if TURNTABLE:
         INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_hdri_resource_folder)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_TURNTABLE += env.Install(PREFIX_BIN, turntable_usd_resource_folder)
+    if SCHEMAS:
+        # Arnold schemas configuration, it doesn't load any library as the code is linked in the turntable.
+        # A static USD finds it under <bin>/usd, with a shared USD the turntable registers it at startup.
+        INSTALL_TURNTABLE += env.Install(os.path.join(PREFIX_BIN, 'usd', 'usdArnold', 'resources'), [SCHEMAS[4], SCHEMAS[0]])
     env.Alias('turntable-install', INSTALL_TURNTABLE)
 
 # We don't need to install the license if the prefix is left to its default #553
