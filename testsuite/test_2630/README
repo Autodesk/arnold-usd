@@ -1,0 +1,5 @@
+Lighting linking does not work with instanceable references
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
