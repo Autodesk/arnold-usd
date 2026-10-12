@@ -14,6 +14,7 @@
 #ifdef HdArnoldUSE_INSTANCE_LIGHT_LINKING_SPLIT
 
 #include <pxr/imaging/hd/filteringSceneIndex.h>
+#include <pxr/imaging/hd/instancerTopologySchema.h>
 #include <pxr/imaging/hd/sceneIndexPlugin.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/base/vt/array.h>
@@ -57,7 +58,9 @@ private:
     };
 
     struct PrototypeSplit {
-        std::vector<GroupInfo> groups;  // groups.size() > 1 means splitting is needed
+        // groups.size() > 1 means splitting is needed, a single group only overrides
+        // the categories of the original prototype.
+        std::vector<GroupInfo> groups;
     };
 
     struct InstancerSplitState {
@@ -82,6 +85,15 @@ private:
     void _PopulateCache(const SdfPath &instancerPath);
     void _RemoveFromCache(const SdfPath &instancerPath);
 
+    void _TrackInstancer(const SdfPath &instancerPath, const HdInstancerTopologySchema &topoSchema);
+    void _UntrackInstancer(const SdfPath &instancerPath);
+
+    // Recomputes the split state of an instancer and collects the resulting notices.
+    void _RecomputeInstancer(const SdfPath &instancerPath,
+                             HdSceneIndexObserver::RemovedPrimEntries &removed,
+                             HdSceneIndexObserver::AddedPrimEntries &added,
+                             HdSceneIndexObserver::DirtiedPrimEntries &dirtied);
+
     void _CollectHierarchy(const SdfPath &rootPath,
                            std::vector<std::pair<SdfPath, TfToken>> &outPrims) const;
 
@@ -102,6 +114,11 @@ private:
     std::unordered_map<SdfPath, SyntheticRootEntry, SdfPath::Hash> _syntheticRoots;
     std::unordered_map<SdfPath, std::vector<SdfPath>, SdfPath::Hash> _parentToSyntheticRoots;
     std::unordered_map<SdfPath, SplitOriginalEntry, SdfPath::Hash> _splitOriginalRoots;
+
+    // Non-legacy instancers with instance categories, and their instance locations
+    // (e.g. native instance prims), so we can recompute the split when their categories change.
+    std::unordered_map<SdfPath, VtArray<SdfPath>, SdfPath::Hash> _trackedInstancers;
+    std::unordered_map<SdfPath, SdfPath, SdfPath::Hash> _instanceLocationToInstancer;
 };
 
 class HdArnoldInstanceLightLinkingSplitSceneIndexPlugin : public HdSceneIndexPlugin {

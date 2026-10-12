@@ -11,6 +11,7 @@
 #ifdef HdArnoldUSE_INSTANCE_LIGHT_LINKING_SPLIT
 
 #include <pxr/imaging/hd/categoriesSchema.h>
+#include <pxr/imaging/hd/dataSourceLegacyPrim.h>
 #include <pxr/imaging/hd/instanceCategoriesSchema.h>
 #include <pxr/imaging/hd/instancedBySchema.h>
 #include <pxr/imaging/hd/instancerTopologySchema.h>
@@ -22,6 +23,7 @@
 #include <iostream>
 #include <algorithm>
 #include <map>
+#include <set>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -76,6 +78,21 @@ HdArnoldInstanceLightLinkingSplitSceneIndex::HdArnoldInstanceLightLinkingSplitSc
 // ---------------------------------------------------------------------------
 // Static helpers
 // ---------------------------------------------------------------------------
+
+// Instancers coming from a legacy scene delegate (scene index emulation) are skipped:
+// their data is pulled from the delegate, which isn't queryable while it is still
+// populating. Reading instanceCategories from _PrimsAdded during
+// UsdImagingDelegate::_Populate throws std::out_of_range in UsdImagingInstanceAdapter.
+static bool _IsLegacyInstancer(const HdInstancerTopologySchema &topoSchema)
+{
+    HdContainerDataSourceHandle topoContainer = topoSchema.GetContainer();
+    if (!topoContainer) {
+        return false;
+    }
+    HdBoolDataSourceHandle legacyDS =
+        HdBoolDataSource::Cast(topoContainer->Get(HdLegacyFlagTokens->isLegacyInstancer));
+    return legacyDS && legacyDS->GetTypedValue(0.0f);
+}
 
 /* static */
 SdfPath HdArnoldInstanceLightLinkingSplitSceneIndex::_MakeSyntheticRootPath(
@@ -174,7 +191,7 @@ bool HdArnoldInstanceLightLinkingSplitSceneIndex::_ComputeSplitState(
 
     HdIntArrayVectorSchema indicesVec = topoSchema.GetInstanceIndices();
     const size_t numCatSlots = catValues->GetNumElements();
-    bool anySplit = false;
+    bool anyOverride = false;
 
     for (size_t pi = 0; pi < prototypes.size(); ++pi) {
         const SdfPath &protoRoot = prototypes[pi];
@@ -206,11 +223,15 @@ bool HdArnoldInstanceLightLinkingSplitSceneIndex::_ComputeSplitState(
             groups[key].push_back(slot);
         }
 
-        if (groups.size() <= 1) {
+        // The render delegate only reads the categories of the prototype prims (and of the
+        // instancer), never instanceCategories. Native instance prototypes live outside the
+        // stage namespace, so no light-link collection matches them. Even when all instances
+        // share the same categories we need to push them onto the prototype.
+        if (groups.size() == 1 && groups.begin()->first.empty()) {
             continue;
         }
 
-        anySplit = true;
+        anyOverride = true;
         PrototypeSplit &split = outState.protoSplits[protoRoot];
         size_t groupIdx = 0;
         for (auto &[key, indices] : groups) {
@@ -224,7 +245,7 @@ bool HdArnoldInstanceLightLinkingSplitSceneIndex::_ComputeSplitState(
         }
     }
 
-    return anySplit;
+    return anyOverride;
 }
 
 // ---------------------------------------------------------------------------
@@ -248,11 +269,10 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PopulateCache(const SdfPath &
     if (!_ComputeSplitState(instancerPath, prim, state)) {
         return;
     }
-    std::cout << "Populate cache" << std::endl;
     _instancerCache[instancerPath] = state;
 
     for (auto &[origRoot, split] : state.protoSplits) {
-        if (split.groups.size() <= 1) {
+        if (split.groups.empty()) {
             continue;
         }
         // Group 0 keeps the original prototype root path.
@@ -293,6 +313,100 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_RemoveFromCache(const SdfPath
     }
 
     _instancerCache.erase(it);
+}
+
+void HdArnoldInstanceLightLinkingSplitSceneIndex::_TrackInstancer(
+    const SdfPath &instancerPath, const HdInstancerTopologySchema &topoSchema)
+{
+    VtArray<SdfPath> locations;
+    if (HdPathArrayDataSourceHandle locationsDS = topoSchema.GetInstanceLocations()) {
+        locations = locationsDS->GetTypedValue(0.0f);
+    }
+    for (const SdfPath &location : locations) {
+        _instanceLocationToInstancer[location] = instancerPath;
+    }
+    _trackedInstancers[instancerPath] = std::move(locations);
+}
+
+void HdArnoldInstanceLightLinkingSplitSceneIndex::_UntrackInstancer(const SdfPath &instancerPath)
+{
+    auto it = _trackedInstancers.find(instancerPath);
+    if (it == _trackedInstancers.end()) {
+        return;
+    }
+    for (const SdfPath &location : it->second) {
+        auto locIt = _instanceLocationToInstancer.find(location);
+        if (locIt != _instanceLocationToInstancer.end() && locIt->second == instancerPath) {
+            _instanceLocationToInstancer.erase(locIt);
+        }
+    }
+    _trackedInstancers.erase(it);
+}
+
+void HdArnoldInstanceLightLinkingSplitSceneIndex::_RecomputeInstancer(
+    const SdfPath &instancerPath,
+    HdSceneIndexObserver::RemovedPrimEntries &removed,
+    HdSceneIndexObserver::AddedPrimEntries &added,
+    HdSceneIndexObserver::DirtiedPrimEntries &dirtied)
+{
+    static const HdDataSourceLocator kCategoriesLocator = HdCategoriesSchema::GetDefaultLocator();
+
+    // Remove the previous synthetic hierarchies, and dirty the categories of the original
+    // prototype prims since their override may change.
+    std::set<SdfPath> oldOrigRoots;
+    auto stateIt = _instancerCache.find(instancerPath);
+    if (stateIt != _instancerCache.end()) {
+        for (auto &[origRoot, split] : stateIt->second.protoSplits) {
+            if (split.groups.empty()) {
+                continue;
+            }
+            oldOrigRoots.insert(origRoot);
+            std::vector<std::pair<SdfPath, TfToken>> origHierarchy;
+            _CollectHierarchy(origRoot, origHierarchy);
+            for (auto &[origPath, primType] : origHierarchy) {
+                dirtied.push_back({origPath, kCategoriesLocator});
+            }
+            for (size_t gi = 1; gi < split.groups.size(); ++gi) {
+                const SdfPath &synRoot = split.groups[gi].protoRootPath;
+                for (auto &[origPath, primType] : origHierarchy) {
+                    removed.push_back({origPath.ReplacePrefix(origRoot, synRoot)});
+                }
+            }
+        }
+    }
+    _RemoveFromCache(instancerPath);
+
+    // The instance locations may have changed with the topology.
+    _UntrackInstancer(instancerPath);
+    HdSceneIndexPrim prim = _GetInputSceneIndex()->GetPrim(instancerPath);
+    _TrackInstancer(instancerPath, HdInstancerTopologySchema::GetFromParent(prim.dataSource));
+
+    _PopulateCache(instancerPath);
+
+    // Add the new synthetic hierarchies, and dirty the categories of the newly
+    // overridden original prototype prims (they might have been added before the instancer).
+    stateIt = _instancerCache.find(instancerPath);
+    if (stateIt == _instancerCache.end()) {
+        return;
+    }
+    for (auto &[origRoot, split] : stateIt->second.protoSplits) {
+        if (split.groups.empty()) {
+            continue;
+        }
+        std::vector<std::pair<SdfPath, TfToken>> origHierarchy;
+        _CollectHierarchy(origRoot, origHierarchy);
+        if (oldOrigRoots.count(origRoot) == 0) {
+            for (auto &[origPath, primType] : origHierarchy) {
+                dirtied.push_back({origPath, kCategoriesLocator});
+            }
+        }
+        for (size_t gi = 1; gi < split.groups.size(); ++gi) {
+            const SdfPath &synRoot = split.groups[gi].protoRootPath;
+            for (auto &[origPath, primType] : origHierarchy) {
+                added.push_back({origPath.ReplacePrefix(origRoot, synRoot), primType});
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -447,7 +561,9 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsAdded(
         return;
     }
 
+    HdSceneIndexObserver::RemovedPrimEntries extraRemoved;
     HdSceneIndexObserver::AddedPrimEntries extraAdded;
+    HdSceneIndexObserver::DirtiedPrimEntries extraDirtied;
 
     for (const auto &entry : entries) {
         // Check whether this newly-added prim is an instancer we should split.
@@ -455,46 +571,27 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsAdded(
         if (!prim.dataSource) {
             continue;
         }
-        HdInstanceCategoriesSchema instCatSchema =
-            HdInstanceCategoriesSchema::GetFromParent(prim.dataSource);
-        if (!instCatSchema) {
-            continue;
-        }
+        // Check the topology first: it is safe to read on legacy instancers,
+        // while instanceCategories isn't. The instance categories may not be
+        // available yet (lights not added), so all instancers are tracked.
         HdInstancerTopologySchema topoSchema =
             HdInstancerTopologySchema::GetFromParent(prim.dataSource);
-        if (!topoSchema) {
+        if (!topoSchema || _IsLegacyInstancer(topoSchema)) {
             continue;
         }
 
-        _PopulateCache(entry.primPath);
-
-        auto stateIt = _instancerCache.find(entry.primPath);
-        if (stateIt == _instancerCache.end()) {
-            continue;
-        }
-
-        // Emit PrimsAdded for each synthetic prototype hierarchy.
-        for (auto &[origRoot, split] : stateIt->second.protoSplits) {
-            if (split.groups.size() <= 1) {
-                continue;
-            }
-            // Collect the original prototype hierarchy once.
-            std::vector<std::pair<SdfPath, TfToken>> origHierarchy;
-            _CollectHierarchy(origRoot, origHierarchy);
-
-            for (size_t gi = 1; gi < split.groups.size(); ++gi) {
-                const SdfPath &synRoot = split.groups[gi].protoRootPath;
-                for (auto &[origPath, primType] : origHierarchy) {
-                    const SdfPath synPath = origPath.ReplacePrefix(origRoot, synRoot);
-                    extraAdded.push_back({synPath, primType});
-                }
-            }
-        }
+        _RecomputeInstancer(entry.primPath, extraRemoved, extraAdded, extraDirtied);
     }
 
+    if (!extraRemoved.empty()) {
+        _SendPrimsRemoved(extraRemoved);
+    }
     _SendPrimsAdded(entries);
     if (!extraAdded.empty()) {
         _SendPrimsAdded(extraAdded);
+    }
+    if (!extraDirtied.empty()) {
+        _SendPrimsDirtied(extraDirtied);
     }
 }
 
@@ -507,8 +604,19 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsRemoved(
 
     HdSceneIndexObserver::RemovedPrimEntries extraRemoved;
 
+    // Removal entries are subtrees: collect all the tracked instancers below them.
+    std::vector<SdfPath> removedInstancers;
     for (const auto &entry : entries) {
-        auto stateIt = _instancerCache.find(entry.primPath);
+        for (const auto &[instancerPath, locations] : _trackedInstancers) {
+            if (instancerPath.HasPrefix(entry.primPath)) {
+                removedInstancers.push_back(instancerPath);
+            }
+        }
+    }
+
+    for (const SdfPath &instancerPath : removedInstancers) {
+        _UntrackInstancer(instancerPath);
+        auto stateIt = _instancerCache.find(instancerPath);
         if (stateIt == _instancerCache.end()) {
             continue;
         }
@@ -529,7 +637,7 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsRemoved(
             }
         }
 
-        _RemoveFromCache(entry.primPath);
+        _RemoveFromCache(instancerPath);
     }
 
     _SendPrimsRemoved(entries);
@@ -553,47 +661,29 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsDirtied(
         HdInstancerTopologySchema::GetDefaultLocator();
     static const HdDataSourceLocator kInstanceCategoriesLocator =
         HdInstanceCategoriesSchema::GetDefaultLocator();
+    static const HdDataSourceLocator kCategoriesLocator =
+        HdCategoriesSchema::GetDefaultLocator();
 
+    std::set<SdfPath> instancersToRecompute;
     for (const auto &entry : entries) {
-        auto stateIt = _instancerCache.find(entry.primPath);
-        if (stateIt != _instancerCache.end()) {
-            const bool topoOrCatDirty =
-                entry.dirtyLocators.Intersects(kInstancerTopoLocator) ||
-                entry.dirtyLocators.Intersects(kInstanceCategoriesLocator);
-
-            if (topoOrCatDirty) {
-                // Collect old synthetic hierarchy for removal.
-                for (auto &[origRoot, split] : stateIt->second.protoSplits) {
-                    if (split.groups.size() <= 1) continue;
-                    std::vector<std::pair<SdfPath, TfToken>> origHierarchy;
-                    _CollectHierarchy(origRoot, origHierarchy);
-                    for (size_t gi = 1; gi < split.groups.size(); ++gi) {
-                        const SdfPath &synRoot = split.groups[gi].protoRootPath;
-                        for (auto &[origPath, primType] : origHierarchy) {
-                            extraRemoved.push_back({origPath.ReplacePrefix(origRoot, synRoot)});
-                        }
-                    }
-                }
-
-                _RemoveFromCache(entry.primPath);
-                _PopulateCache(entry.primPath);
-
-                auto newStateIt = _instancerCache.find(entry.primPath);
-                if (newStateIt != _instancerCache.end()) {
-                    for (auto &[origRoot, split] : newStateIt->second.protoSplits) {
-                        if (split.groups.size() <= 1) continue;
-                        std::vector<std::pair<SdfPath, TfToken>> origHierarchy;
-                        _CollectHierarchy(origRoot, origHierarchy);
-                        for (size_t gi = 1; gi < split.groups.size(); ++gi) {
-                            const SdfPath &synRoot = split.groups[gi].protoRootPath;
-                            for (auto &[origPath, primType] : origHierarchy) {
-                                extraAdded.push_back({origPath.ReplacePrefix(origRoot, synRoot), primType});
-                            }
-                        }
-                    }
-                }
+        if (_trackedInstancers.count(entry.primPath)) {
+            if (entry.dirtyLocators.Intersects(kInstancerTopoLocator) ||
+                entry.dirtyLocators.Intersects(kInstanceCategoriesLocator)) {
+                instancersToRecompute.insert(entry.primPath);
             }
-            continue;
+            if (_instancerCache.count(entry.primPath)) {
+                continue;
+            }
+        }
+
+        // The light linking scene index dirties the categories of the instance prims, while
+        // the instanceCategories of their instancer is only dirtied by the dependency
+        // forwarding scene index, which comes after us.
+        if (entry.dirtyLocators.Intersects(kCategoriesLocator)) {
+            auto locIt = _instanceLocationToInstancer.find(entry.primPath);
+            if (locIt != _instanceLocationToInstancer.end()) {
+                instancersToRecompute.insert(locIt->second);
+            }
         }
 
         // Propagate dirtiness from original prototype prims to their synthetic counterparts.
@@ -612,6 +702,10 @@ void HdArnoldInstanceLightLinkingSplitSceneIndex::_PrimsDirtied(
                 break;
             }
         }
+    }
+
+    for (const SdfPath &instancerPath : instancersToRecompute) {
+        _RecomputeInstancer(instancerPath, extraRemoved, extraAdded, extraDirtied);
     }
 
     if (!extraRemoved.empty()) {
@@ -640,3 +734,4 @@ PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // HdArnoldUSE_INSTANCE_LIGHT_LINKING_SPLIT
 #endif // ENABLE_SCENE_INDEX
+
