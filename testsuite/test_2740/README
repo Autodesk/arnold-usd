@@ -1,0 +1,17 @@
+Render a Volume prim whose vdb field is an OpenVDB points grid as an arnold points node
+
+A Volume prim's field points at pointgrid.vdb's "points" grid, which
+AiVolumeFileGetChannelTypes classifies as AI_VOLUME_CHANNEL_TYPE_POINTS
+(Arnold >= 7.5.4.0). Instead of creating an arnold volume node (which can't
+render points grids), arnold-usd creates an arnold points node reading
+file_name/file_grid from the same vdb, with position, radius and velocity
+auto-detected from the grid's P/pscale/v attributes, and the "Cd" per-point
+attribute exposed as user data and used as the surface shader's base_color.
+
+pointgrid.vdb is the same fixture used by arnold core's test_18209.
+
+See #2740
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-c /Cameras/renderCamera'}

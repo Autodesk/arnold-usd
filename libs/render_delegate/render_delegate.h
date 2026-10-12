@@ -43,20 +43,25 @@
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
+#include <pxr/imaging/hgi/hgi.h>
 
 #include <tbb/concurrent_queue.h>
-
+#include <functional>
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
 #include "constant_strings.h"
+
+#if defined(HOUDINI_LOGGER_BUILD)
+#include "houdini/houdini_logger.h"
+#endif
 
 #include <ai.h>
 
 class HydraArnoldReader;
 
 PXR_NAMESPACE_OPEN_SCOPE
-
+class HdArnoldRenderBuffer;
 struct HdArnoldRenderVar {
     /// Settings for the RenderVar.
     HdAovSettingsMap settings;
@@ -100,6 +105,7 @@ public:
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
     const AtString& GetPxrMtlxPath() override;
+    const std::string& GetOcioConfigPath() const override;
 
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
@@ -368,12 +374,23 @@ public:
         _delegateRenderProductsDirty = true;
     }
     /// Advertise whether this delegate supports pausing and resuming of
-    /// background render threads. Default implementation returns false.
+    /// background render threads. True when Arnold provides the resumable
+    /// AiRenderPause()/AiRenderResume() API, false otherwise.
     ///
-    /// @return True if pause/restart is supported.
+    /// @return True if pause/resume is supported.
     HDARNOLD_API
     bool IsPauseSupported() const override;
-    
+
+    // HdRenderDelegate::IsPaused()/IsStopped() were only added in USD 22.03.
+#if PXR_VERSION >= 2203
+    /// Query the delegate's pause state.
+    ///
+    /// @return True if a Pause() call is currently in effect (i.e. no Resume(),
+    ///  Restart(), or scene edit has cancelled it since).
+    HDARNOLD_API
+    bool IsPaused() const override;
+#endif
+
     /// Advertise whether this delegate supports stopping and restarting of
     /// background render threads. Default implementation returns false.
     ///
@@ -406,9 +423,18 @@ public:
     HDARNOLD_API
     bool Restart() override;
 
+    /// Pause all of this delegate's background rendering threads. Only takes
+    /// effect when IsPauseSupported() returns true; preserves render progress
+    /// via AiRenderPause() rather than interrupting the render.
+    ///
+    /// @return True if successful.
+    HDARNOLD_API
+    bool Pause() override;
+
     /// Resume all of this delegate's background rendering threads previously
-    /// paused by a call to Pause. Default implementation does nothing. This is
-    /// currently doing the same as restart
+    /// paused by a call to Pause.
+    ///
+    /// @return True if successful.
     HDARNOLD_API
     bool Resume() override;
 
@@ -548,6 +574,28 @@ public:
 
     bool IsBatchContext() const {return _isBatch;}
 
+    /// Receives the host application's Hgi instance via the standard
+    /// HdRenderDelegate driver interface. Stored as a borrowed pointer.
+    HDARNOLD_API
+    void SetDrivers(HdDriverVector const& drivers) override;
+
+    /// Returns the borrowed Hgi instance, or nullptr if the host application
+    /// did not provide one (e.g. batch / husk without a GL context).
+    Hgi* GetHgi() const { return _hgi; }
+
+    /// Queues a GPU texture for destruction on the thread that owns the GL context.
+    ///
+    /// Hgi textures must be created and destroyed on the main thread, but render buffers are allocated and
+    /// destroyed while Hydra syncs, which hosts may do on another thread.
+    ///
+    /// @param texture Texture to destroy, left empty.
+    HDARNOLD_API
+    void QueueTextureDestruction(HgiTextureHandle& texture);
+
+    /// Destroys every queued texture. Only call this with the GL context current.
+    HDARNOLD_API
+    void FlushTextureDestructions();
+
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     
     /// @brief Get the procedural parent
@@ -577,6 +625,8 @@ public:
 #endif
 
     const std::string &GetOutputOverride() const {return _outputOverride;}
+    /// Current frame, as set by the host through the houdini:frame render setting.
+    float GetFrame() const {return _frame;}
     
     /// Method used to create any node in the context of the render delegate. 
     /// This method should always be called, instead of explicit AiNode() creations
@@ -623,10 +673,12 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        // if we have a procedural parent, we should avoid deleting nodes
-        // as this can happen in batch sessions during procedural_update, 
-        // which is not allowed
-        if (_procParent) {
+        // If we have a procedural parent and the parent render is a batch render,
+        // we must avoid deleting nodes: this can happen during procedural_update,
+        // which is not allowed in batch sessions. For interactive renders we do
+        // want to destroy the node, otherwise regenerating a node with the same
+        // name later on causes naming conflicts (see #2277).
+        if (_procParent && _isBatch) {
             AiNodeSetDisabled(node, true);
         }
         else
@@ -637,6 +689,23 @@ public:
     {
         std::lock_guard<std::mutex> guard(_nodeNamesMutex);
         _nodeNames[name] = node;
+    }
+
+    // Register an ArnoldNodeGraph's original (source-file) name so that lookups
+    // by that name still resolve when the file is referenced and the runtime
+    // SdfPath is remapped. See HdArnoldNodeGraph::Sync, which reads
+    // primvars:arnold:name on the prim.
+    inline void AddNodeGraphName(const std::string &name, const SdfPath &path)
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        _nodeGraphNames[name] = path;
+    }
+
+    inline SdfPath LookupNodeGraphPath(const std::string &name) const
+    {
+        std::lock_guard<std::mutex> guard(_nodeGraphNamesMutex);
+        auto it = _nodeGraphNames.find(name);
+        return it == _nodeGraphNames.end() ? SdfPath() : it->second;
     }
 
     /// Method used to lookup a node in the current universe.
@@ -688,10 +757,69 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
+    /// Register a coordinate-system projection camera together with its aperture
+    /// ratio (verticalAperture / horizontalAperture). The vertical screen window
+    /// of these cameras is (re)computed from the actual render resolution in
+    /// UpdateCoordSysCameraProjections(), so the projection stays independent of
+    /// the render camera aspect / resolution (see HdArnoldCoordSys).
+    void RegisterCoordSysCamera(AtNode* camera, float apertureRatio) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras[camera] = apertureRatio;
+    }
+    void UnregisterCoordSysCamera(AtNode* camera) {
+        std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+        _coordSysCameras.erase(camera);
+    }
+    /// Recompute the vertical screen window of every registered coordinate-system
+    /// camera from the current render frame aspect ratio. Must be called after the
+    /// options' xres/yres are set for the render (see HdArnoldRenderPass).
+    void UpdateCoordSysCameraProjections();
+
     void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
     
     // Return true if the render delegate supports shape instancing
     bool SupportShapeInstancing () const {return _supportShapeInstancing;}
+
+    // Return true if nested instances should be flattened into shape instancing
+    // instead of using nested arnold instancer nodes
+    bool FlattenInstancing () const {return _flattenInstancing;}
+
+    /// Which geometrically identical geometries (meshes or curves) are rendered as instances
+    /// of a single canonical Arnold node instead of being duplicated.
+    enum class GeometryDedupMode {
+        None = 0,       ///< No deduplication.
+        Instances = 1,  ///< Only point-instancer prototypes (the flattening case). Default.
+        All = 2         ///< Every eligible geometry, including plain non-instanced duplicates.
+    };
+
+    // Returns the active geometry deduplication mode.
+    GeometryDedupMode GetGeometryDedupMode () const {return _geometryDedupMode;}
+
+    // Return true if any geometry deduplication is enabled.
+    bool DeduplicateGeometry () const {return _geometryDedupMode != GeometryDedupMode::None;}
+
+    /// Geometry deduplication registry, used by the geometry rprims (see HdArnoldRprim) to
+    /// share a single canonical Arnold node between geometrically identical geometries. Each
+    /// rprim keeps the @p hash it is registered under, and calls these accordingly.
+    ///
+    /// Registers a duplicate of the geometry identified by @p hash and returns the canonical
+    /// node to instance. When no rprim owns this geometry yet, a non-null @p candidate becomes
+    /// its canonical and nullptr is returned; a null @p candidate registers nothing.
+    HDARNOLD_API
+    AtNode* AcquireCanonicalGeometry(uint64_t hash, AtNode* candidate);
+
+    /// Releases a duplicate registered with AcquireCanonicalGeometry. Destroys the canonical
+    /// node if it was adopted and this was its last duplicate.
+    HDARNOLD_API
+    void ReleaseCanonicalGeometry(uint64_t hash);
+
+    /// Releases the canonical @p node the rprim @p id owns for @p hash. Arnold instances point at
+    /// their prototype's arrays instead of copying them, so a canonical node cannot be destroyed
+    /// while duplicates reference it: in that case the render delegate adopts it until its last
+    /// duplicate is released, and returns true. The caller must then relinquish the node
+    /// without destroying it.
+    HDARNOLD_API
+    bool LeaveCanonicalGeometry(uint64_t hash, AtNode* node, const SdfPath& id);
 
     HydraArnoldReader *GetReader() {return _reader;} 
     void SetReader(HydraArnoldReader *r) {_reader = r;} 
@@ -699,13 +827,36 @@ public:
     void SetHasCryptomatte(bool b);
     void SetInstancerCryptoOffset(AtNode *node, size_t numInstances);
 
-    bool IsUsingHydraRenderSettings() const;
+    bool IsAcceleratedViewport() const {return _acceleratedViewport;}
+    bool IsUsingHydraRenderSettings() const {return _useHydraRenderSettings;}
+
+    /// Path to the OCIO config file, as provided by the host application through the
+    /// "ocioConfigPath" render setting. It is only meant to be used when the OCIO
+    /// environment variable is not set, which always takes precedence (#2730).
+    const std::string& GetOcioConfigPath() const {return _ocioConfigPath;}
 
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    /// Drops every reference the main drivers hold to a render buffer that is about to be destroyed.
+    ///
+    /// @param renderBuffer Render buffer being destroyed.
+    void _ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer);
+
+    /// Returns the color manager to be used for this render, creating it if needed.
+    ///
+    /// The OCIO config is looked up in the OCIO environment variable first, then in the
+    /// "ocioConfigPath" render setting (#2730). When neither is set, arnold's default
+    /// color manager is returned, which can be a null pointer if it doesn't exist.
+    AtNode* _GetOrCreateColorManager();
+
+    /// Applies the color spaces received through the render settings to the given color
+    /// manager. This is needed as the color manager can be created after the color spaces
+    /// were set, in which case they would otherwise be lost.
+    void _ApplyColorSpaces(AtNode* colorManager);
 
     void _ParseDelegateRenderProducts(const VtValue& value);
 
@@ -720,7 +871,7 @@ private:
     /// Pointer to the shared Resource Registry.
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
-    using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+    using LightLinkingMap = std::unordered_map<TfToken, std::unordered_set<HdLight*>, TfToken::HashFunctor>;
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     
@@ -769,6 +920,7 @@ private:
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
+    std::atomic<uint32_t> _adoptedGeometryCounter{0}; ///< Unique names for adopted canonical nodes.
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
@@ -797,6 +949,12 @@ private:
     std::string _reportFile;
     std::string _statsFile;
     std::string _profileFile;
+    /// OCIO config file path set by the host application, see GetOcioConfigPath.
+    std::string _ocioConfigPath;
+    /// Color spaces received through the render settings, kept so that they can be applied
+    /// to a color manager that is created after them.
+    std::string _colorSpaceLinear;
+    std::string _colorSpaceNarrow;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
@@ -804,6 +962,18 @@ private:
 
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
+
+    /// Geometry deduplication registry entry (see AcquireCanonicalGeometry).
+    struct CanonicalGeometry {
+        AtNode* node = nullptr;  ///< Canonical node, instanced by the duplicates.
+        uint32_t duplicates = 0; ///< Number of rprims instancing node.
+        bool adopted = false;    ///< The owning rprim left: node is destroyed with the last duplicate.
+    };
+    std::mutex _canonicalGeometryMutex;
+    std::unordered_map<uint64_t, CanonicalGeometry> _canonicalGeometry; ///< geometry hash -> canonical
+
+    std::mutex _coordSysCamerasMutex;
+    std::unordered_map<AtNode*, float> _coordSysCameras; ///< coordSys camera node -> aperture ratio (vAp/hAp)
 
     /// FPS value from render settings.
     float _fps;
@@ -815,10 +985,12 @@ private:
     int _nodeId = 0;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
-    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
+    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk, or a batch parent render when running under a procedural)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
+    // Current frame. Only set on the options node in batch renders, see _SetRenderSetting.
+    float _frame = 0.f;
     int _mask = AI_NODE_ALL;  // mask for node types to be translated
     bool _hasCryptomatte = false;
     std::mutex _nodesMutex;
@@ -826,15 +998,30 @@ private:
     bool _renderDelegateOwnsUniverse;
     bool _enableNodesDestruction = true;
     bool _supportShapeInstancing = true;
+    bool _flattenInstancing = false;
+    GeometryDedupMode _geometryDedupMode = GeometryDedupMode::Instances;
     bool _forceIgnoreMotionBlur = false;
+    bool _useHydraRenderSettings = false;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+    bool _acceleratedViewport = false;
+    bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
+    Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+    std::vector<HgiTextureHandle> _texturesToDestroy; ///< Textures waiting for the GL thread.
+    std::mutex _texturesToDestroyMutex;               ///< Guards _texturesToDestroy.
 
-    // We store a list of functions that must be run once all the prims are synced and have filled the 
-    // vectors like 
-    // They will be ran in the _Execute function
+    mutable std::mutex _nodeGraphNamesMutex;
+    std::unordered_map<std::string, SdfPath> _nodeGraphNames;
+
+
+    // We store a list of functions that must be run once all the prims are synced
+    // They will be ran in HasPendingChanges
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
     HydraArnoldReader *_reader = nullptr;
+
+#if defined(HOUDINI_LOGGER_BUILD)
+    std::unique_ptr<HdArnoldHoudiniLogger> _houdiniLogger;
+#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

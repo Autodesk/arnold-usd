@@ -81,12 +81,16 @@ public:
     /// Returns true if the Render Delegate is supported.
     ///
     /// @return Value indicating if the Render Delegate is supported.
+    // The bool/no-argument IsSupported overloads were removed from HdRendererPlugin in USD 26.08
+    // (HD_API_VERSION 103), in favor of the HdRendererCreateArgsSchema overload declared below.
+#if PXR_VERSION < 2608
     HDARNOLD_API
 #ifdef USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
     bool IsSupported(bool gpuEnabled = true) const override;
 #else
     bool IsSupported() const override;
 #endif
+#endif // PXR_VERSION < 2608
 
 #if PXR_VERSION >= 2511
     bool IsSupported(

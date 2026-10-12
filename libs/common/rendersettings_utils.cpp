@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include <cmath>
 #include <unordered_set>
 #include <vector>
 #include "rendersettings_utils.h"
@@ -89,7 +90,8 @@ ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
         return {"FLOAT", str::aov_write_float, str::user_data_float, true};
     } else if (type == _tokens->_float) {
         return {"FLOAT", str::aov_write_float, str::user_data_float, false};
-    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
+    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->int8 ||
+               type == _tokens->ui8 || type == _tokens->uint8) {
         return {"INT", str::aov_write_int, str::user_data_int, false};
     } else if (type == _tokens->half2 || type == _tokens->color2h) {
         return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, true};
@@ -106,6 +108,35 @@ ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
     }
 }
 
+// Locate an ArnoldNodeGraph prim by the string path stored on a referring
+// attribute. If the literal path doesn't resolve (which happens when the file
+// has been referenced and the runtime SdfPath is remapped), scan the stage for
+// an ArnoldNodeGraph whose primvars:arnold:name attribute matches.
+static UsdPrim _FindNodeGraphPrim(const UsdStageRefPtr &stage, const std::string &valStr)
+{
+    if (!stage || valStr.empty())
+        return UsdPrim();
+    UsdPrim ngPrim = stage->GetPrimAtPath(SdfPath(valStr));
+    if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph)
+        return ngPrim;
+    // The writer always authors primvars:arnold:name on ArnoldNodeGraph prims;
+    // scan the stage for a match. This is O(N) per miss but happens only at
+    // render-settings parse time, which is one-shot per render.
+    for (const UsdPrim &p : stage->Traverse()) {
+        if (p.GetTypeName() != _tokens->ArnoldNodeGraph)
+            continue;
+        UsdAttribute nameAttr = p.GetAttribute(str::t_primvars_arnold_name);
+        if (!nameAttr || !nameAttr.HasAuthoredValue())
+            continue;
+        VtValue nameValue;
+        if (!nameAttr.Get(&nameValue) || !nameValue.IsHolding<std::string>())
+            continue;
+        if (nameValue.UncheckedGet<std::string>() == valStr)
+            return p;
+    }
+    return UsdPrim();
+}
+
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
 static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &prim, const UsdAttribute &attr,
                                                 const std::string &attrName, ArnoldAPIAdapter &context, const TimeSettings &time)
@@ -116,8 +147,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
         std::string valStr = VtValueGetString(value);
         if (!valStr.empty()) {
             SdfPath path(valStr);
-            // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = prim.GetStage()->GetPrimAtPath(SdfPath(valStr));
+            UsdPrim ngPrim = _FindNodeGraphPrim(prim.GetStage(), valStr);
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                 // We can use a UsdShadeShader schema in order to read connections
@@ -169,8 +199,7 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
             unsigned numElements = AiArrayGetNumElements(aovShadersArray);
             for(const auto &nodeGraphPrimName: TfStringTokenize(valStr)) {
                 SdfPath nodeGraphPrimPath(nodeGraphPrimName);
-                // We check if there is a primitive at the path of this string
-                UsdPrim nodeGraphPrim = prim.GetStage()->GetPrimAtPath(nodeGraphPrimPath);
+                UsdPrim nodeGraphPrim = _FindNodeGraphPrim(prim.GetStage(), nodeGraphPrimName);
 
                 if (nodeGraphPrim && nodeGraphPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                     // We can use a UsdShadeShader schema in order to read connections
@@ -202,6 +231,50 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     }
 }
 
+// What driver_exr uses when its compression array is empty. Not queryable from the node entry,
+// whose default is an empty array (see driver_open in driver_exr.cpp)
+static constexpr const char *s_defaultExrCompression = "zip";
+
+std::string GetDriverCompressionFallback(const AtNode *driver, size_t index)
+{
+    AtArray *current = AiNodeGetArray(driver, str::compression);
+    const uint32_t numCurrent = current ? AiArrayGetNumElements(current) : 0;
+    if (numCurrent == 0)
+        return s_defaultExrCompression;
+
+    // Same rule as driver_exr: element #index, or element #0 when the array is shorter
+    const uint32_t elem = (index < numCurrent) ? static_cast<uint32_t>(index) : 0;
+    return AiArrayGetStr(current, elem).c_str();
+}
+
+void SetDriverExrCompressions(AtNode *driver, const std::vector<std::string> &compressions)
+{
+    // Only driver_exr has an array-typed "compression" parameter (driver_deepexr has none)
+    if (driver == nullptr || !AiNodeIs(driver, str::driver_exr))
+        return;
+
+    bool hasAuthored = false;
+    for (const std::string &compression : compressions) {
+        if (!compression.empty()) {
+            hasAuthored = true;
+            break;
+        }
+    }
+    // Nothing to gather, leave the RenderProduct-level compression alone
+    if (!hasAuthored)
+        return;
+
+    // The fallback reads the array currently set on the driver, so it has to stay in place until
+    // the new one is complete
+    AtArray *array = AiArrayAllocate(static_cast<uint32_t>(compressions.size()), 1, AI_TYPE_STRING);
+    for (size_t i = 0; i < compressions.size(); ++i) {
+        const std::string compression = compressions[i].empty() ?
+            GetDriverCompressionFallback(driver, i) : compressions[i];
+        AiArraySetStr(array, static_cast<uint32_t>(i), AtString(compression.c_str()));
+    }
+    AiNodeSetArray(driver, str::compression, array);
+}
+
 // Encapsulate the logic to extract driver type and settings from a UsdProduct prim
 // The function can return nullptr if it wasn't able to find the driver
 AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, ArnoldAPIAdapter &context, const TimeSettings &time) {
@@ -221,8 +294,9 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
     std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
     VtValueGetString(productNameValue) : renderProductPrim.GetName().GetText();
 
-    // Set the filename for the output image
-    AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+    // Set the filename for the output image, if the driver writes one (driver_no_op doesn't)
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::filename))
+        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
     const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
     // All the attributes having the arnold:{driverType} prefix are the settings of the driver
     for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {        
@@ -282,7 +356,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
     }
 
     // Get the proper driver type based on the file extension
-    if (extension == "tif")
+    if (extension == "tif" || extension == "tiff")
         driverType = "driver_tiff";
     else if (extension == "jpg" || extension == "jpeg")
         driverType = "driver_jpeg";
@@ -455,23 +529,31 @@ void SetRegion(AtNode* options, const GfVec4f& windowNDC, const GfVec2i& resolut
         (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
         (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
         (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
-        // Need to invert the window range in the Y axis
-        GfVec4f adjustedWindow = windowNDC;
-        float minY = 1. - adjustedWindow[3];
-        float maxY = 1. - adjustedWindow[1];
-        adjustedWindow[1] = minY;
-        adjustedWindow[3] = maxY;
-
         // Ensure the user isn't setting invalid ranges
+        GfVec4f adjustedWindow = windowNDC;
         if (adjustedWindow[0] > adjustedWindow[2])
             std::swap(adjustedWindow[0], adjustedWindow[2]);
         if (adjustedWindow[1] > adjustedWindow[3])
             std::swap(adjustedWindow[1], adjustedWindow[3]);
-        
-        AiNodeSetInt(options, str::region_min_x, int(adjustedWindow[0] * resolution[0]));
-        AiNodeSetInt(options, str::region_min_y, int(adjustedWindow[1] * resolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(adjustedWindow[2] * resolution[0]) - 1);
-        AiNodeSetInt(options, str::region_max_y, int(adjustedWindow[3] * resolution[1]) - 1);
+
+        // Snap the NDC window to integer pixel coordinates with ceil, matching the convention
+        // used by Houdini (SYSceil in XUSD_RenderSettings::computeImageWindows) and by the
+        // render delegate in HdArnoldRenderPass::_Execute, so that all code paths place the
+        // data window on the same pixels. The Y snapping must happen in the original y-up NDC
+        // space with the same float expressions before flipping into Arnold's y-down region,
+        // as float precision errors can round differently in the two spaces.
+        const int yMinUp = std::ceil(adjustedWindow[1] * resolution[1]);
+        const int yMaxUp = std::ceil(adjustedWindow[3] * resolution[1] - 1);
+        AiNodeSetInt(options, str::region_min_x, int(std::ceil(adjustedWindow[0] * resolution[0])));
+        AiNodeSetInt(options, str::region_max_x, int(std::ceil(adjustedWindow[2] * resolution[0] - 1)));
+        AiNodeSetInt(options, str::region_min_y, resolution[1] - 1 - yMaxUp);
+        AiNodeSetInt(options, str::region_max_y, resolution[1] - 1 - yMinUp);
+    } else {
+        // Full frame window, ensure a previously set region doesn't stick around
+        AiNodeResetParameter(options, str::region_min_x);
+        AiNodeResetParameter(options, str::region_min_y);
+        AiNodeResetParameter(options, str::region_max_x);
+        AiNodeResetParameter(options, str::region_max_y);
     }
 }
 
@@ -504,10 +586,38 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
-    GfVec4f windowNDC;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
-        SetRegion(options, windowNDC, resolution);
-    }    
+    GfVec4f windowNDC(0.f, 0.f, 1.f, 1.f);
+    renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame);
+
+    UsdRelationship productsRel = renderSettings.GetProductsRel();
+    SdfPathVector productTargets;
+    productsRel.GetTargets(&productTargets);
+
+    // Render products can override the framing attributes of the render settings.
+    // Arnold only supports a single resolution and region per render, so like the
+    // render delegate we use the values of the first render product.
+    for (const SdfPath& productPath : productTargets) {
+        UsdRenderProduct renderProduct(stage->GetPrimAtPath(productPath));
+        if (!renderProduct)
+            continue;
+        UsdAttribute productResolutionAttr = renderProduct.GetResolutionAttr();
+        GfVec2i productResolution;
+        if (productResolutionAttr.HasAuthoredValue() && productResolutionAttr.Get(&productResolution, time.frame) &&
+            productResolution[0] > 0 && productResolution[1] > 0) {
+            resolution = productResolution;
+            AiNodeSetInt(options, str::xres, resolution[0]);
+            AiNodeSetInt(options, str::yres, resolution[1]);
+        }
+        UsdAttribute productPixelAspectRatioAttr = renderProduct.GetPixelAspectRatioAttr();
+        if (productPixelAspectRatioAttr.HasAuthoredValue() && productPixelAspectRatioAttr.Get(&pixelAspectRatioValue, time.frame))
+            AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
+        UsdAttribute productDataWindowNDCAttr = renderProduct.GetDataWindowNDCAttr();
+        if (productDataWindowNDCAttr.HasAuthoredValue())
+            productDataWindowNDCAttr.Get(&windowNDC, time.frame);
+        break;
+    }
+    // The region is expressed in pixels, so it must be computed with the final resolution
+    SetRegion(options, windowNDC, resolution);
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
@@ -537,9 +647,6 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     std::set<AtNode *> beautyDrivers;
 
     // Every render product is translated as an arnold driver.
-    UsdRelationship productsRel = renderSettings.GetProductsRel();
-    SdfPathVector productTargets;
-    productsRel.GetTargets(&productTargets);
     for (size_t i = 0; i < productTargets.size(); ++i) {
 
         UsdPrim productPrim = renderSettingsPrim.GetStage()->GetPrimAtPath(productTargets[i]);
@@ -579,6 +686,10 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         size_t prevOutputsCount = outputs.size();
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
+        std::vector<std::string> compressionList;
+        const TfToken compressionAttrName(std::string("arnold:") + driverType + ":compression");
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
             UsdPrim renderVarPrim = renderSettingsPrim.GetStage()->GetPrimAtPath(renderVarsTargets[j]);
@@ -597,7 +708,12 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             if (filterAttr) {
                 VtValue filterValue;
                 if (filterAttr.Get(&filterValue, time.frame)) {
-                    filterType = VtValueGetString(filterValue);
+                    // Only override the default filter type if a non-empty value
+                    // was authored. An empty "arnold:filter" would otherwise clobber
+                    // the box_filter fallback and create an invalid node.
+                    std::string filterStr = VtValueGetString(filterValue);
+                    if (!filterStr.empty())
+                        filterType = filterStr;
                 }
             }
 
@@ -605,7 +721,11 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             AtNode *filter = AiNodeLookUpByName(universe, AtString(filterName.c_str()));
             if (filter == nullptr)
                 filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
-            
+            // An unknown/invalid filter type returns a null node. Skip this
+            // RenderVar rather than dereferencing it below.
+            if (filter == nullptr)
+                continue;
+
             // Set the filter width if the attribute exists in this filter type
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
                 // An eventual attribute "arnold:width" will determine the filter width attribute
@@ -689,14 +809,25 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                // Create a user data shader that will read the desired primvar, its type depends on the AOV type
-                std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData, userDataName.c_str());
-                // Link the user_data to the aov_write
-                AiNodeLink(userData, "aov_input", aovShader);
-                // Set the user data (primvar) to read
-                AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
-                // We need to add the aov shaders to options.aov_shaders. 
+                // The reader is normally a user_data_* shader that looks up a primvar.
+                // "st" and "uv" are special: UVs are stored as built-in geometry data in
+                // arnold rather than as user data, so user_data_* would return zeros.
+                // Use a utility shader in uv color_mode instead, matching the Hydra render
+                // pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                std::string readerName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
+                AtNode *reader = nullptr;
+                if (sourceName == "st" || sourceName == "uv") {
+                    reader = context.CreateArnoldNode(str::utility.c_str(), readerName.c_str());
+                    AiNodeSetStr(reader, str::color_mode, str::uv);
+                    AiNodeSetStr(reader, str::shade_mode, str::flat);
+                } else {
+                    reader = context.CreateArnoldNode(arnoldTypes.userData, readerName.c_str());
+                    // Set the user data (primvar) to read
+                    AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                }
+                // Link the reader to the aov_write
+                AiNodeLink(reader, "aov_input", aovShader);
+                // We need to add the aov shaders to options.aov_shaders.
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);
             }
@@ -741,6 +872,16 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             aovNamesList.push_back(sourceName);
             // Remember if this output is half precision or not
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
+            std::string varCompression;
+            if (isDriverExr) {
+                UsdAttribute compressionAttr = renderVarPrim.GetAttribute(compressionAttrName);
+                VtValue compressionValue;
+                if (compressionAttr && compressionAttr.Get(&compressionValue, time.frame))
+                    varCompression = VtValueGetString(compressionValue);
+            }
+            compressionList.push_back(varCompression);
         } // End renderVar loop
         
         if (useLayerName) {
@@ -773,6 +914,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             if (isHalfDriver && driverType == "driver_exr")
                 AiNodeSetBool(driver, AtString("half_precision"), true);
         }
+        SetDriverExrCompressions(driver, compressionList);
     } // End renderProduct loop
 
     // Set options.outputs, with all the AOVs to be rendered
@@ -813,7 +955,9 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
 
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->globalOperator), "operator", context, time);
 
-    // Setup color manager
+    // Setup color manager. The OCIO environment variable takes precedence over everything
+    // else, then comes an explicit color_manager:node_entry authored in the scene, and
+    // finally the config path the host application gave us (#2730)
     AtNode* colorManager = nullptr;
     const char *ocio_path = std::getenv("OCIO");
     if (ocio_path) {
@@ -827,6 +971,15 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             std::string colorManagerEntry = VtValueGetString(colorManagerEntryValue);
             colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
         }
+    }
+
+    if (colorManager == nullptr && !context.GetOcioConfigPath().empty()) {
+        // The render delegate creates this same color manager when it receives the config
+        // path, in which case we reuse it instead of ending up with two of them
+        colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
+        if (colorManager == nullptr || !AiNodeIs(colorManager, str::color_manager_ocio))
+            colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
+        AiNodeSetStr(colorManager, str::config, AtString(context.GetOcioConfigPath().c_str()));
     }
 
     if (colorManager == nullptr) {

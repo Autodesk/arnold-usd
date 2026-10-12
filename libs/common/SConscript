@@ -26,6 +26,7 @@ source_files = [
     'materials_utils.cpp',
     'rendersettings_utils.cpp',
     'shape_utils.cpp',
+    'trace_utils.cpp',
     'procedural_reader.cpp',
 ]
 

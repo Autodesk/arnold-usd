@@ -1,0 +1,95 @@
+#usda 1.0
+(
+    doc = """Issue #2641 - animated instanced lights via a (cached) Point Instancer.
+
+    Three SphereLights are instanced through a PointInstancer whose `positions`
+    are time-sampled, sweeping the lights from the -X side of the ground plane
+    (frame 1) to the +X side (frame 30). When scrubbing/re-rendering through the
+    Hydra render delegate (Solaris), the lit pools on the ground must follow the
+    instancer motion. Before the fix the instanced lights stayed frozen at their
+    frame-1 positions because the Arnold instancer was only rebuilt on
+    HdLight::DirtyParams, not when the instancer itself became dirty.
+
+    Note: this is an interactive (re-render / time-scrub) bug. A single batch
+    render always rebuilds the instancer on the first Sync, so it cannot
+    reproduce the freeze - use this scene in Houdini/Solaris and scrub the
+    timeline to verify. The single-frame render here guards the instanced-light
+    code path from breaking."""
+    endTimeCode = 30
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "world"
+{
+    def Mesh "ground"
+    {
+        float3[] extent = [(-12, 0, -12), (12, 0, 12)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-12, 0, -12), (12, 0, -12), (12, 0, 12), (-12, 0, 12)]
+        color3f[] primvars:displayColor = [(0.18, 0.18, 0.18)]
+        uniform token subdivisionScheme = "none"
+        double3 xformOp:translate = (0, 1.9688394253517179, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def PointInstancer "lightInstancer"
+    {
+        float3[] extent = [(-8, 2.5, -4), (8, 3.5, 4)]
+        point3f[] positions.timeSamples = {
+            1: [(-7, 3, -3), (-7, 3, 0), (-7, 3, 3)],
+            30: [(7, 3, -3), (7, 3, 0), (7, 3, 3)],
+        }
+        int[] protoIndices = [0, 0, 0]
+        rel prototypes = </world/lightInstancer/Prototypes/lightProto>
+
+        def Scope "Prototypes"
+        {
+            def SphereLight "lightProto"
+            {
+                color3f inputs:color = (1, 1, 1)
+                float inputs:diffuse = 1
+                bool inputs:enableColorTemperature = 0
+                float inputs:exposure = 0
+                float inputs:intensity = 6
+                bool inputs:normalize = 1
+                float inputs:radius = 0.5
+                float inputs:specular = 1
+                bool treatAsPoint = 0
+            }
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focalLength = 35
+        float horizontalAperture = 36
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 27
+        double3 xformOp:rotateXYZ = (-60, 0, 0)
+        double3 xformOp:translate = (0, 22, 13)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings"
+    {
+        rel camera = </cameras/camera1>
+        token[] includedPurposes = ["default"]
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        int2 resolution = (160, 120)
+    }
+}
+

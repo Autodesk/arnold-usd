@@ -396,6 +396,9 @@ void ReadArrayLink(
 
     indexStr = indexStr.substr(1); // remove the first "i" character
 
+    if (indexStr.find_first_not_of("0123456789") != std::string::npos)
+        return;
+
     // get the index
     int index = std::stoi(indexStr);
     if (index < 0)
@@ -653,7 +656,7 @@ unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue)
 int VtValueGetInt(const VtValue& value, int defaultValue)
 {
     if (!value.IsEmpty())
-        VtValueGet<int, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
+        VtValueGet<int, bool, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
 
     return defaultValue;
 }
@@ -730,7 +733,7 @@ AtMatrix VtValueGetMatrix(const VtValue& value)
 {
     if (value.IsEmpty())
         return AiM4Identity();
-    AtMatrix result;
+    AtMatrix result = AiM4Identity();
     _VtValueGetRecursive<AtMatrix, GfMatrix4f, GfMatrix4d>(value, result);
     return result;
 }
@@ -780,7 +783,8 @@ inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arn
                 }
             }
         }
-        AiArrayUnmap(array);
+        if (array)
+            AiArrayUnmap(array);
         return array;
     }
     
@@ -950,11 +954,15 @@ uint32_t DeclareAndAssignParameter(
     size_t arraySize = value.GetArraySize();
     
     // - If the value is not an array, we want a constant user data
-    // - If the value has a single element, and the scope is "constant", we want a constant user data.
+    // - If the value has a single element, we want a constant user data, unless it is a
+    //   per-instance "constant ARRAY": a uniform/varying/indexed array with a single element
+    //   cannot be indexed safely by Arnold on a shape with more than one face/vertex, which
+    //   produces "out-of-range" errors (e.g. an inherited primvars:crypto_asset resolved as a
+    //   single-element uniform primvar under an instanceable reference, see #2699). Declaring
+    //   it constant lets the single value apply to the whole shape.
     // - If the value has more than one element, and the scope is "constant", we want a constant array
-    // - If the attribute name is "displayColor" and has a single element, we want a constant user data
-    bool isConstant = !isArray || 
-        ((scope == str::t_constant || name == str::t_displayColor) && arraySize <= 1);
+    bool isConstant = !isArray ||
+        (scope != str::t_constantArray && arraySize <= 1);
     
     uint8_t type = GetArnoldTypeFromValue(value, !isArray , isArray);
     

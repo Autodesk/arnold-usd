@@ -1,0 +1,7 @@
+Support ArnoldNodeGraph primitives when the usd file is referenced and the prim is namespaced
+
+See #2645
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}

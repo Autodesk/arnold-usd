@@ -30,7 +30,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "mesh.h"
+#include "coord_sys.h"
 #include "light.h"
+#include <pxr/base/trace/trace.h>
 
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
@@ -41,6 +43,10 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
+
+#include <optional>
+#include <string>
+#include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -173,6 +179,7 @@ HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath
 }
 
 HdArnoldMesh::~HdArnoldMesh() {
+    _ReleaseGeometryDedup();
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
@@ -201,6 +208,8 @@ HdArnoldMesh::~HdArnoldMesh() {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    AiProfileBlock("hydra_proc:HdArnoldMesh:Sync"); 
+    TRACE_FUNCTION();
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
 
@@ -213,8 +222,11 @@ void HdArnoldMesh::Sync(
     if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
     HdArnoldSampledPrimvarType _pointsSample;
+    // DirtyNormals must also trigger the primvar refresh below: when a deforming mesh advances in
+    // time, Hydra reports authored normal changes as DirtyNormals (not DirtyPrimvar), so gating only
+    // on DirtyPrimvar leaves the Arnold nlist stale relative to the updated points.
     bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
-                               (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+                               (*dirtyBits & (HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyNormals));
 
     // We need to set the deform keys first if it is specified
     VtValue deformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
@@ -231,8 +243,34 @@ void HdArnoldMesh::Sync(
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
     }
-    
-    if (_primvars.count(HdTokens->points) != 0) {
+
+    // Fetched at most once per Sync, for both the deduplication and the topology translation.
+    std::optional<HdMeshTopology> topologyCache;
+    auto getMeshTopology = [&]() -> const HdMeshTopology& {
+        if (!topologyCache.has_value())
+            topologyCache = GetMeshTopology(sceneDelegate);
+        return *topologyCache;
+    };
+
+    _SyncGeometryDedup(
+        sceneDelegate, id, str::polymesh, _primvars, _pointsSample, true, dirtyBits, dirtyPrimvars, param,
+        [&](uint64_t& hash) {
+            // Geom subsets and mesh lights are not supported.
+            const HdMeshTopology& topology = getMeshTopology();
+            if (!topology.GetGeomSubsets().empty() || _HasMeshLight(sceneDelegate, id))
+                return false;
+            // Creases are not part of the topology, and the display style sets the subdivision.
+            hash = TfHash::Combine(
+                topology.ComputeHash(), GetSubdivTags(sceneDelegate).ComputeHash(),
+                GetDisplayStyle(sceneDelegate).refineLevel);
+            return true;
+        });
+    node = GetArnoldNode();
+
+    // A duplicate shares the geometry of its canonical, and has no geom subsets.
+    if (_IsDuplicate()) {
+        _subsets.clear();
+    } else if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
@@ -245,8 +283,8 @@ void HdArnoldMesh::Sync(
     TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
-    if (dirtyTopology) {
-        const auto topology = GetMeshTopology(sceneDelegate);
+    if (dirtyTopology && !_IsDuplicate()) {
+        const HdMeshTopology& topology = getMeshTopology();
         _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         param.Interrupt();
         // Keep a reference on the vertex buffers as long as this object is live
@@ -254,15 +292,41 @@ void HdArnoldMesh::Sync(
         const VtIntArray &vertexCounts = topology.GetFaceVertexCounts();
         const VtIntArray &vertexIndices = topology.GetFaceVertexIndices();
 
-        const auto numFaces = topology.GetNumFaces();
+        auto numFaces = topology.GetNumFaces();
+
+        // Determine hole faces for non-subdivided meshes.
+        // USD holeIndices marks faces as invisible — we remove them from the topology.
+        const VtIntArray &holeIndices = topology.GetHoleIndices();
+        const bool isSubdivided = topology.GetScheme() != PxOsdOpenSubdivTokens->none;
+        if (!isSubdivided && !holeIndices.empty()) {
+            _holeFilter.Build(holeIndices, vertexCounts);
+        } else {
+            _holeFilter.Clear();
+        }
+
+        // Build filtered topology if there are holes
+        VtIntArray filteredCounts;
+        VtIntArray filteredIndices;
+        const VtIntArray *activeCounts = &vertexCounts;
+        const VtIntArray *activeIndices = &vertexIndices;
+
+        if (!_holeFilter.Empty()) {
+            filteredCounts = vertexCounts;
+            _holeFilter.FilterUniformArray(filteredCounts);
+            filteredIndices = vertexIndices;
+            _holeFilter.FilterFaceVaryingArray(filteredIndices);
+            numFaces = static_cast<int>(filteredCounts.size());
+            activeCounts = &filteredCounts;
+            activeIndices = &filteredIndices;
+        }
 
         // Check if the vertex count buffer contains negative value
-        const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
+        const bool hasNegativeValues = std::any_of(activeCounts->cbegin(), activeCounts->cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
         // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
         if (_isLeftHanded || hasNegativeValues) {
-            VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
-            VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
+            VtIntArray vertexCountsTmp = *activeCounts;
+            VtIntArray vertexIndicesTmp = *activeIndices;
             assert(vertexCountsTmp.size() == (size_t)numFaces);
             if (Ai_unlikely(hasNegativeValues)) {
                 std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
@@ -271,12 +335,12 @@ void HdArnoldMesh::Sync(
                 for (int i = 0; i < numFaces; ++i) {
                     const int vertexCount = vertexCountsTmp[i];
                     for (int vertexIdx = 0; vertexIdx < vertexCount; vertexIdx += 1) {
-                        vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = vertexIndices[_vertexCountSum + vertexIdx];
+                        vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = (*activeIndices)[_vertexCountSum + vertexIdx];
                     }
                     _vertexCountSum += vertexCount;
                 }
             } else {
-                _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+                _vertexCountSum = std::accumulate(activeCounts->cbegin(), activeCounts->cend(), 0);
             }
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCountsTmp);
@@ -284,11 +348,11 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
 
         } else {
-            _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+            _vertexCountSum = std::accumulate(activeCounts->cbegin(), activeCounts->cend(), 0);
             // Keep the buffers alive
-            _vertexCountsVtValue = VtValue(vertexCounts);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
+            _vertexCountsVtValue = VtValue(*activeCounts);
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(*activeCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(*activeIndices, AI_TYPE_UINT));
         }
 
         scheme = topology.GetScheme();
@@ -302,11 +366,25 @@ void HdArnoldMesh::Sync(
         } else {
             AiNodeSetStr(node, str::subdiv_type, str::none);
         }
-        AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
+        // Build shidxs; if holes were removed we need to filter the result
+        AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), topology.GetNumFaces(), _subsets));
+        if (!_holeFilter.Empty()) {
+            AtArray* shidxsArray = AiNodeGetArray(node, str::shidxs);
+            if (shidxsArray) {
+                const uint32_t numElements = AiArrayGetNumElements(shidxsArray);
+                std::vector<uint8_t> shidxs(numElements);
+                for (uint32_t i = 0; i < numElements; ++i)
+                    shidxs[i] = AiArrayGetByte(shidxsArray, i);
+                if (_holeFilter.FilterUniformArray(shidxs)) {
+                    AiNodeSetArray(node, str::shidxs,
+                        AiArrayConvert(shidxs.size(), 1, AI_TYPE_BYTE, shidxs.data()));
+                }
+            }
+        }
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
-    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
+    if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto displayStyle = GetDisplayStyle(sceneDelegate);
         // In Hydra, GetDisplayStyle will return a refine level between [0, 8]. 
@@ -325,7 +403,7 @@ void HdArnoldMesh::Sync(
         transformDirtied = true;
     }
 
-    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id)) {
+    if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id) && !_IsDuplicate()) {
         param.Interrupt();
         const auto subdivTags = GetSubdivTags(sceneDelegate);
         ArnoldUsdReadCreases(
@@ -346,7 +424,11 @@ void HdArnoldMesh::Sync(
         materialsAssigned = true;
         const auto numSubsets = _subsets.size();
         const auto numShaders = numSubsets + 1;
-        const auto isVolume = _IsVolume();
+        const auto isVolume = !_IsDuplicate() && _IsVolume();
+        // Shared materials bound by different rprims to different cameras each
+        // resolve to their own camera through this per-rprim remap (see the
+        // remap-aware HdArnoldNodeGraph::GetCached*Shader).
+        const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
         auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
@@ -354,14 +436,15 @@ void HdArnoldMesh::Sync(
         HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
             nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
-            const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+            auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
                                            : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
-                shader[arrayId] = isVolume ? material->GetCachedVolumeShader() : material->GetCachedSurfaceShader();
-                dispMap[arrayId] = material->GetCachedDisplacementShader();
+                shader[arrayId] = isVolume ? material->GetCachedVolumeShader(coordSysBinding)
+                                           : material->GetCachedSurfaceShader(coordSysBinding);
+                dispMap[arrayId] = material->GetCachedDisplacementShader(coordSysBinding);
             }
         };
         for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
@@ -371,7 +454,11 @@ void HdArnoldMesh::Sync(
         // Keep track of the materials assigned to this mesh
         GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
 
-        if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
+        // The displacement belongs to the geometry, shared by a duplicate.
+        if (_IsDuplicate()) {
+            AiArrayUnmap(dispMapArray);
+            AiArrayDestroy(dispMapArray);
+        } else if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);
             AiNodeSetArray(node, str::disp_map, dispMapArray);
         } else {
@@ -383,7 +470,7 @@ void HdArnoldMesh::Sync(
         AiNodeSetArray(node, str::shader, shaderArray);
     };
 
-    if (dirtyPrimvars) {
+    if (dirtyPrimvars && !_IsDuplicate()) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         _autobumpVisibilityFlags.ClearPrimvarFlags();
@@ -412,19 +499,29 @@ void HdArnoldMesh::Sync(
 
                     std::string primvarStr = primvar.first.GetText();
                     const static std::string s_lightPrefix = "arnold:light:";
-                    // check if the attribute starts with "arnold:light:"
-                    if (primvarStr.length() > s_lightPrefix.length() && 
-                        primvarStr.substr(0, s_lightPrefix.length()) == s_lightPrefix) {
-                        // we want to read this attribute and set it in the light node. We need to 
-                        // modify the attribute name so that we remove the light prefix
+                    const static std::string s_arnoldPrefix = "arnold:";
+                    bool shouldSetOnLight = false;
+                    if (primvarStr.length() > s_lightPrefix.length() &&
+                        TfStringStartsWith(primvarStr, s_lightPrefix)) {
+                        // Normalize "arnold:light:attr" → "arnold:attr" so both prefixes
+                        // share the same dispatch below
                         primvarStr.erase(7, 6);
-                    
+                        shouldSetOnLight = true;
+                    } else if (primvarStr.length() > s_arnoldPrefix.length() &&
+                               TfStringStartsWith(primvarStr, s_arnoldPrefix) &&
+                               primvarStr != "arnold:matrix") {
+
+                        const std::string paramName = primvarStr.substr(s_arnoldPrefix.length());
+                        shouldSetOnLight = AiNodeEntryLookUpParameter(
+                            AiNodeGetNodeEntry(_geometryLight), AtString(paramName.c_str())) != nullptr;
+                    }
+                    if (shouldSetOnLight) {
                         if (primvarStr == "arnold:shaders") {
-                            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id, 
-                                TfToken("primvars:arnold:light:shaders"), meshLight);
+                            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id,
+                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight);
                         } else {
                             HdArnoldSetConstantPrimvar(
-                                _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
+                                _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value,
                                 nullptr, nullptr, nullptr, _renderDelegate);
                         }
                         continue;
@@ -479,12 +576,32 @@ void HdArnoldMesh::Sync(
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, &desc.valueIndices, GetRenderDelegate());
+                // Filter uniform primvar values/indices for hole faces
+                VtValue uniformValue = desc.value;
+                VtIntArray uniformIndices = desc.valueIndices;
+                if (!_holeFilter.Empty()) {
+                    if (!uniformIndices.empty()) {
+                        _holeFilter.FilterUniformArray(uniformIndices);
+                    } else {
+                        _holeFilter.FilterUniformValue(uniformValue);
+                    }
+                }
+                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, uniformValue, &uniformIndices, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
+                // Filter face-varying primvar values/indices for hole faces
+                VtValue fvValue = desc.value;
+                VtIntArray fvIndices = desc.valueIndices;
+                if (!_holeFilter.Empty()) {
+                    if (!fvIndices.empty()) {
+                        _holeFilter.FilterFaceVaryingArray(fvIndices);
+                    } else {
+                        _holeFilter.FilterFaceVaryingValue(fvValue);
+                    }
+                }
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
-                    if (!desc.valueIndices.empty()) {
-                       AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(fvValue));
+                    if (!fvIndices.empty()) {
+                       AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                     } else {
                         int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
                         AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
@@ -493,7 +610,7 @@ void HdArnoldMesh::Sync(
                     if (!_useSubdiv) {
                         // The number of motion keys has to be matched between points and normals, so if there are multiple
                         // position keys, so we are forcing the user to use the SamplePrimvars function.
-                        if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
+                        if (fvValue.IsEmpty() || _numberOfPositionKeys > 1) {
                             HdArnoldIndexedSampledPrimvarType sample;
                             SampleIndexedPrimvar(
                                 sceneDelegate, id, primvar.first, arnoldRenderParam->GetShutterRange(), &sample);
@@ -502,16 +619,16 @@ void HdArnoldMesh::Sync(
                             _RemapNormalKeys(_numberOfPositionKeys, sample);
                             }
                             AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfVec3f>>(sample));
-                            if (!desc.valueIndices.empty()) {
-                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                            if (!fvIndices.empty()) {
+                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                             } else {
                                 int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
                                 AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                             }
                         } else {
-                            AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(desc.value));
-                            if (!desc.valueIndices.empty()) {
-                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                            AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(fvValue));
+                            if (!fvIndices.empty()) {
+                                AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(fvIndices, leftHandedVertexCounts));
                             } else {
                                 int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
                                 AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
@@ -524,7 +641,7 @@ void HdArnoldMesh::Sync(
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
                         // TODO check leftHandedVertexCounts
-                        node, primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, leftHandedVertexCounts,
+                        node, primvar.first, desc.role, fvValue, GetRenderDelegate(), fvIndices, leftHandedVertexCounts,
                         &_vertexCountSum);
                 }
             }
@@ -545,11 +662,24 @@ void HdArnoldMesh::Sync(
         }        
     }
 
-    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
+    if (dirtyPrimvars && _shape.IsInstanceNode()) {
+        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken&) { return false; });
+    }
+
+    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
+    // or if the coordinate-system bindings changed (assignMaterials rewrites each material's
+    // "space" inputs to the cameras bound here - see the remap-aware GetCached*Shader).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories) ||
+        (dirtyTopology && !_subsets.empty())) {
         param.Interrupt();
         assignMaterials();
     }
+
+    // Note: we deliberately do not export the bound coordinate-system cameras as a
+    // "coord_sys" user attribute on the shape. Arnold's OSL render services resolve
+    // named spaces globally by camera node name and never consult such an array, so
+    // it would have no consumer - while holding AtNode pointers that dangle if the
+    // coordinate system is removed without this rprim being re-synced.
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
     
@@ -559,20 +689,16 @@ void HdArnoldMesh::Sync(
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyPoints |
-           HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtySubdivTags |
-           HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId |
-           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided |
+           HdChangeTracker::DirtySubdivTags | HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform |
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | 
+           HdChangeTracker::DirtyCategories | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    bool hasMeshLight = false;
-    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
-    if (lightValue.IsHolding<bool>()) {
-        hasMeshLight = lightValue.UncheckedGet<bool>();            
-    }
-    
+    const bool hasMeshLight = _HasMeshLight(sceneDelegate, id);
     if (hasMeshLight) {
         if (_geometryLight == nullptr) {
             // We need to create the mesh light, pointing to the current mesh.
@@ -591,6 +717,21 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
         _geometryLight = nullptr;    
     }
     return _geometryLight;
+}
+
+bool HdArnoldMesh::_HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const
+{
+    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
+    if (lightValue.IsHolding<bool>() && lightValue.UncheckedGet<bool>())
+        return true;
+#ifndef ENABLE_SCENE_INDEX
+    // In Hydra 2 the meshLightResolvingSIP already handles MeshLightAPI by injecting a
+    // synthetic meshLight child sprim handled by light.cpp — don't create a second node here.
+    VtValue isLightValue = sceneDelegate->GetLightParamValue(id, HdTokens->isLight);
+    if (isLightValue.IsHolding<bool>() && isLightValue.UncheckedGet<bool>())
+        return true;
+#endif
+    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

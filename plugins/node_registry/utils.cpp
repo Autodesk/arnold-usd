@@ -382,8 +382,12 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     }
     AiMetaDataIteratorDestroy(nodeMetadataIter);
 
+    // When we build against a static USD, we don't need to filter out shaders
+    // as we are just rendering a USD file and no UI is involved
+#ifndef PXR_STATIC
     if (hide)
         return;
+#endif
 
     auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
     const auto filename = AiNodeEntryGetFilename(nodeEntry);

@@ -1,0 +1,12 @@
+Author uv_camera ray_origin / ray_direction shader links through an ArnoldNodeGraph
+
+The uv_camera ray_origin / ray_direction (and the generic uv_remap) can be
+driven by a shader. On export we now author these links through an
+ArnoldNodeGraph primitive, referenced from the camera both as a USD connection
+(resolved by the translator) and as a string path (resolved by the render
+delegate). This test writes such a camera to USD, checks the authored node
+graph and connections, and verifies the links are restored on reload.
+
+See #2710
+
+author: sebastien ortega

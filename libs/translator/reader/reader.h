@@ -117,6 +117,25 @@ public:
         return node;
     }
 
+    // Map an ArnoldNodeGraph's original (source-file) name to its remapped
+    // stage path so that lookups by the source-file path still succeed after
+    // the file is referenced under a different namespace.
+    void AddNodeGraphName(const std::string &name, const SdfPath &path)
+    {
+        _nodeGraphNamesLock.lock();
+        _nodeGraphNames[name] = path;
+        _nodeGraphNamesLock.unlock();
+    }
+
+    SdfPath LookupNodeGraphPath(const std::string &name)
+    {
+        _nodeGraphNamesLock.lock();
+        auto it = _nodeGraphNames.find(name);
+        SdfPath result = (it == _nodeGraphNames.end()) ? SdfPath() : it->second;
+        _nodeGraphNamesLock.unlock();
+        return result;
+    }
+
     // We only lock if we're in multithread, otherwise
     // we want to avoid this cost
     void LockReader()
@@ -204,6 +223,8 @@ private:
                            // finished reading
     std::vector<AtNode *> _nodes;
     std::unordered_map<std::string, AtNode *> _nodeNames;
+    AtMutex _nodeGraphNamesLock;
+    std::unordered_map<std::string, SdfPath> _nodeGraphNames;
 
     UsdArnoldAPI *_apiAdapter = nullptr;
 

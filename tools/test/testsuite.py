@@ -118,7 +118,14 @@ class Testsuite(object):
       # - Tests intended for other platform
       self.skipped_tests = {}
       self.skipped_tests['ignore'] = self.groups.get_tests('ignore')
-      
+
+      # Per-pass skip lists: a test listed in the 'pass_<name>' group is not run
+      # for that pass. Test.run() consumes these 'pass_*' keys. This lets a test
+      # that is only meaningful in some passes (e.g. a Hydra-only feature that is
+      # not implemented in the procedural 'usd' pass) opt out of the others.
+      for pass_name in self.passes:
+         self.skipped_tests['pass_' + pass_name] = self.groups.get_tests('pass_' + pass_name)
+
       self.skipped_tests['os'] = set()
       for system_os in (_ for _ in system.allowed.os if _ != system.os):
          self.skipped_tests['os'] |= (self.groups.get_tests(system_os) - self.groups.get_tests(system.os))

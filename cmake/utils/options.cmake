@@ -38,6 +38,15 @@ option(BUILD_PROCEDURAL "Builds the Procedural" ON)
 option(BUILD_PROC_SCENE_FORMAT "Enables the Procedural Scene format" ON)
 option(BUILD_USD_IMAGING_PLUGIN "Builds the USD Imaging plugins" ON)
 option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
+# Small helper class (HdArnoldHoudiniLogger, see libs/render_delegate/houdini/) composed
+# into the one shared HdArnoldRenderDelegate, that bridges Arnold's AiMsg log and Pixar's
+# Tf diagnostics into Houdini's Log Viewer panel. Not a separate delegate or
+# plugin. Off by default: only the htoa build turns this on, so vanilla/Maya/Katana builds
+# never compile or link it, and libs/common stays Houdini/HDK-free. Requires a Houdini
+# build (HOUDINI_LOCATION), and links libHoudiniUT.
+option(BUILD_HOUDINI_LOGGER "Build the Houdini-only Arnold/Tf log bridge helper" OFF)
+set(HOUDINI_LOGGER_NAME "Arnold Delegate" CACHE STRING
+    "Log Viewer source name used by BUILD_HOUDINI_LOGGER")
 
 
 # Build additions
@@ -45,17 +54,38 @@ option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
+set(SCHEMA_GEN_TIMEOUT "300" CACHE STRING
+    "Timeout in seconds for each schema-generation hython/python subprocess (a Houdini/Arnold license-server problem hangs rather than fails).")
+option(BUILD_TURNTABLE "Build the turntable tool" OFF)
 
 # Configurations:
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
 option(ENABLE_SHARED_ARRAYS "Enable using shared arrays" OFF)
-option(ENABLE_HYDRA2_RENDERSETTINGS "Enable using RenderSetting hydra prim" OFF)
+# Unrelated to BUILD_SCENE_INDEX_PLUGIN / ENABLE_SCENE_INDEX_IN_BUNDLE: those say whether the
+# scene index filters are compiled in, which Hydra 1 needs too. This one only picks the
+# default traversal mode, and USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX still overrides it.
+option(ENABLE_HYDRA2 "Traverse the stage with the scene index (Hydra 2) by default" ON)
 option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" OFF)
+# The bundle embeds the procedural alongside the USD/Hydra plugins. Hosts that ship the
+# procedural from an Arnold distribution instead only want the plugins, and embedding a
+# second copy would duplicate it and make the bundle something Arnold has to discover as
+# well as USD. ON preserves the existing behaviour.
+option(ENABLE_PROCEDURAL_IN_BUNDLE "Include the Arnold procedural in the bundle" ON)
+option(ENABLE_TRACING "Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE)." OFF)
+if (NOT ENABLE_TRACING)
+    # Apply globally, matching SConstruct:386-387 which appends TRACE_ENABLE=0 to the
+    # whole environment. libs/render_delegate sets it on its own target, so the
+    # delegate is covered but nodeRegistryArnold, sceneIndexArnold and
+    # usdImagingArnold are not, and they end up with USD trace instrumentation
+    # compiled in where the SCons build has none.
+    add_compile_definitions(TRACE_ENABLE=0)
+endif()
 option(MTOA_BUILD "Build MtoA-specific plugins (e.g. the ai<Name> primvar remap scene index)" OFF)
 if (MTOA_BUILD AND BUILD_BUNDLE)
     # The MtoA primvar remap SIP is useful only if the scene index ships in the bundle.
     set(ENABLE_SCENE_INDEX_IN_BUNDLE ON CACHE BOOL "Add the scene index filters in the bundle" FORCE)
 endif()
+
 option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
 
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")

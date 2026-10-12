@@ -125,11 +125,17 @@ protected:
         for (auto* v : _inMemoryVolumes) {
             f(v);
         }
+        for (auto* v : _pointsVolumes) {
+            f(v);
+        }
     }
 
     HdArnoldRenderDelegate* _renderDelegate;       ///< Pointer to the Render Delegate.
     std::vector<HdArnoldShape*> _volumes;          ///< Vector storing all the Volumes created.
     std::vector<HdArnoldShape*> _inMemoryVolumes;  ///< Vectoring storing all the Volumes for in-memory VDB storage.
+    /// Points nodes created for vdb grids that store OpenVDB points rather than a
+    /// regular volume/SDF grid, since arnold volumes can't render those directly (#2740).
+    std::vector<HdArnoldShape*> _pointsVolumes;
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL}; ///< Visibility of the shape.
     HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE}; ///< Sidedness of the shape.
 };

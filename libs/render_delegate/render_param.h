@@ -65,8 +65,11 @@ public:
 
     /// Constructor for HdArnoldRenderParam.
     HdArnoldRenderParam(HdArnoldRenderDelegate* delegate);
-    /// Destructor for HdArnoldRenderParam.
-    ~HdArnoldRenderParam() override = default;
+    /// Destructor for HdArnoldRenderParam. Must explicitly stop the message-log
+    /// callback so the registration is removed from Arnold's global table —
+    /// the defaulted destructor would leak the callback slot otherwise.
+    HDARNOLD_API
+    ~HdArnoldRenderParam() override;
 
     /// Starts or continues rendering.
     ///
@@ -83,17 +86,87 @@ public:
     /// @param needsRestart Whether or not changes are applied to the scene and we need to restart rendering.
     /// @param clearStatus Clears the internal failure status. Set it to false when no scene data changed, that could
     ///  affect the aborted internal status.
+    /// @param clearPaused Clears the internal paused status, but only when there is an actual render to interrupt:
+    ///  AiRenderInterrupt() unparks a render gated by AiRenderPause() (it clears Arnold's own pause flag and leaves
+    ///  the session in AI_RENDER_STATUS_PAUSED), so a pause in effect is not honoured past this call and the
+    ///  bookkeeping has to follow. A pause requested before the render began survives, since there is nothing to
+    ///  unpark and UpdateRender() is still holding the render at AI_RENDER_STATUS_NOT_STARTED. Set it to false only
+    ///  when the interrupt itself is the mechanism used to *achieve* the pause (see Pause()'s pre-7.5.4 fallback),
+    ///  not when it is caused by an unrelated scene edit.
     HDARNOLD_API
-    void Interrupt(bool needsRestart = true, bool clearStatus = true);
-    /// Pauses an ongoing render, does nothing if no render is running.
+    void Interrupt(bool needsRestart = true, bool clearStatus = true, bool clearPaused = true);
+    /// Pauses the render. On Arnold 7.5.4+ this gates the render threads via AiRenderPause() without discarding
+    /// accumulated progress; before that it falls back to interrupting the render. A pause requested before the
+    /// render has begun is remembered, and UpdateRender() then holds off on starting it.
     HDARNOLD_API
     void Pause();
-    /// Resumes an already paused render, does nothing if no render is running, or the render is not paused.
+    /// Resumes a paused render, does nothing if the render is not paused.
     HDARNOLD_API
     void Resume();
+    /// Returns whether a Pause() call is currently in effect. Cleared by Resume(), Restart(), or an
+    /// Interrupt() cancelling the pause (see Interrupt()'s clearPaused parameter). Note this cannot be derived
+    /// from AiRenderGetStatus(), which keeps reporting AI_RENDER_STATUS_RENDERING for a gated render.
+    ///
+    /// @return True if paused.
+    bool IsPaused() const { return _paused.load(std::memory_order_acquire); }
+    /// Stops the render, discarding any progress, and holds it stopped until Restart() (or Resume()) is called.
+    /// Unlike Pause() this does not preserve accumulated samples; unlike a bare Interrupt() the render is not
+    /// picked up again by the next UpdateRender() call.
+    HDARNOLD_API
+    void Stop();
+    /// Returns whether a Stop() call is currently in effect.
+    ///
+    /// @return True if stopped.
+    bool IsStopped() const { return _stopped.load(std::memory_order_acquire); }
+    /// Returns whether Arnold has delivered at least one viewport update since the render began.
+    ///
+    /// This only matters for accelerated rendering (options.direct_outputs), where the render result is pulled
+    /// with AiGetRenderOutput() instead of being pushed to us through a driver: that call is only valid once
+    /// Arnold has actually rendered something, and an AI_RENDER_UPDATE_VIEWPORT update is what tells us it has.
+    /// Set from Arnold's render thread and cleared right before AiRenderBegin().
+    ///
+    /// @return True if an AI_RENDER_UPDATE_VIEWPORT update has been received for the current render.
+    bool HasViewportUpdate() const { return _viewportUpdated.load(std::memory_order_acquire); }
+    /// Forgets any viewport update received so far, so AiGetRenderOutput() is not called again until Arnold
+    /// delivers a new one.
+    ///
+    /// Call this, with the render interrupted, whenever the outputs or the resolution change: Arnold only resizes
+    /// its direct output buffers when the next frame starts, and reading them into a texture already at the new
+    /// size before that reads past their end.
+    void ResetViewportUpdate() { _viewportUpdated.store(false, std::memory_order_release); }
+    /// Ends the render session, so the next UpdateRender() begins a new one.
+    ///
+    /// Arnold only creates the direct outputs pipeline when a GPU session is set up, so toggling
+    /// options.direct_outputs on a running session is not reliably picked up by AiRenderRestart().
+    HDARNOLD_API
+    void EndSession();
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
+
+    /// Quiesces imager evaluation (blocking) so nodes only an imager reads can be edited, without
+    /// interrupting the render. Deferred like Interrupt()/_needsRestart, and for the same reason:
+    /// HdArnoldNodeGraph::Sync only queues its connections, ProcessConnections() applies them later,
+    /// so the reopen can't be scoped to the caller. Inert in batch or under a procedural parent
+    /// (where it would deadlock), matching Interrupt(); ResumeImagers() repeats those guards.
+    HDARNOLD_API
+    void ImagerInterrupt();
+    /// Reopens the barrier closed by ImagerInterrupt() and refreshes the imagers. Does nothing
+    /// unless a resume is owed: on a finished render AiImagerResume() restarts an imager-only pass,
+    /// so an unconditional call would knock a converged render back to converging every frame.
+    HDARNOLD_API
+    void ResumeImagers();
+    /// Drops any queued restart / imager resume without acting on it, for teardown. Leaves _paused
+    /// and _stopped alone - they are state, and clearing _stopped would *permit* a restart.
+    HDARNOLD_API
+    void ClearPendingUpdates();
+    /// Returns whether Arnold's render threads are running, i.e. whether the scene is unsafe to
+    /// edit in ways that need the render parked - destroying a node in particular. Interrupt()
+    /// parks the render, ImagerInterrupt() deliberately does not.
+    ///
+    /// @return True if a render is in progress.
+    HDARNOLD_API
+    bool IsRenderInProgress() const;
 
     /// Gets the shutter range.
     ///
@@ -140,6 +213,11 @@ public:
     /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
     std::string GetRenderStatusString() const;
 
+    /// Updates the per-instance cached log message from the Arnold message
+    /// callback. Public so the file-scope `_MsgStatusCallback` free function can
+    /// route into the correct instance via its userPtr argument.
+    void SetCachedLogMessage(const char* msg);
+
     /// Calculates the total render time. This will reset if the scene is dirtied (i.e. tthe camera changes)
     ///
     /// @return elapsed render time in ms
@@ -163,26 +241,71 @@ public:
     const SdfPath& GetHydraRenderSettingsPrimPath() const;
 
 private:
+    /// Render update callback handed to AiRenderBegin().
+    ///
+    /// Arnold invokes this from its render thread every time the render changes state. The only update we act on
+    /// is AI_RENDER_UPDATE_VIEWPORT, which flags that a viewport frame is available (see HasViewportUpdate()).
+    /// Every other update type is answered with the status Arnold expects for it -- the
+    /// render_update_type_to_status table in ai_render.h -- which is a no-op for the render's state machine, so
+    /// registering this callback leaves behaviour and interactivity exactly as they are without one.
+    ///
+    /// @param privateData Pointer to the HdArnoldRenderParam driving the render.
+    /// @param updateType Why Arnold is invoking the callback.
+    /// @param updateInfo Details about the current render state. Unused.
+    /// @return The status Arnold should carry on with.
+    static AtRenderStatus _UpdateCallback(
+        void* privateData, AtRenderUpdateType updateType, const AtRenderUpdateInfo* updateInfo);
+
     inline void ResetStartTimer()
     {
-        _renderTimeMutex.lock();
+        // Use std::lock_guard so the mutex is released even if the time_point
+        // assignment or system_clock::now() throws. The previous manual
+        // lock()/unlock() would deadlock every future caller of any method
+        // protected by _renderTimeMutex if an exception escaped.
+        std::lock_guard<std::mutex> guard(_renderTimeMutex);
         _renderStartTime = std::chrono::system_clock::now();
-        _renderTimeMutex.unlock();
     }
 
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
-    std::atomic<bool> _needsRestart;
+    std::atomic<bool> _needsRestart{false};
     /// Indicate if rendering has been aborted at one point or another.
-    std::atomic<bool> _aborted;
-    /// Indicate if rendering has been paused.
-    std::atomic<bool> _paused;
+    std::atomic<bool> _aborted{false};
+    /// Indicate if rendering has been paused. This is plain state, not a one-shot intent flag: UpdateRender() reads
+    /// it without consuming it, and only Resume()/Restart()/Stop() and a pause-cancelling Interrupt() clear it. It
+    /// has to be tracked here rather than queried from Arnold because AiRenderIsPaused() only exists in 7.5.4+, and
+    /// because a pause requested before AiRenderBegin() is not something Arnold can remember.
+    /// Prior to C++20 std::atomic<bool>'s default constructor leaves the value indeterminate, and the cpp file's
+    /// constructor explicitly stores false into _needsRestart and _aborted but not into _paused — so the first
+    /// UpdateRender call read uninitialized memory. Initialize all of them here for safety.
+    std::atomic<bool> _paused{false};
+    /// Indicate if rendering has been stopped by Stop() and must stay stopped until Restart()/Resume(). Distinct
+    /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
+    /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.
+    std::atomic<bool> _stopped{false};
+    /// Indicate whether Arnold has sent at least one AI_RENDER_UPDATE_VIEWPORT update for this render. Set by
+    /// _UpdateCallback() on the render thread, cleared just before AiRenderBegin(). Deliberately *not* cleared on
+    /// AiRenderRestart(): once Arnold has produced a viewport frame the outputs stay valid to fetch, and clearing
+    /// it would blank the viewport on every scene edit, which is the opposite of what accelerated rendering is for.
+    std::atomic<bool> _viewportUpdated{false};
+    /// Indicate that ImagerInterrupt() closed Arnold's imager barrier, so a ResumeImagers() is owed. A debt, not a
+    /// latch on the interrupt itself: Syncs run in parallel and each caller needs AiImagerInterrupt()'s blocking
+    /// drain, so the call is always issued, and Arnold's flag-based barrier balances N interrupts with one resume.
+    std::atomic<bool> _imagerInterrupted{false};
 
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
 
-    unsigned int _msgLogCallback = 0;
+    int _msgLogCallback = -1;
+
+    /// Per-instance cached log message and its mutex. These were previously
+    /// file-scope globals shared across every HdArnoldRenderParam instance, so
+    /// concurrent renders (multiple delegates) overwrote each other's status
+    /// strings and GetRenderStatusString could return a message that came from
+    /// a different instance entirely.
+    mutable std::mutex _cachedLogMutex;
+    std::string _cachedLogMsg;
 
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
@@ -208,9 +331,24 @@ public:
     /// Only calls interrupt once per created instance of HdArnoldRenderParamInterrupt.
     void Interrupt()
     {
-        if (!_hasInterrupted) {
+        // _param is initialized in the constructor via reinterpret_cast from the
+        // HdRenderParam* the caller passes in. If the caller passes nullptr
+        // (legal at the HdRenderParam* interface), _param is also nullptr and
+        // dereferencing it crashes. Guard against that here.
+        if (_param != nullptr && !_hasInterrupted) {
             _hasInterrupted = true;
             _param->Interrupt();
+        }
+    }
+
+    /// The counterpart of Interrupt() for imager graphs: closes Arnold's imager barrier instead of
+    /// stopping the render, latched once per instance the same way. Unlike Interrupt() the reopen
+    /// is not scoped here - see HdArnoldRenderParam::ImagerInterrupt().
+    void ImagerInterrupt()
+    {
+        if (_param != nullptr && !_hasImagerInterrupted) {
+            _hasImagerInterrupted = true;
+            _param->ImagerInterrupt();
         }
     }
 
@@ -227,6 +365,8 @@ public:
 private:
     /// Indicate if the render has been interrupted already.
     bool _hasInterrupted = false;
+    /// Indicate if the imager barrier has been closed already by this instance.
+    bool _hasImagerInterrupted = false;
     /// Pointer to the Arnold Render Param struct held inside.
     HdArnoldRenderParam* _param = nullptr;
 };

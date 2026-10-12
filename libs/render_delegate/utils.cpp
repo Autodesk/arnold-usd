@@ -31,6 +31,7 @@
 // limitations under the License.
 #include "utils.h"
 
+#include <pxr/base/arch/env.h>
 #include <pxr/base/gf/vec2d.h>
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec2h.h>
@@ -81,6 +82,30 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 } // namespace
 
+// Build-time default for the Hydra 1 / Hydra 2 choice, set from the ENABLE_HYDRA2 build
+// option. This is deliberately independent of ENABLE_SCENE_INDEX: that one says whether the
+// scene index filters are compiled in at all, and Hydra 1 needs them just as much as Hydra 2
+// does (HdRenderIndex applies the per-renderer filters under scene index emulation, which is
+// on by default in either mode). Hosts that are not ready for Hydra 2 build with
+// ENABLE_HYDRA2=False and must keep BUILD_SCENE_INDEX_PLUGIN enabled.
+#ifndef ARNOLD_ENABLE_HYDRA2
+#define ARNOLD_ENABLE_HYDRA2 1
+#endif
+
+bool HdArnoldIsSceneIndexEnabled()
+{
+    if (!ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX"))
+        return ARNOLD_ENABLE_HYDRA2 != 0;
+
+    std::string useSceneIndex = ArchGetEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX");
+    std::string::size_type i = useSceneIndex.find(" ");
+    while (i != std::string::npos) {
+        useSceneIndex.erase(i, 1);
+        i = useSceneIndex.find(" ");
+    }
+    return useSceneIndex != "0";
+}
+
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
     HdArnoldSampledMatrixType xf{};
@@ -114,9 +139,11 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         xf.values.resize(transformKeys);
         // If an amount of transform keys is provided, we must resample
         // the times & values to match the new amount
+        const float divisor = std::max(static_cast<float>(transformKeys) - 1.f, 1.f);
         for (int i = 0; i < transformKeys; ++i) {
-            xf.times[i] = timeStart + i * (timeEnd - timeStart) /
-                (static_cast<float>(transformKeys)-1.f);
+            xf.times[i] = (transformKeys == 1)
+                ? timeStart
+                : timeStart + i * (timeEnd - timeStart) / divisor;
             xf.values[i] = xfOrig.Resample(xf.times[i]);
         }
     }
@@ -169,7 +196,10 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
     HdArnoldEnsureSamplesCount(samplingInterval, xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
-        for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
+        // The normal path below explicitly handles nodes[0] outside the loop; the
+        // fallback must do the same or nodes[0] would keep its stale matrix while
+        // every other node was reset to identity.
+        for (auto i = decltype(nodeCount){0}; i < nodeCount; ++i) {
             AiNodeSetArray(nodes[i], str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
             AiNodeResetParameter(nodes[i], str::motion_start);
             AiNodeResetParameter(nodes[i], str::motion_end);
@@ -500,10 +530,12 @@ size_t HdArnoldSetPositionFromPrimvar(
 
 void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value)
 {
-    if (!value.IsHolding<VtVec3fArray>()) {
+    // Accept both VtVec3fArray and VtVec3dArray; the helper does the
+    // double->float per-element conversion when needed. (issue #480)
+    VtVec3fArray values;
+    if (!HdArnoldUnboxArrayValue(value, values)) {
         return;
     }
-    const auto& values = value.UncheckedGet<VtVec3fArray>();
     AiNodeSetArray(node, paramName, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
 }
 
@@ -530,6 +562,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     auto* out = static_cast<float*>(AiArrayMap(arr));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
+    AiArrayUnmap(arr);
     AiNodeSetArray(node, str::radius, arr);
 }
 
@@ -554,7 +587,6 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
         const auto data = xf.Resample(timeSamples[i]);
         AiArraySetKey(arr, i, data.data());
     }
-    AiArrayUnmap(arr);
     AiNodeSetArray(node, arnoldAttr, arr);
 }
 

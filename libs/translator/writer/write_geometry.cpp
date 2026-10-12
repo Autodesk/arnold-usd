@@ -91,7 +91,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         if (nelems > 0) {
             vtArrNsides.resize(nelems);
             for (unsigned int i = 0; i < nelems; ++i)
-                vtArrNsides[i] = (unsigned char)AiArrayGetUInt(nsides, i);
+                vtArrNsides[i] = (int)AiArrayGetUInt(nsides, i);
         }
     }
     if (vtArrNsides.empty()) {
@@ -120,7 +120,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             uvValues[i] = GfVec2f(uvArrayValues[i].x, uvArrayValues[i].y);
         }
         writer.SetPrimVar(uvPrimVar, uvValues);
-        AiArrayUnmap(uvlist);
+        AiArrayUnmapConst(uvlist);
 
         // check if the indices are present
         AtArray *uvidxsArray = AiNodeGetArray(node, AtString("uvidxs"));
@@ -133,7 +133,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
                 vtIndices[i] = uvidxs[i];
             }
             writer.SetPrimVarIndices(uvPrimVar, vtIndices);
-            AiArrayUnmap(uvidxsArray);
+            AiArrayUnmapConst(uvidxsArray);
         }
     }
     AtArray *nlist = AiNodeGetArray(node, AtString("nlist"));
@@ -163,7 +163,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             writer.SetPrimVar(normalsPrimVar, normalsValues);
         }
         
-        AiArrayUnmap(nlist);
+        AiArrayUnmapConst(nlist);
 
         // check if the indices are present
         AtArray *nidxsArray = AiNodeGetArray(node, AtString("nidxs"));
@@ -175,18 +175,26 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
                 vtIndices[i] = nidxs[i];
             }
             writer.SetPrimVarIndices(normalsPrimVar, vtIndices);
-            AiArrayUnmap(nidxsArray);
+            AiArrayUnmapConst(nidxsArray);
         }
     }
     AtString subdivType = AiNodeGetStr(node, AtString("subdiv_type"));
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
-    if (subdivType == catclarkStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->catmullClark);
-    else if (subdivType == linearStr)
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->bilinear);
-    else
-        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->none);
+    // subdivisionScheme is a uniform attribute in USD and must not have time samples, so it is
+    // written directly at default time rather than through the time-varying SetAttribute logic.
+    // The default-time pass always authors it, so that subdiv_type wins over any value the host
+    // already wrote on this prim (e.g. MayaUSD's defaultMeshScheme). Per-frame passes only author
+    // it if nothing was written yet, so a frame range export keeps a single value.
+    UsdAttribute subdivSchemeAttr = mesh.GetSubdivisionSchemeAttr();
+    if (writer.GetTime().IsDefault() || !subdivSchemeAttr.HasAuthoredValue()) {
+        TfToken subdivScheme = UsdGeomTokens->none;
+        if (subdivType == catclarkStr)
+            subdivScheme = UsdGeomTokens->catmullClark;
+        else if (subdivType == linearStr)
+            subdivScheme = UsdGeomTokens->bilinear;
+        subdivSchemeAttr.Set(subdivScheme);
+    }
 
     // always write subdiv iterations even if it's set to default
     UsdAttribute attr = prim.CreateAttribute(
@@ -254,6 +262,9 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             break;
     }
     writer.SetAttribute(curves.GetTypeAttr(), curveType);
+    // Track whether the curves are cubic so we can pick the right widths
+    // interpolation below — see the radius/widths block.
+    const bool curvesAreCubic = (curveType == UsdGeomTokens->cubic);
 
     WriteAttribute(node, "points", prim, curves.GetPointsAttr(), writer);
 
@@ -268,7 +279,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             vertexCountArray[i] = (int)in[i];
         }
         writer.SetAttribute(curves.GetCurveVertexCountsAttr(), vertexCountArray);
-        AiArrayUnmap(numPointsArray);
+        AiArrayUnmapConst(numPointsArray);
     }
     _exportedAttrs.insert("num_points");
 
@@ -282,12 +293,22 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             widthArray[i] = in[i] * 2.f;
         }
         writer.SetAttribute(curves.GetWidthsAttr(), widthArray);
-        AiArrayUnmap(radiusArray);
+        AiArrayUnmapConst(radiusArray);
 
-        if (radiusCount == 1)
+        if (radiusCount == 1) {
             curves.SetWidthsInterpolation(UsdGeomTokens->constant);
-        else
+        } else if (curvesAreCubic) {
+            // Arnold's radius array is one value per CV (per control point).
+            // For cubic basis curves UsdGeomBasisCurves expects "vertex"
+            // interpolation when there is one value per CV — "varying" has a
+            // *different* element count for cubic curves (one per segment +
+            // 1 / per-wrap, not per CV), so the previous unconditional
+            // "varying" silently produced a size-mismatched primvar. Linear
+            // curves keep "varying" since varying == vertex for them.
+            curves.SetWidthsInterpolation(UsdGeomTokens->vertex);
+        } else {
             curves.SetWidthsInterpolation(UsdGeomTokens->varying);
+        }
     }
     _exportedAttrs.insert("radius");
 
@@ -326,7 +347,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
             widthArray[i] = in[i] * 2.f;
         }
         writer.SetAttribute(points.GetWidthsAttr(), widthArray);
-        AiArrayUnmap(radiusArray);
+        AiArrayUnmapConst(radiusArray);
     }
     _exportedAttrs.insert("radius");
 

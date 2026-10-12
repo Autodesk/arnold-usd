@@ -63,7 +63,11 @@ void HdArnoldOptions::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* render
  
     const auto id = GetId();
     if ((*dirtyBits & HdArnoldOptions::DirtyParams) && !id.IsEmpty()) {
-        HdArnoldRenderParamInterrupt param(renderParam);
+        // Rename the outer wrapper to avoid the inner `param` iterator variable
+        // shadowing it — previously the constructor created this wrapper but the
+        // shadow meant we never reached its Interrupt() method, so option changes
+        // never halted an in-flight render.
+        HdArnoldRenderParamInterrupt paramInterrupt(renderParam);
 
         const AtNodeEntry *optionsNodeEntry = AiNodeEntryLookUp(str::options);
         if (optionsNodeEntry == nullptr)
@@ -82,13 +86,16 @@ void HdArnoldOptions::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* render
 
             const VtValue val = sceneDelegate->Get(id, paramToken);
             if (!val.IsEmpty()) {
+                // We are about to mutate the options node — interrupt the render
+                // (no-op after the first call thanks to HdArnoldRenderParamInterrupt).
+                paramInterrupt.Interrupt();
                 if (paramName == str::camera) {
                     // For cameras, we need to look for the right render camera
                     // and set the connection in the options node
                     std::string camera = VtValueGetString(val);
                     HdArnoldCamera* cameraNode = reinterpret_cast<HdArnoldCamera*>(
                         sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->camera, SdfPath(camera.c_str())));
-                                        
+
                     if (cameraNode) {
                         cameraNode->Sync(sceneDelegate, renderParam, dirtyBits);
                         AtNode* camNode = cameraNode->GetCamera();
@@ -97,7 +104,7 @@ void HdArnoldOptions::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* render
                 } else {
                     HdArnoldSetParameter(options, param, val, _renderDelegate);
                 }
-            }            
+            }
         }
         AiParamIteratorDestroy(paramIter);
     }

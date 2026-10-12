@@ -232,4 +232,115 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs);
 /// Type to store arnold param names and values.
 using ArnoldUsdParamValueList = std::vector<std::pair<AtString, VtValue>>;
 
+/// Helper that filters mesh data to drop entries belonging to "hole" faces
+/// (as expressed by USD's `holeIndices` attribute).
+///
+/// The class pre-computes:
+///   - a `std::vector<bool>` membership table for O(1) hole-face tests, and
+///   - a prefix sum of the original face-vertex counts so that face-varying
+///     entries can be filtered with a single range copy per face.
+///
+/// All filter methods are no-ops (return false) when `Empty()` is true,
+/// so callers can safely wrap them unconditionally.
+class ARCH_HIDDEN MeshHoleFilter {
+public:
+    MeshHoleFilter() = default;
+
+    /// Build / rebuild the internal lookup tables.
+    /// If @p holeIndices is empty, the filter becomes empty (no-op).
+    void Build(const VtIntArray& holeIndices, const VtIntArray& originalFaceVertexCounts);
+
+    /// Reset to the empty state.
+    void Clear();
+
+    bool Empty() const { return _holeCount == 0; }
+    size_t NumOriginalFaces() const { return _isHole.size(); }
+    size_t NumKeptFaces() const { return _isHole.size() - _holeCount; }
+    size_t NumHoles() const { return _holeCount; }
+    /// True if the face index is marked as a hole. Index must be < NumOriginalFaces().
+    bool IsHole(size_t face) const { return _isHole[face]; }
+
+    /// Filter a per-face (uniform) array (one entry per face).
+    /// Returns true if filtering was applied; false on no-op (filter empty
+    /// or array size does not match the original face count).
+    template <typename T>
+    bool FilterUniformArray(VtArray<T>& arr) const
+    {
+        if (Empty()) return false;
+        if (arr.size() != _isHole.size()) return false;
+        // Read via const cdata() to avoid COW detach on a possibly-shared
+        // input; the input is then replaced via move-assign below.
+        const T* src = arr.cdata();
+        VtArray<T> out;
+        out.reserve(NumKeptFaces());
+        for (size_t i = 0; i < _isHole.size(); ++i) {
+            if (!_isHole[i]) out.push_back(src[i]);
+        }
+        arr = std::move(out);
+        return true;
+    }
+    template <typename T>
+    bool FilterUniformArray(std::vector<T>& arr) const
+    {
+        if (Empty()) return false;
+        if (arr.size() != _isHole.size()) return false;
+        std::vector<T> out;
+        out.reserve(NumKeptFaces());
+        for (size_t i = 0; i < _isHole.size(); ++i) {
+            if (!_isHole[i]) out.push_back(arr[i]);
+        }
+        arr = std::move(out);
+        return true;
+    }
+
+    /// Filter a face-varying array (entries grouped per face, sized to the
+    /// sum of the original face vertex counts). Uses range copies based on
+    /// the pre-computed prefix-sum offsets.
+    template <typename T>
+    bool FilterFaceVaryingArray(VtArray<T>& arr) const
+    {
+        if (Empty()) return false;
+        const size_t expected = _offsets.empty() ? 0 : _offsets.back();
+        if (arr.size() < expected) return false;
+        // cdata() does not trigger COW detach on the input.
+        const T* src = arr.cdata();
+        VtArray<T> out;
+        out.reserve(expected); // upper bound; actual is expected - holeVertexCount
+        for (size_t i = 0; i < _isHole.size(); ++i) {
+            if (_isHole[i]) continue;
+            for (size_t j = _offsets[i]; j < _offsets[i + 1]; ++j) {
+                out.push_back(src[j]);
+            }
+        }
+        arr = std::move(out);
+        return true;
+    }
+    template <typename T>
+    bool FilterFaceVaryingArray(std::vector<T>& arr) const
+    {
+        if (Empty()) return false;
+        const size_t expected = _offsets.empty() ? 0 : _offsets.back();
+        if (arr.size() < expected) return false;
+        std::vector<T> out;
+        out.reserve(expected);
+        for (size_t i = 0; i < _isHole.size(); ++i) {
+            if (_isHole[i]) continue;
+            out.insert(out.end(), arr.begin() + _offsets[i], arr.begin() + _offsets[i + 1]);
+        }
+        arr = std::move(out);
+        return true;
+    }
+
+    /// Filter a uniform VtValue by trying the common primvar element types.
+    /// Returns true if a matching type was found and filtered.
+    bool FilterUniformValue(VtValue& value) const;
+    /// Filter a face-varying VtValue by trying the common primvar element types.
+    bool FilterFaceVaryingValue(VtValue& value) const;
+
+private:
+    std::vector<bool> _isHole;     ///< Per-face hole membership (size = numOriginalFaces).
+    std::vector<size_t> _offsets;  ///< Prefix sum of face vertex counts (size = numOriginalFaces + 1).
+    size_t _holeCount = 0;         ///< Number of unique hole faces.
+};
+
 PXR_NAMESPACE_CLOSE_SCOPE

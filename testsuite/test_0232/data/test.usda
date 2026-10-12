@@ -24,8 +24,6 @@ def Xform "lights"
         float inputs:intensity = 1
         bool inputs:normalize = 0
         float inputs:specular = 1
-        asset inputs:texture:file = @./data/overclouds.exr@
-        token inputs:texture:format = "latlong"
         rel portals = None
         string primvars:arnold:aov = "dome" (
             interpolation = "constant"
@@ -148,7 +146,7 @@ def Scope "Render"
                 string sourceName = "normals"
                 token sourceType = "raw"
             }
-	}
+        }
 
         def RenderProduct "Arnold_renderproduct"
         {
@@ -172,8 +170,7 @@ def Scope "Render"
         custom bool arnold:global:AA_sample_clamp_affects_aovs = 0
         custom int arnold:global:AA_samples = 6
         custom int arnold:global:AA_samples_max = 10
-        custom int arnold:global:AA_seed
-        int arnold:global:AA_seed = 1138
+        custom int arnold:global:AA_seed = 1138
         int arnold:global:AA_seed.timeSamples = {
             1138: 1138,
         }
@@ -206,9 +203,7 @@ def Scope "Render"
     }
 }
 
-def "pig" (
-    
-)
+def "pig"
 {
     matrix4d xformOp:transform = ( (50, 0, 0, 0), (0, 50, 0, 0), (0, 0, 50, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]

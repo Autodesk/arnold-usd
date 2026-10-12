@@ -44,14 +44,21 @@ namespace {
 UsdPrim _GetNodeGraph(UsdPrim& prim, UsdArnoldWriter &writer, const TfToken& lightShaderAttr)
 {
     std::string nodeGraphName = prim.GetPath().GetString() + "/light_shader";
-    SdfPath nodeGraphPath(nodeGraphName);        
+    SdfPath nodeGraphPath(nodeGraphName);
     UsdStageRefPtr stage = writer.GetUsdStage();
     UsdPrim nodeGraphPrim = stage->DefinePrim(nodeGraphPath, str::t_ArnoldNodeGraph);
 
-    UsdAttribute arnoldShaderAttr = 
-        prim.CreateAttribute(lightShaderAttr, 
+    UsdAttribute arnoldShaderAttr =
+        prim.CreateAttribute(lightShaderAttr,
         SdfValueTypeNames->String, false);
-    arnoldShaderAttr.Set(nodeGraphPrim.GetPath().GetString());
+    arnoldShaderAttr.Set(nodeGraphName);
+
+    // Author the local path under primvars:arnold:name so the prim can still
+    // be resolved when this file is referenced and the runtime path gets
+    // remapped under a different namespace (see HdArnoldRenderDelegate's
+    // node-graph name map).
+    nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+        .Set(nodeGraphName);
 
     return nodeGraphPrim;
 }
@@ -82,23 +89,33 @@ bool _WriteArnoldLightFilters(const AtNode* node, UsdPrim& prim,
         return false;
 
     UsdPrim nodeGraphPrim = _GetNodeGraph(prim, writer, lightShaderAttr);
+    // Use a separate counter for the :iN suffix instead of the loop index. If
+    // a slot in the Arnold filters array is null we skip it, but the next
+    // valid filter must still land on the next contiguous :iN — otherwise
+    // outputs:filters:i1 ends up missing and the reader (which iterates i1,
+    // i2, … and stops at the first missing slot) truncates the filter list.
+    int outputIndex = 1;
     for (unsigned int i = 0; i < numFilters; ++i) {
         AtNode* filter = (AtNode*)AiArrayGetPtr(lightFilters, i);
         if (filter == nullptr)
             continue;
 
-        TfToken filterIndexAttrName(TfStringPrintf("outputs:filters:i%d", i+1));
-        UsdAttribute filterIndexAttr = nodeGraphPrim.CreateAttribute(filterIndexAttrName, 
-            SdfValueTypeNames->Token, false);
-        
         writer.WritePrimitive(filter);
         std::string filterName = UsdArnoldPrimWriter::GetArnoldNodeName(filter, writer);
         UsdPrim filterPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(filterName));
+        if (!filterPrim)
+            continue;
+
+        TfToken filterIndexAttrName(TfStringPrintf("outputs:filters:i%d", outputIndex));
+        UsdAttribute filterIndexAttr = nodeGraphPrim.CreateAttribute(filterIndexAttrName,
+            SdfValueTypeNames->Token, false);
+
         UsdAttribute filterOutputAttr = filterPrim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
         filterName += ".outputs:out";
-        
+
         SdfPath filterOutputPath(filterName);
         filterIndexAttr.AddConnection(filterOutputPath);
+        outputIndex++;
     }
     return true;
 }

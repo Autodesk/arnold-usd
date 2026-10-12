@@ -143,13 +143,26 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
     // Create the ArnoldNodeGraph primitive
     UsdPrim nodeGraphPrim = stage->DefinePrim(SdfPath(nodeGraphName), _tokens->ArnoldNodeGraph);
 
+    // Author the local path under primvars:arnold:name so the prim can still
+    // be resolved when this file is referenced and the runtime path gets
+    // remapped under a different namespace.
+    nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+        .Set(nodeGraphName);
+
     // Reference the nodeGraph in our RenderSetting's attribute (e.g. arnold:global:background)
     TfToken terminal(arnoldPrefix + attrStr);
-    UsdAttribute nodeGraphTerminal = 
+    UsdAttribute nodeGraphTerminal =
         prim.CreateAttribute(terminal, SdfValueTypeNames->String, false);
     nodeGraphTerminal.Set(nodeGraphName);
 
     std::string idSuffix;
+    // For array attributes (aov_shaders) the ":iN" suffix used to be derived
+    // from the loop index directly. That meant a null entry in the source
+    // array — or an entry whose USD prim couldn't be resolved — produced
+    // outputs:aov_shaders:i2 with no i1, and the reader walks i1, i2, … and
+    // stops at the first missing slot. Track our own contiguous counter and
+    // only bump it when an entry is actually authored.
+    int outputIndex = 1;
     // Loop through each of the nodes to write
     for (size_t i = 0; i < nodesArray.size(); ++i) {
         AtNode* target = nodesArray[i];
@@ -160,19 +173,23 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
         std::string hierarchyPath = TfGetPathName(targetName);
         if (hierarchyPath != "/")
             writer.SetStripHierarchy(hierarchyPath);
-        
+
         // Author the target shader, under the nodeGraph scope
         writer.WritePrimitive(target);
         UsdPrim targetPrim = stage->GetPrimAtPath(SdfPath(targetName));
-        
-        // For array attributes (aov_shaders) we need add the index, starting at 1
+        if (!targetPrim) {
+            if (hierarchyPath != "/")
+                writer.SetStripHierarchy(stripHierarchy);
+            continue;
+        }
+
         // e.g. outputs:aov_shaders:i1
         if (attrType == AI_TYPE_ARRAY)
-            idSuffix = TfStringPrintf(":i%d", (int)i+1);
-        
+            idSuffix = TfStringPrintf(":i%d", outputIndex);
+
         // Create the node graph terminal
         TfToken outputGraphAttr(outputPrefix + attrStr + idSuffix);
-        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(outputGraphAttr, 
+        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(outputGraphAttr,
             SdfValueTypeNames->Token, false);
 
         // Ensure the target shader has an output attribute (outputs:out)
@@ -183,6 +200,7 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
         // Eventually restore the previous stripHierarchy
         if (hierarchyPath != "/")
             writer.SetStripHierarchy(stripHierarchy);
+        outputIndex++;
     }
     // Restore the previous scope
     writer.SetScope(prevScope);
@@ -194,9 +212,9 @@ static TfToken _GetUsdDataType(const std::string& aovType, bool isHalf)
         return isHalf ? _tokens->color3h : _tokens->color3f;
     if (aovType == "RGBA")
         return isHalf ? _tokens->color4h : _tokens->color4f;
-    if (aovType == "VECTOR")
+    if (aovType == "VECTOR" || aovType == "POINT")
         return isHalf ? _tokens->half3 : _tokens->float3;
-    if (aovType == "VECTOR2")
+    if (aovType == "VECTOR2" || aovType == "POINT2")
         return isHalf ? _tokens->half2 : _tokens->float2;
     if (aovType == "FLOAT")
         return isHalf ? _tokens->half : _tokens->_float;
@@ -232,8 +250,8 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                        AiNodeGetInt(node, str::region_max_x),
                        AiNodeGetInt(node, str::region_max_y));
 
-    if (cropRegion[0] > 0 && cropRegion[1] > 0 && 
-        cropRegion[2] > 0 && cropRegion[3] > 0) {
+    if (cropRegion[0] >= 0 && cropRegion[1] >= 0 &&
+        cropRegion[2] >= 0 && cropRegion[3] >= 0) {
         cropRegion[0] /= resolution[0];
         cropRegion[1] /= resolution[1];
         cropRegion[2] = (cropRegion[2] + 1.f) / resolution[0];
@@ -242,6 +260,9 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
         cropRegion[1] = 1.f - cropRegion[1];
         cropRegion[3] = 1.f - cropRegion[3];
 
+        if (cropRegion[1] > cropRegion[3])
+            std::swap(cropRegion[1], cropRegion[3]);
+        
         writer.SetAttribute(renderSettings.CreateDataWindowNDCAttr(), cropRegion);
     }
     _exportedAttrs.insert("region_min_x");
@@ -444,18 +465,27 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
             // conflict between different nodes
             _exportedAttrs.clear();
             
-            // Create the RenderVar for this AOV
-            std::string varName = renderVarsPrefix + output.aovName;
+            // Create the RenderVar for this AOV.
+            //
+            // Arnold uses a trailing '*' to mean "all light groups" (e.g.
+            // RGBA*). '*' is not a valid character in a USD identifier, so we
+            // need to rewrite it to a textual suffix before turning it into
+            // an SdfPath. The strip used to happen AFTER the duplicate-name
+            // loop, which meant that the SECOND occurrence of "RGBA*" became
+            // "/Render/Vars/RGBA*1" — last character is '1', not '*', so the
+            // strip was skipped and the path kept the illegal asterisk. Do
+            // the rewrite on the base AOV name first.
+            std::string baseAovName = output.aovName;
+            if (!baseAovName.empty() && baseAovName.back() == '*') {
+                baseAovName.pop_back();
+                baseAovName += std::string("all");
+            }
+            std::string varName = renderVarsPrefix + baseAovName;
             int aovIndex = 0;
             while (aovNames.find(varName) != aovNames.end()) {
-                varName = renderVarsPrefix + output.aovName + std::to_string(++aovIndex);
+                varName = renderVarsPrefix + baseAovName + std::to_string(++aovIndex);
             }
             aovNames.insert(varName);
-
-            if (varName.back() == '*') {
-                varName.pop_back();
-                varName += std::string("all");
-            }
 
             SdfPath aovPath(varName);
             UsdRenderVar renderVar = UsdRenderVar::Define(stage, aovPath);
@@ -472,7 +502,15 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                     renderVarPrim.CreateAttribute(_tokens->aovSettingName, SdfValueTypeNames->String), output.layerName);
             }
             if (output.camera) {
-                std::string cameraName = UsdArnoldPrimWriter::GetArnoldNodeName(output.camera, writer);
+                // Use the raw Arnold node name so the value matches what the
+                // node will be called after readback (when primvars:arnold:name
+                // is round-tripped). Arnold core parses this string directly
+                // when resolving the AOV output line, bypassing the reader's
+                // path-to-node remapping map. Fall back to the sanitized USD
+                // path only if the node has no name (#2654).
+                std::string cameraName = AiNodeGetName(output.camera);
+                if (cameraName.empty())
+                    cameraName = UsdArnoldPrimWriter::GetArnoldNodeName(output.camera, writer);
                 writer.SetAttribute(
                     renderVarPrim.CreateAttribute(_tokens->aovSettingCamera, SdfValueTypeNames->String), cameraName);
             }
@@ -487,6 +525,14 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
                 writer.SetAttribute(
                     renderVarPrim.CreateAttribute(_tokens->aovSettingWidth, SdfValueTypeNames->Float),
                     AiNodeGetFlt(output.filter, str::width));
+                // _exportedAttrs was cleared at the top of this iteration, so
+                // _WriteArnoldParameters below will iterate every filter
+                // parameter including "width" and re-author it as
+                // arnold:<filterType>:width — leaving two competing values
+                // for the same logical setting on the RenderVar. The canonical
+                // form is arnold:width (just authored above), so mark "width"
+                // exported to suppress the duplicate.
+                _exportedAttrs.insert("width");
             }
             // Author the filter attributes with the arnold:{filterType}: prefix
             std::string filterAttrPrefix = std::string("arnold:") + filterType;
@@ -528,15 +574,20 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
     std::string driverType = AiNodeEntryGetName(driverEntry);
     writer.SetAttribute(renderProductPrim.CreateAttribute(_tokens->aovDriver, SdfValueTypeNames->String),
         driverType);
-    AtString filename = AiNodeGetStr(node, str::filename);
-    _exportedAttrs.insert("filename");
-    writer.SetAttribute(renderProduct.CreateProductNameAttr(), TfToken(filename.c_str()));
+    // Not every driver writes a file: driver_no_op has neither filename nor color_space.
+    const bool hasFilename = AiNodeEntryLookUpParameter(driverEntry, str::filename) != nullptr;
+    if (hasFilename) {
+        AtString filename = AiNodeGetStr(node, str::filename);
+        _exportedAttrs.insert("filename");
+        writer.SetAttribute(renderProduct.CreateProductNameAttr(), TfToken(filename.c_str()));
+    }
     renderProduct.CreateOrderedVarsRel();
     // loop through driver attributes, set them in the render product with the driverType prefix
    std::string attrPrefix = std::string("arnold:") + driverType;
    
    // FIXME add color space as arnold:color_space
-   AtString colorSpace = AiNodeGetStr(node, str::color_space);
+   AtString colorSpace = AiNodeEntryLookUpParameter(driverEntry, str::color_space) ?
+        AiNodeGetStr(node, str::color_space) : AtString();
     if (!colorSpace.empty()) {
         writer.SetAttribute(
             renderProductPrim.CreateAttribute(_tokens->aovColorSpace, SdfValueTypeNames->String),
@@ -557,6 +608,11 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
         SdfPath imagerNodeGraphPath(imagerGraphName);
         // Create the ArnoldNodeGraph primitive
         UsdPrim nodeGraphPrim = stage->DefinePrim(imagerNodeGraphPath, _tokens->ArnoldNodeGraph);
+        // Author the local path under primvars:arnold:name so the prim can
+        // still be resolved when this file is referenced and the runtime path
+        // gets remapped under a different namespace.
+        nodeGraphPrim.CreateAttribute(str::t_primvars_arnold_name, SdfValueTypeNames->String, false)
+            .Set(imagerGraphName);
         // Ensure the imager is authored
         writer.WritePrimitive(input);
         UsdPrim imagerPrim = stage->GetPrimAtPath(imagerPath);
@@ -574,6 +630,8 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
     }
    _exportedAttrs.insert("input");
     
+   // driver_exr.compression is a positional array, aligned with the render_outputs loop above
+   // and therefore with the orderedVars it authored. Don't reorder that loop
    _WriteArnoldParameters(node, writer, renderProductPrim, attrPrefix);
    writer.SetScope(prevScope);
 

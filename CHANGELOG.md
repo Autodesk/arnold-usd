@@ -1,18 +1,99 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.2.0] (Unreleased)
+## [7.5.4.0] (Unreleased)
 
 ### Features
 
+- [usd#32](https://github.com/Autodesk/arnold-usd/issues/32) - Support coordsys primitives
+- [usd#2652](https://github.com/Autodesk/arnold-usd/issues/2652) - Add setting for accelerated viewport
+- [usd#2705](https://github.com/Autodesk/arnold-usd/issues/2705) - Bind volume shaders on step-sized meshes
+- [usd#2719](https://github.com/Autodesk/arnold-usd/issues/2719) - Add support for resumable rendering in the render delegate.
+- [usd#2740](https://github.com/Autodesk/arnold-usd/issues/2740) - Render OpenVDB points grids in Volume prims as Arnold points nodes instead of volume nodes
+- [usd#2730](https://github.com/Autodesk/arnold-usd/issues/2730) - Use the OCIO config file path from the settings map when $OCIO is not set
+- [usd#2742](https://github.com/Autodesk/arnold-usd/issues/2742) - Support per-RenderVar EXR compression
+- [usd#2745](https://github.com/Autodesk/arnold-usd/issues/2745) - Support renderingColorSpace in the hydra2 render_settings
+- [usd#2710](https://github.com/Autodesk/arnold-usd/issues/2710) - Support uv_camera ray_direction / ray_origin in hydra
+- [usd#2731](https://github.com/Autodesk/arnold-usd/issues/2731) - Per-renderVar EXR compression
+- [usd#2747](https://github.com/Autodesk/arnold-usd/issues/2747) - Fix nodes destruction during interactive sessions under a procedural
+- [usd#2749](https://github.com/Autodesk/arnold-usd/issues/2749) - Mesh geometry deduplication in the hydra render delegate
+- [usd#2754](https://github.com/Autodesk/arnold-usd/issues/2754) - Support for sequence rendering with hydra 2 render settings
+- [usd#2758](https://github.com/Autodesk/arnold-usd/issues/2758) - Support shader imagers with interactive updates
+- [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
+- [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2777) - Add Houdini logger support
+
+### Bug fixes
+
+- [usd#2722](https://github.com/Autodesk/arnold-usd/issues/2722) - Fix MSVC Linking error in NormalsPruningDataSource scene index.
+- [usd#2728](https://github.com/Autodesk/arnold-usd/issues/2728) - Default USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX to enabled when unset, matching USD 26.03+ behavior.
+- [usd#2770](https://github.com/Autodesk/arnold-usd/issues/2770) - Fix region rendering with the hydra2 render settings, and support the RenderProduct resolution, pixelAspectRatio and dataWindowNDC
+- [usd#2782](https://github.com/Autodesk/arnold-usd/issues/2782) - Avoid changing the options node when the frame changes
+- [usd#2781](https://github.com/Autodesk/arnold-usd/pull/2781) - Fix export of subdivisionScheme from MayaUSD
+- [usd#2784](https://github.com/Autodesk/arnold-usd/pull/2784) - Register lights without link value when lightLinking
+
+## [7.5.3.2] (Unreleased)
+
+### Bug fixes
+
+- [usd#2715](https://github.com/Autodesk/arnold-usd/issues/2715) - Honor PointInstancer-level visibility in the Hydra render delegate
+- [usd#2699](https://github.com/Autodesk/arnold-usd/issues/2699) - Fix primvars:crypto_asset being ignored on instanceable references
+
+
+## [7.5.3.0] 2026-07-22
+
+### Features
+
+- [usd#2706](https://github.com/Autodesk/arnold-usd/issues/2706) - Fix overscan 1-pixel offset with certain resolutions
+- [usd#2698](https://github.com/Autodesk/arnold-usd/issues/2698) - Author upAxis and meterUnit metadatas in the writer
+- [usd#2625](https://github.com/Autodesk/arnold-usd/issues/2625) - Add turntable command line tool generating turntable scenes from a usd asset.
+- [usd#1286](https://github.com/Autodesk/arnold-usd/issues/1286) - Support UV RenderVars
+- [usd#2685](https://github.com/Autodesk/arnold-usd/issues/2685) - Fix warnings about empty node names with nested instancers
+- [usd#2687](https://github.com/Autodesk/arnold-usd/issues/2687) - Support double-precision primvars
+- [usd#2691](https://github.com/Autodesk/arnold-usd/issues/2691) - Support mesh normals updates interactively
+- [usd#2686](https://github.com/Autodesk/arnold-usd/issues/2686) - Prevent subdivisionScheme from being written as timeSamples in USD export
+- [usd#2712](https://github.com/Autodesk/arnold-usd/pull/2712) - Add env variable HDARNOLD_FLATTEN_INSTANCING to flatten the nested instancers
+
+### Bug Fixes
+
+- [usd#2673](https://github.com/Autodesk/arnold-usd/issues/2673) - Remove spurious warnings "Arnold attribute not recognized"
+- [usd#255](https://github.com/Autodesk/arnold-usd/issues/255) - Do not reset lights during IPR iterations
+- [usd#2677](https://github.com/Autodesk/arnold-usd/issues/2677) - Fix crash reading RenderSettings with empty arnold:filter on a RenderVar
+- [usd#2641](https://github.com/Autodesk/arnold-usd/issues/2641) - Animate instanced lights driven by an animated Point Instancer in Hydra
+- [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
+- [usd#2628](https://github.com/Autodesk/arnold-usd/issues/2628) - Fix crash happening after changing the purpose in hydra
+- [usd#2621](https://github.com/Autodesk/arnold-usd/issues/2621) - Fix invalid null shader being authored to USD from Maya
+
+## [7.5.2.1] (Unreleased)
+
+### Bug Fixes
+
+- [usd#2707](https://github.com/Autodesk/arnold-usd/issues/2707) - MeshLightAPI parameters are not read properly
+
+## [7.5.2.0] 2026-06-18
+
+### Features
+
+- [usd#2632](https://github.com/Autodesk/arnold-usd/issues/2632) - Support holeIndices in UsdGeomMesh for non-subdivided meshes
+- [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
+- [usd#2645](https://github.com/Autodesk/arnold-usd/issues/2645) - Support ArnoldNodeGraph primitives when the usd files are referenced
 - [usd#2619](https://github.com/Autodesk/arnold-usd/issues/2619) - Add MtoA scene index plugin for MayaHydra support of custom attributes
 - [usd#2583](https://github.com/Autodesk/arnold-usd/issues/2583) - Support nested instancers with lightweight shape instancing
 - [usd#2594](https://github.com/Autodesk/arnold-usd/issues/2594) - Use a global map for shared arrays
 - [usd#2608](https://github.com/Autodesk/arnold-usd/issues/2608) - Implement preliminary support for ParticleField3DGaussianSplat.
 - [usd#2549](https://github.com/Autodesk/arnold-usd/issues/2549) - Support matte in hydra2 render passes
+- [usd#2626](https://github.com/Autodesk/arnold-usd/issues/2626) - Flush op: textures when cop_texture_changed is triggered
+- [usd#2439](https://github.com/Autodesk/arnold-usd/issues/2439) - Support shaping attributes in all lights
+- [usd#2477](https://github.com/Autodesk/arnold-usd/issues/2477) - Support IES profiles on any light
 
-## [7.5.1.1] (Unreleased)
+### Bug Fixes
 
+- [usd#2695](https://github.com/Autodesk/arnold-usd/issues/2695) - Fix MaterialX boolean shaders through USD
+
+## [7.5.1.2] (Unreleased)
+
+- [usd#2635](https://github.com/Autodesk/arnold-usd/issues/2635) - Fix rounding issue with husk when overscan is used at certain resolutions
+
+## [7.5.1.1] 2026-04-22
 
 ### Bug Fixes
 

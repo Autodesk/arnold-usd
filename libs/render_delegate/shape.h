@@ -71,8 +71,69 @@ public:
     /// This can happen e.g. with primitives of type ArnoldProceduralCustom
     /// where the node type is an attribute
     ///
+    /// The node is recreated if it is not of @p shapeType, or if it is a ginstance: those
+    /// cannot be reused once initialized.
+    ///
     /// @param shapeType New node entry for this Arnold shape node
-    void SetShapeType(const AtString& shapeType, const SdfPath& id);
+    /// @param id Path to the primitive.
+    /// @param primId Prim ID of the owning rprim, applied to a recreated node.
+    void SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId);
+
+    /// Turns this shape into a ginstance of @p proto (geometry deduplication). The instance
+    /// keeps its own transform and surface shader, and shares the geometry of @p proto.
+    ///
+    /// @param proto The canonical Arnold node to instance.
+    /// @param id Path to the primitive.
+    /// @param primId Prim ID of the owning rprim.
+    void ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId);
+
+    /// Makes this shape's Arnold instancer reference @p proto instead of this shape's own node
+    /// (geometry deduplication of point-instancer prototypes), or its own node again if null.
+    ///
+    /// @param proto The canonical geometry node to instance, or nullptr.
+    void SetPrototypeOverride(AtNode* proto) { _sharedGeometry = proto; }
+
+    /// Returns the canonical node this shape renders instead of its own geometry, either as
+    /// a ginstance (ConvertToInstanceOf) or through its instancer (SetPrototypeOverride).
+    ///
+    /// @return The shared geometry node, or nullptr.
+    AtNode* GetSharedGeometry() const { return _sharedGeometry; }
+
+    /// Returns true if the Arnold node is a ginstance (see ConvertToInstanceOf).
+    ///
+    /// @return True if the Arnold node is a ginstance.
+    bool IsInstanceNode() const { return _isInstance; }
+
+    /// Forgets the Arnold node without destroying it, when its ownership was transferred.
+    void ReleaseShapeOwnership();
+
+    /// Destroys the Arnold node and instancers now, rather than with this shape.
+    HDARNOLD_API
+    void DestroyNodes();
+
+    /// Hides or shows everything this shape renders through (see HdArnoldRprim::SkipHiddenPrim):
+    /// the instancers if any, otherwise the shape node itself. A node shared with other rprims
+    /// (a geometry deduplication canonical) must not be disabled, as its instances would
+    /// disappear too: its visibility is cleared instead, which its instances do not inherit.
+    ///
+    /// @param hidden Whether the shape should stop rendering.
+    /// @param nodeIsShared True when other rprims may instance this shape's node.
+    HDARNOLD_API
+    void SetHidden(bool hidden, bool nodeIsShared);
+
+    /// Returns true if this shape is currently not rendering, either because SetHidden hid it
+    /// or because the node it renders through was disabled for its render tag.
+    ///
+    /// @return True if the shape is hidden.
+    HDARNOLD_API
+    bool IsHidden() const;
+
+    /// Forces the instances to be built through an Arnold instancer node rather than shape
+    /// instancing, which bakes the instance matrices onto the node and would prevent it from
+    /// being shared (geometry deduplication).
+    ///
+    /// @param force Whether to force the Arnold instancer-node path.
+    void SetForceInstancerNode(bool force) { _forceInstancerNode = force; }
 
     /// Syncs internal data and arnold state with hydra.
     ///
@@ -129,10 +190,13 @@ protected:
     /// @param id Path to the primitive.
     /// @param instancerId Path to the Point Instancer.
     /// @param force Forces updating of the instances even if they are not dirtied.
+    /// @param primId Prim ID of the primitive.
+    /// @param cryptoObject Cryptomatte object name of the primitive, if overridden.
     HDARNOLD_API
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-        HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force);
+        HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force,
+        int32_t primId, const SdfPath& cryptoObject);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
     /// @param param Reference to HdArnoldRenderParamInterrupt.
@@ -142,7 +206,19 @@ protected:
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
     std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
     AtNode* _shape = nullptr;                ///< Pointer to the Arnold Shape.
+    AtNode* _sharedGeometry = nullptr;       ///< Canonical node rendered instead of _shape (see GetSharedGeometry).
+    /// How SetHidden hid this shape, so that showing it again undoes exactly that.
+    enum class HiddenBy : uint8_t {
+        None,       ///< Not hidden by SetHidden (render tags may still have disabled nodes).
+        Instancers, ///< The instancer chain was disabled.
+        Visibility, ///< The shape's own node is shared: its visibility was cleared.
+        Disabled    ///< The shape's own node was disabled.
+    };
+    HiddenBy _hiddenBy = HiddenBy::None;
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
+    bool _forceInstancerNode = false;        ///< Force the instancer-node path (see SetForceInstancerNode).
+    /// True when _shape was created as a ginstance: AiNodeIs cannot tell once it is initialized.
+    bool _isInstance = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

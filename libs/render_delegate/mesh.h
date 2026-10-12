@@ -38,6 +38,7 @@
 
 #include <ai.h>
 #include <mutex>
+
 #include <pxr/pxr.h>
 
 #include <pxr/imaging/hd/mesh.h>
@@ -47,6 +48,7 @@
 #include "rprim.h"
 #include "utils.h"
 #include "shared_arrays.h"
+#include <shape_utils.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -86,6 +88,9 @@ protected:
     HDARNOLD_API
     AtNode *_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
+    /// Returns true if this mesh has a mesh light.
+    bool _HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const;
+
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtValue _vertexCountsVtValue;      ///< Vertex nsides. We need to keep it alive for left handed geometries.
@@ -93,6 +98,7 @@ protected:
     bool _useSubdiv = false;       ///< Whether the geometry use subdivision.
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
+    MeshHoleFilter _holeFilter;       ///< Cached membership/offset tables for USD holeIndices filtering.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
     ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays of the scene
 };

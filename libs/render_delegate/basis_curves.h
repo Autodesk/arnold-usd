@@ -45,7 +45,7 @@ public:
     /// Destructor for HdArnoldBasisCurves.
     ///
     /// Destory all Arnold curves and ginstances.
-    ~HdArnoldBasisCurves() override = default;
+    ~HdArnoldBasisCurves() override;
 
     /// Syncs the Hydra Basis Curves to the Arnold Curves.
     ///

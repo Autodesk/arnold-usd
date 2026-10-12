@@ -1,0 +1,18 @@
+primvars:crypto_asset is ignored on instanceable references
+
+An asset authors a constant primvars:crypto_asset on a parent Xform, inherited by
+the descendant geometry and resolved as the Cryptomatte asset id. When the asset is
+added through an instanceable reference, the inherited primvar reached the shape as a
+single-element per-element (uniform) primvar and was declared as a size-1 uniform
+array, which Arnold could not index per face ("out-of-range error (index N of 1)"),
+leaving the crypto_asset AOV empty. Single-element uniform/varying/indexed primvars are
+now declared as constant user data so the value applies to the whole shape.
+
+Cryptomatte asset ids are name hashes that differ between the reading paths, so this test
+asserts on the render log (no out-of-range / failed-lookup errors) rather than on pixels.
+
+Fixes #2699
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {}

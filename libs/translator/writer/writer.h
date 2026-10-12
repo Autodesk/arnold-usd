@@ -46,7 +46,8 @@ public:
           _shutterStart(0.f),
           _shutterEnd(0.f),
           _allAttributes(false),
-          _time(UsdTimeCode::Default())
+          _time(UsdTimeCode::Default()),
+          _metersPerUnit(-1.f)
     {
     }
     ~UsdArnoldWriter() {}
@@ -228,6 +229,13 @@ public:
     {
         return _appendFile;
     }
+
+    void SetUpAxis(const std::string &upAxis) { _upAxis = upAxis; }
+    const std::string &GetUpAxis() const { return _upAxis; }
+
+    void SetMetersPerUnit(float metersPerUnit) { _metersPerUnit = metersPerUnit; }
+    float GetMetersPerUnit() const { return _metersPerUnit; }
+
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
@@ -252,4 +260,6 @@ private:
     std::string _defaultPrim;          // usd files have a defaultPrim that can be used for file references
     std::unordered_set<AtNode*> _requiredShaders;
     bool _appendFile = false;
+    std::string _upAxis;
+    float _metersPerUnit;
 };

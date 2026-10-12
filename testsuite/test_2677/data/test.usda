@@ -1,0 +1,126 @@
+#usda 1.0
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "rgba"
+            {
+                custom string arnold:filter = ""
+                token dataType = "color4f"
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "rgba"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct"
+        {
+            rel orderedVars = </Render/Products/Vars/rgba>
+            token productName = "toto.exr"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings"
+    {
+        custom float arnold:global:AA_sample_clamp = 5
+        custom bool arnold:global:AA_sample_clamp_affects_aovs = 1
+        custom int arnold:global:AA_samples = 2
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        custom bool arnold:global:abort_on_error = 0
+        custom int arnold:global:auto_transparency_depth = 5
+        custom int arnold:global:bucket_size = 8
+        custom bool arnold:global:enable_adaptive_sampling = 0
+        custom bool arnold:global:enable_progressive_render = 1
+        custom int arnold:global:GI_diffuse_depth = 1
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 1
+        custom int arnold:global:GI_specular_samples = 2
+        custom int arnold:global:GI_sss_samples = 1
+        custom int arnold:global:GI_total_depth = 1
+        custom int arnold:global:GI_transmission_depth = 1
+        custom int arnold:global:GI_transmission_samples = 1
+        custom int arnold:global:GI_volume_depth = 1
+        custom int arnold:global:GI_volume_samples = 1
+        custom float arnold:global:indirect_sample_clamp = 1
+        custom float arnold:global:indirect_specular_blur = 5
+        custom int arnold:global:light_samples = 2
+        custom int arnold:global:log:verbosity = 5
+        custom float arnold:global:low_light_threshold = 0.1
+        custom bool arnold:global:parallel_node_init = 1
+        custom string arnold:global:procedural_instancing_optimization = "exhaustive"
+        custom bool arnold:global:subdiv_frustum_culling = 1
+        custom bool arnold:global:texture_accept_unmipped = 1
+        custom bool arnold:global:texture_accept_untiled = 1
+        custom bool arnold:global:texture_auto_generate_tx = 0
+        custom bool arnold:global:texture_automip = 0
+        custom float arnold:global:texture_max_memory_MB = 32000
+        custom bool arnold:global:texture_use_existing_tx = 1
+        custom int arnold:global:threads = -2
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </Cameras/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        bool disableDepthOfField = 0
+        bool disableMotionBlur = 0
+        token[] includedPurposes = ["default"]
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/renderproduct>
+        int2 resolution = (960, 540)
+    }
+
+    def Scope "mtl" (
+        active = false
+    )
+    {
+        def ArnoldNodeGraph "arnold_denoiser_intel"
+        {
+            custom int _delegate_update
+            token outputs:input.connect = </Render/mtl/arnold_denoiser_intel/imager_denoiser_oidn1.outputs:shader>
+
+            def Shader "imager_denoiser_oidn1"
+            {
+                uniform token info:id = "arnold:imager_denoiser_oidn"
+                string inputs:albedo = "/render/mtl/arnold_denoiser_intel"
+                string inputs:input
+                string inputs:layer_selection = "RGBA"
+                string inputs:output_suffix = ""
+                token inputs:render_device = ""
+                token outputs:shader
+            }
+        }
+    }
+}
+
+def Sphere "Geom"
+{
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float2 clippingRange = (1, 20000)
+        float focalLength = 18.147562
+        float focusDistance = 8.771489
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        float verticalAperture = 11.787188
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 8.771489143371582, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

@@ -17,6 +17,7 @@
 // limitations under the License.
 #include "native_rprim.h"
 
+#include "coord_sys.h"
 #include "node_graph.h"
 
 #include <common_bits.h>
@@ -102,18 +103,22 @@ void HdArnoldNativeRprim::Sync(
         }
     }
 
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+    // DirtyCategories carries the coordinate-system bindings, and the material's
+    // "space" inputs are rewritten to the cameras bound here, so a binding change
+    // has to re-assign the material (see HdArnoldGetCoordSysBinding).
+    if (*dirtyBits & (HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
         GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
-        const auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId);
+        auto* material = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), materialId, _renderDelegate);
         if (material != nullptr) {
+            const auto coordSysBinding = HdArnoldGetCoordSysBinding(sceneDelegate, id);
             if (AiNodeIs(GetArnoldNode(), str::volume)) {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedVolumeShader(coordSysBinding));
             } else {
-                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader());
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetCachedSurfaceShader(coordSysBinding));
             }
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);
@@ -133,7 +138,7 @@ void HdArnoldNativeRprim::Sync(
                 continue;
 
             // Get the parameter name, removing the arnold:prefix if any
-            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold_prefix.c_str()) ? p.first.GetString().substr(str::arnold_prefix.length()) : p.first.GetString());
             HdArnoldSetConstantPrimvar(node, TfToken(paramName), p.second.role, p.second.value, &_visibilityFlags,
                     nullptr, nullptr, _renderDelegate);
         }
@@ -171,7 +176,8 @@ HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyTransform |
            HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility |
-           HdChangeTracker::DirtyDoubleSided | HdArnoldShape::GetInitialDirtyBitsMask() | ArnoldUsdRprimBitsParams;
+           HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtyCategories |
+           HdArnoldShape::GetInitialDirtyBitsMask() | ArnoldUsdRprimBitsParams;
 }
 
 const TfTokenVector& HdArnoldNativeRprim::GetBuiltinPrimvarNames() const

@@ -50,6 +50,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     (ArnoldNodeGraph)
     ((PrimvarsArnoldFiltermap, "primvars:arnold:filtermap"))
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
+    ((PrimvarsArnoldRayOrigin, "primvars:arnold:ray_origin"))
+    ((PrimvarsArnoldRayDirection, "primvars:arnold:ray_direction"))
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
     ((PrimvarsArnoldTransformKeys, "primvars:arnold:transform_keys"))
     ((PrimvarsArnoldStepSize, "primvars:arnold:step_size"))
@@ -202,46 +204,42 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
     return array;
 
 }
-void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim)
+void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim, bool isVolume)
 {
-    // First search the material attachment in the arnold scope, then in the mtlx one
-    // Finally, ComputeSurfaceSource will look into the universal scope
+    // Resolve both the surface and the volume terminals. We search the arnold
+    // scope first, then the mtlx one; ComputeSurfaceSource / ComputeVolumeSource
+    // also look into the universal scope as a fallback.
 #if PXR_VERSION >= 2108
     TfTokenVector contextList {str::t_arnold, str::t_mtlx};
     UsdShadeShader surface = mat.ComputeSurfaceSource(contextList);
+    UsdShadeShader volume = mat.ComputeVolumeSource(contextList);
 #else
     // old method, we need to ask for each context explicitely
-    // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
-    if (!surface) { // not found, check in the mtlx scope
+    if (!surface) // not found, check in the mtlx scope
         surface = mat.ComputeSurfaceSource(str::t_mtlx);
-    }
-    if (!surface) {// not found, search in the global scope
+    if (!surface) // not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
-    }
 
-#endif
-    
-    if (surface) {
-        // Found a surface shader, let's add a connection to it (to be processed later)
-        shaderPrim = surface.GetPrim();
-    } else {
-        // No surface found in USD primitives
-
-        // We have a single "shader" binding in arnold, whereas USD has "surface"
-        // and "volume" For now we export volume only if surface is empty.
-#if PXR_VERSION >= 2108
-        UsdShadeShader volume = mat.ComputeVolumeSource(contextList);
-#else
-        // old method, we need to ask for each context explicitely
-        UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
-        if (!volume)
-            volume = mat.ComputeVolumeSource();
+    UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
+    if (!volume) // not found, search in the global scope
+        volume = mat.ComputeVolumeSource();
 #endif
 
-        if (volume)
-            shaderPrim = volume.GetPrim();
-    }
+    // Arnold shapes have a single "shader" slot, whereas USD distinguishes the
+    // "surface" and "volume" terminals. For a shape that is rendered as a volume
+    // (a native volume node, or a polymesh with step_size > 0) we must prefer the
+    // volume terminal: otherwise a universal / preview surface terminal (e.g. a
+    // UsdPreviewSurface authored for DCC interop) would shadow the actual volume
+    // shader, and the volume would be rendered as a (black) surface. For regular
+    // shapes we keep preferring the surface terminal, only falling back to the
+    // volume terminal when no surface is bound.
+    UsdShadeShader primary = isVolume ? volume : surface;
+    UsdShadeShader fallback = isVolume ? surface : volume;
+    if (primary)
+        shaderPrim = primary.GetPrim();
+    else if (fallback)
+        shaderPrim = fallback.GetPrim();
 
     if (dispPrim) { 
         // first check displacement in the arnold scope, then in the mtlx one,
@@ -282,7 +280,7 @@ void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPri
         }
     }
 }
-static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
+static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr, bool isVolume = false)
 {
     // We want to get the material assignment for the "full" purpose, which is meant for rendering
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
@@ -290,7 +288,7 @@ static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPri
     if (!mat) {
         return;
     }
-    GetMaterialTargets(mat, shaderPrim, dispPrim);
+    GetMaterialTargets(mat, shaderPrim, dispPrim, isVolume);
 }
 
 // Read the materials / shaders assigned to a shape (node)
@@ -306,10 +304,10 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
         materialBoundPrim = prim.GetStage()->GetPrimAtPath(pathConsidered);
     }
     UsdPrim shaderPrim, dispPrim;
-    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
 
     if (shaderPrim) {
-        context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(), 
+        context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(),
             ArnoldAPIAdapter::CONNECTION_PTR);
     } else if (assignDefault) {
         AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader(IsVolume(node, prim)));
@@ -347,7 +345,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
 
-        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
         if (shaderPrim)
             shaderStr = shaderPrim.GetPath().GetString();
         else if (assignDefault) {
@@ -400,7 +398,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
         UsdPrim shaderPrim, dispPrim;
-        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr, IsVolume(node, prim));
 
         if (shaderPrim) {
             shaderStr = shaderPrim.GetPath().GetString();
@@ -609,7 +607,8 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
         }
     } else if (matrixNumKeys >= parentMatrixNumKeys) {
         for (unsigned int i = 0; i < matrixNumKeys; ++i) {
-            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
+            const float t = (float)i / AiMax(float(matrixNumKeys - 1), 1.f);
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, t, 0));
             AiArraySetMtx(matrices, i, m);
         }
     } else { // The number of matrices of the parent is greater than the child, it can happen on instances, we resize the current matrix
@@ -623,68 +622,123 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
     }
 }
 
-bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &attr, 
+// Walk the stage and register every ArnoldNodeGraph whose authored
+// primvars:arnold:name differs from its current path. The map allows
+// ReadNodeGraphAttr to resolve a source-file string path (e.g.
+// "/root/mtl/light_shader") to the prim's runtime path
+// ("/light/mtl/light_shader") when the file has been referenced and remapped.
+static void _PopulateNodeGraphNameMap(UsdArnoldReader *reader)
+{
+    if (!reader)
+        return;
+    UsdStageRefPtr stage = reader->GetStage();
+    if (!stage)
+        return;
+    for (const UsdPrim &p : stage->Traverse()) {
+        if (p.GetTypeName() != _tokens->ArnoldNodeGraph)
+            continue;
+        UsdAttribute nameAttr = p.GetAttribute(str::t_primvars_arnold_name);
+        if (!nameAttr || !nameAttr.HasAuthoredValue())
+            continue;
+        VtValue nameValue;
+        if (!nameAttr.Get(&nameValue) || !nameValue.IsHolding<std::string>())
+            continue;
+        const std::string &nameStr = nameValue.UncheckedGet<std::string>();
+        if (!nameStr.empty() && nameStr != p.GetPath().GetString())
+            reader->AddNodeGraphName(nameStr, p.GetPath());
+    }
+}
+
+bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &attr,
                                     const std::string &attrName, UsdArnoldReaderContext &context,
                                     UsdArnoldReaderContext::ConnectionType cType) {
 
 
     bool success = false;
-    // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
+    // A camera / light / render-setting references its shaders through an
+    // ArnoldNodeGraph primitive that acts as a passthrough. That reference can be
+    // authored in two ways, both handled here:
+    //   1. as a real USD connection pointing at the ArnoldNodeGraph output
+    //      terminal, e.g. primvars:arnold:ray_origin.connect = </cam/graph.outputs:ray_origin>
+    //   2. as a plain string holding the path to the ArnoldNodeGraph prim (legacy
+    //      form, still authored as a fallback and used by the render delegate)
     const TimeSettings &time = context.GetTimeSettings();
-    VtValue value;
-    if (attr && attr.Get(&value, time.frame)) {
-        // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value);
-        
-        if (!valStr.empty()) {
-            SdfPath path(valStr);
-            // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
-            // We verify if the primitive is indeed a ArnoldNodeGraph
-            if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
-                // We can use a UsdShadeShader schema in order to read connections
-                UsdShadeShader ngShader(ngPrim);
-                
-                bool isArray = false;
-                if (cType == ArnoldAPIAdapter::CONNECTION_ARRAY) {
-                    isArray = true;
-                    cType = ArnoldAPIAdapter::CONNECTION_PTR;
-                }
-                int arrayIndex = 0;
-                while(true) {
 
-                    std::string outAttrName = attrName;
-                    std::string connAttrName = attrName;
-                    if (isArray) {
-                        // usd format for arrays
-                        std::string idStr = std::to_string(++arrayIndex);
-                        outAttrName += std::string(":i") + idStr;
-                        // format used internally in the reader to recognize arrays easily
-                        connAttrName += std::string("[") + idStr + std::string("]");
+    UsdPrim ngPrim;
+    // Case 1: the attribute is connected to the ArnoldNodeGraph. USD composition
+    // already remaps the connection target when this layer is referenced, so the
+    // prim can be resolved directly without consulting the node-graph name map.
+    if (attr && attr.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (attr.GetConnections(&connections) && !connections.empty())
+            ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(connections[0].GetPrimPath());
+    }
+    // Case 2: the attribute holds the ArnoldNodeGraph path as a string.
+    if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
+        VtValue value;
+        if (attr && attr.Get(&value, time.frame)) {
+            std::string valStr = VtValueGetString(value);
+            if (!valStr.empty()) {
+                // We check if there is a primitive at the path of this string
+                ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
+                // If the prim isn't at that exact path it might have been remapped by
+                // a reference/payload composition. Consult the node-graph name map,
+                // built from the authored primvars:arnold:name attributes.
+                if (!ngPrim || ngPrim.GetTypeName() != _tokens->ArnoldNodeGraph) {
+                    SdfPath remapped = context.GetReader()->LookupNodeGraphPath(valStr);
+                    if (remapped.IsEmpty()) {
+                        _PopulateNodeGraphNameMap(context.GetReader());
+                        remapped = context.GetReader()->LookupNodeGraphPath(valStr);
                     }
-                    
-                    // the output attribute must have the same name as the input one in the RenderSettings
-                    UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
-                    if (outputAttr) {
-                        SdfPathVector sourcePaths;
-                        // Check which shader is connected to this output
-                        if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
-                            !sourcePaths.empty()) {
-                            SdfPath outPath(sourcePaths[0].GetPrimPath());
-                            UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
-                            if (outPrim) {
-                                context.AddConnection(node, connAttrName, outPath.GetText(), cType);
-                            }
-                        }
-                        success = true;
-                    } else
-                        break;
-                    if (!isArray)
-                        break;
+                    if (!remapped.IsEmpty())
+                        ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(remapped);
                 }
             }
         }
+    }
 
+    // We verify if the primitive is indeed a ArnoldNodeGraph
+    if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+        // We can use a UsdShadeShader schema in order to read connections
+        UsdShadeShader ngShader(ngPrim);
+
+        bool isArray = false;
+        if (cType == ArnoldAPIAdapter::CONNECTION_ARRAY) {
+            isArray = true;
+            cType = ArnoldAPIAdapter::CONNECTION_PTR;
+        }
+        int arrayIndex = 0;
+        while(true) {
+
+            std::string outAttrName = attrName;
+            std::string connAttrName = attrName;
+            if (isArray) {
+                // usd format for arrays
+                std::string idStr = std::to_string(++arrayIndex);
+                outAttrName += std::string(":i") + idStr;
+                // format used internally in the reader to recognize arrays easily
+                connAttrName += std::string("[") + idStr + std::string("]");
+            }
+
+            // the output attribute must have the same name as the input one in the RenderSettings
+            UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
+            if (outputAttr) {
+                SdfPathVector sourcePaths;
+                // Check which shader is connected to this output
+                if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
+                    !sourcePaths.empty()) {
+                    SdfPath outPath(sourcePaths[0].GetPrimPath());
+                    UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
+                    if (outPrim) {
+                        context.AddConnection(node, connAttrName, outPath.GetText(), cType);
+                    }
+                }
+                success = true;
+            } else
+                break;
+            if (!isArray)
+                break;
+        }
     }
     return success;
 }
@@ -701,14 +755,30 @@ void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, AtNo
 }
 
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)
-{   
-    UsdAttribute filtermapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldFiltermap); 
-    if (filtermapAttr && filtermapAttr.HasAuthoredValue()) {
-        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, ArnoldAPIAdapter::CONNECTION_PTR);    
+{
+    // The camera references its shaders through an ArnoldNodeGraph, either as a
+    // string path or as a USD connection (see ReadNodeGraphAttr). A pure
+    // connection has no authored value, so we test for both here.
+    const auto isAuthored = [](const UsdAttribute &attr) {
+        return attr && (attr.HasAuthoredValue() || attr.HasAuthoredConnections());
+    };
+    UsdAttribute filtermapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldFiltermap);
+    if (isAuthored(filtermapAttr)) {
+        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, ArnoldAPIAdapter::CONNECTION_PTR);
     }
     UsdAttribute uvRemapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldUvRemap);
-    if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
+    if (isAuthored(uvRemapAttr)) {
         ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    // The uv_camera ray_origin / ray_direction are linked to a shader through an
+    // ArnoldNodeGraph primitive, just like uv_remap above
+    UsdAttribute rayOriginAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayOrigin);
+    if (isAuthored(rayOriginAttr)) {
+        ReadNodeGraphAttr(prim, node, rayOriginAttr, "ray_origin", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    }
+    UsdAttribute rayDirectionAttr = prim.GetAttribute(_tokens->PrimvarsArnoldRayDirection);
+    if (isAuthored(rayDirectionAttr)) {
+        ReadNodeGraphAttr(prim, node, rayDirectionAttr, "ray_direction", context, ArnoldAPIAdapter::CONNECTION_LINK);
     }
 }
 
@@ -917,7 +987,9 @@ void ReadPrimvars(
             declaration = "uniform";
 
         if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
-            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
+            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray ||
+            typeName == SdfValueTypeNames->Double2 || typeName == SdfValueTypeNames->Double2Array ||
+            typeName == SdfValueTypeNames->TexCoord2d || typeName == SdfValueTypeNames->TexCoord2dArray) {
             primvarType = AI_TYPE_VECTOR2;
 
             // A special case for UVs
@@ -939,13 +1011,21 @@ void ReadPrimvars(
             typeName == SdfValueTypeNames->Point3f || typeName == SdfValueTypeNames->Point3fArray ||
             typeName == SdfValueTypeNames->Normal3f || typeName == SdfValueTypeNames->Normal3fArray ||
             typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
-            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
+            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray ||
+            typeName == SdfValueTypeNames->Vector3d || typeName == SdfValueTypeNames->Vector3dArray ||
+            typeName == SdfValueTypeNames->Point3d || typeName == SdfValueTypeNames->Point3dArray ||
+            typeName == SdfValueTypeNames->Normal3d || typeName == SdfValueTypeNames->Normal3dArray ||
+            typeName == SdfValueTypeNames->Double3 || typeName == SdfValueTypeNames->Double3Array ||
+            typeName == SdfValueTypeNames->TexCoord3d || typeName == SdfValueTypeNames->TexCoord3dArray) {
             primvarType = AI_TYPE_VECTOR;
-        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
+        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray ||
+            typeName == SdfValueTypeNames->Color3d || typeName == SdfValueTypeNames->Color3dArray)
             primvarType = AI_TYPE_RGB;
         else if (
             typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
-            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
+            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array ||
+            typeName == SdfValueTypeNames->Color4d || typeName == SdfValueTypeNames->Color4dArray ||
+            typeName == SdfValueTypeNames->Double4 || typeName == SdfValueTypeNames->Double4Array)
             primvarType = AI_TYPE_RGBA;
         else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray || 
             typeName == SdfValueTypeNames->Double || typeName == SdfValueTypeNames->DoubleArray)

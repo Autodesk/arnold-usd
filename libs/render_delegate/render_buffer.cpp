@@ -16,14 +16,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "render_buffer.h"
+#include "render_delegate.h"
+#include <pxr/base/tf/diagnostic.h>
 
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#include <pxr/imaging/hgiGL/texture.h>
+#endif
 #include <pxr/base/gf/half.h>
 #include <pxr/base/gf/vec3i.h>
 
 #include <ai.h>
 
 // memcpy
+#include <algorithm>
 #include <cstring>
+#include <string>
+
+#include <iostream>
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#include <pxr/imaging/garch/glApi.h>
+#endif
 
 // TOOD(pal): use a more efficient locking mechanism than the std::mutex.
 PXR_NAMESPACE_OPEN_SCOPE
@@ -197,10 +209,246 @@ WriteBucketFunctionMap writeBucketFunctions{
 
 } // namespace
 
-HdArnoldRenderBuffer::HdArnoldRenderBuffer(const SdfPath& id) : HdRenderBuffer(id)
+HdArnoldRenderBuffer::HdArnoldRenderBuffer(HdArnoldRenderDelegate* renderDelegate, 
+    const SdfPath& id) : HdRenderBuffer(id), _renderDelegate(renderDelegate)
 {
-    _hasUpdates.store(false, std::memory_order_release);
 }
+
+namespace {
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+
+/// Maps a buffer format onto the format of the texture AiGetRenderOutput copies into.
+///
+/// AiGetRenderOutput copies the AOV's raw bytes and rejects a texture whose element size doesn't match: the depth
+/// AOV (Z, a single float) needs a single channel texture, the beauty needs RGBA32F. Half float textures are
+/// converted to by Arnold.
+///
+/// @param format Buffer format.
+/// @return Matching Hgi format.
+HgiFormat _GetHgiFormat(HdFormat format)
+{
+    switch (format) {
+        case HdFormatFloat32:
+            return HgiFormatFloat32;
+        case HdFormatFloat16:
+            return HgiFormatFloat16;
+        case HdFormatFloat16Vec4:
+            return HgiFormatFloat16Vec4;
+        default:
+            return HgiFormatFloat32Vec4;
+    }
+}
+
+// Attempts to (re)create the HgiGL texture. Returns the GL texture id, which may be 0 if
+// no GL context was current at call time. Caller holds the buffer's mutex.
+uint32_t _CreateGpuTexture(
+    Hgi* hgi, HgiTextureHandle& outTexture, unsigned int width, unsigned int height, HdFormat format,
+    const TfToken& aovName, const char* suffix)
+{
+    if (hgi == nullptr) return 0;
+    if (width == 0 || height == 0) return 0;
+    HgiTextureDesc desc;
+    std::string debugName = aovName.IsEmpty() ? "HdArnoldRenderBuffer" : aovName.GetString();
+    if (suffix != nullptr && suffix[0] != '\0') {
+        debugName += '.';
+        debugName += suffix;
+    }
+    desc.debugName = debugName;
+    desc.type = HgiTextureType2D;
+    desc.dimensions = GfVec3i(static_cast<int>(width), static_cast<int>(height), 1);
+    desc.format = _GetHgiFormat(format);
+    desc.layerCount = 1;
+    desc.mipLevels = 1;
+    desc.sampleCount = HgiSampleCount1;
+    desc.usage = HgiTextureUsageBitsShaderRead | HgiTextureUsageBitsColorTarget;
+    outTexture = hgi->CreateTexture(desc);
+    if (auto* gl = dynamic_cast<HgiGLTexture*>(outTexture.Get())) {
+        return gl->GetTextureId();
+    }
+    return 0;
+}
+
+uint32_t _GetGlTextureId(const HgiTextureHandle& texture)
+{
+    if (auto* gl = dynamic_cast<HgiGLTexture*>(texture.Get())) {
+        return gl->GetTextureId();
+    }
+    return 0;
+}
+
+// Fullscreen blit with vertex-shader Y flip (Arnold top-origin -> OpenGL bottom-origin).
+struct _GpuFlipBlit {
+    GLuint program = 0;
+    GLuint vertexBuffer = 0;
+
+    void _CompileShader(const char* src, GLenum stage, GLuint* outShader) const
+    {
+        *outShader = glCreateShader(stage);
+        glShaderSource(*outShader, 1, &src, nullptr);
+        glCompileShader(*outShader);
+        GLint status = 0;
+        glGetShaderiv(*outShader, GL_COMPILE_STATUS, &status);
+        if (status != GL_TRUE) {
+            TF_WARN("HdArnoldRenderBuffer: GPU Y-flip shader compile failed");
+        }
+    }
+
+    void _EnsureInitialized()
+    {
+        if (program != 0) {
+            return;
+        }
+
+        static const char* const kVertexShader120 = R"(#version 120
+attribute vec4 position;
+attribute vec2 uvIn;
+varying vec2 uv;
+void main(void)
+{
+    gl_Position = position;
+    uv = vec2(uvIn.x, 1.0 - uvIn.y);
+}
+)";
+
+        static const char* const kFragmentShader120 = R"(#version 120
+varying vec2 uv;
+uniform sampler2D colorIn;
+void main(void)
+{
+    gl_FragColor = texture2D(colorIn, uv);
+}
+)";
+
+        GLuint vs = 0;
+        GLuint fs = 0;
+        _CompileShader(kVertexShader120, GL_VERTEX_SHADER, &vs);
+        _CompileShader(kFragmentShader120, GL_FRAGMENT_SHADER, &fs);
+
+        program = glCreateProgram();
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
+        GLint linkStatus = 0;
+        glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+        if (linkStatus != GL_TRUE) {
+            TF_WARN("HdArnoldRenderBuffer: GPU Y-flip shader link failed");
+        }
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+
+        static const float vertices[] = {
+            // position (xyzw)   uv
+            -1.0f, 3.0f, 0.0f, 1.0f, 0.0f, 2.0f,
+            -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            3.0f, -1.0f, 0.0f, 1.0f, 2.0f, 0.0f,
+        };
+        glGenBuffers(1, &vertexBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    bool Flip(uint32_t srcTextureId, uint32_t dstTextureId, int width, int height)
+    {
+        if (srcTextureId == 0 || dstTextureId == 0 || width <= 0 || height <= 0) {
+            return false;
+        }
+
+        _EnsureInitialized();
+        if (program == 0) {
+            return false;
+        }
+
+        GLint restoreFramebuffer = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &restoreFramebuffer);
+
+        GLint restoreViewport[4];
+        glGetIntegerv(GL_VIEWPORT, restoreViewport);
+
+        GLint restoreProgram = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &restoreProgram);
+
+        GLint restoreActiveTexture = 0;
+        glGetIntegerv(GL_ACTIVE_TEXTURE, &restoreActiveTexture);
+
+        GLuint fbo = 0;
+        glGenFramebuffers(1, &fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dstTextureId, 0);
+
+        const GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+            TF_WARN("HdArnoldRenderBuffer: GPU Y-flip FBO incomplete (status %u)", static_cast<unsigned>(fboStatus));
+            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(restoreFramebuffer));
+            glDeleteFramebuffers(1, &fbo);
+            return false;
+        }
+
+        glViewport(0, 0, width, height);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(program);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, srcTextureId);
+        const GLint colorLoc = glGetUniformLocation(program, "colorIn");
+        glUniform1i(colorLoc, 0);
+
+        GLint restoreArrayBuffer = 0;
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &restoreArrayBuffer);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+        const GLint locPosition = glGetAttribLocation(program, "position");
+        glVertexAttribPointer(locPosition, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 6, nullptr);
+        glEnableVertexAttribArray(locPosition);
+
+        const GLint locUv = glGetAttribLocation(program, "uvIn");
+        glVertexAttribPointer(
+            locUv, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 6, reinterpret_cast<void*>(sizeof(float) * 4));
+        glEnableVertexAttribArray(locUv);
+
+        GLboolean restoreDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+        GLboolean restoreDepthMask = GL_TRUE;
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &restoreDepthMask);
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+
+        GLboolean restoreBlend = glIsEnabled(GL_BLEND);
+        glDisable(GL_BLEND);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        if (restoreBlend) {
+            glEnable(GL_BLEND);
+        }
+        if (restoreDepthEnabled) {
+            glEnable(GL_DEPTH_TEST);
+        }
+        glDepthMask(restoreDepthMask);
+
+        glDisableVertexAttribArray(locPosition);
+        glDisableVertexAttribArray(locUv);
+        glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(restoreArrayBuffer));
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        glUseProgram(static_cast<GLuint>(restoreProgram));
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(restoreFramebuffer));
+        glViewport(restoreViewport[0], restoreViewport[1], restoreViewport[2], restoreViewport[3]);
+        glActiveTexture(restoreActiveTexture);
+
+        glDeleteFramebuffers(1, &fbo);
+        return true;
+    }
+};
+
+_GpuFlipBlit _gpuFlipBlit;
+
+#endif // SUPPORT_ACCELERATED_VIEWPORT
+
+} // namespace
 
 bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, bool multiSampled)
 {
@@ -208,6 +456,9 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     // So deallocate won't lock.
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
+    // Allocate runs while Hydra syncs, possibly on a thread without the GL context, so the textures are neither
+    // destroyed nor created here: EnsureGpuTexture() recreates them at the new size from GetResource().
+    _QueueTexturesForDestruction();
     if (!_SupportedComponentFormat(format)) {
         _width = 0;
         _height = 0;
@@ -217,6 +468,8 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     _format = format;
     _width = dimensions[0];
     _height = dimensions[1];
+
+    // --CPU buffers--
     const auto byteCount = _width * _height * HdDataSizeOfFormat(format);
     if (byteCount != 0) {
         _buffer.resize(byteCount, 0);
@@ -224,19 +477,162 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     return true;
 }
 
+void HdArnoldRenderBuffer::_QueueTexturesForDestruction()
+{
+    // Caller holds the buffer's mutex.
+    _gpuInit = false;
+    _hasReadback = false;
+    if (_renderDelegate == nullptr) {
+        return;
+    }
+    _renderDelegate->QueueTextureDestruction(_aovTexture);
+    _renderDelegate->QueueTextureDestruction(_texture);
+}
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+void HdArnoldRenderBuffer::EnsureGpuTexture()
+{
+    if (_renderDelegate != nullptr) {
+        _renderDelegate->FlushTextureDestructions();
+    }
+    if (_hgi == nullptr || _width == 0 || _height == 0 || _gpuInit) {
+        return;
+    }
+    std::lock_guard<std::mutex> _guard(_mutex);
+
+    if (_aovTexture && _texture && _GetGlTextureId(_aovTexture) != 0 && _GetGlTextureId(_texture) != 0) {
+        _gpuInit = true;
+        return;
+    }
+
+    const auto ensureTexture = [&](HgiTextureHandle& tex, const char* suffix) {
+        if (tex && _GetGlTextureId(tex) != 0) {
+            return;
+        }
+        if (tex) {
+            _hgi->DestroyTexture(&tex);
+        }
+        _CreateGpuTexture(_hgi, tex, _width, _height, _format, _aovName, suffix);
+    };
+
+    ensureTexture(_aovTexture, "aov");
+    ensureTexture(_texture, "display");
+    if (_GetGlTextureId(_aovTexture) != 0 && _GetGlTextureId(_texture) != 0) {
+        _gpuInit = true;
+    }
+}
+#endif
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
+{
+    const uint32_t srcId = _GetGlTextureId(_aovTexture);
+    const uint32_t dstId = _GetGlTextureId(_texture);
+    return _gpuFlipBlit.Flip(srcId, dstId, static_cast<int>(_width), static_cast<int>(_height));
+}
+#endif
+VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
+{
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+    if (_renderDelegate == nullptr) {
+        return VtValue();
+    }
+    auto* self = const_cast<HdArnoldRenderBuffer*>(this);
+    // GetResource() is called by Hydra/Solaris from the main thread with the GL context
+    // current. AiGetRenderOutput does CUDA<->GL interop that requires a current GL context, so
+    // this is the right place to pull Arnold's latest AOV data into the GL texture. It is also
+    // where the textures dropped while syncing get destroyed, hence the flush even when the GPU
+    // path is off.
+    if (!_renderDelegate->IsAcceleratedViewport() || _hgi == nullptr || _aovName.IsEmpty()) {
+        _renderDelegate->FlushTextureDestructions();
+        return VtValue();
+    }
+    self->EnsureGpuTexture();
+
+    AtRenderSession* rs = _renderDelegate->GetRenderSession();
+    const auto status = rs != nullptr ? AiRenderGetStatus(rs) : AI_RENDER_STATUS_NOT_STARTED;
+    // A started render is not enough: AiGetRenderOutput() must not be called before Arnold has actually
+    // produced a viewport frame, which the render update callback reports (see
+    // HdArnoldRenderParam::HasViewportUpdate). The render pass clears that flag whenever the outputs or the
+    // resolution change, until Arnold has resized its buffers to match.
+    auto* renderParam = static_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+    const bool canReadBack =
+        status != AI_RENDER_STATUS_NOT_STARTED && renderParam != nullptr && renderParam->HasViewportUpdate();
+
+    std::lock_guard<std::mutex> guard(self->_mutex);
+    if (canReadBack && _aovTexture && _texture) {
+        const uint64_t aovGlId = static_cast<uint64_t>(_GetGlTextureId(_aovTexture));
+        if (aovGlId != 0) {
+            // glFinish() ensures all pending GL/CUDA interop operations on this texture
+            // are complete before Arnold maps it again via cuGraphicsMapResources.
+            // Without this, successive AiGetRenderOutput calls on the same texture AV inside
+            // Arnold because the previous async CUDA write hasn't finished unmapping.
+            glFinish();
+            const AtRenderErrorCode rc = AiGetRenderOutput(rs, AtString(_aovName.GetText()), aovGlId, AtGetRenderOutputHandleType::OPENGL);
+            if (rc == AI_SUCCESS) {
+                // Sync CUDA/GL interop before sampling the AOV texture in our blit.
+                glFinish();
+                _readbackWarned = false;
+                if (self->_FlipAovToDisplayTexture() && _GetGlTextureId(_texture) != 0) {
+                    _hasReadback = true;
+                    return VtValue(_texture);
+                }
+                // Flip failed — show AOV as-is (may be Y-inverted).
+                return VtValue(_aovTexture);
+            }
+            // Arnold logs a warning of its own for each failure, so only report the first one.
+            if (!_readbackWarned) {
+                _readbackWarned = true;
+                TF_WARN(
+                    "AiGetRenderOutput failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
+            }
+        }
+    }
+    // Nothing new was read back: hand out the last frame that was, rather than a texture that was never written.
+    if (_hasReadback && _texture && _GetGlTextureId(_texture) != 0) {
+        return VtValue(_texture);
+    }
+#endif
+    return VtValue();
+}
+
+void HdArnoldRenderBuffer::SetHgi(Hgi* hgi)
+{
+    std::lock_guard<std::mutex> guard(_mutex);
+    if (_hgi != hgi) {
+        // The textures belong to the Hgi that created them.
+        _QueueTexturesForDestruction();
+    }
+    _hgi = hgi;
+}
+
+void HdArnoldRenderBuffer::Clear()
+{
+    std::lock_guard<std::mutex> guard(_mutex);
+    std::fill(_buffer.begin(), _buffer.end(), uint8_t{0});
+}
+
 void* HdArnoldRenderBuffer::Map()
 {
     _mutex.lock();
     if (_buffer.empty()) {
+        // Leaving the mutex unlocked here means a subsequent Unmap() must NOT
+        // try to release it. Track the locked-ness in _mapped (guarded by the
+        // mutex while we still hold it) so Unmap doesn't read _buffer.empty()
+        // racily — a concurrent Allocate() can flip that between Map and Unmap
+        // and would otherwise lead us to unlock a mutex we don't hold (UB).
+        _mapped = false;
         _mutex.unlock();
         return nullptr;
     }
+    _mapped = true;
     return _buffer.data();
 }
 
 void HdArnoldRenderBuffer::Unmap()
 {
-    if (!_buffer.empty()) {
+    if (_mapped) {
+        _mapped = false;
         _mutex.unlock();
     }
 }
@@ -248,12 +644,17 @@ void HdArnoldRenderBuffer::_Deallocate()
     std::lock_guard<std::mutex> _guard(_mutex);
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
+    _QueueTexturesForDestruction();
 }
 
 void HdArnoldRenderBuffer::WriteBucket(
     unsigned int bucketXO, unsigned int bucketYO, unsigned int bucketWidth, unsigned int bucketHeight, HdFormat format,
     const void* bucketData)
 {
+    // When backed by a GPU texture, bucket data is delivered via AiGetRenderOutput, not the driver path.
+    if (_hgi != nullptr)
+        return;
+    
     if (!_SupportedComponentFormat(format)) {
         return;
     }
@@ -274,7 +675,6 @@ void HdArnoldRenderBuffer::WriteBucket(
     if (ye == yo) {
         return;
     }
-    _hasUpdates.store(true, std::memory_order_release);
     const auto dataWidth = (xe - xo);
     // Single component formats can be:
     //  - HdFormatUNorm8

@@ -748,11 +748,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned char>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
                 }
                 typeName = SdfValueTypeNames->UCharArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_INT: {
@@ -761,7 +762,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
                 }
                 typeName = SdfValueTypeNames->IntArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -774,7 +776,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
                 }
                 typeName = SdfValueTypeNames->UIntArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -787,11 +790,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<bool>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
                 }
                 typeName = SdfValueTypeNames->BoolArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_FLOAT: {
@@ -800,7 +804,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<float>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
                 }
                 typeName = SdfValueTypeNames->FloatArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
@@ -813,11 +818,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Color3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_VECTOR: {
@@ -826,11 +832,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Vector3fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_RGBA: {
@@ -839,11 +846,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec4f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
                 }
                 typeName = SdfValueTypeNames->Color4fArray;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_VECTOR2: {
@@ -852,11 +860,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec2f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
-                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
+                    if (numElements > 0)
+                        memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
                 }
                 typeName = SdfValueTypeNames->Float2Array;
                 attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_STRING: {
@@ -887,7 +896,7 @@ static inline bool convertArnoldAttribute(
                     typeName = SdfValueTypeNames->Matrix4dArray;
                     attrWriter.ProcessAttributeKeys(writer, primWriter, typeName, vtMotionArray, motionStart, motionEnd);
                 }
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
 
@@ -906,7 +915,7 @@ static inline bool convertArnoldAttribute(
                 }
 
                 if (strcmp(paramName, "shader") == 0 && numElements == 1) {
-                    if (vtArr[0] == "ai_default_reflection_shader") {
+                    if (vtArr[0] == "ai_default_reflection_shader" || vtArr[0].empty()) {
                         break;
                     }
                 }
@@ -1203,8 +1212,11 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         }
     }
     // Identity matrix, nothing to write
-    if (!hasMatrix)
+    if (!hasMatrix) {
+        if (matrices)
+            AiArrayUnmapConst(array);
         return;
+    }
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
     UsdAttribute attr = xformOp.GetAttr();
@@ -1244,6 +1256,20 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         time += timeDelta;
     }
     AiArrayUnmapConst(array);
+}
+
+// A shape is rendered as a volume either when it's a native volume node, or when
+// it's a polymesh with a positive step_size (an implicit / mesh volume). This must
+// stay consistent with the reader's IsVolume() (see reader/read_geometry.cpp),
+// otherwise volume shaders get wired into the surface slot and are dropped at import
+// (falling back to _fallbackVolume).
+static bool IsVolumeShape(const AtNode* node)
+{
+    if (AiNodeIs(node, str::volume))
+        return true;
+    if (AiNodeIs(node, str::polymesh))
+        return AiNodeGetFlt(node, str::step_size) > AI_EPSILON;
+    return false;
 }
 
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer, bool isVolume = false)
@@ -1304,6 +1330,27 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
         // Bind the material to this primitive
         UsdShadeMaterialBindingAPI::Apply(prim).Bind(mat);
+    }
+
+    // A shape rendered as a volume uses only the volume terminal. If the bound
+    // material already exposes a surface terminal (e.g. a UsdPreviewSurface that
+    // MaxUSD authors for interop), strip it: UsdImaging's Hydra-1 material
+    // adapter builds the surface terminal and then SKIPS the volume one
+    // ("surface XOR volume" in UsdImagingMaterialAdapter::GetMaterialResource),
+    // so the volume shape would get no shader and render black. Removing the
+    // surface terminal lets ComputeSurfaceSource return empty, so the volume
+    // terminal is built for all code paths. See MAXTOA-2033.
+    if (isVolume && mat) {
+        static const TfToken s_surfaceOutputs[] = {
+            TfToken("outputs:surface"),         // universal render context
+            TfToken("outputs:arnold:surface"),  // arnold render context
+            TfToken("outputs:mtlx:surface")     // materialx render context
+        };
+        UsdPrim matPrim = mat.GetPrim();
+        for (const TfToken& outputName : s_surfaceOutputs) {
+            if (matPrim.HasProperty(outputName))
+                matPrim.RemoveProperty(outputName);
+        }
     }
 
     // Now bind the eventual surface shader and displacement to the material.
@@ -1389,11 +1436,13 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
 
             unsigned int numSubsets = AiMax(numShaders, numDisp);
             if (writer.GetAppendFile()) {
-                // If we are in append mode, we want to check if the subsets already exist, in which case 
+                // If we are in append mode, we want to check if the subsets already exist, in which case
                 // we don't want to create them again
                 std::vector<UsdGeomSubset> prevSubsets = UsdGeomSubset::GetGeomSubsets(geom, _tokens->face);
-                if (prevSubsets.size() >= numSubsets)
-                   return; 
+                if (prevSubsets.size() >= numSubsets) {
+                    AiArrayUnmap(shidxsArray);
+                    return;
+                }
             }
             for (unsigned int i = 0; i < numSubsets; ++i) {
                 AtNode* shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
@@ -1415,7 +1464,7 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
                 UsdPrim subsetPrim = subset.GetPrim();
 
                 // Process the material binding on the subset primitive
-                processMaterialBinding(shader, displacement, subsetPrim, writer);
+                processMaterialBinding(shader, displacement, subsetPrim, writer, IsVolumeShape(node));
             }
             AiArrayUnmap(shidxsArray);
             return;
@@ -1427,5 +1476,5 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     static const AtString polymesh_str("polymesh");
     AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, AtString("disp_map")) : nullptr;
 
-    processMaterialBinding(shader, displacement, prim, writer, AiNodeIs(node, str::volume));
+    processMaterialBinding(shader, displacement, prim, writer, IsVolumeShape(node));
 }

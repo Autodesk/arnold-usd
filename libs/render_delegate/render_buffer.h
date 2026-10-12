@@ -23,11 +23,14 @@
 #include <pxr/pxr.h>
 
 #include "api.h"
+#include "config.h"
 
 #include "hdarnold.h"
 
 #include <pxr/imaging/hd/aov.h>
 #include <pxr/imaging/hd/renderBuffer.h>
+#include <pxr/imaging/hgi/hgi.h>
+#include <pxr/imaging/hgi/texture.h>
 
 #include <atomic>
 #include <mutex>
@@ -37,11 +40,13 @@ struct AtNode;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class HdArnoldRenderDelegate;
+
 /// Utility class for handling render data.
 class HdArnoldRenderBuffer : public HdRenderBuffer {
 public:
     HDARNOLD_API
-    HdArnoldRenderBuffer(const SdfPath& id);
+    HdArnoldRenderBuffer(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
     HDARNOLD_API
     ~HdArnoldRenderBuffer() override = default;
@@ -81,6 +86,12 @@ public:
     HDARNOLD_API
     bool IsMapped() const override;
 
+    /// Returns the GPU texture backing this render buffer, wrapped in a VtValue.
+    /// Returns an empty VtValue when no Hgi was provided (CPU path).
+    HDARNOLD_API
+    VtValue GetResource(bool multiSampled) const override;
+
+
     /// Resolve the buffer so that reads reflect the latest writes.
     /// This buffer does not need any resolving.
     void Resolve() override {}
@@ -96,18 +107,13 @@ public:
     /// @param converged True if the render buffer is converged, false otherwise.
     void SetConverged(bool converged) { _converged = converged; }
 
-    bool IsEmpty() const {return _buffer.empty();}
+    bool IsEmpty() const { return _buffer.empty() && !_texture && !_aovTexture; }
+
     HDARNOLD_API
     void WriteBucket(
         unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
         HdFormat format, const void* bucketData);
-
-    /// Return wether or not the buffer has any updates. The function also resets the internal counter tracking the
-    /// if there has been any updates.
-    ///
-    /// @return True if the buffer has any updates, false otherwise.
-    bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
-
+    
     /// Utility class for storing render buffers.
     struct BufferDefinition {
         HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
@@ -118,29 +124,73 @@ public:
 
         /// Default constructor.
         BufferDefinition() = default;
-
-        /// Constructor.
-        ///
-        /// @param _buffer Pointer to the HdArnoldRenderBuffer.
-        /// @param _settings Hash map storing the render settings.
-        BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
-            : settings(_settings), buffer(_buffer)
-        {
-        }
+        
     };
+
+    /// Provide the host Hgi instance to take the GPU path. Passing nullptr keeps the CPU path active.
+    /// The GPU textures are created lazily by EnsureGpuTexture().
+    HDARNOLD_API
+    void SetHgi(Hgi* hgi);
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+    /// Ensures the GPU textures have been created with a valid GL id, and destroys the textures queued on the
+    /// render delegate. Only call this with the GL context current (GetResource() does): Hgi textures must be
+    /// created and destroyed on the main thread.
+    HDARNOLD_API
+    void EnsureGpuTexture();
+#endif
+
+    /// Returns true if this buffer is backed by a GPU texture.
+    bool HasGpuTexture() const { return static_cast<bool>(_texture); }
+
+    /// Provide the Arnold AOV name used when calling AiGetRenderOutput on this buffer. An empty name means the
+    /// buffer has no Arnold output to read back.
+    HDARNOLD_API
+    void SetAovName(const TfToken& aovName)
+    {
+        if (_aovName != aovName) {
+            _readbackWarned = false;
+            _hasReadback = false;
+        }
+        _aovName = aovName;
+    }
+
+    /// Zeroes the CPU buffer, leaving its allocation alone.
+    ///
+    /// An AOV that Arnold stops writing keeps whatever the last render left in it, which the host keeps reading:
+    /// stale ids in the primId AOV pick the wrong prims.
+    HDARNOLD_API
+    void Clear();
 
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
     void _Deallocate() override;
 
-    std::vector<uint8_t> _buffer;                    ///< Storing render data.
+    /// Hands the GPU textures to the render delegate, which destroys them on the GL thread.
+    void _QueueTexturesForDestruction();
+
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+    /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
+    /// @return True if _texture was updated, false to use _aovTexture as-is.
+    bool _FlipAovToDisplayTexture() const;
+#endif
+
+    std::vector<uint8_t> _buffer;                    ///< Storing render data (CPU path only).
+    Hgi* _hgi = nullptr;                             ///< Borrowed Hgi instance, owned by the render delegate's host.
+    mutable HgiTextureHandle _aovTexture;            ///< AiGetRenderOutput target (Arnold image-space Y).
+    mutable HgiTextureHandle _texture;               ///< Hydra-facing texture after Y flip (GPU path only).
+    std::atomic<bool> _gpuInit = false;
     std::mutex _mutex;                               ///< Mutex for the parallel writes.
     unsigned int _width = 0;                         ///< Buffer width.
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
+    HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
-    std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
+    TfToken _aovName;                                ///< AOV name passed to AiGetRenderOutput.
+    mutable bool _readbackWarned = false;            ///< Keeps a failing readback from warning on every redraw.
+    mutable bool _hasReadback = false;               ///< _texture holds the result of a successful readback.
+    bool _mapped = false;                            ///< Whether Map() left the mutex held; consulted by Unmap().
 };
 
 using HdArnoldRenderBufferStorage =

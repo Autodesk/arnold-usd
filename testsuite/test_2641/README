@@ -1,0 +1,19 @@
+Animated instanced lights via a cached Point Instancer
+
+Three SphereLights are instanced through a PointInstancer with time-sampled
+positions, sweeping the lit pools across the ground plane from frame 1 to
+frame 30. Through the Hydra render delegate (Solaris), scrubbing the timeline
+must move the instanced lights with the instancer. Before the fix the lights
+stayed frozen at their frame-1 positions because the Arnold instancer was only
+rebuilt on HdLight::DirtyParams and not when the instancer itself was dirty.
+
+This is an interactive (re-render / time-scrub) bug: a single batch render
+rebuilds the instancer on the first Sync, so it cannot reproduce the freeze.
+Verify in Houdini/Solaris by scrubbing the timeline. The batch render here only
+guards the instanced-light code path from breaking.
+
+Fixes #2641
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 16'}

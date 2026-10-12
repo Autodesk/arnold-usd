@@ -17,6 +17,7 @@
 // limitations under the License.
 #include "instancer.h"
 #include "shape_utils.h"
+#include <pxr/base/trace/trace.h>
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
@@ -81,6 +82,8 @@ HdArnoldInstancer::HdArnoldInstancer(
 
 void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    AiProfileBlock("hydra_proc:HdArnoldInstancer:Sync"); 
+    TRACE_FUNCTION();
     if (!_delegate->CanUpdateScene())
         return;
  
@@ -201,30 +204,22 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
     const SdfPath& instancerId = GetId();
     if (!prototypeNode)
         return false;
+    // An invisible instancer produces no instances; returning false makes the caller
+    // (HdArnoldShape::_SyncInstances) hide the prototype source mesh. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible())
+        return false;
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
 
     // If the sampling interval has changed we need to resample the translate, orientations and scales
     if (UpdateSamplingInterval(renderParam->GetShutterRange()))
         ResampleInstancePrimvars();
     
-    HdArnoldSampledMatrixArrayType sampleArray;
+    HdArnoldSampledPrimvarType sampleArray;
     int instanceCount = ComputeSampleMatrixArrayRecursive(renderDelegate, sampleArray, prototypeId);
-    if (instanceCount == 0)
+    if (instanceCount == 0 || sampleArray.count == 0)
         return false;
 
-    AtArray* matrices = AiArrayAllocate(instanceCount, sampleArray.count, AI_TYPE_MATRIX);
-    std::vector<AtMatrix> matrixVector;
-    for (size_t n = 0; n < sampleArray.count; ++n) {
-        const auto& instanceMatrices = sampleArray.values[n];
-        matrixVector.clear();
-        matrixVector.reserve(instanceMatrices.size());
-        for (const auto& instanceMatrix : instanceMatrices) {
-            AtMatrix arnoldMatrix;
-            ConvertValue(arnoldMatrix, instanceMatrix);
-            matrixVector.push_back(arnoldMatrix);
-        }
-        AiArraySetKey(matrices, n, matrixVector.data());
-    }
+    AtArray* matrices = _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfMatrix4f>>(sampleArray);
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
@@ -299,13 +294,22 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
 void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 {
     const SdfPath& instancerId = GetId();
+
+    // Hydra visibility=invisible on the instancer prim does not author any arnold:visibility
+    // primvar, so it is handled explicitly here. This also covers nested chains where a node was
+    // populated before the hide. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible()) {
+        AiNodeSetByte(node, str::visibility, 0);
+        return;
+    }
+
     VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
     if (!matteVal.IsEmpty())
         AiNodeSetBool(node, str::matte, VtValueGetBool(matteVal));
 
     VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
     if (!visVal.IsEmpty()) {
-        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+        AiNodeSetByte(node, str::visibility, static_cast<uint8_t>(VtValueGetInt(visVal)));
     } else {
         bool assignVisibility = false;
         HdArnoldRayFlags rayFlags{AI_RAY_ALL};
@@ -373,15 +377,23 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
 
 
     // By default _deformKeys will take over sample counts
-    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) { 
+    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) {
         sampleArray.Resize(1);
         sampleArray.times[0] = 0.0;
     } else if (_deformKeys > 1 /*&& _deformKeys > sampleArray.times.size()*/) {
-        const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
-        const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
-        sampleArray.Resize(_deformKeys);
-        for(int i = 0; i < _deformKeys; ++i) {
-            sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);   
+        // If none of the _AccumulateSampleTimes calls above pushed any sample times into
+        // sampleArray, min/max_element would return end() and we'd UB on dereference.
+        // Fall back to a single key at t=0 in that case.
+        if (sampleArray.times.empty()) {
+            sampleArray.Resize(1);
+            sampleArray.times[0] = 0.0;
+        } else {
+            const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
+            const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
+            sampleArray.Resize(_deformKeys);
+            for(int i = 0; i < _deformKeys; ++i) {
+                sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);
+            }
         }
     }
     const auto numSamples = sampleArray.count;
@@ -469,7 +481,7 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
     }
 }
 
-int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId)
+int HdArnoldInstancer::ComputeSampleMatrixArrayRecursiveInternal(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId)
 {
     const auto parentId = GetParentId();
     HdArnoldSampledMatrixArrayType parentSampleArray;
@@ -477,10 +489,12 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
     if (!parentId.IsEmpty()) {
         auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
         if (parentInstancer) {
-            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursive(renderDelegate, parentSampleArray, GetId());
+            parentInstanceCount = parentInstancer->ComputeSampleMatrixArrayRecursiveInternal(renderDelegate, parentSampleArray, GetId());
+            if (parentInstanceCount == 0)
+                return 0;
         }
     }
-    
+
     const SdfPath& instancerId = GetId();
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     const int instanceCount = static_cast<int>(instanceIndices.size());
@@ -495,13 +509,13 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
 
     // Use the sample times that have the biggest amount of keys. The time samples
     // should be regular so we don't need to consider the union of both time steps.
-    auto samples = sampleArray.count >= parentSampleArray.count ? 
+    const auto & samples = sampleArray.count >= parentSampleArray.count ?
         sampleArray : parentSampleArray;
     const size_t numSamples = samples.count;
     if (numSamples == 0) {
         return 0;
     }
-    auto &sampleTimes = samples.times;
+    const auto &sampleTimes = samples.times;
     const int totalInstanceCount = parentInstanceCount * instanceCount;
     HdArnoldSampledMatrixArrayType outArray;
     outArray.Resize(static_cast<int>(numSamples));
@@ -523,21 +537,75 @@ int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate 
     return totalInstanceCount;
 }
 
+int HdArnoldInstancer::ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledPrimvarType &sampleArray, const SdfPath& prototypeId)
+{
+    // Compute combined matrices in double precision (needed for accurate matrix multiplication
+    // across nesting levels), then convert to GfMatrix4f for the output. GfMatrix4f has the same
+    // memory layout as AtMatrix so the resulting VtArray can be shared directly with Arnold.
+    HdArnoldSampledMatrixArrayType doubleSamples;
+    const int instanceCount = ComputeSampleMatrixArrayRecursiveInternal(renderDelegate, doubleSamples, prototypeId);
+    if (instanceCount == 0)
+        return 0;
+
+    sampleArray.Resize(doubleSamples.count);
+    sampleArray.count = doubleSamples.count;
+    for (size_t n = 0; n < doubleSamples.count; ++n) {
+        sampleArray.times[n] = doubleSamples.times[n];
+        const auto& src = doubleSamples.values[n];
+        VtArray<GfMatrix4f> dst(src.size());
+        for (size_t i = 0; i < src.size(); ++i) {
+            dst[i] = GfMatrix4f(src[i]);
+        }
+        // Release the double-precision sample immediately after conversion to avoid
+        // holding both representations in memory simultaneously.
+        doubleSamples.values[n] = VtMatrix4dArray();
+        sampleArray.values[n] = VtValue(std::move(dst));
+    }
+    return instanceCount;
+}
+
 void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
     const SdfPath& instancerId = GetId();
 
+    // Match HdStInstancer / hdPrman: an invisible instancer produces no instances. The prototype
+    // source mesh is left hidden by the caller (HdArnoldShape::_SyncInstances) when the instancers
+    // vector stays empty. See instancer.h::_IsInstancerVisible.
+    if (!_IsInstancerVisible()) {
+        return;
+    }
+
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
         return;
     }
+    // If the sampling interval has changed we need to resample the translate, orientations and scales
+    // (see ComputeShapeInstancesTransforms). Resampling also updates the parent instancers.
+    HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    if (UpdateSamplingInterval(renderParam->GetShutterRange()))
+        ResampleInstancePrimvars();
+
     HdArnoldSampledMatrixArrayType sampleArray;
     ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
 
-    // Implementation with the arnold instancer
+    // Implementation with the arnold instancer.
+    // The arnold instancer node name must be globally unique. A separate chain of arnold
+    // instancer nodes is built per prototype shape (see HdArnoldShape), so when several shapes
+    // share the same (parentInstancer, childInstancer) pair, naming a node solely from those
+    // ids collides. We therefore derive the name from the unique child node we just created.
+    //
+    // Invariant: both callers (HdArnoldShape / HdArnoldLight) clear the instancers vector before
+    // the first call, and the parent recursion below only runs after a node has been pushed, so
+    // an empty vector here means this is the innermost (leaf) call. For the leaf we combine the
+    // instancer id with the prototype (shape) id; for parents we prefix the child node's name,
+    // which is already unique by induction. See NESTED_INSTANCER_CRASHES.md.
     std::stringstream ss;
-    ss << prototypeId << "_instancer";
+    if (instancers.empty()) {
+        ss << instancerId << "_prototype_" << prototypeId << "_instancer";
+    } else {
+        ss << AiNodeGetName(instancers.back()) << "_parent_" << instancerId;
+    }
     AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
     instancers.push_back(instancerNode);
 

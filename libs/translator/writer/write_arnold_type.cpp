@@ -78,36 +78,44 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 AtUniverse *universe = AiUniverse();
                 AtParamValueMap *params = AiParamValueMap();
                 AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
-                AiProceduralViewport(node, universe, AI_PROC_BOXES, params);
-                AiParamValueMapDestroy(params);
-                AtBBox bbox;
-                bbox.init();
-                static AtString boxStr("box");
+                // Check the AiProceduralViewport return value before
+                // computing/authoring the extent. If the call fails, the
+                // viewport universe is empty and bbox stays in its
+                // "inverted" init state (min = +FLT_MAX, max = -FLT_MAX),
+                // which would be written verbatim as a bogus extent. The
+                // twin in write_geometry.cpp (UsdArnoldWriteProceduralCustom)
+                // already guards on this return.
+                if (AiProceduralViewport(node, universe, AI_PROC_BOXES, params)) {
+                    AtBBox bbox;
+                    bbox.init();
+                    static AtString boxStr("box");
 
-                // Need to loop over all the nodes that were created in this "viewport" 
-                // universe, and get an expanded bounding box
-                AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(universe, AI_NODE_SHAPE);
-                while (!AiNodeIteratorFinished(nodeIter))
-                {
-                    AtNode *node = AiNodeIteratorGetNext(nodeIter);
-                    if (AiNodeIs(node, boxStr)) {
-                        bbox.expand(AiNodeGetVec(node, AtString("min")));
-                        bbox.expand(AiNodeGetVec(node, AtString("max")));
+                    // Need to loop over all the nodes that were created in this "viewport"
+                    // universe, and get an expanded bounding box
+                    AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(universe, AI_NODE_SHAPE);
+                    while (!AiNodeIteratorFinished(nodeIter))
+                    {
+                        AtNode *node = AiNodeIteratorGetNext(nodeIter);
+                        if (AiNodeIs(node, boxStr)) {
+                            bbox.expand(AiNodeGetVec(node, AtString("min")));
+                            bbox.expand(AiNodeGetVec(node, AtString("max")));
+                        }
                     }
-                }
-                AiNodeIteratorDestroy(nodeIter);
-                AiUniverseDestroy(universe);
+                    AiNodeIteratorDestroy(nodeIter);
 
-                VtVec3fArray extent;
-                extent.resize(2);
-                extent[0][0] = bbox.min.x;
-                extent[0][1] = bbox.min.y;
-                extent[0][2] = bbox.min.z;
-                extent[1][0] = bbox.max.x;
-                extent[1][1] = bbox.max.y;
-                extent[1][2] = bbox.max.z;
-                UsdGeomBoundable boundable(prim);
-                writer.SetAttribute(boundable.CreateExtentAttr(), extent);
+                    VtVec3fArray extent;
+                    extent.resize(2);
+                    extent[0][0] = bbox.min.x;
+                    extent[0][1] = bbox.min.y;
+                    extent[0][2] = bbox.min.z;
+                    extent[1][0] = bbox.max.x;
+                    extent[1][1] = bbox.max.y;
+                    extent[1][2] = bbox.max.z;
+                    UsdGeomBoundable boundable(prim);
+                    writer.SetAttribute(boundable.CreateExtentAttr(), extent);
+                }
+                AiParamValueMapDestroy(params);
+                AiUniverseDestroy(universe);
             }
         }
     }
@@ -172,7 +180,7 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         UsdAttribute extentsAttr = targetBoundable.GetExtentAttr();
         if (extentsAttr) {
             VtVec3fArray extents;
-            extentsAttr.Get(&extents, (float)writer.GetTime().GetValue());
+            extentsAttr.Get(&extents, writer.GetTime());
 
             UsdGeomBoundable boundable(prim);
             writer.SetAttribute(boundable.CreateExtentAttr(), extents);

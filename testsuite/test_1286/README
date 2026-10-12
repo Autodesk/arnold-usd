@@ -1,0 +1,7 @@
+Support uv renderVars
+
+See #1286
+
+author: sebastien ortega
+
+PARAMS: {'scene':'scene.usda'}

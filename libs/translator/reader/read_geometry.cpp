@@ -57,6 +57,8 @@
 #include "read_light.h"
 #include "utils.h"
 
+#include <unordered_map>
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -203,7 +205,30 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
             AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
             ReadLightCommon(prim, meshLightNode, time);
             ReadLightNormalize(prim, meshLightNode, time);
+            ReadLightShapingParams(prim, meshLightNode, time, false);
             ReadMatrix(prim, meshLightNode, time, context);
+            // Apply arnold:light:* primvars (same as the primvars:arnold:light path)
+            ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+            ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+            // Apply bare arnold:attr_name primvars if attr_name exists in the mesh_light node entry
+            {
+                const AtNodeEntry *nentry = AiNodeGetNodeEntry(meshLightNode);
+                const static std::string s_lightPrefix = "arnold:light:";
+                const static std::string s_arnoldPrefix = "arnold:";
+                for (const UsdGeomPrimvar &primvar : context.GetPrimvars()) {
+                    const std::string primvarName = primvar.GetPrimvarName().GetString();
+                    if (primvarName.length() > s_arnoldPrefix.length() &&
+                        TfStringStartsWith(primvarName, s_arnoldPrefix) &&
+                        !TfStringStartsWith(primvarName, s_lightPrefix) &&
+                        primvarName != "arnold:matrix") {
+                        const std::string paramName = primvarName.substr(s_arnoldPrefix.length());
+                        const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.c_str()));
+                        if (paramEntry) {
+                            ReadAttribute(primvar.GetAttr(), meshLightNode, paramName, time, context, AiParamGetType(paramEntry));
+                        }
+                    }
+                }
+            }
         }
 #endif
     }
@@ -285,13 +310,18 @@ bool MeshOrientation::OrientFaceIndexAttribute(T& attr)
 class MeshPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
-    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation) {}
+    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation), _holeFilter(nullptr) {}
+    MeshPrimvarsRemapper(MeshOrientation &orientation, const MeshHoleFilter *holeFilter)
+        : _orientation(orientation), _holeFilter(holeFilter) {}
     virtual ~MeshPrimvarsRemapper() {}
     bool ReadPrimvar(const TfToken& primvar) override;  
+    bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value) override;
     bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         std::vector<unsigned int> &indexes) override;
 private:
     MeshOrientation &_orientation;
+    const MeshHoleFilter *_holeFilter;
 };
 bool MeshPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
 {
@@ -301,11 +331,31 @@ bool MeshPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
     return true;
 }
 
+bool MeshPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation,
+        VtValue &value) 
+{
+    if (_holeFilter == nullptr || _holeFilter->Empty())
+        return false;
+
+    if (interpolation == UsdGeomTokens->uniform) {
+        return _holeFilter->FilterUniformValue(value);
+    }
+    // Face-varying values are NOT filtered here — the index filtering in
+    // RemapIndexes already skips hole-face entries, and the indices still
+    // reference positions in the original (unfiltered) values array.
+    return false;
+}
+
 bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         std::vector<unsigned int> &indexes) 
 {
     if (interpolation != UsdGeomTokens->faceVarying)
         return false;
+
+    // Filter hole faces from face-varying indices
+    if (_holeFilter != nullptr && !_holeFilter->Empty()) {
+        _holeFilter->FilterFaceVaryingArray(indexes);
+    }
 
     if (!_orientation.OrientFaceIndexAttribute(indexes)) {
         const UsdAttribute &attr = primvar.GetAttr();
@@ -351,35 +401,70 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
             }
         }
     }
-    
-    ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
-        context, AI_TYPE_ARRAY, AI_TYPE_BYTE);
 
-    if (!meshOrientation.reverse) {
-        // Basic right-handed orientation, no need to do anything special here
-        ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
-            context, AI_TYPE_ARRAY, AI_TYPE_UINT);
+    // Read subdivision scheme early — needed to determine hole handling
+    TfToken subdiv;
+    mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
+
+    // Read holeIndices for non-subdivided meshes.
+    // USD holeIndices marks faces as invisible (not rendered).
+    // We handle this by removing hole faces from nsides/vidxs entirely.
+    MeshHoleFilter holeFilter;
+    VtIntArray originalNsides; // original nsides; only populated if there are holes
+    if (subdiv == UsdGeomTokens->none) {
+        VtIntArray holeIndices;
+        mesh.GetHoleIndicesAttr().Get(&holeIndices, frame);
+        if (!holeIndices.empty()) {
+            mesh.GetFaceVertexCountsAttr().Get(&originalNsides, frame);
+            holeFilter.Build(holeIndices, originalNsides);
+        }
+    }
+
+    if (!holeFilter.Empty()) {
+        // Filter nsides: exclude hole faces
+        VtIntArray filteredNsides = originalNsides;
+        holeFilter.FilterUniformArray(filteredNsides);
+        // Match the non-hole path which uses AI_TYPE_BYTE for nsides.
+        std::vector<uint8_t> nsides_byte(filteredNsides.begin(), filteredNsides.end());
+        AiNodeSetArray(node, str::nsides, AiArrayConvert(nsides_byte.size(), 1, AI_TYPE_BYTE, nsides_byte.data()));
+
+        // Filter vidxs: exclude vertex indices belonging to hole faces
+        VtIntArray allVidxs;
+        mesh.GetFaceVertexIndicesAttr().Get(&allVidxs, frame);
+        holeFilter.FilterFaceVaryingArray(allVidxs);
+
+        // Handle left-handed orientation
+        if (meshOrientation.reverse) {
+            meshOrientation.nsidesArray = filteredNsides;
+            meshOrientation.OrientFaceIndexAttribute(allVidxs);
+        }
+
+        std::vector<unsigned int> vidxs_uint(allVidxs.begin(), allVidxs.end());
+        AiNodeSetArray(node, str::vidxs, AiArrayConvert(vidxs_uint.size(), 1, AI_TYPE_UINT, vidxs_uint.data()));
     } else {
-        // We can't call ReadArray here because the orientation requires to
-        // reverse face attributes. So we're duplicating the function here.
-        VtIntArray array;
-        mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
-        size_t size = array.size();
-        if (size > 0) {
-            meshOrientation.OrientFaceIndexAttribute(array);
+        // No holes: use standard attribute reading
+        ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
+            context, AI_TYPE_ARRAY, AI_TYPE_BYTE);
 
-            // Need to convert the data from int to unsigned int
-            std::vector<unsigned int> arnold_vec(array.begin(), array.end());
-            AiNodeSetArray(node, str::vidxs, AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
-        } else
-            AiNodeResetParameter(node, str::vidxs);
+        if (!meshOrientation.reverse) {
+            ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
+                context, AI_TYPE_ARRAY, AI_TYPE_UINT);
+        } else {
+            VtIntArray array;
+            mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
+            size_t size = array.size();
+            if (size > 0) {
+                meshOrientation.OrientFaceIndexAttribute(array);
+                std::vector<unsigned int> arnold_vec(array.begin(), array.end());
+                AiNodeSetArray(node, str::vidxs, AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
+            } else
+                AiNodeResetParameter(node, str::vidxs);
+        }
     }
 
     bool hasVelocities = _ReadPointsAndVelocities(mesh, node, str::vlist, context);
 
     // Read USD builtin normals
-    TfToken subdiv;
-    mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
     const bool wantNormals = subdiv == UsdGeomTokens->none;
     UsdAttribute normalsAttr = GetNormalsAttribute(mesh);
     if (normalsAttr.HasAuthoredValue() && wantNormals) {
@@ -393,8 +478,8 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
         std::vector<GfVec3f> normalsArray;
         std::vector<unsigned int> nidxs; // Flattened array that we are going to pass to arnold
-        normalsArray.reserve(vListKeys*AiArrayGetNumElements(vlistArray));
-        unsigned int normalsElemCount = -1;
+        normalsArray.reserve(vListKeys * (vlistArray ? AiArrayGetNumElements(vlistArray) : 0));
+        unsigned int normalsElemCount = 0;
 
         UsdGeomPrimvar normalsPrimvar(normalsAttr);
         TfToken normalsInterp = GetNormalsInterpolation(mesh);
@@ -462,6 +547,10 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                     // Fill it with 0, 1, ..., 99.
                     std::iota(std::begin(nidxs), std::end(nidxs), 0);
                 }
+                // Filter out face-varying entries belonging to hole faces
+                if (!holeFilter.Empty()) {
+                    holeFilter.FilterFaceVaryingArray(nidxs);
+                }
                 // If the mesh is left handed we need to reorder the indices
                 if (meshOrientation.reverse) {
                     meshOrientation.OrientFaceIndexAttribute(nidxs);
@@ -483,6 +572,22 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         VtIntArray faceVtxArray;
         mesh.GetFaceVertexCountsAttr().Get(&faceVtxArray, frame);
         ReadSubsetsMaterialBinding(prim, node, context, subsets, faceVtxArray.size());
+
+        // If holes were removed, the shidxs array has entries for all original faces.
+        // We need to filter it to match the reduced face count.
+        if (!holeFilter.Empty()) {
+            AtArray* shidxsArray = AiNodeGetArray(node, str::shidxs);
+            if (shidxsArray) {
+                const uint32_t numElements = AiArrayGetNumElements(shidxsArray);
+                std::vector<uint8_t> shidxs(numElements);
+                for (uint32_t i = 0; i < numElements; ++i)
+                    shidxs[i] = AiArrayGetByte(shidxsArray, i);
+                if (holeFilter.FilterUniformArray(shidxs)) {
+                    AiNodeSetArray(node, str::shidxs,
+                        AiArrayConvert(shidxs.size(), 1, AI_TYPE_BYTE, shidxs.data()));
+                }
+            }
+        }
     } 
 
     UsdAttribute cornerWeightsAttr = mesh.GetCornerSharpnessesAttr();
@@ -502,7 +607,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
-     MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
+     MeshPrimvarsRemapper primvarsRemapper(meshOrientation, &holeFilter);
     _ReadGenericShape(prim, context, node, time, "primvars:arnold", &primvarsRemapper, subsets.empty());
 
     // Check if subdiv_iterations were set in ReadArnoldParameters,
@@ -917,6 +1022,7 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // C0 = 0.28209479177387814 (the l=0 SH basis constant).
     // USD radiance:sphericalHarmonicsCoefficients stores raw coefficients;
     // apply the transformation here before building the Arnold atarray.
+    bool gsShSet = false;
     {
         UsdAttribute shAttr;
         bool isFloat = gs.UsesFloatRadianceCoefficients(&shAttr);
@@ -953,7 +1059,25 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
                 }
                 AiNodeSetArray(node, str::gs_sh,
                     AiArrayConvert(shCoeffs.size(), 1, AI_TYPE_RGB, shCoeffs.data()));
+                gsShSet = true;
             }
+        }
+    }
+
+    // --- Spherical harmonics fallback: primvars:displayColor ----------------
+    // When Houdini's Bake GSplat SOP creates a ParticleField3DGaussianSplat prim,
+    // it stores the degree-0 splat color in primvars:displayColor instead of
+    // radiance coefficients. When no coefficients are present, use displayColor
+    // as the degree-0 DC term. The values are already the final DC color
+    // (raw_f_dc * C0 + 0.5), so they are passed through directly without normalization.
+    if (!gsShSet) {
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        UsdGeomPrimvar displayColorPv = primvarsAPI.GetPrimvar(TfToken("displayColor"));
+        if (displayColorPv) {
+            VtArray<GfVec3f> displayColor;
+            if (displayColorPv.Get(&displayColor, frame) && !displayColor.empty())
+                AiNodeSetArray(node, str::gs_sh,
+                    AiArrayConvert(displayColor.size(), 1, AI_TYPE_RGB, displayColor.cdata()));
         }
     }
 
@@ -2013,12 +2137,37 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     if (reader == nullptr)
         return nullptr;
 
-    AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
     UsdVolVolume::FieldMap fields = volume.GetFieldPaths();
     std::string filename;
     std::vector<std::string> grids;
+    std::vector<std::string> pointsGrids;
+
+#if ARNOLD_VERSION_NUM >= 70504
+    // Since Arnold 7.5.4.0, AiVolumeFileGetChannelTypes lets us know if a given vdb grid stores
+    // OpenVDB points rather than a regular volume/SDF grid. Arnold volume nodes can't render
+    // points grids, so those are routed to a dedicated points node instead (#2740). The query
+    // reopens and reparses the whole file, so its result is cached per filename.
+    std::unordered_map<std::string, std::unordered_map<std::string, int>> channelTypesCache;
+    auto getChannelType = [&channelTypesCache](const std::string &file, const std::string &grid) -> int {
+        auto cacheIt = channelTypesCache.find(file);
+        if (cacheIt == channelTypesCache.end()) {
+            std::unordered_map<std::string, int> types;
+            AtArray *channels = AiVolumeFileGetChannels(file.c_str());
+            AtArray *channelTypes = AiVolumeFileGetChannelTypes(file.c_str());
+            if (channels != nullptr && channelTypes != nullptr) {
+                const unsigned numChannels = AiArrayGetNumElements(channels);
+                for (unsigned i = 0; i < numChannels; ++i) {
+                    types[AiArrayGetStr(channels, i).c_str()] = AiArrayGetInt(channelTypes, i);
+                }
+            }
+            cacheIt = channelTypesCache.emplace(file, std::move(types)).first;
+        }
+        auto typeIt = cacheIt->second.find(grid);
+        return typeIt == cacheIt->second.end() ? AI_VOLUME_CHANNEL_TYPE_UNKNOWN : typeIt->second;
+    };
+#endif
 
     // Loop over all the fields in this volume node.
     // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
@@ -2039,33 +2188,65 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
-                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", AiNodeGetName(node));
+                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", prim.GetPath().GetText());
             }
             TfToken vdbGrid;
             if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid, time.frame)) {
+                std::string gridName = vdbGrid.GetString();
+#if ARNOLD_VERSION_NUM >= 70504
+                if (getChannelType(fieldFilename, gridName) == AI_VOLUME_CHANNEL_TYPE_POINTS) {
+                    pointsGrids.push_back(gridName);
+                    continue;
+                }
+#endif
                 int fieldIndex = 0;
                 if (vdbAsset.GetFieldIndexAttr().Get(&fieldIndex, time.frame)) {
-                    std::string vdbIndexGrid = vdbGrid.GetString();
-                    vdbIndexGrid += std::string("[") + std::to_string(fieldIndex) + std::string("]");
-                    grids.push_back(vdbIndexGrid);
-                } else {
-                    grids.push_back(vdbGrid);
+                    gridName += std::string("[") + std::to_string(fieldIndex) + std::string("]");
                 }
+                grids.push_back(gridName);
             }
         }
     }
 
-    // Now set the first vdb filename that was found
-    AiNodeSetStr(node, str::filename, AtString(filename.c_str()));
+    AtNode *node = nullptr;
+    // Only skip creating the arnold volume node when every field turned out to be a points grid.
+    // If nothing was found at all, we still create an (empty) volume node, matching prior behavior.
+    if (!grids.empty() || pointsGrids.empty()) {
+        node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
+        // Now set the first vdb filename that was found
+        AiNodeSetStr(node, str::filename, AtString(filename.c_str()));
 
-    // Set all the grids that are needed
-    AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
-    for (size_t i = 0; i < grids.size(); ++i) {
-        AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+        // Set all the grids that are needed
+        AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
+        for (size_t i = 0; i < grids.size(); ++i) {
+            AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+        }
+        AiNodeSetArray(node, str::grids, gridsArray);
+
+        _ReadGenericShape(prim, context, node, time, "primvars:arnold");
     }
-    AiNodeSetArray(node, str::grids, gridsArray);
 
-    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+#if ARNOLD_VERSION_NUM >= 70504
+    // Arnold's points node can only source a single grid per node (file_grid), so each points
+    // grid found on this volume prim gets its own points node.
+    for (size_t i = 0; i < pointsGrids.size(); ++i) {
+        std::string pointsName = prim.GetPath().GetText();
+        if (node != nullptr || pointsGrids.size() > 1) {
+            pointsName += "/points_";
+            pointsName += pointsGrids[i];
+        }
+        AtNode *pointsNode = context.CreateArnoldNode("points", pointsName.c_str());
+        AiNodeSetStr(pointsNode, str::file_name, AtString(filename.c_str()));
+        AiNodeSetStr(pointsNode, str::file_grid, AtString(pointsGrids[i].c_str()));
+        // Points don't support the same feature set as volumes (e.g. no volume shading, no
+        // interior/exterior shaders), so we fall back to the generic shape reading path used
+        // by regular geometry: standard material binding, primvars and arnold parameters.
+        _ReadGenericShape(prim, context, pointsNode, time, "primvars:arnold");
+        if (node == nullptr)
+            node = pointsNode;
+    }
+#endif
+
     return node;
 }
 

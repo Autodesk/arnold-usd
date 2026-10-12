@@ -35,6 +35,7 @@
 #include <pxr/base/tf/getenv.h>
 #include <pxr/base/tf/envSetting.h>
 
+#include <pxr/imaging/hd/version.h>
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/extComputation.h>
@@ -42,6 +43,9 @@
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
+#include <pxr/imaging/hd/driver.h>
+#include <pxr/imaging/hgi/tokens.h>
+
 #ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
@@ -53,6 +57,7 @@
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
+#include "coord_sys.h"
 #include "gaussian_splat.h"
 #include "instancer.h"
 #include "light.h"
@@ -68,10 +73,7 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
-
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #include "render_settings.h"
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -112,6 +114,10 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    (renderSettingsSrc)
+    (hydraSceneRenderSettingsSrc)
+    (ocioConfigPath)
+
     // The following tokens are also defined in read_options.cpp, we need them
     // here for the conversion from TfToken to HdFormat, while in read_options they
     // are used for the conversion of HdFormat to TfToken.
@@ -135,8 +141,19 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_SHAPE_INSTANCING, "", "Set to 0 to disable inner shape instancing");
+TF_DEFINE_ENV_SETTING(
+    HDARNOLD_FLATTEN_INSTANCING, "",
+    "Set to 1 to flatten nested instances into shape instancing instead of using nested arnold instancer nodes");
 
 namespace {
+
+const bool IsSceneIndexEmulationEnabled() {
+#if HD_API_VERSION >= 99
+    return true;
+#else
+    return HdRenderIndex::IsSceneIndexEmulationEnabled();
+#endif
+}
 
 const HdFormat _GetHdFormatFromToken(const TfToken& token)
 {
@@ -263,6 +280,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
     // Scene-index dependency forwarding dirties lights when graphs change but does
     // not reorder this pass.
     static const TfTokenVector r{HdPrimTypeTokens->camera,
+                                 HdPrimTypeTokens->coordSys,
                                  HdPrimTypeTokens->material,
                                  str::t_ArnoldNodeGraph,
                                  HdPrimTypeTokens->distantLight,
@@ -294,11 +312,7 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
     } else
 #endif
     {
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-#else
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-#endif
         return r;
     }
 }
@@ -380,7 +394,6 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         // Search paths
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
 #if ARNOLD_VERSION_NUM <= 70403
-        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
 #else
         {str::t_asset_searchpath, {"Asset search path.", config.asset_searchpath}},
@@ -397,6 +410,9 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
         {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+        {str::t_accelerated_viewport, {"Enable accelerated viewport", config.accelerated_viewport}},
+#endif
     };
     return data;
 }
@@ -437,18 +453,32 @@ void _CheckForBoolValue(const VtValue& value, F&& f)
         f(value.UncheckedGet<long>() != 0);
     } else if (value.IsHolding<long long>()) {
         f(value.UncheckedGet<long long>() != 0);
+    } else if (value.IsHolding<unsigned int>()) {
+        f(value.UncheckedGet<unsigned int>() != 0u);
+    } else if (value.IsHolding<unsigned long>()) {
+        f(value.UncheckedGet<unsigned long>() != 0ul);
+    } else if (value.IsHolding<unsigned long long>()) {
+        f(value.UncheckedGet<unsigned long long>() != 0ull);
     }
 }
 
 template <typename F>
 void _CheckForIntValue(const VtValue& value, F&& f)
 {
+    // See _CheckForBoolValue: unsigned integer types are silently dropped
+    // without the matching IsHolding branches.
     if (value.IsHolding<int>()) {
         f(value.UncheckedGet<int>());
     } else if (value.IsHolding<long>()) {
         f(static_cast<int>(value.UncheckedGet<long>()));
     } else if (value.IsHolding<long long>()) {
         f(static_cast<int>(value.UncheckedGet<long long>()));
+    } else if (value.IsHolding<unsigned int>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned int>()));
+    } else if (value.IsHolding<unsigned long>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned long>()));
+    } else if (value.IsHolding<unsigned long long>()) {
+        f(static_cast<int>(value.UncheckedGet<unsigned long long>()));
     }
 }
 
@@ -502,6 +532,11 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
     return _renderDelegate->GetPxrMtlxPath();
 }
 
+const std::string& HydraArnoldAPI::GetOcioConfigPath() const
+{
+    return _renderDelegate->GetOcioConfigPath();
+}
+
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 
     _apiAdapter(this),
     _universe(universe),
@@ -510,7 +545,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _context(context),
     _isBatch(isBatch), 
     _renderDelegateOwnsUniverse(universe==nullptr)
-{     
+{
 
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);
@@ -572,9 +607,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         }
         AiNodeEntryIteratorDestroy(shapeIter);
     }
-    std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
-    if (_counterResourceRegistry.fetch_add(1) == 0) {
-        _resourceRegistry.reset(new HdResourceRegistry());
+    {
+        std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
+        if (_counterResourceRegistry.fetch_add(1) == 0) {
+            _resourceRegistry = std::make_shared<HdResourceRegistry>();
+        }
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
@@ -626,7 +663,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
-    _renderParam.reset(new HdArnoldRenderParam(this));
+#if defined(HOUDINI_LOGGER_BUILD)
+    _houdiniLogger = std::make_unique<HdArnoldHoudiniLogger>(GetUniverse());
+#endif
+
+    _renderParam = std::make_unique<HdArnoldRenderParam>(this);
     // To set the default value.
     _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
@@ -652,17 +693,42 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _supportShapeInstancing = envShapeInstancing != std::string("0");
 #else
     _supportShapeInstancing = false;
-#endif    
-    
+#endif
+
+    // When enabled, nested instances are flattened into shape instancing instead of
+    // being handled by a chain of nested arnold instancer nodes. Defaults to disabled.
+    std::string envFlattenInstancing = TfGetEnvSetting(HDARNOLD_FLATTEN_INSTANCING);
+    _flattenInstancing = envFlattenInstancing == std::string("1");
+
+    // Geometry deduplication mode: 0 off, 1 point-instancer prototypes only (default), 2 all
+    // geometries. Read with TfGetenvInt rather than a cached TfGetEnvSetting, so that it can
+    // change between two render delegates of the same process.
+    switch (TfGetenvInt("HDARNOLD_GEOM_DEDUP", 1)) {
+        case 0: _geometryDedupMode = GeometryDedupMode::None; break;
+        case 2: _geometryDedupMode = GeometryDedupMode::All; break;
+        default: _geometryDedupMode = GeometryDedupMode::Instances; break;
+    }
+
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 {
-    std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
-    if (_counterResourceRegistry.fetch_sub(1) == 1) {
-        _resourceRegistry.reset();
+#if defined(HOUDINI_LOGGER_BUILD)
+    _houdiniLogger.reset();
+#endif
+    {
+        std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
+        if (_counterResourceRegistry.fetch_sub(1) == 1) {
+            _resourceRegistry.reset();
+        }
     }
     _renderParam->Interrupt();
+    // Hydra destroys the render buffers before the delegate, so this is the last chance to release their textures.
+    FlushTextureDestructions();
+    // Drop anything queued instead of acting on it: nothing will poll for it again. We can't be
+    // holding an imager barrier for a session that outlives us - only the procedural passes an
+    // external universe, always with a procedural parent, which ImagerInterrupt() skips.
+    _renderParam->ClearPendingUpdates();
     if (_renderDelegateOwnsUniverse) {
         AiRenderSessionDestroy(GetRenderSession());
         AiUniverseDestroy(_universe);
@@ -680,40 +746,98 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
-void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
-{    
-    // function to get or create the color manager and set it on the options node
-    auto getOrCreateColorManager = [](HdArnoldRenderDelegate *renderDelegate, AtNode* options) -> AtNode* {
-        AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
-        if (colorManager == nullptr) {
-            const char *ocio_path = std::getenv("OCIO");
-            if (ocio_path) {
-                colorManager = renderDelegate->CreateArnoldNode(str::color_manager_ocio, 
-                    str::color_manager_ocio);
-                AiNodeSetPtr(options, str::color_manager, colorManager);
-                AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
-            }
-            else
-                // use the default color manager
-                colorManager = renderDelegate->LookupNode("ai_default_color_manager_ocio");
-        }
+AtNode* HdArnoldRenderDelegate::_GetOrCreateColorManager()
+{
+    AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(_options, str::color_manager));
+    if (colorManager != nullptr)
         return colorManager;
-    };
 
+    // The OCIO environment variable takes precedence over everything else, then comes the
+    // config path the host application gave us through the render settings (#2730).
+    const char* ocio_path = std::getenv("OCIO");
+    const AtString config(ocio_path ? ocio_path : _ocioConfigPath.c_str());
+    if (!config.empty()) {
+        // The reading paths create the same color manager when they read the render settings
+        // prim, we must not end up with two of them
+        colorManager = FindOrCreateArnoldNode(str::color_manager_ocio, str::color_manager_ocio);
+        AiNodeSetPtr(_options, str::color_manager, colorManager);
+        AiNodeSetStr(colorManager, str::config, config);
+        // The color spaces might have been received before we had a config to create this
+        // color manager, in which case they were applied to the default color manager.
+        _ApplyColorSpaces(colorManager);
+    } else {
+        // use the default color manager
+        colorManager = LookupNode("ai_default_color_manager_ocio");
+    }
+    return colorManager;
+}
+
+void HdArnoldRenderDelegate::_ApplyColorSpaces(AtNode* colorManager)
+{
+    if (colorManager == nullptr)
+        return;
+    if (!_colorSpaceLinear.empty())
+        AiNodeSetStr(colorManager, str::color_space_linear, AtString(_colorSpaceLinear.c_str()));
+    if (!_colorSpaceNarrow.empty())
+        AiNodeSetStr(colorManager, str::color_space_narrow, AtString(_colorSpaceNarrow.c_str()));
+}
+
+void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
+{
     // When husk/houdini changes frame, they set the new frame number via the render settings.
     if (_key == str::t_houdiniFrame) {
         if (_value.IsHolding<double>()) {
             const float frame = static_cast<float>(_value.UncheckedGet<double>());
-            AiNodeSetFlt(_options, str::frame, frame);
+            // Only restart when the frame actually changed.
+            if (frame != _frame) {
+                _frame = frame;
+                // Modifying the options node is costly during interactive renders and slows down
+                // timeline playback, so we only set options.frame in batch renders.
+                if (_isBatch)
+                    AiNodeSetFlt(_options, str::frame, frame);
+                _renderParam->Restart();
+            }
         }
-
-        // We want to restart a new render in that case.
+    }
+    
+    // See the HDK hydra docs for more details
+    //   https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraCopTextures
+    if (_key == str::t_houdiniCopTextureChanged) {
+        // COP textures need updating, flush the texture cache to trigger a refresh
+        // of all the image_cop nodes. Use Interrupt() directly rather than Pause(),
+        // which now issues a resumable AiRenderPause() on newer Arnold versions --
+        // this needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         _renderParam->Restart();
     }
 
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
+        return;
+    }
+    if (_key == _tokens->renderSettingsSrc) {
+        if (_value.IsHolding<TfToken>()) {
+            TfToken renderSettingsSrc = _value.UncheckedGet<TfToken>();
+            _useHydraRenderSettings = (renderSettingsSrc == _tokens->hydraSceneRenderSettingsSrc);
+        }
+    }
+    // The host application can tell us where its OCIO config file resides, e.g. maya
+    // reads it from its color management preferences (#2730). We only use it when the OCIO
+    // environment variable is not set, as it always takes precedence.
+    if (_key == _tokens->ocioConfigPath) {
+        if (_value.IsHolding<std::string>()) {
+            _ocioConfigPath = _value.UncheckedGet<std::string>();
+            if (!_ocioConfigPath.empty() && std::getenv("OCIO") == nullptr) {
+                // Create the color manager right away, the color spaces might never be set.
+                AtNode* colorManager = _GetOrCreateColorManager();
+                // The color manager could already exist, in which case the above returned it
+                // as-is and we still need to apply the config we just received.
+                if (colorManager != nullptr && AiNodeIs(colorManager, str::color_manager_ocio))
+                    AiNodeSetStr(colorManager, str::config, AtString(_ocioConfigPath.c_str()));
+            }
+        }
         return;
     }
     TfToken key;
@@ -724,20 +848,32 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
-        _CheckForBoolValue(value, [&](const bool b) {
-            AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
-            AiDeviceAutoSelect(GetRenderSession());
-        });
+        _CheckForBoolValue(value, [&](const bool b) { _gpuRenderingEnabled = b; });
+
+        if (_acceleratedViewport) {
+            AiNodeSetStr(_options, str::render_device, str::GPU);
+            AiNodeSetBool(_options, str::direct_outputs, true);
+        }
+        else
+        {
+            _CheckForBoolValue(value, [&](const bool b) {
+                AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
+                AiDeviceAutoSelect(GetRenderSession());
+            });
+        }
     } else if (key == str::t_log_verbosity) {
-        if (value.IsHolding<int>()) {
-            _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
+        // Some hosts (older Houdini, Maya) pass integer settings as long /
+        // long long. _CheckForIntValue normalises all three to int, so the
+        // verbosity actually takes effect instead of being silently dropped.
+        _CheckForIntValue(value, [&](const int verbosity) {
+            _verbosityLogFlags = _GetLogFlagsFromVerbosity(verbosity);
             static const auto& config = HdArnoldConfig::GetInstance();
             // Do not set the console and file flags, if the corresponding
             // environment variable was set in the config
             if (config.log_flags_console < 0) {
                 AiMsgSetConsoleFlags(
-                    #if ARNOLD_VERSION_NUM < 70100                    
-                        GetRenderSession(), 
+                    #if ARNOLD_VERSION_NUM < 70100
+                        GetRenderSession(),
                     #else
                         _universe,
                     #endif
@@ -745,15 +881,15 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
             if (config.log_flags_file < 0) {
                 AiMsgSetLogFileFlags(
-                    #if ARNOLD_VERSION_NUM < 70100                    
-                        GetRenderSession(), 
+                    #if ARNOLD_VERSION_NUM < 70100
+                        GetRenderSession(),
                     #else
                         _universe,
                     #endif
                     _verbosityLogFlags);
 
             }
-        }
+        });
     } else if (key == str::t_log_file) {
         if (value.IsHolding<std::string>()) {
             _logFile = value.UncheckedGet<std::string>();
@@ -777,35 +913,37 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiProfileSetFileName(_profileFile.c_str());
         }
     } else if (key == str::t_enable_progressive_render) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForBoolValue(value, [&](const bool b) {
                 AiRenderSetHintBool(GetRenderSession(), str::progressive, b);
                 AiNodeSetBool(_options, str::enable_progressive_render, b);
             });
         }
     } else if (key == str::t_progressive_min_AA_samples) {
-        if (!_isBatch) {
+        if (!_isBatch && _procParent == nullptr) {
             _CheckForIntValue(value, [&](const int i) {
                 AiRenderSetHintInt(GetRenderSession(), str::progressive_min_AA_samples, i);
             });
         }
     } else if (key == str::t_interactive_target_fps) {
-        if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, value.UncheckedGet<float>());
-            }
+        // _CheckForFloatValue handles double and GfHalf as well as float, so
+        // hosts that don't normalise to float don't get their FPS setting dropped.
+        if (!_isBatch && _procParent == nullptr) {
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, f);
+            });
         }
     } else if (key == str::t_interactive_target_fps_min) {
-        if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, value.UncheckedGet<float>());
-            }
+        if (!_isBatch && _procParent == nullptr) {
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, f);
+            });
         }
     } else if (key == str::t_interactive_fps_min) {
-        if (!_isBatch) {
-            if (value.IsHolding<float>()) {
-                AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
-            }
+        if (!_isBatch && _procParent == nullptr) {
+            _CheckForFloatValue(value, [&](const float f) {
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, f);
+            });
         }
     } else if (key == _tokens->instantaneousShutter) {
         // If the arnold-specific attribute "ignore_motion_blur" is set, it should take 
@@ -841,13 +979,20 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(this, _options);
-            AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
+            _colorSpaceLinear = value.UncheckedGet<std::string>();
+            // _GetOrCreateColorManager returns nullptr when there is no OCIO config
+            // and the ai_default_color_manager_ocio lookup fails; dereferencing
+            // it crashes inside AiNodeSetStr.
+            AtNode* colorManager = _GetOrCreateColorManager();
+            if (colorManager != nullptr)
+                AiNodeSetStr(colorManager, str::color_space_linear, AtString(_colorSpaceLinear.c_str()));
         }
     } else if (key == str::color_space_narrow) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(this, _options);
-            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
+            _colorSpaceNarrow = value.UncheckedGet<std::string>();
+            AtNode* colorManager = _GetOrCreateColorManager();
+            if (colorManager != nullptr)
+                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(_colorSpaceNarrow.c_str()));
         }
     } else if (key == _tokens->dataWindowNDC) {
         if (value.IsHolding<GfVec4f>()) {
@@ -862,6 +1007,32 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec2i>()) {
             _resolution = value.UncheckedGet<GfVec2i>();
         }
+    }
+    else if (key == str::t_accelerated_viewport) {
+#ifdef SUPPORT_ACCELERATED_VIEWPORT
+        _CheckForBoolValue(value, [&](const bool b) {
+            if (b == _acceleratedViewport) {
+                // Hosts re-send every render setting on each update, and ending the session below is expensive.
+                return;
+            }
+            _acceleratedViewport = b;
+            AiNodeSetBool(_options, str::direct_outputs, _acceleratedViewport);
+            if (_acceleratedViewport) {
+                AiNodeSetStr(_options, str::render_device, str::GPU);
+            } else {
+                AiNodeSetStr(_options, str::render_device, _gpuRenderingEnabled ? str::GPU : str::CPU);
+                AiDeviceAutoSelect(GetRenderSession());
+            }
+            // Arnold only builds the direct outputs pipeline when it sets up a GPU session, so a session that
+            // already has one ignores direct_outputs being turned on, and AiGetRenderOutput() never gets
+            // anything to serve. Start a new session instead of restarting this one.
+            _renderParam->EndSession();
+        });
+#else
+        AiMsgWarning(
+            "[usd] accelerated_viewport render setting ignored - "
+            "SUPPORT_ACCELERATED_VIEWPORT was not defined at build time");
+#endif
     } else if (key == _tokens->batchCommandLine) {
         // Solaris-specific command line, it can have an argument "-o output.exr" to override
         // the output image. We might end up using this for arnold drivers
@@ -869,13 +1040,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
-                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                if (commandLine[i] == "-o" && i + 1 < commandLine.size()) {
                     _outputOverride = commandLine[++i];
                     continue;
                 }
                 // husk argument for thread count (#1077)
-                if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
-                        && i < commandLine.size() - 2) {
+                if ((commandLine[i] == "-j" || commandLine[i] == "--threads")
+                        && i + 1 < commandLine.size()) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
@@ -883,12 +1054,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
-        std::string cmParam = key.GetString().substr(_tokens->colorManagerNamespace.GetString().length());
-        AtNode* colorManager = getOrCreateColorManager(this, _options);
-        AtString cmParamStr(cmParam.c_str());
-        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), 
-            AtString(cmParam.c_str())) != nullptr) {
-            _SetNodeParam(colorManager, TfToken(cmParam), value);
+        const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
+        AtNode* colorManager = _GetOrCreateColorManager();
+        if (colorManager != nullptr) {
+            AtString cmParamStr(cmParamCStr);
+            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), cmParamStr) != nullptr) {
+                _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
+            }
         }
     } 
     else {
@@ -1012,16 +1184,23 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         }
                     }
 
-                    // Look for driver:parameters:aov:format and arnold:format overrides
+                    // Look for driver:parameters:aov:format and arnold:format overrides.
+                    // Only apply the override if it maps to a known HdFormat; otherwise
+                    // _GetHdFormatFromToken returns HdFormatInvalid and we would clobber
+                    // a previously valid renderVar.format value.
                     const auto* aovDriverFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovDriverFormat);
                     if (aovDriverFormat != nullptr && aovDriverFormat->CanCast<TfToken>()) {
                         TfToken aovDriverFormatToken = VtValue::Cast<TfToken>(*aovDriverFormat).UncheckedGet<TfToken>();
-                        renderVar.format = _GetHdFormatFromToken(aovDriverFormatToken);
+                        const HdFormat overrideFormat = _GetHdFormatFromToken(aovDriverFormatToken);
+                        if (overrideFormat != HdFormatInvalid)
+                            renderVar.format = overrideFormat;
                     }
                     const auto* arnoldFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovFormat);
                     if (arnoldFormat != nullptr && arnoldFormat->CanCast<TfToken>()) {
                         TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
-                        renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
+                        const HdFormat overrideFormat = _GetHdFormatFromToken(arnoldFormatToken);
+                        if (overrideFormat != HdFormatInvalid)
+                            renderVar.format = overrideFormat;
                     }
 
                     if (!renderVar.sourceName.empty()) {
@@ -1052,6 +1231,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     _RemoveArnoldGlobalPrefix(_key, key);
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
+    } else if (key == str::t_accelerated_viewport) {
+        return VtValue(_acceleratedViewport);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
         AiRenderGetHintBool(GetRenderSession(), str::progressive, v);
@@ -1082,8 +1263,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
         return VtValue(v);
-    } else if (key == str::t_profile_file) {
-        return VtValue(std::string(AiProfileGetFileName().c_str()));
     } else if (key == str::t_background) {
         return VtValue(_background.GetString());
     } else if (key == str::t_atmosphere) {
@@ -1126,15 +1305,6 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
-// for testing in batch mode. TODO: correctly check the if we can and want to use the hydra render settings
-bool HdArnoldRenderDelegate::IsUsingHydraRenderSettings() const { 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-    return true; 
-#else
-    return false;
-#endif
-}
-
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1150,8 +1320,12 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     if(!renderStatus.empty())
     {
         // Beautify the log - 'Rendering' looks nicer than 'rendering'
-        // in the viewport annotation
-        renderStatus[0] = std::toupper(renderStatus[0]);
+        // in the viewport annotation. std::toupper requires the argument to be
+        // representable as unsigned char (or EOF); passing a `char` directly is
+        // UB for byte values > 127 on platforms where char is signed, since the
+        // implicit promotion to int is then negative.
+        renderStatus[0] = static_cast<char>(
+            std::toupper(static_cast<unsigned char>(renderStatus[0])));
     }
     const int width = AiNodeGetInt(_options, str::xres);
     const int height = AiNodeGetInt(_options, str::yres);
@@ -1277,8 +1451,11 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         DirtyDependency(sprimId);
 
     if (typeId == HdPrimTypeTokens->camera) {
-        return (_mask & AI_NODE_CAMERA) ? 
+        return (_mask & AI_NODE_CAMERA) ?
             new HdArnoldCamera(this, sprimId) : nullptr;
+    }
+    if (typeId == HdPrimTypeTokens->coordSys) {
+        return new HdArnoldCoordSys(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->material) {
         return (_mask & AI_NODE_SHADER) ? 
@@ -1358,7 +1535,7 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 {
     // Neither of these will create Arnold nodes.
     if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(bprimId);
+        return new HdArnoldRenderBuffer(this, bprimId);
     }
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
@@ -1367,14 +1544,9 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
 #if PXR_VERSION >= 2208
     // Only support render settings when we don't own the universe (procedural context).
     // When we own the universe (batch context), settings come through SetRenderSettings.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
     if (typeId == HdPrimTypeTokens->renderSettings /*&& !_renderDelegateOwnsUniverse*/) {
-        return new HdArnoldRenderSettings(bprimId);
+        return new HdArnoldRenderSettings(this, bprimId);
     }
-#else
-    if (typeId == HdPrimTypeTokens->renderSettings)
-        return nullptr;
-#endif // ENABLE_HYDRA2_RENDERSETTINGS
 #endif // PXR_VERSION >= 2208
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
@@ -1386,10 +1558,88 @@ HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
     return CreateBprim(typeId, SdfPath());
 }
 
+void HdArnoldRenderDelegate::QueueTextureDestruction(HgiTextureHandle& texture)
+{
+    if (!texture) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+    _texturesToDestroy.push_back(texture);
+    texture = HgiTextureHandle();
+}
+
+void HdArnoldRenderDelegate::FlushTextureDestructions()
+{
+    std::vector<HgiTextureHandle> textures;
+    {
+        std::lock_guard<std::mutex> guard(_texturesToDestroyMutex);
+        if (_texturesToDestroy.empty()) {
+            return;
+        }
+        textures.swap(_texturesToDestroy);
+    }
+    if (_hgi == nullptr) {
+        return;
+    }
+    for (auto& texture : textures) {
+        _hgi->DestroyTexture(&texture);
+    }
+}
+
+void HdArnoldRenderDelegate::_ForgetRenderBuffer(const HdArnoldRenderBuffer* renderBuffer)
+{
+    if (renderBuffer == nullptr || _universe == nullptr) {
+        return;
+    }
+    AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(_universe, AI_NODE_DRIVER);
+    while (!AiNodeIteratorFinished(nodeIter)) {
+        AtNode* driver = AiNodeIteratorGetNext(nodeIter);
+        if (driver == nullptr || !AiNodeIs(driver, str::HdArnoldDriverMain)) {
+            continue;
+        }
+        for (const AtString& pointer : {str::color_pointer, str::depth_pointer, str::id_pointer}) {
+            if (AiNodeGetPtr(driver, pointer) == renderBuffer) {
+                AiNodeSetPtr(driver, pointer, nullptr);
+            }
+        }
+        AtArray* pointers = AiNodeGetArray(driver, str::buffer_pointers);
+        const unsigned int pointerCount = pointers != nullptr ? AiArrayGetNumElements(pointers) : 0;
+        for (unsigned int i = 0; i < pointerCount; ++i) {
+            if (AiArrayGetPtr(pointers, i) == renderBuffer) {
+                AiArraySetPtr(pointers, i, nullptr);
+            }
+        }
+        // node_update copied the parameters above into the driver's local data, and only runs again when the
+        // render restarts.
+        auto* driverData = static_cast<DriverMainData*>(AiNodeGetLocalData(driver));
+        if (driverData == nullptr) {
+            continue;
+        }
+        if (driverData->colorBuffer == renderBuffer) {
+            driverData->colorBuffer = nullptr;
+        }
+        if (driverData->depthBuffer == renderBuffer) {
+            driverData->depthBuffer = nullptr;
+        }
+        if (driverData->idBuffer == renderBuffer) {
+            driverData->idBuffer = nullptr;
+        }
+        for (auto& buffer : driverData->buffers) {
+            if (buffer.second == renderBuffer) {
+                buffer.second = nullptr;
+            }
+        }
+    }
+    AiNodeIteratorDestroy(nodeIter);
+}
+
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 {
     // RenderBuffers can be in use in drivers.
     _renderParam->Interrupt();
+    // The render pass only rewires the drivers on its next execute, but the render can be restarted before that
+    // (e.g. by the Hydra render settings path), and Arnold would then write buckets into freed memory.
+    _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
     delete bPrim;
 }
 
@@ -1407,6 +1657,39 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
 
+void HdArnoldRenderDelegate::UpdateCoordSysCameraProjections()
+{
+    std::lock_guard<std::mutex> guard(_coordSysCamerasMutex);
+    if (_coordSysCameras.empty())
+        return;
+    const int yres = AiNodeGetInt(_options, str::yres);
+    if (yres == 0)
+        return;
+    // Arnold bakes the render frame aspect ratio into every camera's vertical fov
+    // (see AiWorldToScreenMatrix). We cancel it per coordSys projector by setting
+    // its vertical screen window to frameAspect * (vAperture/hAperture), using the
+    // resolution actually being rendered - so the projection follows the projector's
+    // own aperture and is independent of the render camera aspect / resolution.
+    const float frameAspect =
+        (static_cast<float>(AiNodeGetInt(_options, str::xres)) / static_cast<float>(yres)) *
+        AiNodeGetFlt(_options, str::pixel_aspect_ratio);
+    for (const auto& entry : _coordSysCameras) {
+        AtNode* camera = entry.first;
+        const float yHalf = frameAspect * entry.second;
+        const AtVector2 windowMin = AiNodeGetVec2(camera, str::screen_window_min);
+        const AtVector2 windowMax = AiNodeGetVec2(camera, str::screen_window_max);
+        const float yCenter = 0.5f * (windowMin.y + windowMax.y);
+        const float newMinY = yCenter - yHalf;
+        const float newMaxY = yCenter + yHalf;
+        // Only write when the value actually changes: this is called every render,
+        // and re-setting the parameter would dirty the camera and restart rendering.
+        if (!GfIsClose(windowMin.y, newMinY, AI_EPSILON) || !GfIsClose(windowMax.y, newMaxY, AI_EPSILON)) {
+            AiNodeSetVec2(camera, str::screen_window_min, windowMin.x, newMinY);
+            AiNodeSetVec2(camera, str::screen_window_max, windowMax.x, newMaxY);
+        }
+    }
+}
+
 AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
 {
     if (_renderDelegateOwnsUniverse) {
@@ -1420,29 +1703,28 @@ AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader()
 {
-    if (_fallbackShader)
-        return _fallbackShader;
-
     std::lock_guard<std::mutex> guard(_defaultShadersMutex);
     if (_fallbackShader == nullptr) {
-        _fallbackShader = CreateArnoldNode(str::standard_surface, 
+        // Build the shader graph in a local, then publish to _fallbackShader
+        // only once the user_data_reader has been linked. Otherwise a concurrent
+        // caller reading _fallbackShader could observe the pointer between the
+        // assignment and the AiNodeLink below, and return an unlinked shader.
+        AtNode* shader = CreateArnoldNode(str::standard_surface,
             AtString("_fallbackShader"));
-    
+
         AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
             AtString("_fallbackShader_userDataReader"));
-        
+
         AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
         AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
-        AiNodeLink(userDataReader, str::base_color, _fallbackShader);
+        AiNodeLink(userDataReader, str::base_color, shader);
+        _fallbackShader = shader;
     }
-    return _fallbackShader; 
+    return _fallbackShader;
 }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader()
 {
-    if (_fallbackVolumeShader)
-        return _fallbackVolumeShader;
-
     std::lock_guard<std::mutex> guard(_defaultShadersMutex);
     if (_fallbackVolumeShader == nullptr) {
         _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
@@ -1494,15 +1776,14 @@ void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* 
         if (!name.IsEmpty() || !links.empty()) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        links.emplace(name, std::vector<HdLight*>{light});
+        links.emplace(name, std::unordered_set<HdLight*>{light});
     } else {
-        if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+        if (it->second.insert(light).second) {
             // We only trigger the change if we are registering a non-empty collection, or there are more than one
             // collections.
             if (!name.IsEmpty() || links.size() > 1) {
                 _lightLinkingChanged.store(true, std::memory_order_release);
             }
-            it->second.push_back(light);
         }
     }
 }
@@ -1518,7 +1799,7 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
         if (!name.IsEmpty() || links.size() > 1) {
             _lightLinkingChanged.store(true, std::memory_order_release);
         }
-        it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
+        it->second.erase(light);
         if (it->second.empty()) {
             links.erase(name);
         }
@@ -1629,20 +1910,36 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     // For interactive renders, it is always possible to update the scene
     if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
+    // When running under a procedural parent, we translate the scene during the
+    // procedural expansion, while the parent render is already active (status
+    // RENDERING). We must be allowed to update the scene regardless of that
+    // status, otherwise no node would ever get translated in a batch render.
+    if (_procParent != nullptr)
+        return true;
     // For batch renders, only update the scene if the render hasn't started yet,
-    // or if it's finished
-    const int status = AiRenderGetStatus(_renderSession);
+    // or if it's finished. We must use GetRenderSession() rather than _renderSession
+    // directly: when we don't own the universe (procedural / external) _renderSession
+    // is never assigned, and reading it via the accessor pulls the session out of the
+    // universe instead of dereferencing nullptr.
+    const int status = AiRenderGetStatus(GetRenderSession());
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
 
 bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const SdfPath& cameraId, const GfVec2f& shutter)
 {
-    if (!_deferredFunctionCalls.empty()) {
-        // TODO: depending on the size, we could do the update in parallel.
-        for (const auto& func : _deferredFunctionCalls) {
-            func();
-        }
-        _deferredFunctionCalls.clear();
+    // Drain the deferred queue under the lock by swapping it into a local,
+    // then run the callbacks without holding the lock. Iterating
+    // _deferredFunctionCalls directly while another thread is push_back-ing
+    // under _deferredFunctionCallsMutex (from _ApplyLightLinking) is a data
+    // race: a reallocation could invalidate the loop's iterator.
+    std::vector<std::function<void()>> deferred;
+    {
+        std::lock_guard<std::mutex> guard(_deferredFunctionCallsMutex);
+        deferred.swap(_deferredFunctionCalls);
+    }
+    // TODO: depending on the size, we could do the update in parallel.
+    for (const auto& func : deferred) {
+        func();
     }
 
     HdDirtyBits bits = HdChangeTracker::Clean;
@@ -1680,7 +1977,7 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
 #ifdef ENABLE_SCENE_INDEX
         // Unfortunately the MarkAllRprimsDirty doesn't work as we would expect in USD 25.05 with hydra 2, it marks dirty the prims of the legacy scene index which doesn't contain rprims, so all
         // the dirty notifications get discarded. We have to use a workaround to get the same behaviour as before by propagating the dirtyness to a dedicated scene index filter.
-        if (HdRenderIndex::IsSceneIndexEmulationEnabled()) {
+        if (IsSceneIndexEmulationEnabled()) {
             if (HdSceneIndexBaseRefPtr sceneIndex = renderIndex->GetTerminalSceneIndex()) {
                 // Regarding the used of TfHashMap to carry the dirtyness, we unfortunately can't pass
                 // directly HdSceneIndexObserver::DirtiedPrimEntries due to template functions implementation
@@ -1722,14 +2019,41 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         changes = true;
     }
     SdfPath id;
+#ifdef ENABLE_SCENE_INDEX
+    // Under scene index emulation (Hydra 2) the change tracker's MarkRprimDirty / MarkSprimDirty
+    // must not be called directly: they raise "requires emulation" coding errors and the dirtiness
+    // is dropped. We instead push the dirtiness through the terminal scene index, the same way the
+    // bulk Rprim dirtying above does. Resolve the terminal scene index once for the lambda to use.
+    HdSceneIndexBaseRefPtr terminalSceneIndex =
+        IsSceneIndexEmulationEnabled() ? renderIndex->GetTerminalSceneIndex() : nullptr;
+#endif
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
-        // Marking a primitive as being dirty. But the function to invoke
-        // depends on the prim type. For now we're checking first if a Rprim
-        // exists with this name, to choose between Rprims and Sprims.
-        if (renderIndex->HasRprim(source)) {
-            changeTracker.MarkRprimDirty(source, bits);
+        // Marking a primitive as being dirty. The conversion to data source locators and the
+        // function to invoke depend on the prim type, so we check first whether an Rprim exists
+        // with this name to choose between Rprims and Sprims.
+        const bool isRprim = renderIndex->HasRprim(source);
+#ifdef ENABLE_SCENE_INDEX
+        if (terminalSceneIndex) {
+            const HdSceneIndexPrim prim = terminalSceneIndex->GetPrim(source);
+            HdDataSourceLocatorSet locators;
+            if (isRprim) {
+                HdDirtyBitsTranslator::RprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            } else {
+                HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(prim.primType, bits, &locators);
+            }
+            if (!locators.IsEmpty()) {
+                TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash> dirtyEntries;
+                dirtyEntries.insert({source, locators});
+                auto dataSource = HdRetainedTypedSampledDataSource<
+                    TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(dirtyEntries);
+                terminalSceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
+            }
+            return;
         }
-        else {
+#endif
+        if (isRprim) {
+            changeTracker.MarkRprimDirty(source, bits);
+        } else {
             // Depending on the Sprim type, the dirty bits must be different. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
             changeTracker.MarkSprimDirty(source, bits);
         }
@@ -1748,14 +2072,19 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
                 auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
+                    if (sourceIt->second.empty()) {
+                        _sourceToTargetsMap.erase(sourceIt);
+                    }
                 }
-                if (sourceIt->second.empty()) {
-                    _sourceToTargetsMap.erase(sourceIt);
-                }
-                // This source primitive needs to be updated
-                auto bits = _dependencyToDirtyBitsMap[{id, source}];
+                // This source primitive needs to be updated. Use find() so we don't
+                // silently insert a zero-bits entry when the (target, source) pair
+                // is missing — operator[] would leak default entries into the map.
+                const auto bitsIt = _dependencyToDirtyBitsMap.find({id, source});
+                const HdDirtyBits bits = bitsIt != _dependencyToDirtyBitsMap.end()
+                    ? bitsIt->second : HdChangeTracker::Clean;
                 markPrimDirty(source, bits);
-                _dependencyToDirtyBitsMap.erase({id, source});
+                if (bitsIt != _dependencyToDirtyBitsMap.end())
+                    _dependencyToDirtyBitsMap.erase(bitsIt);
             }
 
             // Erase the map from this target to all its sources
@@ -1769,52 +2098,110 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
         // We need to ensure that the previous dependencies were properly cleared
         const auto &newTargetsWithBits = dependencyChange.targets;
         const auto &source = dependencyChange.source;
-        auto prevTargets = _sourceToTargetsMap[source];
+        // Look up via find() rather than operator[] so we don't silently
+        // insert an empty PathSet entry for sources we've never seen
+        // (TrackDependencies(source, {}) routinely hits this path via
+        // ClearDependencies).
+        PathSet prevTargets;
+        {
+            const auto prevIt = _sourceToTargetsMap.find(source);
+            if (prevIt != _sourceToTargetsMap.end())
+                prevTargets = prevIt->second;
+        }
         PathSet newTargets;
         for (const auto &pathAndBits : newTargetsWithBits) {
             newTargets.insert(pathAndBits.first);
-            _dependencyToDirtyBitsMap.insert({{pathAndBits.first, source}, pathAndBits.second});
+            // Overwrite any prior bits for this (target, source) pair so updated
+            // dependencies actually take effect (insert() is a no-op on existing keys).
+            _dependencyToDirtyBitsMap[{pathAndBits.first, source}] = pathAndBits.second;
         }
-        // Set the new targets for this source
-        _sourceToTargetsMap[source] = newTargets;
+        // Set the new targets for this source. If the new list is empty, drop
+        // the entry entirely rather than leaving an empty PathSet behind.
+        if (newTargets.empty()) {
+            _sourceToTargetsMap.erase(source);
+        } else {
+            _sourceToTargetsMap[source] = newTargets;
+        }
 
         // Now check, for all targets that were set previously to this source,
         // if they're still present in the new list. If they're not, then we need
-        // to remove the source from the target map
+        // to remove the source from the target map. Use find() so a target that
+        // was already removed via the removal queue doesn't get a default-
+        // constructed entry resurrected here.
         for (const auto &prevTarget : prevTargets) {
             if (newTargets.find(prevTarget) == newTargets.end()) {
-                _targetToSourcesMap[prevTarget].erase(source);
+                const auto targetIt = _targetToSourcesMap.find(prevTarget);
+                if (targetIt != _targetToSourcesMap.end()) {
+                    targetIt->second.erase(source);
+                    if (targetIt->second.empty())
+                        _targetToSourcesMap.erase(targetIt);
+                }
                 _dependencyToDirtyBitsMap.erase({prevTarget, source});
             }
         }
-        
+
         for (const auto& target : newTargets) {
             // for each target, we want to add all the source to its map
             _targetToSourcesMap[target].insert(source);
         }
     }
-    
+
+    // Instanced lights are Sprims, and Hydra does not propagate a Point Instancer's dirtiness to
+    // them the way it does for instanced Rprims: when an instancer's prototypes are only lights,
+    // nothing carries the dirty notification to the light Sprim, so after the first frame the
+    // instanced lights stay frozen while the instancer animates (issue #2641). The light registers
+    // a dependency on its instancer (see HdArnoldGenericLight::Sync); here we look for instancers
+    // that prims depend on and that are still dirty in the change tracker - because no Rprim caused
+    // Hydra to sync and clean them - and propagate that dirtiness to the dependent prims so they
+    // re-sync and rebuild their Arnold instancer. The light's re-sync calls the instancer's Sync,
+    // which clears the instancer's dirty bits and prevents this from looping every frame.
+    for (const auto& targetAndSources : _targetToSourcesMap) {
+        const SdfPath& target = targetAndSources.first;
+        if (renderIndex->GetInstancer(target) == nullptr) {
+            continue;
+        }
+        if (changeTracker.GetInstancerDirtyBits(target) != HdChangeTracker::Clean) {
+            DirtyDependency(target);
+        }
+    }
+
     // Finally, we're processing all the dependencies that were marked as dirty.
     // For each of them, we need to update all the sources pointing at it
     while (_dependencyDirtyQueue.try_pop(id)) {
         auto it = _targetToSourcesMap.find(id);
         if (it != _targetToSourcesMap.end()) {
             changes = true;
-            // mark each source as being dirty
+            // mark each source as being dirty. Use find() to avoid inserting
+            // a zero-bits default entry when the (target, source) pair is missing.
             for (const auto &source: it->second) {
-                auto bits = _dependencyToDirtyBitsMap[{id, source}];
-                markPrimDirty(source, bits);
+                const auto bitsIt = _dependencyToDirtyBitsMap.find({id, source});
+                if (bitsIt != _dependencyToDirtyBitsMap.end())
+                    markPrimDirty(source, bitsIt->second);
             }
         }
     }
 
-    // If we have connections in our stack, it means that some nodes were re-exported, 
+    // If we have connections in our stack, it means that some nodes were re-exported,
     // and therefore that the render was already interrupted
     ProcessConnections();
+    // Now the queued links are applied, it's safe for an imager to read those nodes again. This
+    // can't live in UpdateRender(), which our callers skip for the whole frame when we return true.
+    _renderParam->ResumeImagers();
     return changes;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const { return false; }
+bool HdArnoldRenderDelegate::IsPauseSupported() const
+{
+#if ARNOLD_VERSION_NUM >= 70504
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if PXR_VERSION >= 2203
+bool HdArnoldRenderDelegate::IsPaused() const { return _renderParam->IsPaused(); }
+#endif
 
 bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
 
@@ -1823,6 +2210,14 @@ bool HdArnoldRenderDelegate::Stop(bool blocking)
 #else
 bool HdArnoldRenderDelegate::Stop()
 #endif
+{
+    // A hard stop: fully interrupt the render, and keep it stopped until Restart(),
+    // rather than parking it at the resumable pause gate used by Pause() below.
+    _renderParam->Stop();
+    return true;
+}
+
+bool HdArnoldRenderDelegate::Pause()
 {
     _renderParam->Pause();
     return true;
@@ -1842,7 +2237,13 @@ bool HdArnoldRenderDelegate::Restart()
 
 #if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsStopped() const
-{   
+{
+    // A render parked at the AiRenderPause() gate keeps reporting AI_RENDER_STATUS_RENDERING, so the Arnold status
+    // alone would miss it. That is intentional here -- paused is not stopped, and IsPaused() reports that instead --
+    // but a Stop() has to be reported even before the next UpdateRender() tick observes the interrupted status.
+    if (_renderParam->IsStopped()) {
+        return true;
+    }
     int status = AiRenderGetStatus(GetRenderSession());
     return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }
@@ -1881,6 +2282,64 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
     }
 }
 
+// ---------------------------------------------------------------------------
+// Geometry deduplication registry (meshes and curves).
+// ---------------------------------------------------------------------------
+
+AtNode* HdArnoldRenderDelegate::AcquireCanonicalGeometry(uint64_t hash, AtNode* candidate)
+{
+    std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+    const auto it = _canonicalGeometry.find(hash);
+    if (it != _canonicalGeometry.end()) {
+        ++it->second.duplicates;
+        return it->second.node;
+    }
+    if (candidate != nullptr)
+        _canonicalGeometry.emplace(hash, CanonicalGeometry{candidate});
+    return nullptr;
+}
+
+void HdArnoldRenderDelegate::ReleaseCanonicalGeometry(uint64_t hash)
+{
+    AtNode* toDestroy = nullptr;
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && it->second.duplicates > 0))
+            return;
+        if (--it->second.duplicates == 0 && it->second.adopted) {
+            toDestroy = it->second.node;
+            _canonicalGeometry.erase(it);
+        }
+    }
+    DestroyArnoldNode(toDestroy);
+}
+
+bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node, const SdfPath& id)
+{
+    {
+        std::lock_guard<std::mutex> guard(_canonicalGeometryMutex);
+        const auto it = _canonicalGeometry.find(hash);
+        if (!TF_VERIFY(it != _canonicalGeometry.end() && !it->second.adopted && it->second.node == node))
+            return false;
+        if (it->second.duplicates == 0) {
+            _canonicalGeometry.erase(it);
+            return false;
+        }
+        it->second.adopted = true;
+    }
+    // Once the nodes belong to Arnold (see EnableNodesDestruction) they must not be touched.
+    if (_enableNodesDestruction) {
+        // Give the node's name back to the rprim, which creates its new node under it, and stop
+        // rendering it on its own. Its instances are unaffected, they set their own visibility.
+        const std::string name =
+            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
+        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        AiNodeSetByte(node, str::visibility, 0);
+    }
+    return true;
+}
+
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
     if (node == nullptr)
@@ -1896,6 +2355,22 @@ void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
     }
 }
 
+void HdArnoldRenderDelegate::SetDrivers(HdDriverVector const& drivers)
+{
+    // Skip in batch renders, and when we run under a procedural parent: in that
+    // case we don't own the render loop and shouldn't grab the host's Hgi driver.
+    if (_isBatch || _procParent != nullptr)
+        return;
+
+    for (HdDriver* driver : drivers) {
+        if (driver != nullptr && driver->name == HgiTokens->renderDriver &&
+            driver->driver.IsHolding<Hgi*>()) {
+            _hgi = driver->driver.UncheckedGet<Hgi*>();
+            break;
+        }
+    }
+}
+
 bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
     // In this function we store the provided render tags, and we want to return
@@ -1903,16 +2378,18 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     if (renderTags == _renderTags)
         return false;
 
-    // if the amount of elements has not changed, we also want to check if we're receiving 
-    // the render tags in a different order
+    // If the amount of elements has not changed, we also want to check if we're receiving
+    // the render tags in a different order. Comparing as sorted vectors handles both
+    // ordering and duplicates correctly — the previous "every new tag is in old" check
+    // missed cases like new=[a, a] vs old=[a, b] (different sets, but every 'a' is
+    // found in old, so it reported no change).
     bool renderTagsChanged = renderTags.size() != _renderTags.size();
     if (!renderTagsChanged) {
-        for (auto t : renderTags) {
-            if (std::find(_renderTags.begin(), _renderTags.end(), t) == _renderTags.end()) {
-                renderTagsChanged = true;
-                break;
-            }
-        }
+        TfTokenVector a = renderTags;
+        TfTokenVector b = _renderTags;
+        std::sort(a.begin(), a.end());
+        std::sort(b.begin(), b.end());
+        renderTagsChanged = (a != b);
     }
     _renderTags = renderTags;
     return renderTagsChanged;
@@ -1920,15 +2397,15 @@ bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_background);
     return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere, this);
     if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_atmosphere);
     return nullptr;
@@ -1938,7 +2415,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     std::vector<AtNode *> nodes;
     for (const auto &materialPath: _aov_shaders) {
-        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath, this);
         if (nodeGraph) {
             const auto &terminals = nodeGraph->GetCachedTerminals(_tokens->aovShadersArray);
             std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
@@ -1949,7 +2426,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager, this);
     if (nodeGraph) {
         // Indicate to this node graph that it is an imager graph, so that 
         // it doesn't interrupt / restart the render when a node changes
@@ -1969,8 +2446,8 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
 
 AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
-    if (nodeGraph)    
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override, this);
+    if (nodeGraph)
         return nodeGraph->GetCachedTerminal(str::t_shader_override);
     return nullptr;
 }
@@ -1984,6 +2461,10 @@ void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
 void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
 {
    _cryptomatteDrivers.clear();
+   // Otherwise HasCryptomatte() keeps reporting true after every driver is
+   // gone, and code paths gated on it (e.g. the per-instancer crypto offset
+   // declaration) stay enabled with no driver to consume the data.
+   _hasCryptomatte = false;
 }
 void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numInstances)
 {   
@@ -2003,7 +2484,9 @@ void HdArnoldRenderDelegate::SetInstancerCryptoOffset(AtNode *node, size_t numIn
     std::vector<int> crypto_object_offsets(numInstances);
     for (size_t i = 0; i < numInstances; ++i)
         crypto_object_offsets[i] = i;
-    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, &crypto_object_offsets[0]));
+    // .data() is defined for empty vectors; &crypto_object_offsets[0] is UB when numInstances is 0
+    // (which the caller in SetHasCryptomatte can hit for instancers with no instance_matrix yet).
+    AiNodeSetArray(node, str::instance_crypto_object_offset, AiArrayConvert(numInstances, 1, AI_TYPE_INT, crypto_object_offsets.data()));
 }
 
 void HdArnoldRenderDelegate::SetHasCryptomatte(bool b)
@@ -2042,12 +2525,17 @@ HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
 bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
 {
     if (command == TfToken("flush_texture")) {
-        // Stop render
-        _renderParam->Pause();
+        // Stop render. Use Interrupt() directly rather than Pause(), which now
+        // issues a resumable AiRenderPause() on newer Arnold versions -- this
+        // needs a hard stop so the cache flush below is safe.
+        _renderParam->Interrupt(false, false);
         // Flush texture
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render
         _renderParam->Restart();
+        // Hydra interprets the return value as "command handled" — returning
+        // false here made every successful flush look like an unhandled command.
+        return true;
     }
     return false;
 }

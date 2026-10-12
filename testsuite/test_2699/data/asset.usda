@@ -1,0 +1,19 @@
+#usda 1.0
+(
+    defaultPrim = "asset"
+)
+
+def Xform "asset"
+{
+    # Constant primvar authored on the parent prim, meant to be inherited by the
+    # descendant Mesh/Sphere and resolved as the Cryptomatte asset id.
+    string primvars:crypto_asset = "my_custom_asset" (
+        interpolation = "constant"
+    )
+
+    def Sphere "geo"
+    {
+        float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+        double radius = 1
+    }
+}

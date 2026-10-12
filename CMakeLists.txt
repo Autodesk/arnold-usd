@@ -9,6 +9,9 @@ list(APPEND CMAKE_MODULE_PATH "${USD_LOCATION}/lib/cmake/" 0)
 # Define the project and build options
 include(options)
 
+# OpenGL must be found before importing pxrTargets (garch links OpenGL::GL)
+find_package(OpenGL)
+
 # Global required packagse
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
@@ -42,6 +45,11 @@ add_subdirectory(plugins)
 if (BUILD_USDGENSCHEMA_ARNOLD)
     message(STATUS "Building custom usdGenSchema")
     add_subdirectory(tools/usdgenschema)
+endif()
+
+if (BUILD_TURNTABLE)
+    message(STATUS "Building turntable tool")
+    add_subdirectory(tools/turntable)
 endif()
 
 # Building the schemas

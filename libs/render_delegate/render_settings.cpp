@@ -18,14 +18,15 @@
 /// @file render_settings.cpp
 ///
 /// Hydra 2.0 Render Settings Prim for Arnold.
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
-
 #include "render_settings.h"
+#include "render_delegate.h"
 
 #if PXR_VERSION >= 2308
 
 #include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/range2f.h>
 #include <pxr/base/gf/vec2i.h>
+#include <pxr/base/gf/vec4f.h>
 #include <pxr/base/tf/debug.h>
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/registryManager.h>
@@ -34,6 +35,7 @@
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <pxr/imaging/hd/sceneIndex.h>
 #include <pxr/imaging/hd/sceneIndexPrimView.h>
+#include <pxr/imaging/hd/renderSettingsSchema.h>
 #include <pxr/imaging/hd/utils.h>
 #include <pxr/imaging/hdsi/renderSettingsFilteringSceneIndex.h>
 
@@ -41,6 +43,8 @@
 #include <pxr/usdImaging/usdImaging/renderSettingsAdapter.h>
 #include <pxr/usdImaging/usdImaging/usdRenderSettingsSchema.h>
 
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include "../common/rendersettings_utils.h"
@@ -130,11 +134,42 @@ VtDictionary _GenerateArnoldOptions(VtDictionary const& settings)
     return options;
 }
 
+// Append `newShaders` to options.aov_shaders, preserving any existing entries
+// and skipping pointers that are already present. _UpdateArnoldOptions (driven
+// by DirtyNamespacedSettings) and _UpdateRenderProducts (driven by
+// DirtyRenderProducts) both contribute aov_shaders; they can fire in either
+// order, so each must merge rather than overwrite.
+void _MergeAovShaders(AtNode* options, const std::vector<AtNode*>& newShaders)
+{
+    if (newShaders.empty())
+        return;
+
+    std::vector<AtNode*> merged;
+    AtArray* existing = AiNodeGetArray(options, str::aov_shaders);
+    if (existing) {
+        const uint32_t n = AiArrayGetNumElements(existing);
+        merged.reserve(n + newShaders.size());
+        for (uint32_t i = 0; i < n; ++i) {
+            AtNode* node = static_cast<AtNode*>(AiArrayGetPtr(existing, i));
+            if (node)
+                merged.push_back(node);
+        }
+    }
+    for (AtNode* node : newShaders) {
+        if (node && std::find(merged.begin(), merged.end(), node) == merged.end())
+            merged.push_back(node);
+    }
+
+    AiNodeSetArray(options, str::aov_shaders,
+        AiArrayConvert(merged.size(), 1, AI_TYPE_NODE, merged.data()));
+}
+
 } // end anonymous namespace
 
 // ----------------------------------------------------------------------------
 
-HdArnoldRenderSettings::HdArnoldRenderSettings(SdfPath const& id) : HdRenderSettings(id) {}
+HdArnoldRenderSettings::HdArnoldRenderSettings(HdArnoldRenderDelegate* renderDelegate, 
+    SdfPath const& id) : HdRenderSettings(id), _renderDelegate(renderDelegate) {}
 
 HdArnoldRenderSettings::~HdArnoldRenderSettings()
 { 
@@ -161,13 +196,11 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
     const VtDictionary& namespacedSettings = GetNamespacedSettings();
     const VtDictionary arnoldOptions = _GenerateArnoldOptions(namespacedSettings);
 
-    if (arnoldOptions.empty()) {
+    if (arnoldOptions.empty() || _renderDelegate == nullptr) {
         return;
     }
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
 
     // Set Arnold options from the render settings
     for (auto const& pair : arnoldOptions) {
@@ -178,17 +211,17 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
             // Get the node graph referenced by this attribute and assign its terminal node
             // to the arnold options
             SdfPath nodeGraphPath(VtValueGetString(value));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), nodeGraphPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, TfToken(name)) : nullptr;
             AiNodeSetPtr(options, nameStr, target);
         } else if (nameStr == str::aov_shaders) {
             // Get the node graph referenced by this attribute and set
-            // list of aov shaders in the options attribute            
+            // list of aov shaders in the options attribute
             std::vector<AtNode*> aovShaders;
             std::string aovShadersStr = VtValueGetString(value);
             for (const auto &shader: TfStringTokenize(aovShadersStr)) {
                 SdfPath path(shader);
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), path, _renderDelegate);
                 if (nodeGraph) {                
                     for (int i = 1; ; ++i ) {
                         std::stringstream ss;
@@ -200,8 +233,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
                     }                
                 }
             }
-            if (!aovShaders.empty())
-                AiNodeSetArray(options, str::aov_shaders, AiArrayConvert(aovShaders.size(), 1, AI_TYPE_NODE, aovShaders.data()));
+            _MergeAovShaders(options, aovShaders);
 
         } else {
 
@@ -215,7 +247,7 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
                 continue;
             }
 
-            HdArnoldSetParameter(options, paramEntry, value, renderDelegate);
+            HdArnoldSetParameter(options, paramEntry, value, _renderDelegate);
         }
     }
 
@@ -224,9 +256,19 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
 
 void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
 {
+// HdRenderSettings::GetShutterInterval was introduced in USD 23.11 and replaced by
+// GetUnionedSamplingInterval in USD 25.05 (PXR_VERSION 2605). Earlier USD versions
+// (e.g. Houdini 20.0 / USD 23.08) expose neither, so there is nothing to update.
+#if PXR_VERSION >= 2311
+#if PXR_VERSION < 2605
     if (GetShutterInterval().IsHolding<GfVec2d>()) {
         // Set the shutter interval on the render delegate
         const GfVec2d shutterInterval = GetShutterInterval().UncheckedGet<GfVec2d>();
+#else
+    if (GetUnionedSamplingInterval().IsHolding<GfVec2d>()) {
+        // Set the shutter interval on the render delegate
+        const GfVec2d shutterInterval = GetUnionedSamplingInterval().UncheckedGet<GfVec2d>();
+#endif
         // The shutter is stored in
         //  * ArnoldRenderParams
         //  * ArnoldHydraReader when used with (kick)
@@ -239,11 +281,8 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
 
         // The next call to _Execute will replace param->_shutter with the value of the universe
         // We also update Arnold directly
-        HdArnoldRenderDelegate* renderDelegate =
-            static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-
-        if (renderDelegate) {
-            AtNode* options = renderDelegate->GetOptions();
+        if (_renderDelegate) {
+            AtNode* options = _renderDelegate->GetOptions();
             if (options) {
                 AiNodeSetFlt(options, AtString("shutter_start"), static_cast<float>(shutterInterval[0]));
                 AiNodeSetFlt(options, AtString("shutter_end"), static_cast<float>(shutterInterval[1]));
@@ -253,6 +292,7 @@ void HdArnoldRenderSettings::_UpdateShutterInterval(HdSceneDelegate* sceneDelega
             }
         }
     }
+#endif
 }
 
 void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
@@ -260,14 +300,11 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
 #if PXR_VERSION >= 2211
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating rendering color space for %s\n", GetId().GetText());
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-
-    if (!renderDelegate) {
+    if (!_renderDelegate) {
         return;
     }
 
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
     if (!options) {
         return;
     }
@@ -286,17 +323,21 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
     // Get USD rendering color space from the data source
     UsdImagingUsdRenderSettingsSchema usdRss = UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
 
-    // Setup color manager - check for OCIO environment variable first
+    // Setup color manager - the OCIO environment variable takes precedence, then comes the
+    // config path the host application gave us through the render settings (#2730)
     AtNode* colorManager = nullptr;
     const char* ocio_path = std::getenv("OCIO");
-    if (ocio_path) {
-        colorManager = renderDelegate->CreateArnoldNode(AtString("color_manager_ocio"), AtString("color_manager_ocio"));
+    const AtString ocioConfig(ocio_path ? ocio_path : _renderDelegate->GetOcioConfigPath().c_str());
+    if (!ocioConfig.empty()) {
+        // This is called on every render settings update, and the render delegate might have
+        // created this color manager already, so we must not create a new one every time
+        colorManager = _renderDelegate->FindOrCreateArnoldNode(str::color_manager_ocio, str::color_manager_ocio);
         if (colorManager) {
-            AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+            AiNodeSetStr(colorManager, str::config, ocioConfig);
         }
     }
 
-    // If no OCIO environment variable, use the default color manager
+    // If we have no OCIO config, use the default color manager
     if (colorManager == nullptr) {
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
     }
@@ -305,8 +346,26 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
         // Set the color manager node in the options
         AiNodeSetPtr(options, str::color_manager, colorManager);
 
-        // Set rendering color space from USD if available
-        HdTokenDataSourceHandle renderingColorSpaceHandle = usdRss.GetRenderingColorSpace();
+        // Set rendering color space if available. mayaHydra (via
+        // MhRenderingColorSpaceResolvingSceneIndex) and the render-settings flattening
+        // scene index resolve the color space into the HdRenderSettingsSchema
+        // "renderSettings" locator, not the raw UsdImaging "__usdRenderSettings"
+        // locator, so read from HdRenderSettingsSchema first.
+        HdTokenDataSourceHandle renderingColorSpaceHandle;
+#if PXR_VERSION >= 2311
+        // HdRenderSettingsSchema::GetRenderingColorSpace was introduced in USD 23.11.
+        HdRenderSettingsSchema hdRss = HdRenderSettingsSchema::GetFromParent(prim.dataSource);
+        if (hdRss.IsDefined()) {
+            renderingColorSpaceHandle = hdRss.GetRenderingColorSpace();
+        }
+#endif
+        // Fall back to the UsdImaging schema if the resolved value is absent or empty.
+        if (!renderingColorSpaceHandle || renderingColorSpaceHandle->GetTypedValue(0.0f).IsEmpty()) {
+            HdTokenDataSourceHandle usdHandle = usdRss.GetRenderingColorSpace();
+            if (usdHandle && !usdHandle->GetTypedValue(0.0f).IsEmpty()) {
+                renderingColorSpaceHandle = usdHandle;
+            }
+        }
         if (renderingColorSpaceHandle) {
             TfToken renderingColorSpace = renderingColorSpaceHandle->GetTypedValue(0.0f);
             if (!renderingColorSpace.IsEmpty()) {
@@ -343,7 +402,7 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
             }
             
             // Set the parameter value using HdArnoldSetParameter
-            HdArnoldSetParameter(colorManager, paramEntry, pair.second, renderDelegate);
+            HdArnoldSetParameter(colorManager, paramEntry, pair.second, _renderDelegate);
             
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                 .Msg("Set color manager parameter %s on %s\n", paramName.c_str(), AiNodeGetName(colorManager));
@@ -357,34 +416,14 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
 void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelegate)
 {
     HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
-    if (terminalSi) {
+    if (terminalSi && _renderDelegate) {
         HdSceneIndexPrim prim = terminalSi->GetPrim(GetId());
         if (prim.dataSource) {
-            HdArnoldRenderDelegate* renderDelegate =
-                static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
             UsdImagingUsdRenderSettingsSchema usdRss =
                 UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
-            AtNode* options = renderDelegate->GetOptions();
+            AtNode* options = _renderDelegate->GetOptions();
             if (!options) return;
-            HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio();
-            if (parHandle) {
-                AiNodeSetFlt(options, str::pixel_aspect_ratio, parHandle->GetTypedValue(0));
-            }
-
-            HdVec2iDataSourceHandle resHandle = usdRss.GetResolution();
-            if (resHandle) {
-                GfVec2i res = resHandle->GetTypedValue(0);
-                AiNodeSetInt(options, str::xres, res[0]);
-                AiNodeSetInt(options, str::yres, res[1]);
-            }
-
-            HdVec4fDataSourceHandle dwndcHandle = usdRss.GetDataWindowNDC();
-            if (dwndcHandle) {
-                GfVec2i resolution;
-                resolution[0] = AiNodeGetInt(options, str::xres);
-                resolution[1] = AiNodeGetInt(options, str::yres);
-                SetRegion(options, dwndcHandle->GetTypedValue(0), resolution);
-            }
+            // Resolution, pixel aspect ratio and data window are handled in _UpdateFraming
 
             // NOTE: Unfortunatelly we don't have access to instantaneousShutter which is deprecated but is
             // used in some of the tests. We use GetDisableMotionBlur which is the replacement for instantaneousShutter
@@ -398,7 +437,7 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
             if (camHandle) {
                 _hydraCameraPath = SdfPath(camHandle->GetTypedValue(0));
                 const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::camera);
-                HdArnoldSetParameter(options, paramEntry, VtValue(_hydraCameraPath.GetString()), renderDelegate);
+                HdArnoldSetParameter(options, paramEntry, VtValue(_hydraCameraPath.GetString()), _renderDelegate);
             } else {
                 // Should we reset the camera ? In batch mode it's not necessary but we might want to do it in interactive mode
                 _hydraCameraPath = SdfPath();
@@ -410,7 +449,11 @@ void HdArnoldRenderSettings::_ReadUsdRenderSettings(HdSceneDelegate* sceneDelega
 void HdArnoldRenderSettings::_Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const HdDirtyBits* dirtyBits)
 {
-    if (std::getenv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX") == nullptr)
+    if (!HdArnoldIsSceneIndexEnabled())
+        return;
+
+    // If we're not using the hydra render settings, we shouldn't do anything here
+    if (_renderDelegate == nullptr || !_renderDelegate->IsUsingHydraRenderSettings())
         return;
 
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
@@ -428,14 +471,14 @@ void HdArnoldRenderSettings::_Sync(
         // in that case we don't want to use those render settings
         return;
     }
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    if (renderDelegate->GetProceduralParent())
+    if (_renderDelegate == nullptr || _renderDelegate->GetProceduralParent())
         return;
 
     // We register this render setting as the one to use for the render.
     HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(renderParam);
     param->SetHydraRenderSettingsPrimPath(GetId());
+
+    HdArnoldRenderParamInterrupt paramInterrupt(renderParam);
 
     // TODO when do we need to read them ? just only once ?
     // What happens when the resolution is changed in the render settings ?
@@ -449,24 +492,134 @@ void HdArnoldRenderSettings::_Sync(
 
     if (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
         // Generate and apply Arnold options from the render settings
+        paramInterrupt.Interrupt();
         _UpdateArnoldOptions(sceneDelegate);
     }
 
 #if PXR_VERSION >= 2311
-    if (*dirtyBits & HdRenderSettings::DirtyShutterInterval || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+#if PXR_VERSION < 2605
+	const auto DirtyShutter = HdRenderSettings::DirtyShutterInterval;
+#else
+	const auto DirtyShutter = HdRenderSettings::DirtyUnionedSamplingInterval;
+#endif
+    if (*dirtyBits & DirtyShutter || *dirtyBits & HdRenderSettings::DirtyNamespacedSettings) {
+        paramInterrupt.Interrupt();
         _UpdateShutterInterval(sceneDelegate, param);
     }
 #endif
 
     if (*dirtyBits & DirtyRenderProducts) {
         // TODO implement _UpdateRenderProduct
+        paramInterrupt.Interrupt();
         _UpdateRenderProducts(sceneDelegate, param);
     }
 
     if (*dirtyBits & DirtyRenderingColorSpace) {
+        paramInterrupt.Interrupt();
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
 
+    // The framing must be applied after the namespaced settings and the render products.
+    // Changes to the render settings framing attributes dirty the render products, but we
+    // still check it on every sync (it's cheap and only interrupts on changes), e.g. when
+    // this prim becomes the active render settings without its products being dirtied.
+    // Force it when the namespaced settings changed, as they could have overwritten the
+    // arnold options framing parameters.
+    _UpdateFraming(sceneDelegate, paramInterrupt, (*dirtyBits & HdRenderSettings::DirtyNamespacedSettings) != 0);
+}
+
+void HdArnoldRenderSettings::_UpdateFraming(
+    HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& paramInterrupt, bool force)
+{
+    AtNode* options = _renderDelegate->GetOptions();
+    if (!options)
+        return;
+
+    GfVec2i resolution(AiNodeGetInt(options, str::xres), AiNodeGetInt(options, str::yres));
+    float pixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    GfVec4f windowNDC(0.f, 0.f, 1.f, 1.f);
+
+    // Arnold only supports a single resolution and region per render. The products received
+    // from hydra already have their values flattened with the render settings ones, so like
+    // hdPrman, we use the first product that has a valid resolution.
+    const HdRenderSettings::RenderProduct* framingProduct = nullptr;
+    for (const auto& product : GetRenderProducts()) {
+        if (product.resolution[0] > 0 && product.resolution[1] > 0) {
+            framingProduct = &product;
+            break;
+        }
+    }
+    if (framingProduct) {
+        resolution = framingProduct->resolution;
+        // RenderProduct::pixelAspectRatio has no default initializer in hydra and is left
+        // untouched when no data source provides it, so only trust sensible values
+        if (std::isfinite(framingProduct->pixelAspectRatio) && framingProduct->pixelAspectRatio > 0.f)
+            pixelAspectRatio = framingProduct->pixelAspectRatio;
+        const GfRange2f& dataWindowNDC = framingProduct->dataWindowNDC;
+        // A default constructed range means no data window was provided. Don't test IsEmpty,
+        // as an inverted window is valid and is reordered by SetRegion like in the procedural
+        if (dataWindowNDC != GfRange2f()) {
+            windowNDC = GfVec4f(
+                dataWindowNDC.GetMin()[0], dataWindowNDC.GetMin()[1], dataWindowNDC.GetMax()[0],
+                dataWindowNDC.GetMax()[1]);
+        }
+    } else {
+        // No render product with a resolution, fallback to the render settings prim values
+        HdSceneIndexBaseRefPtr terminalSi = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+        HdSceneIndexPrim prim = terminalSi ? terminalSi->GetPrim(GetId()) : HdSceneIndexPrim();
+        if (prim.dataSource) {
+            UsdImagingUsdRenderSettingsSchema usdRss =
+                UsdImagingUsdRenderSettingsSchema::GetFromParent(prim.dataSource);
+            if (HdVec2iDataSourceHandle resHandle = usdRss.GetResolution())
+                resolution = resHandle->GetTypedValue(0);
+            if (HdFloatDataSourceHandle parHandle = usdRss.GetPixelAspectRatio())
+                pixelAspectRatio = parHandle->GetTypedValue(0);
+            if (HdVec4fDataSourceHandle dwndcHandle = usdRss.GetDataWindowNDC())
+                windowNDC = dwndcHandle->GetTypedValue(0);
+        }
+    }
+
+    // Framing options explicitly set in the arnold namespaced settings (e.g. arnold:global:xres)
+    // take precedence over the USD ones, like in the usd procedural. They were already applied
+    // to the options by _UpdateArnoldOptions, so we keep the current options values
+    bool hasRegionOverride = false;
+    for (const auto& pair : GetNamespacedSettings()) {
+        if (!TfStringStartsWith(pair.first, "arnold:"))
+            continue;
+        const std::string optionName = _GetArnoldOptionName(pair.first);
+        if (optionName == "xres") {
+            resolution[0] = AiNodeGetInt(options, str::xres);
+        } else if (optionName == "yres") {
+            resolution[1] = AiNodeGetInt(options, str::yres);
+        } else if (optionName == "pixel_aspect_ratio") {
+            pixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+        } else if (TfStringStartsWith(optionName, "region_")) {
+            hasRegionOverride = true;
+        }
+    }
+
+    const bool resolutionChanged = resolution[0] != AiNodeGetInt(options, str::xres) ||
+                                   resolution[1] != AiNodeGetInt(options, str::yres);
+    const bool pixelAspectRatioChanged = pixelAspectRatio != AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    const bool windowChanged = windowNDC != _windowNDC;
+    if (!force && !resolutionChanged && !pixelAspectRatioChanged && !windowChanged)
+        return;
+
+    paramInterrupt.Interrupt();
+    AiNodeSetInt(options, str::xres, resolution[0]);
+    AiNodeSetInt(options, str::yres, resolution[1]);
+    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    if (!hasRegionOverride) {
+        // The region is expressed in pixels, so it must be computed with the final resolution
+        SetRegion(options, windowNDC, resolution);
+    }
+    _windowNDC = windowNDC;
+
+    TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
+        .Msg(
+            "Framing: resolution %dx%d, pixel aspect ratio %f, data window (%f, %f, %f, %f)%s\n", resolution[0],
+            resolution[1], pixelAspectRatio, windowNDC[0], windowNDC[1], windowNDC[2], windowNDC[3],
+            hasRegionOverride ? " (region overridden by arnold settings)" : "");
 }
 
 #if PXR_VERSION <= 2308
@@ -491,13 +644,11 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Updating render products for %s\n", GetId().GetText());
 
     const RenderProducts& products = GetRenderProducts();
-    if (products.empty()) {
+    if (products.empty() || _renderDelegate == nullptr) {
         return;
     }
 
-    HdArnoldRenderDelegate* renderDelegate =
-        static_cast<HdArnoldRenderDelegate*>(sceneDelegate->GetRenderIndex().GetRenderDelegate());
-    AtNode* options = renderDelegate->GetOptions();
+    AtNode* options = _renderDelegate->GetOptions();
 
     std::vector<std::string> outputs;
     std::vector<std::string> lpes;
@@ -508,16 +659,6 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
     for (const auto& product : products) {
         if (product.renderVars.empty()) {
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Empty render product %s\n", product.name.GetText());
-        }
-
-        // Check if this product has a specific resolution set
-        // If so, use it instead of the global render settings resolution
-        // Note that this sets the last product resolution found.
-        if (product.resolution[0] > 0 && product.resolution[1] > 0) {
-            AiNodeSetInt(options, str::xres, product.resolution[0]);
-            AiNodeSetInt(options, str::yres, product.resolution[1]);
-            TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
-                .Msg("Using product resolution: %dx%d\n", product.resolution[0], product.resolution[1]);
         }
 
         // Create driver node
@@ -554,14 +695,16 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
         }
 
-        AtNode* driver = renderDelegate->CreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
+        AtNode* driver = _renderDelegate->FindOrCreateArnoldNode(AtString(driverType.c_str()), AtString(driverName.c_str()));
 
         if (!driver) {
             TF_WARN("Failed to create driver for render product %s\n", driverName.c_str());
             continue;
         }
 
-        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+        // Not every driver writes a file: driver_no_op has no filename
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), str::filename))
+            AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
         const char* driverNodeName = AiNodeGetName(driver);
 
         // Set driver parameters from product's arnold-namespaced settings
@@ -599,14 +742,14 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             }
             if (paramName == "input") {
                 SdfPath imagerPath(VtValueGetString(pair.second));
-                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath);
+                HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
                 driverImager = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
                 AiNodeSetPtr(driver, str::input, driverImager);
                 continue;
             }
 
             // Set the parameter value using HdArnoldSetParameter
-            HdArnoldSetParameter(driver, paramEntry, pair.second, renderDelegate);
+            HdArnoldSetParameter(driver, paramEntry, pair.second, _renderDelegate);
 
             TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                 .Msg("Set driver parameter %s on %s\n", paramName.c_str(), driverNodeName);
@@ -621,7 +764,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         if (driverImager == nullptr && imagerIt != namespacedSettings.end()) {
             const VtValue& imagerValue = imagerIt->second;
             SdfPath imagerPath(VtValueGetString(imagerValue));
-            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath);
+            HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(sceneDelegate->GetRenderIndex(), imagerPath, _renderDelegate);
             AtNode *target = nodeGraph ? nodeGraph->GetOrCreateTerminal(sceneDelegate, str::t_input) : nullptr;
             AiNodeSetPtr(driver, str::input, target);
                 
@@ -629,7 +772,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 .Msg("Set imager on driver %s\n", driverNodeName);
             
         }
-        // TODO handle resolution / pixelAspectRatio / apertureSize / dataWindowNDC 
+        // Resolution / pixelAspectRatio / dataWindowNDC are handled in _UpdateFraming
         // Track AOV names to detect duplicates
         std::unordered_set<std::string> aovNames;
         std::unordered_set<std::string> duplicatedAovs;
@@ -639,12 +782,19 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
         bool useLayerName = false;
         std::vector<bool> isHalfList;
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
+        // driver_exr.compression is a positional array where element i applies to
+        // render_outputs[i], and RenderVars can author arnold:driver_exr:compression (ARNOLD-15669)
+        std::vector<std::string> compressionList;
+        const std::string compressionKey = "arnold:" + driverType + ":compression";
 
         // Process render vars for this product
         for (const auto& renderVar : product.renderVars) {
             // Create filter (default to box_filter)
             std::string varName = renderVar.varPath.GetString();
-            std::string filterName = varName + "/filter";
+            std::string filterName;
+            filterName.reserve(varName.size() + 7);
+            filterName = varName;
+            filterName += "/filter";
             std::string filterType = "box_filter";
 
             // Check if arnold:filter is specified in the render var settings
@@ -659,11 +809,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
             }
 
-            AtNode* filter = AiNodeLookUpByName(AiNodeGetUniverse(options), AtString(filterName.c_str()));
-            if (!filter) {
-                filter = renderDelegate->CreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
-            }
-
+            AtNode *filter = _renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), AtString(filterName.c_str()));
+            
             if (!filter) {
                 TF_WARN("Failed to create filter for render var %s\n", varName.c_str());
                 continue;
@@ -690,8 +837,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 const std::string filterPrefix = "arnold:" + filterType + ":";
                 if (TfStringStartsWith(settingName, filterPrefix)) {
                     paramName = settingName.substr(filterPrefix.size());
-                } else if (TfStringStartsWith(settingName, "arnold:globals:")) {
-                    paramName = settingName.substr(15); // strlen("arnold:globals:")
+                } else if (TfStringStartsWith(settingName, "arnold:global:")) {
+                    paramName = settingName.substr(14); // strlen("arnold:global:")
                 } else if (TfStringStartsWith(settingName, "arnold:")) {
                     paramName = settingName.substr(7); // strlen("arnold:")
                 } else {
@@ -708,7 +855,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 }
 
                 // Set the parameter value using HdArnoldSetParameter
-                HdArnoldSetParameter(filter, paramEntry, pair.second, renderDelegate);
+                HdArnoldSetParameter(filter, paramEntry, pair.second, _renderDelegate);
 
                 TF_DEBUG(HDARNOLD_RENDER_SETTINGS)
                     .Msg("Set filter parameter %s on %s\n", paramName.c_str(), filterNodeName);
@@ -782,7 +929,7 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             if (!product.cameraPath.IsEmpty() && product.cameraPath != _hydraCameraPath) {
                 cameraName = product.cameraPath.GetString();
                 // Check the arnold camera name in case its name is different from the prim name
-                AtNode *cam = renderDelegate->LookupNode(cameraName.c_str());
+                AtNode *cam = _renderDelegate->LookupNode(cameraName.c_str());
                 if (cam)
                     cameraName = std::string(AiNodeGetName(cam));
             }
@@ -804,21 +951,43 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 aovName = layerName;
                 lpes.push_back(aovName + " " + sourceName);
             } else if (sourceType == UsdRenderTokens->primvar) {
-                // Primvar AOV - requires aov_write and user_data shaders
-                std::string aovShaderName = varName + "_shader";
+                // Primvar AOV - requires aov_write and a reader shader
+                std::string aovShaderName;
+                aovShaderName.reserve(varName.size() + 7);
+                aovShaderName = varName;
+                aovShaderName += "_shader";
                 AtNode* aovShader =
-                    renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
+                    _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.aovWrite, AtString(aovShaderName.c_str()));
 
                 if (aovShader) {
                     AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
-                    std::string userDataName = varName + "_user_data";
-                    AtNode* userData =
-                        renderDelegate->CreateArnoldNode(arnoldTypes.userData, AtString(userDataName.c_str()));
+                    std::string readerName;
+                    readerName.reserve(varName.size() + 10);
+                    readerName = varName;
+                    readerName += "_user_data";
 
-                    if (userData) {
-                        AiNodeLink(userData, "aov_input", aovShader);
-                        AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
+                    // "st" and "uv" are special: UVs are stored as built-in geometry data
+                    // in arnold rather than user data, so user_data_* returns zeros.
+                    // Use a utility shader in uv color_mode instead, matching the Hydra
+                    // render pass behaviour (see HdArnoldRenderPass _CreateAOV).
+                    
+                    AtNode* reader = nullptr;
+                    if (sourceName == "st" || sourceName == "uv") {
+                        reader = _renderDelegate->FindOrCreateArnoldNode(str::utility, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::color_mode, str::uv);
+                            AiNodeSetStr(reader, str::shade_mode, str::flat);
+                        }
+                    } else {
+                        reader = _renderDelegate->FindOrCreateArnoldNode(arnoldTypes.userData, AtString(readerName.c_str()));
+                        if (reader) {
+                            AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
+                        }
+                    }
+
+                    if (reader) {
+                        AiNodeLink(reader, "aov_input", aovShader);
                         aovShaders.push_back(aovShader);
                     }
                 }
@@ -853,6 +1022,15 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
             layerNames.push_back(layerName);
             aovNamesList.push_back(sourceName);
             isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
+            // Has to stay next to outputs.push_back to keep the indices aligned, as the loop
+            // above can skip RenderVars entirely
+            std::string varCompression;
+            if (isDriverExr) {
+                auto compressionIt = renderVarSettings.find(compressionKey);
+                if (compressionIt != renderVarSettings.end())
+                    varCompression = VtValueGetString(compressionIt->second);
+            }
+            compressionList.push_back(varCompression);
         }
 
         // Add layer names for duplicated AOVs
@@ -878,6 +1056,8 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
                 AiNodeSetBool(driver, AtString("half_precision"), true);
             }
         }
+
+        SetDriverExrCompressions(driver, compressionList);
     }
 
     // Set outputs array on options
@@ -901,9 +1081,10 @@ void HdArnoldRenderSettings::_UpdateRenderProducts(HdSceneDelegate* sceneDelegat
 
         TF_DEBUG(HDARNOLD_RENDER_SETTINGS).Msg("Set %zu light path expressions\n", lpes.size());
     }
+
+    _MergeAovShaders(options, aovShaders);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
 
 #endif // PXR_VERSION >= 2308
-#endif // ENABLE_HYDRA2_RENDERSETTINGS

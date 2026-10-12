@@ -50,9 +50,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 class HdArnoldRenderSettings;
-#endif
 
 /// Utility class for handling Render Passes.
 class HdArnoldRenderPass : public HdRenderPass {
@@ -95,23 +93,15 @@ protected:
     HDARNOLD_API
     void _ClearRenderBuffers();
 
-#ifdef ENABLE_HYDRA2_RENDERSETTINGS
 #if PXR_VERSION >= 2308
     /// Gets the driving hydra render settings prim.
     ///
     /// @return Pointer to the HdArnoldRenderSettings prim.
     HdArnoldRenderSettings* _GetHydraRenderSettingsPrim() const;
 #endif
-#endif
 
 private:
     HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
-    HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackColor;          ///< Color render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackDepth;          ///< Depth render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
-    AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
-    AtArray* _fallbackAovShaders;                 ///< AtArray storing the fallback AOV shaders.
     std::vector<AtNode*> _aovShaders;             ///< Pointer to list of user aov shaders
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
@@ -129,6 +119,11 @@ private:
         AtNode* writer = nullptr;
         /// Optional reader node for each AOV.
         AtNode* reader = nullptr;
+        /// Optional per-RenderVar filter node. Previously the AOV-specific filter
+        /// returned by _CreateFilter was only referenced from the output string and
+        /// never destroyed, leaking one Arnold filter per RenderVar on every
+        /// custom-product rebuild.
+        AtNode* filter = nullptr;
     };
 
     // Each arnold driver can handle multiple AOVs.
@@ -146,13 +141,19 @@ private:
     GfMatrix4d _viewMtx; ///< View matrix of the camera.
     GfMatrix4d _projMtx; ///< Projection matrix of the camera.
 
+    /// Scratch buffer of zero bytes used to clear HdArnoldRenderBuffers between
+    /// render iterations. Kept as a per-instance member so it grows monotonically
+    /// without being shared across HdArnoldRenderPass instances (which would
+    /// be the case for a function-local static).
+    std::vector<uint8_t> _zeroData;
+
     CameraUtilFraming _framing;
 
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
+    bool _acceleratedViewport = false;
     bool _isConverged = false;          ///< State of the render convergence.
-    bool _usingFallbackBuffers = false; ///< If the render pass is using the fallback buffers.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

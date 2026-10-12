@@ -37,6 +37,7 @@
 
 #include "render_delegate.h"
 #include "utils.h"
+#include "shared_arrays.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -116,10 +117,25 @@ protected:
     int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
 
 private:
+    /// Queries the Hydra visibility of the instancer prim.
+    ///
+    /// Mirrors HdStInstancer / hdPrman: when the point instancer prim itself is hidden
+    /// (e.g. USD visibility=invisible flattened onto the instancer), instance creation must
+    /// be gated off. This is queried live rather than cached because the prototype rprim's
+    /// _SyncInstances (which drives instance creation) may run before this instancer's Sync.
+    ///
+    /// @return true if the instancer prim is visible.
+    bool _IsInstancerVisible() const { return GetDelegate()->GetVisible(GetId()); }
+
     void ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray);
-    int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
+    // Internal helper: returns combined matrices in double precision for recursive combination.
+    int ComputeSampleMatrixArrayRecursiveInternal(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledMatrixArrayType &sampleArray, const SdfPath& prototypeId);
+    // Public entry point: outputs VtArray<GfMatrix4f> values (same layout as AtMatrix) for direct
+    // sharing with Arnold, avoiding a separate double-precision allocation at the call site.
+    int ComputeSampleMatrixArrayRecursive(HdArnoldRenderDelegate *renderDelegate, HdArnoldSampledPrimvarType &sampleArray, const SdfPath& prototypeId);
 
     GfVec2f _samplingInterval = {0.f, 0.f}; //< Keep track of the primvar sampling interval used 
+    ArrayHandler _arrayHandler; ///< Manages shared matrix array buffers to avoid extra copies in Arnold
 
 };
 

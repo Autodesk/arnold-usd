@@ -437,7 +437,7 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
 
     for (UsdPrim p = prim; !p.IsPseudoRoot(); p = p.GetParent()) {
         if (p.IsA<UsdGeomXformable>()) {
-            const UsdGeomXformable xformable(prim);
+            const UsdGeomXformable xformable(p);
             const UsdGeomXformable::XformQuery query(xformable);
             if (query.GetTimeSamples(&tmpTimes)) {
                 _InsertTimesInInterval(interval, tmpTimes, times);
