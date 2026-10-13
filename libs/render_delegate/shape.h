@@ -217,6 +217,8 @@ protected:
     HiddenBy _hiddenBy = HiddenBy::None;
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
     bool _forceInstancerNode = false;        ///< Force the instancer-node path (see SetForceInstancerNode).
+    /// True when the instances have different light-link categories, set per instance on the leaf instancer.
+    bool _perInstanceLightLinking = false;
     /// True when _shape was created as a ginstance: AiNodeIs cannot tell once it is initialized.
     bool _isInstance = false;
 };

@@ -22,6 +22,7 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
+#include <algorithm>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -289,6 +290,70 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
         parentInstancesMult *= entry.instanceIndices.size();
     }
     return true;
+}
+
+std::vector<VtArray<TfToken>> HdArnoldInstancer::ComputeInstanceCategories(const SdfPath& prototypeId)
+{
+    std::vector<VtArray<TfToken>> result;
+    std::vector<TfToken> parentCategories;
+    bool hasCategories = false;
+    SdfPath childId = prototypeId;
+    HdArnoldInstancer* current = this;
+    while (current) {
+        const SdfPath& currentId = current->GetId();
+        const VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(currentId, childId);
+        if (instanceIndices.empty())
+            break;
+        if (current == this)
+            result.resize(instanceIndices.size());
+        // Indexed by instance slot, not by the instances of childId.
+        const std::vector<VtArray<TfToken>> instanceCategories = GetDelegate()->GetInstanceCategories(currentId);
+        if (!instanceCategories.empty()) {
+            bool sameCategories = true;
+            const VtArray<TfToken>* firstCategories = nullptr;
+            for (size_t i = 0; i < instanceIndices.size(); ++i) {
+                const int index = instanceIndices[i];
+                if (index < 0 || static_cast<size_t>(index) >= instanceCategories.size())
+                    continue;
+                const VtArray<TfToken>& categories = instanceCategories[index];
+                hasCategories |= !categories.empty();
+                if (current == this) {
+                    result[i] = categories;
+                } else {
+                    parentCategories.insert(parentCategories.end(), categories.begin(), categories.end());
+                    if (firstCategories == nullptr)
+                        firstCategories = &categories;
+                    else if (sameCategories && categories != *firstCategories)
+                        sameCategories = false;
+                }
+            }
+            if (!sameCategories) {
+                AiMsgWarning(
+                    "%s: per-instance light linking is not supported on nested instancers, the light-link "
+                    "categories of all the instances of %s are combined",
+                    prototypeId.GetText(), currentId.GetText());
+            }
+        }
+        const SdfPath& parentId = current->GetParentId();
+        if (parentId.IsEmpty())
+            break;
+        childId = currentId;
+        current = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+    }
+    if (!hasCategories)
+        return {};
+
+    // Sort the categories so that instances with the same categories compare equal.
+    for (auto& categories : result) {
+        std::vector<TfToken> sorted(categories.cbegin(), categories.cend());
+        sorted.insert(sorted.end(), parentCategories.begin(), parentCategories.end());
+        std::sort(sorted.begin(), sorted.end());
+        sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+        categories.assign(sorted.begin(), sorted.end());
+    }
+    if (std::all_of(result.begin(), result.end(), [&](const VtArray<TfToken>& c) { return c == result.front(); }))
+        result.resize(1);
+    return result;
 }
 
 void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)

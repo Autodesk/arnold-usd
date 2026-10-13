@@ -73,6 +73,8 @@
 #include "render_pass.h"
 #include "volume.h"
 #include <cctype>
+#include <algorithm>
+#include <map>
 #include "render_settings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -1806,6 +1808,42 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
     }
 }
 
+std::vector<AtNode*> HdArnoldRenderDelegate::_GetLinkedLights(
+    const VtArray<TfToken>& categories, const LightLinkingMap& links)
+{
+    std::vector<AtNode*> lights;
+    for (const auto& category : categories) {
+        auto it = links.find(category);
+        if (it != links.end()) {
+            for (auto* light : it->second) {
+                auto* arnoldLight = HdArnoldLight::GetLightNode(light);
+                if (arnoldLight != nullptr) {
+                    lights.push_back(arnoldLight);
+                }
+            }
+        }
+    }
+    // Add the lights with an empty collection to the list.
+    auto it = links.find(TfToken{});
+    if (it != links.end()) {
+        for (auto* light : it->second) {
+            auto* arnoldLight = HdArnoldLight::GetLightNode(light);
+            if (arnoldLight != nullptr) {
+                lights.push_back(arnoldLight);
+            }
+        }
+    }
+
+    // Add the mesh lights as well, they are not registered as light in hydra unfortunatelly
+    {
+        std::lock_guard<std::mutex> guard(_meshLightsMutex);
+        for (AtNode * meshLight:_meshLights) {
+            lights.push_back(meshLight); // TODO except if they have a collection yeah
+        }
+    }
+    return lights;
+}
+
 void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
 {
     std::lock_guard<std::mutex> guard(_lightLinkingMutex);
@@ -1825,37 +1863,7 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
         return;
     }
     auto applyGroups = [=](const AtString& group, const AtString& useGroup, const LightLinkingMap& links) {
-        std::vector<AtNode*> lights;
-        for (const auto& category : categories) {
-            auto it = links.find(category);
-            if (it != links.end()) {
-                for (auto* light : it->second) {
-                    auto* arnoldLight = HdArnoldLight::GetLightNode(light);
-                    if (arnoldLight != nullptr) {
-                        lights.push_back(arnoldLight);
-                    }
-                }
-            }
-        }
-        // Add the lights with an empty collection to the list.
-        auto it = links.find(TfToken{});
-        if (it != links.end()) {
-            for (auto* light : it->second) {
-                auto* arnoldLight = HdArnoldLight::GetLightNode(light);
-                if (arnoldLight != nullptr) {
-                    lights.push_back(arnoldLight);
-                }
-            }
-        }
-
-        // Add the mesh lights as well, they are not registered as light in hydra unfortunatelly
-        {
-            std::lock_guard<std::mutex> guard(_meshLightsMutex);
-            for (AtNode * meshLight:_meshLights) {
-                lights.push_back(meshLight); // TODO except if they have a collection yeah
-            }
-        }
-
+        std::vector<AtNode*> lights = _GetLinkedLights(categories, links);
         // If lights is empty, then no lights affect the shape, and we still have to set useGroup to true.
         if (lights.empty()) {
             AiNodeResetParameter(shape, group);
@@ -1876,26 +1884,184 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
     }
 }
 
-void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
-    const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
-    VtArray<TfToken> instancerCategories;
-    // If this shape is instanced, we store the list of "categories"
-    // (aka collections) associated with it.
-    if (!instancerId.IsEmpty()) {
-        instancerCategories = sceneDelegate->GetCategories(instancerId);
+bool HdArnoldRenderDelegate::HasLightLinking()
+{
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    const auto lightEmpty = _lightLinks.empty() || (_lightLinks.size() == 1 && _lightLinks.count(TfToken{}) == 1);
+    const auto shadowEmpty = _shadowLinks.empty() || (_shadowLinks.size() == 1 && _shadowLinks.count(TfToken{}) == 1);
+    return !lightEmpty || !shadowEmpty;
+}
+
+VtArray<TfToken> HdArnoldRenderDelegate::_GetRprimCategories(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, const std::vector<VtArray<TfToken>>& instanceCategories)
+{
+    VtArray<TfToken> categories = sceneDelegate->GetCategories(id);
+    const SdfPath& instancerId = sceneDelegate->GetInstancerId(id);
+    if (instancerId.IsEmpty())
+        return categories;
+    // A native instancer of UsdImagingDelegate (legacy Hydra) has the path of its first instance,
+    // so its own categories are the ones of that instance and must not apply to the others. The
+    // instance categories describe all the instances in that case, so we only add the categories
+    // of the instancer (e.g. the point instancer prim) when the instances don't have any.
+    const bool hasInstanceCategories =
+        std::any_of(instanceCategories.begin(), instanceCategories.end(),
+                    [](const VtArray<TfToken>& c) { return !c.empty(); });
+    if (!hasInstanceCategories) {
+        for (const auto& instancerCategory : sceneDelegate->GetCategories(instancerId))
+            categories.push_back(instancerCategory);
     }
-    if (instancerCategories.empty()) {
-        // If there are no collections associated with eventual instancers,
-        // we just pass the reference to the categories array to avoid useless copies
-        _ApplyLightLinking(node, sceneDelegate->GetCategories(id));
-    } else {
-        // We want to concatenate the shape's categories with the
-        // instancer's categories, and call ApplyLightLinking with the full list
-        VtArray<TfToken> categories = sceneDelegate->GetCategories(id);
-        categories.reserve(categories.size() + instancerCategories.size());
-        for (const auto &instanceCategory : instancerCategories)
+    return categories;
+}
+
+VtArray<TfToken> HdArnoldRenderDelegate::_GetLightLinkCategories(HdSceneDelegate* sceneDelegate, const SdfPath& id)
+{
+    const SdfPath& instancerId = sceneDelegate->GetInstancerId(id);
+    if (instancerId.IsEmpty() || !HasLightLinking())
+        return _GetRprimCategories(sceneDelegate, id, {});
+
+    // When all the instances share the same instance categories, they can be applied to the shape
+    // itself. Otherwise the instancer node gets them per instance (see ApplyInstanceLightLinking).
+    std::vector<VtArray<TfToken>> instanceCategories;
+    if (auto* instancer = dynamic_cast<HdArnoldInstancer*>(sceneDelegate->GetRenderIndex().GetInstancer(instancerId)))
+        instanceCategories = instancer->ComputeInstanceCategories(id);
+    VtArray<TfToken> categories = _GetRprimCategories(sceneDelegate, id, instanceCategories);
+    if (instanceCategories.size() == 1) {
+        for (const auto& instanceCategory : instanceCategories.front())
             categories.push_back(instanceCategory);
-        _ApplyLightLinking(node, categories);
+    }
+    return categories;
+}
+
+void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
+    _ApplyLightLinking(node, _GetLightLinkCategories(sceneDelegate, id));
+}
+
+void HdArnoldRenderDelegate::ApplyInstanceLightLinking(
+    HdSceneDelegate* sceneDelegate, AtNode* instancerNode, SdfPath const& id,
+    const std::vector<VtArray<TfToken>>& instanceCategories)
+{
+    if (instancerNode == nullptr)
+        return;
+
+    // Group the instances by categories, so that each unique light list is only stored once on the
+    // instancer, and indexed per instance through the valueidxs_ parameters.
+    std::vector<VtArray<TfToken>> groups;
+    std::vector<uint32_t> valueIdxs;
+    if (!instanceCategories.empty()) {
+        // The instance categories are combined with the shape and instancer categories.
+        const VtArray<TfToken> categories = _GetRprimCategories(sceneDelegate, id, instanceCategories);
+        std::map<std::vector<TfToken>, uint32_t> groupIndices;
+        if (instanceCategories.size() > 1)
+            valueIdxs.reserve(instanceCategories.size());
+        for (const auto& instanceCategory : instanceCategories) {
+            std::vector<TfToken> key(instanceCategory.begin(), instanceCategory.end());
+            auto inserted = groupIndices.emplace(std::move(key), static_cast<uint32_t>(groups.size()));
+            if (inserted.second) {
+                VtArray<TfToken> groupCategories = categories;
+                for (const auto& category : instanceCategory)
+                    groupCategories.push_back(category);
+                groups.push_back(std::move(groupCategories));
+            }
+            if (instanceCategories.size() > 1)
+                valueIdxs.push_back(inserted.first->second);
+        }
+        // A single group applies to all the instances, without any index.
+        if (groups.size() == 1)
+            valueIdxs.clear();
+    }
+
+    auto resetUserParam = [](AtNode* node, const AtString& param) {
+        if (AiNodeLookUpUserParameter(node, param) != nullptr)
+            AiNodeResetParameter(node, param);
+    };
+    auto resetGroups = [&](const AtString& group, const AtString& useGroup, const AtString& instanceIdxs,
+                           const AtString& valueIdxsParam, const AtString& arrayCategory) {
+        resetUserParam(instancerNode, group);
+        resetUserParam(instancerNode, arrayCategory);
+        resetUserParam(instancerNode, useGroup);
+        resetUserParam(instancerNode, instanceIdxs);
+        resetUserParam(instancerNode, valueIdxsParam);
+    };
+
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    const auto lightEmpty =
+        groups.empty() || _lightLinks.empty() || (_lightLinks.size() == 1 && _lightLinks.count(TfToken{}) == 1);
+    const auto shadowEmpty =
+        groups.empty() || _shadowLinks.empty() || (_shadowLinks.size() == 1 && _shadowLinks.count(TfToken{}) == 1);
+    if (lightEmpty) {
+        resetGroups(str::instance_light_group, str::instance_use_light_group, str::instanceidxs_light_group,
+                    str::valueidxs_light_group, str::arraycategory_light_group);
+    }
+    if (shadowEmpty) {
+        resetGroups(str::instance_shadow_group, str::instance_use_shadow_group, str::instanceidxs_shadow_group,
+                    str::valueidxs_shadow_group, str::arraycategory_shadow_group);
+    }
+    if (lightEmpty && shadowEmpty) {
+        return;
+    }
+
+    // The instancer node is looked up by name when the deferred call runs, as the shape can rebuild
+    // its instancers in the meantime.
+    const AtString instancerName(AiNodeGetName(instancerNode));
+    auto applyGroups = [=](const AtString& group, const AtString& useGroup, const AtString& instanceIdxs,
+                           const AtString& valueIdxsParam, const AtString& arrayCategory,
+                           const LightLinkingMap& links) {
+        AtNode* node = LookupNode(instancerName.c_str());
+        if (node == nullptr || !AiNodeIs(node, str::instancer))
+            return;
+        // Builtin array parameters of the ginstances are set per instance as an array of arrays.
+        AtArray* values = AiArrayAllocate(static_cast<uint32_t>(groups.size()), 1, AI_TYPE_ARRAY);
+        for (size_t i = 0; i < groups.size(); ++i) {
+            std::vector<AtNode*> lights = _GetLinkedLights(groups[i], links);
+            // An empty light list still has to be set, so that no lights affect these instances.
+            AtArray* lightArray = lights.empty() ?
+                AiArrayAllocate(0, 1, AI_TYPE_NODE) :
+                AiArrayConvert(static_cast<uint32_t>(lights.size()), 1, AI_TYPE_NODE, lights.data());
+            AiArraySetArray(values, static_cast<uint32_t>(i), lightArray);
+        }
+        if (AiNodeLookUpUserParameter(node, group) == nullptr)
+            AiNodeDeclare(node, group, "constant ARRAY ARRAY");
+        AiNodeSetArray(node, group, values);
+        // The instancer looks for the category of the inner arrays on the prototype otherwise, and
+        // warns when it can't find it, which is the case of builtin parameters.
+        if (AiNodeLookUpUserParameter(node, arrayCategory) == nullptr)
+            AiNodeDeclare(node, arrayCategory, str::constantString);
+        AiNodeSetStr(node, arrayCategory, str::constant);
+        if (AiNodeLookUpUserParameter(node, useGroup) == nullptr)
+            AiNodeDeclare(node, useGroup, "constant ARRAY BOOL");
+        AiNodeSetArray(node, useGroup, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
+
+        if (valueIdxs.empty()) {
+            resetUserParam(node, instanceIdxs);
+            resetUserParam(node, valueIdxsParam);
+            return;
+        }
+        // The value indices can only be used along with the instance indices.
+        const uint32_t numInstances = static_cast<uint32_t>(valueIdxs.size());
+        AtArray* instanceIdxsArray = AiArrayAllocate(numInstances, 1, AI_TYPE_UINT);
+        uint32_t* instanceIdxsData = static_cast<uint32_t*>(AiArrayMap(instanceIdxsArray));
+        for (uint32_t i = 0; i < numInstances; ++i)
+            instanceIdxsData[i] = i;
+        AiArrayUnmap(instanceIdxsArray);
+        if (AiNodeLookUpUserParameter(node, instanceIdxs) == nullptr)
+            AiNodeDeclare(node, instanceIdxs, "constant ARRAY UINT");
+        AiNodeSetArray(node, instanceIdxs, instanceIdxsArray);
+        if (AiNodeLookUpUserParameter(node, valueIdxsParam) == nullptr)
+            AiNodeDeclare(node, valueIdxsParam, "constant ARRAY UINT");
+        AiNodeSetArray(node, valueIdxsParam, AiArrayConvert(numInstances, 1, AI_TYPE_UINT, valueIdxs.data()));
+    };
+
+    if (!lightEmpty) {
+        std::lock_guard<std::mutex> deferredGuard(_deferredFunctionCallsMutex);
+        _deferredFunctionCalls.push_back(std::bind(
+            applyGroups, str::instance_light_group, str::instance_use_light_group, str::instanceidxs_light_group,
+            str::valueidxs_light_group, str::arraycategory_light_group, _lightLinks));
+    }
+    if (!shadowEmpty) {
+        std::lock_guard<std::mutex> deferredGuard(_deferredFunctionCallsMutex);
+        _deferredFunctionCalls.push_back(std::bind(
+            applyGroups, str::instance_shadow_group, str::instance_use_shadow_group, str::instanceidxs_shadow_group,
+            str::valueidxs_shadow_group, str::arraycategory_shadow_group, _shadowLinks));
     }
 }
 

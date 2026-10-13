@@ -1,0 +1,5 @@
+Light linking with different light and shadow links per point instancer
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'scene.usda'}

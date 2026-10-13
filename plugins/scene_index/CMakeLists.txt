@@ -11,7 +11,6 @@ set(SRC
     nurbsApproximatingSIP.cpp
     meshLightResolvingSIP.cpp
     renderPassSIP.cpp
-    instanceLightLinkingSIP.cpp
     coordSysSIP.cpp
 )
 
@@ -26,7 +25,6 @@ set(HDR
     implicitSurfaceSIP.h
     nurbsApproximatingSIP.h
     meshLightResolvingSIP.h
-    instanceLightLinkingSIP.h
 )
 
 if (MTOA_BUILD)
