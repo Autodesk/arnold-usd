@@ -1,0 +1,128 @@
+#usda 1.0
+(
+    defaultPrim = "world"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "world"
+{
+    def Mesh "ground"
+    {
+        float3[] extent = [(-12, 0, -12), (12, 0, 12)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-12, 0, -12), (-12, 0, 12), (12, 0, 12), (12, 0, -12)]
+    }
+
+    # USD can't link lights to individual point instances (they aren't prims), only to
+    # the point instancer prim, which applies to all its instances.
+    def Xform "instancers"
+    {
+        # white + red, and casts no shadow from the red light
+        def PointInstancer "pi_red"
+        {
+            point3f[] positions = [(-6.4, 0.6, 0), (-4.8, 0.6, 0), (-3.2, 0.6, 0)]
+            int[] protoIndices = [0, 0, 0]
+            rel prototypes = </world/instancers/pi_red/Prototypes/sphere>
+
+            def Scope "Prototypes"
+            {
+                def Sphere "sphere"
+                {
+                    double radius = 0.6
+                }
+            }
+        }
+
+        # white + blue
+        def PointInstancer "pi_blue"
+        {
+            point3f[] positions = [(-1.6, 0.6, 0), (0, 0.6, 0), (1.6, 0.6, 0)]
+            int[] protoIndices = [0, 0, 0]
+            rel prototypes = </world/instancers/pi_blue/Prototypes/sphere>
+
+            def Scope "Prototypes"
+            {
+                def Sphere "sphere"
+                {
+                    double radius = 0.6
+                }
+            }
+        }
+
+        # white only
+        def PointInstancer "pi_white"
+        {
+            point3f[] positions = [(3.2, 0.6, 0), (4.8, 0.6, 0), (6.4, 0.6, 0)]
+            int[] protoIndices = [0, 0, 0]
+            rel prototypes = </world/instancers/pi_white/Prototypes/sphere>
+
+            def Scope "Prototypes"
+            {
+                def Sphere "sphere"
+                {
+                    double radius = 0.6
+                }
+            }
+        }
+    }
+
+    def Xform "lights"
+    {
+        # Not linked: lights everything.
+        def DistantLight "white"
+        {
+            float inputs:angle = 1
+            color3f inputs:color = (1, 1, 1)
+            bool inputs:normalize = 1
+            float inputs:intensity = 0.6
+            float3 xformOp:rotateXYZ = (-70, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DistantLight "red" (
+            prepend apiSchemas = ["CollectionAPI:lightLink", "CollectionAPI:shadowLink"]
+        )
+        {
+            uniform bool collection:lightLink:includeRoot = 0
+            rel collection:lightLink:includes = [
+                </world/ground>,
+                </world/instancers/pi_red>,
+            ]
+            rel collection:shadowLink:excludes = </world/instancers/pi_red>
+            float inputs:angle = 1
+            color3f inputs:color = (1, 0, 0)
+            bool inputs:normalize = 1
+            float inputs:intensity = 0.6
+            float3 xformOp:rotateXYZ = (-45, -40, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+
+        def DistantLight "blue" (
+            prepend apiSchemas = ["CollectionAPI:lightLink"]
+        )
+        {
+            uniform bool collection:lightLink:includeRoot = 0
+            rel collection:lightLink:includes = </world/instancers/pi_blue>
+            float inputs:angle = 1
+            color3f inputs:color = (0, 0, 1)
+            bool inputs:normalize = 1
+            float inputs:intensity = 1.5
+            float3 xformOp:rotateXYZ = (-45, 40, 0)
+            uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+        }
+    }
+
+    def Camera "camera"
+    {
+        float2 clippingRange = (0.1, 1000)
+        float focalLength = 35
+        float horizontalAperture = 36
+        float verticalAperture = 20.25
+        token projection = "perspective"
+        float3 xformOp:rotateXYZ = (-18, 0, 0)
+        double3 xformOp:translate = (0, 5, 15)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+}

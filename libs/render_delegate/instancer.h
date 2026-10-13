@@ -85,6 +85,20 @@ public:
     HDARNOLD_API
     void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate);
 
+    /// Gathers the light-link categories of the instances of a prototype, from the instance
+    /// categories of this instancer and of its parent instancers.
+    ///
+    /// Per-instance values can only be set on the leaf node of the Arnold instancer chain
+    /// (see CreateArnoldInstancer), so the result is indexed by the instances of this
+    /// instancer. The categories of the parent instances are added to all of them: when the
+    /// parent instances don't share the same categories, their union is used.
+    ///
+    /// @param prototypeId ID of the instanced shape.
+    /// @return The sorted categories of each instance, a single entry if all the instances
+    ///  share the same categories, or nothing if none of them has categories.
+    HDARNOLD_API
+    std::vector<VtArray<TfToken>> ComputeInstanceCategories(const SdfPath& prototypeId);
+
 protected:
     /// Syncs the primvars for the instancer.
     ///

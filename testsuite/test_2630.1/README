@@ -1,0 +1,5 @@
+Light linking with different light and shadow links per native instance
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'scene.usda'}

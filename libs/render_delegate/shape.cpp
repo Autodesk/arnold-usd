@@ -281,20 +281,69 @@ void HdArnoldShape::_SyncInstances(
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
     //  in USD. Alternatively, what happens if a prototype is not instanced in USD.
-    if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, HdTokens->points)
-    && !HdChangeTracker::IsInstancerDirty(dirtyBits, id)
-    && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id)
-    && !force) {
+    // Changes of the instance categories are only notified to the rprims as DirtyInstancer.
+    const bool instancesChanged = HdChangeTracker::IsInstancerDirty(dirtyBits, id) ||
+                                  HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) || force;
+    const bool instancesDirty = instancesChanged || HdChangeTracker::IsPrimvarDirty(dirtyBits, id, HdTokens->points);
+    const bool categoriesDirty = (dirtyBits & HdChangeTracker::DirtyCategories) != 0;
+    if (!instancesDirty && !categoriesDirty) {
         // Visibility still could have changed outside the shape.
         _UpdateInstanceVisibility(param);
         return;
     }
 
+    // The instance light-link categories can only change along with the instances or the categories,
+    // they are kept for the other rebuilds of the instancers (e.g. when the points change).
+    bool categoriesChanged = false;
+    if (instancesChanged || categoriesDirty) {
+        const bool hasLightLinking = renderDelegate->HasLightLinking();
+        std::vector<VtArray<TfToken>> instanceCategories;
+        if (hasLightLinking) {
+            if (auto* arnoldInstancer = dynamic_cast<HdArnoldInstancer*>(instancer))
+                instanceCategories = arnoldInstancer->ComputeInstanceCategories(id);
+        }
+        categoriesChanged =
+            categoriesDirty || hasLightLinking != _hasLightLinking || instanceCategories != _instanceCategories;
+        _hasLightLinking = hasLightLinking;
+        _instanceCategories = std::move(instanceCategories);
+        // The rprims leave the light linking of instanced shapes to us, see ApplyLightLinking.
+        if (categoriesChanged) {
+            param.Interrupt();
+            renderDelegate->ApplyLightLinking(sceneDelegate, _shape, id, _instanceCategories);
+        }
+    }
+
+    // Instances that don't all share the same light-link categories need per-instance light
+    // groups, which only an Arnold instancer node can carry. When they share them, they are
+    // applied to the shape itself by ApplyLightLinking.
+    const bool perInstanceLightLinking = _instanceCategories.size() > 1;
+    // Categories to set per instance on the leaf instancer node. A shared geometry carries the
+    // light groups of another rprim, so they are overridden even when the instances share them.
+    auto getLeafInstanceCategories = [&]() -> std::vector<VtArray<TfToken>> {
+        if (perInstanceLightLinking)
+            return _instanceCategories;
+        if (_sharedGeometry != nullptr && _hasLightLinking)
+            return _instanceCategories.empty() ? std::vector<VtArray<TfToken>>(1) : _instanceCategories;
+        return {};
+    };
+
+    if (!instancesDirty && perInstanceLightLinking == _perInstanceLightLinking) {
+        // Only the light-link categories changed, update the existing instancer.
+        if (categoriesChanged && !_instancers.empty()) {
+            param.Interrupt();
+            renderDelegate->ApplyInstanceLightLinking(sceneDelegate, _instancers[0], id, getLeafInstanceCategories());
+        }
+        // Visibility still could have changed outside the shape.
+        _UpdateInstanceVisibility(param);
+        return;
+    }
+    _perInstanceLightLinking = perInstanceLightLinking;
+
     // Rebuild the instancer
     param.Interrupt();
 
     // Only an instancer node can reference a shared geometry (geometry deduplication).
-    if (_sharedGeometry != nullptr || _forceInstancerNode ||
+    if (_sharedGeometry != nullptr || _forceInstancerNode || _perInstanceLightLinking ||
         UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
         for (auto &instancerNode : _instancers) {
@@ -349,6 +398,12 @@ void HdArnoldShape::_SyncInstances(
                 AiNodeSetArray(_instancers[i], str::instance_visibility, instanceVisibility);
             } else
                 AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+        }
+        // Only the leaf instancer creates the instances of the shape, see ComputeInstanceCategories.
+        if (!_instancers.empty()) {
+            const std::vector<VtArray<TfToken>> leafInstanceCategories = getLeafInstanceCategories();
+            if (!leafInstanceCategories.empty())
+                renderDelegate->ApplyInstanceLightLinking(sceneDelegate, _instancers[0], id, leafInstanceCategories);
         }
     } else
     {

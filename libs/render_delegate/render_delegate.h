@@ -332,8 +332,46 @@ public:
     /// @param delegate scene delegate.
     /// @param node Pointer to the Arnold Shape.
     /// @param id ID of the rprim.
+    /// Instanced rprims are skipped, see the overload taking the instance categories.
     HDARNOLD_API
     void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
+
+    /// Apply light linking to the shape of an instanced rprim.
+    ///
+    /// The instance categories are added to the shape when all the instances share them.
+    ///
+    /// @param delegate scene delegate.
+    /// @param node Pointer to the Arnold Shape.
+    /// @param id ID of the rprim.
+    /// @param instanceCategories Categories of the instances (see
+    ///  HdArnoldInstancer::ComputeInstanceCategories).
+    HDARNOLD_API
+    void ApplyLightLinking(
+        HdSceneDelegate* delegate, AtNode* node, SdfPath const& id,
+        const std::vector<VtArray<TfToken>>& instanceCategories);
+
+    /// Apply per-instance light linking to the leaf Arnold instancer of an instanced rprim,
+    /// for instances that don't all share the same light-link categories.
+    ///
+    /// Each instance gets the lights of the rprim categories combined with its own instance
+    /// categories, through the instance_light_group / instance_shadow_group parameters. The
+    /// parameters are removed if @p instanceCategories is empty or there is no light linking.
+    ///
+    /// @param delegate scene delegate.
+    /// @param instancerNode Pointer to the leaf Arnold instancer instancing the rprim.
+    /// @param id ID of the rprim.
+    /// @param instanceCategories Categories of each instance, or a single entry shared by
+    ///  all the instances (see HdArnoldInstancer::ComputeInstanceCategories).
+    HDARNOLD_API
+    void ApplyInstanceLightLinking(
+        HdSceneDelegate* delegate, AtNode* instancerNode, SdfPath const& id,
+        const std::vector<VtArray<TfToken>>& instanceCategories);
+
+    /// Returns true if any light is restricted to a light or shadow linking collection.
+    ///
+    /// @return True if the scene uses light linking.
+    HDARNOLD_API
+    bool HasLightLinking();
 
     /// Eventually mark some hydra primitives as being dirty
     /// in which case we'll have another sync iteration pending
@@ -872,6 +910,16 @@ private:
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
     using LightLinkingMap = std::unordered_map<TfToken, std::unordered_set<HdLight*>, TfToken::HashFunctor>;
+
+    /// Returns the categories of an rprim and of its instancer. The instancer categories are
+    /// ignored when the instances have their own @p instanceCategories.
+    VtArray<TfToken> _GetRprimCategories(
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, const std::vector<VtArray<TfToken>>& instanceCategories);
+
+    /// Returns the Arnold lights linked to any of @p categories in @p links, along with the
+    /// lights without a collection and the mesh lights. Must run once the lights exist.
+    std::vector<AtNode*> _GetLinkedLights(const VtArray<TfToken>& categories, const LightLinkingMap& links);
+
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     
