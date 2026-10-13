@@ -132,9 +132,11 @@ void ArnoldProceduralCustomAdapter::UpdateForTime(
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
     HdPrimvarDescriptorVector& primvars = primvarDescCache->GetPrimvars(cachePath);
     // For this particular node, we want to pass all the attributes starting with arnold:: as constant primvars, 
-    // so we can access them in the delegate.
+    // so we can access them in the delegate. Unauthored attributes are skipped : the ArnoldProceduralCustom
+    // schema declares the common shape parameters (matte, opaque, etc...) and setting their fallback values
+    // explicitly would override the values of the procedural's child nodes, e.g. the instancer prototypes.
     for (const auto &attr: prim.GetAttributes()) {
-        if (TfStringStartsWith(attr.GetNamespace().GetString(), str::arnold)) {
+        if (TfStringStartsWith(attr.GetNamespace().GetString(), str::arnold) && attr.HasAuthoredValue()) {
             _MergePrimvar(&primvars, attr.GetName(), HdInterpolationConstant);
         }
     }

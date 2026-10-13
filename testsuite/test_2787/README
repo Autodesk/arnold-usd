@@ -1,0 +1,7 @@
+Unauthored common parameters of ArnoldProceduralCustom instancers don't override the prototypes matte
+
+see #2787
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
