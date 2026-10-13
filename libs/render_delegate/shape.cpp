@@ -292,34 +292,44 @@ void HdArnoldShape::_SyncInstances(
         return;
     }
 
+    // The instance light-link categories can only change along with the instances or the categories,
+    // they are kept for the other rebuilds of the instancers (e.g. when the points change).
+    bool categoriesChanged = false;
+    if (instancesChanged || categoriesDirty) {
+        const bool hasLightLinking = renderDelegate->HasLightLinking();
+        std::vector<VtArray<TfToken>> instanceCategories;
+        if (hasLightLinking) {
+            if (auto* arnoldInstancer = dynamic_cast<HdArnoldInstancer*>(instancer))
+                instanceCategories = arnoldInstancer->ComputeInstanceCategories(id);
+        }
+        categoriesChanged =
+            categoriesDirty || hasLightLinking != _hasLightLinking || instanceCategories != _instanceCategories;
+        _hasLightLinking = hasLightLinking;
+        _instanceCategories = std::move(instanceCategories);
+        // The rprims leave the light linking of instanced shapes to us, see ApplyLightLinking.
+        if (categoriesChanged) {
+            param.Interrupt();
+            renderDelegate->ApplyLightLinking(sceneDelegate, _shape, id, _instanceCategories);
+        }
+    }
+
     // Instances that don't all share the same light-link categories need per-instance light
     // groups, which only an Arnold instancer node can carry. When they share them, they are
     // applied to the shape itself by ApplyLightLinking.
-    const bool hasLightLinking = renderDelegate->HasLightLinking();
-    std::vector<VtArray<TfToken>> instanceCategories;
-    if (hasLightLinking) {
-        if (auto* arnoldInstancer = dynamic_cast<HdArnoldInstancer*>(instancer))
-            instanceCategories = arnoldInstancer->ComputeInstanceCategories(id);
-    }
-    const bool perInstanceLightLinking = instanceCategories.size() > 1;
+    const bool perInstanceLightLinking = _instanceCategories.size() > 1;
     // Categories to set per instance on the leaf instancer node. A shared geometry carries the
     // light groups of another rprim, so they are overridden even when the instances share them.
     auto getLeafInstanceCategories = [&]() -> std::vector<VtArray<TfToken>> {
         if (perInstanceLightLinking)
-            return instanceCategories;
-        if (_sharedGeometry != nullptr && hasLightLinking)
-            return instanceCategories.empty() ? std::vector<VtArray<TfToken>>(1) : instanceCategories;
+            return _instanceCategories;
+        if (_sharedGeometry != nullptr && _hasLightLinking)
+            return _instanceCategories.empty() ? std::vector<VtArray<TfToken>>(1) : _instanceCategories;
         return {};
     };
-    // ApplyLightLinking is only called by the rprims when their categories are dirty.
-    if (hasLightLinking && instancesChanged && !categoriesDirty) {
-        param.Interrupt();
-        renderDelegate->ApplyLightLinking(sceneDelegate, _shape, id);
-    }
 
     if (!instancesDirty && perInstanceLightLinking == _perInstanceLightLinking) {
         // Only the light-link categories changed, update the existing instancer.
-        if (!_instancers.empty()) {
+        if (categoriesChanged && !_instancers.empty()) {
             param.Interrupt();
             renderDelegate->ApplyInstanceLightLinking(sceneDelegate, _instancers[0], id, getLeafInstanceCategories());
         }

@@ -1913,27 +1913,26 @@ VtArray<TfToken> HdArnoldRenderDelegate::_GetRprimCategories(
     return categories;
 }
 
-VtArray<TfToken> HdArnoldRenderDelegate::_GetLightLinkCategories(HdSceneDelegate* sceneDelegate, const SdfPath& id)
-{
-    const SdfPath& instancerId = sceneDelegate->GetInstancerId(id);
-    if (instancerId.IsEmpty() || !HasLightLinking())
-        return _GetRprimCategories(sceneDelegate, id, {});
+void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
+    // The light linking of instanced shapes depends on their instances, it is applied by
+    // HdArnoldShape::_SyncInstances.
+    if (!sceneDelegate->GetInstancerId(id).IsEmpty())
+        return;
+    _ApplyLightLinking(node, sceneDelegate->GetCategories(id));
+}
 
+void HdArnoldRenderDelegate::ApplyLightLinking(
+    HdSceneDelegate* sceneDelegate, AtNode* node, SdfPath const& id,
+    const std::vector<VtArray<TfToken>>& instanceCategories)
+{
+    VtArray<TfToken> categories = _GetRprimCategories(sceneDelegate, id, instanceCategories);
     // When all the instances share the same instance categories, they can be applied to the shape
     // itself. Otherwise the instancer node gets them per instance (see ApplyInstanceLightLinking).
-    std::vector<VtArray<TfToken>> instanceCategories;
-    if (auto* instancer = dynamic_cast<HdArnoldInstancer*>(sceneDelegate->GetRenderIndex().GetInstancer(instancerId)))
-        instanceCategories = instancer->ComputeInstanceCategories(id);
-    VtArray<TfToken> categories = _GetRprimCategories(sceneDelegate, id, instanceCategories);
     if (instanceCategories.size() == 1) {
         for (const auto& instanceCategory : instanceCategories.front())
             categories.push_back(instanceCategory);
     }
-    return categories;
-}
-
-void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
-    _ApplyLightLinking(node, _GetLightLinkCategories(sceneDelegate, id));
+    _ApplyLightLinking(node, categories);
 }
 
 void HdArnoldRenderDelegate::ApplyInstanceLightLinking(

@@ -332,8 +332,23 @@ public:
     /// @param delegate scene delegate.
     /// @param node Pointer to the Arnold Shape.
     /// @param id ID of the rprim.
+    /// Instanced rprims are skipped, see the overload taking the instance categories.
     HDARNOLD_API
     void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
+
+    /// Apply light linking to the shape of an instanced rprim.
+    ///
+    /// The instance categories are added to the shape when all the instances share them.
+    ///
+    /// @param delegate scene delegate.
+    /// @param node Pointer to the Arnold Shape.
+    /// @param id ID of the rprim.
+    /// @param instanceCategories Categories of the instances (see
+    ///  HdArnoldInstancer::ComputeInstanceCategories).
+    HDARNOLD_API
+    void ApplyLightLinking(
+        HdSceneDelegate* delegate, AtNode* node, SdfPath const& id,
+        const std::vector<VtArray<TfToken>>& instanceCategories);
 
     /// Apply per-instance light linking to the leaf Arnold instancer of an instanced rprim,
     /// for instances that don't all share the same light-link categories.
@@ -900,10 +915,6 @@ private:
     /// ignored when the instances have their own @p instanceCategories.
     VtArray<TfToken> _GetRprimCategories(
         HdSceneDelegate* sceneDelegate, const SdfPath& id, const std::vector<VtArray<TfToken>>& instanceCategories);
-
-    /// Returns the categories of an rprim and of its instancer, followed by the instance
-    /// categories when all its instances share the same ones.
-    VtArray<TfToken> _GetLightLinkCategories(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
     /// Returns the Arnold lights linked to any of @p categories in @p links, along with the
     /// lights without a collection and the mesh lights. Must run once the lights exist.

@@ -23,6 +23,7 @@
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
 #include <algorithm>
+#include <map>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -343,14 +344,26 @@ std::vector<VtArray<TfToken>> HdArnoldInstancer::ComputeInstanceCategories(const
     if (!hasCategories)
         return {};
 
-    // Sort the categories so that instances with the same categories compare equal.
+    // The parent categories apply to all the instances, only keep them once.
+    std::sort(parentCategories.begin(), parentCategories.end());
+    parentCategories.erase(std::unique(parentCategories.begin(), parentCategories.end()), parentCategories.end());
+
+    // Sort the categories so that instances with the same categories compare equal. Instances usually
+    // share a few sets of categories: each set is only sorted once, and the instances share its array.
+    std::map<std::vector<TfToken>, VtArray<TfToken>> sortedCategories;
     for (auto& categories : result) {
-        std::vector<TfToken> sorted(categories.cbegin(), categories.cend());
-        sorted.insert(sorted.end(), parentCategories.begin(), parentCategories.end());
-        std::sort(sorted.begin(), sorted.end());
-        sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
-        categories.assign(sorted.begin(), sorted.end());
+        auto inserted = sortedCategories.emplace(
+            std::vector<TfToken>(categories.cbegin(), categories.cend()), VtArray<TfToken>());
+        if (inserted.second) {
+            std::vector<TfToken> sorted = inserted.first->first;
+            sorted.insert(sorted.end(), parentCategories.begin(), parentCategories.end());
+            std::sort(sorted.begin(), sorted.end());
+            sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+            inserted.first->second.assign(sorted.begin(), sorted.end());
+        }
+        categories = inserted.first->second;
     }
+    // Comparing arrays sharing the same data is cheap.
     if (std::all_of(result.begin(), result.end(), [&](const VtArray<TfToken>& c) { return c == result.front(); }))
         result.resize(1);
     return result;
