@@ -1,0 +1,82 @@
+#usda 1.0
+
+# Three matte spheres, left to right. Each should render as a black holdout:
+#   x=0  /plain: a top-level ArnoldSphere with arnold:matte = 1
+#   x=2  /O1:    an instancer whose prototype is a hidden matte sphere (/leaf1)
+#   x=4  /O2:    an instancer whose prototype is a hidden instancer (/S2) of a hidden matte sphere (/leaf2)
+# None of the instancer prims author arnold:matte, so they must not override the prototypes matte.
+
+def Camera "cam"
+{
+    float focalLength = 50
+    float horizontalAperture = 20.955
+    float verticalAperture = 15.716
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 15, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def SphereLight "light" (
+    prepend apiSchemas = ["ShadowAPI"]
+)
+{
+    bool inputs:shadow:enable = 0
+    float inputs:intensity = 20
+    float inputs:radius = 2
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 3, 8, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def ArnoldSphere "plain"
+{
+    vector3f[] arnold:center = [(0, 0, 0)]
+    float[] arnold:radius = [0.5]
+    bool arnold:matte = 1
+}
+
+def ArnoldSphere "leaf1"
+{
+    vector3f[] arnold:center = [(0, 0, 0)]
+    float[] arnold:radius = [0.5]
+    bool arnold:matte = 1
+    uchar arnold:visibility = 0
+}
+
+def ArnoldProceduralCustom "O1"
+{
+    string arnold:node_entry = "instancer"
+    string[] arnold:nodes = ["/leaf1"]
+    matrix4d[] arnold:instance_matrix = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0, 1) )]
+    uchar[] arnold:instance_visibility = [255]
+}
+
+def ArnoldSphere "leaf2"
+{
+    vector3f[] arnold:center = [(0, 0, 0)]
+    float[] arnold:radius = [0.5]
+    bool arnold:matte = 1
+    uchar arnold:visibility = 0
+}
+
+def ArnoldProceduralCustom "S2"
+{
+    string arnold:node_entry = "instancer"
+    string[] arnold:nodes = ["/leaf2"]
+    matrix4d[] arnold:instance_matrix = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )]
+    uchar[] arnold:instance_visibility = [255]
+    uchar arnold:visibility = 0
+}
+
+def ArnoldProceduralCustom "O2"
+{
+    string arnold:node_entry = "instancer"
+    string[] arnold:nodes = ["/S2"]
+    matrix4d[] arnold:instance_matrix = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4, 0, 0, 1) )]
+    uchar[] arnold:instance_visibility = [255]
+}
+
+# Backdrop behind everything, so the matte holdouts show up as black discs
+def ArnoldPlane "backdrop"
+{
+    vector3f arnold:point = (0, 0, -2)
+    vector3f arnold:normal = (0, 0, 1)
+}

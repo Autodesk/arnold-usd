@@ -30,6 +30,7 @@
 - [usd#2782](https://github.com/Autodesk/arnold-usd/issues/2782) - Avoid changing the options node when the frame changes
 - [usd#2781](https://github.com/Autodesk/arnold-usd/pull/2781) - Fix export of subdivisionScheme from MayaUSD
 - [usd#2784](https://github.com/Autodesk/arnold-usd/pull/2784) - Register lights without link value when lightLinking
+- [usd#2787](https://github.com/Autodesk/arnold-usd/issues/2787) - Skip unauthored attributes on ArnoldProceduralCustom prims with Hydra
 
 ## [7.5.3.2] (Unreleased)
 
