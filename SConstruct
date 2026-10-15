@@ -129,6 +129,7 @@ vars.AddVariables(
     BoolVariable('ENABLE_SHARED_ARRAYS', 'Enable the use of shared arrays in hydra', False),
     BoolVariable('ENABLE_HYDRA2', 'Traverse the stage with the scene index (Hydra 2) by default. The USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX environment variable overrides this at runtime. Unrelated to BUILD_SCENE_INDEX_PLUGIN, which must stay enabled either way since Hydra 1 needs the scene index filters too.', True),
     BoolVariable('ENABLE_TRACING', 'Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE).', False),
+    BoolVariable('ENABLE_SYMBOLS', 'Build and link with the debug info that separate symbol files are made from after the build. Also adds debug info in opt mode.', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),
     BoolVariable('BUILD_TURNTABLE', 'Whether or not to build the turntable tool', False),
@@ -414,6 +415,10 @@ if env['_COMPILER'] in ['gcc', 'clang']:
             env.Append(LINKFLAGS = ['-arch', 'x86_64'])
     else:
         env.Append(LINKFLAGS = '-Wl,--no-undefined')
+        if env['ENABLE_SYMBOLS']:
+            # No linker writes a build-id by default. Tools that pair a binary
+            # with its symbol file compare it
+            env.Append(LINKFLAGS = '-Wl,--build-id=sha1')
         if env['DISABLE_CXX11_ABI']:
             env.Append(CPPDEFINES = [{'_GLIBCXX_USE_CXX11_ABI' : 0}])
     # Warning level
@@ -430,6 +435,9 @@ if env['_COMPILER'] in ['gcc', 'clang']:
 
     if env['MODE'] == 'opt':
         env.Append(CPPDEFINES=Split('NDEBUG'))
+        if env['ENABLE_SYMBOLS']:
+            env.Append(CCFLAGS = Split('-g'))
+            env.Append(LINKFLAGS = Split('-g'))
 
     # Debug and profile flags
     if env['MODE'] == 'debug' or env['MODE'] == 'profile':
@@ -468,6 +476,12 @@ elif env['_COMPILER'] == 'msvc':
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
         env.Append(CPPDEFINES=Split('NDEBUG'))
+        if env['ENABLE_SYMBOLS']:
+            # SCons compiles with /Z7 when PDB is set, and makes each linked
+            # binary's .pdb a target, so it is installed next to the binary.
+            # /DEBUG makes /INCREMENTAL and /OPT:NOREF,NOICF the defaults
+            env['PDB'] = '${TARGET.base}.pdb'
+            env.Append(LINKFLAGS=Split('/INCREMENTAL:NO /OPT:REF /OPT:ICF'))
     elif env['MODE'] == 'profile':
         env.Append(CCFLAGS=Split('/Ob2 /MD /Zi'))
     elif env['MODE'] == 'debug':

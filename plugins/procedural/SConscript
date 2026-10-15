@@ -229,7 +229,10 @@ elif system.is_darwin:
     # Otherwise we get crashes e.g. with mayaUSD (see #1226)
     if local_env['USD_BUILD_MODE'] == 'static':
         export_list = os.path.join(src_proc_dir, 'macos_export_list')
-        local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+        local_env.Append(LINKFLAGS = Split('-Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+        # -S leaves out the debug map, which dsymutil needs to make a .dSYM
+        if not local_env['ENABLE_SYMBOLS']:
+            local_env.Append(LINKFLAGS = Split('-Xlinker -S'))
 
 # Build shared library for the usd procedural
 USD = local_env.SharedLibrary('%s_proc' % local_env['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')
