@@ -732,6 +732,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
         AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
         AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+        // Toggling the accelerated viewport on lands here too, so the region is current whenever it is read back.
+        if (_acceleratedViewport) {
+            for (auto& buffer : _renderBuffers) {
+                if (buffer.second.buffer != nullptr) {
+                    buffer.second.buffer->SetRegionSize(
+                        _framing.dataWindow.GetWidth(), _framing.dataWindow.GetHeight());
+                }
+            }
+        }
+#endif
         // With the ortho camera we need to update the screen_window_min/max when the window changes
         // This is unfortunate as we won't be able to have multiple viewport with the same ortho camera
         // Another option would be to keep an ortho camera on this class and update it ?
@@ -1037,6 +1048,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 (sourceName == HdAovTokens->color || sourceName == HdAovTokens->depth);
             if (buffer.buffer != nullptr) {
                 buffer.buffer->SetHgi(isGpuBacked ? _renderDelegate->GetHgi() : nullptr);
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+                if (isGpuBacked) {
+                    buffer.buffer->SetRegionSize(
+                        _framing.dataWindow.GetWidth(), _framing.dataWindow.GetHeight());
+                }
+#endif
             }
             if (_acceleratedViewport && !isBeauty && !isGpuBacked) {
                 // Every other AOV is skipped. It gets no Arnold output, so there is nothing to read back, and

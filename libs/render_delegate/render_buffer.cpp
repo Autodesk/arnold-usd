@@ -533,7 +533,7 @@ bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 #endif
 VtValue HdArnoldRenderBuffer::GetResource(bool /*multiSampled*/) const
 {
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && !defined(DIRECT_OUTPUTS_CPU_BUFFER)
     if (_renderDelegate == nullptr) {
         return VtValue();
     }
@@ -606,6 +606,15 @@ void HdArnoldRenderBuffer::SetHgi(Hgi* hgi)
     _hgi = hgi;
 }
 
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+void HdArnoldRenderBuffer::SetRegionSize(unsigned int width, unsigned int height)
+{
+    std::lock_guard<std::mutex> guard(_mutex);
+    _regionWidth = width;
+    _regionHeight = height;
+}
+#endif
+
 void HdArnoldRenderBuffer::Clear()
 {
     std::lock_guard<std::mutex> guard(_mutex);
@@ -625,9 +634,66 @@ void* HdArnoldRenderBuffer::Map()
         _mutex.unlock();
         return nullptr;
     }
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    // Only the buffers the accelerated viewport reads back are given an Hgi, see HdArnoldRenderPass::_Execute.
+    if (_hgi != nullptr) {
+        _ReadDirectOutput();
+    }
+#endif
     _mapped = true;
     return _buffer.data();
 }
+
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+void HdArnoldRenderBuffer::_ReadDirectOutput()
+{
+    // Caller holds the buffer's mutex.
+    if (_renderDelegate == nullptr || !_renderDelegate->IsAcceleratedViewport() || _aovName.IsEmpty()) {
+        return;
+    }
+    AtRenderSession* rs = _renderDelegate->GetRenderSession();
+    if (rs == nullptr || AiRenderGetStatus(rs) == AI_RENDER_STATUS_NOT_STARTED) {
+        return;
+    }
+    // Same as GetResource(): AiGetRenderOutput() must wait for Arnold to have produced a viewport frame at the
+    // current outputs and resolution (see HdArnoldRenderParam::HasViewportUpdate). The render pass only calls
+    // SetRegionSize() after resetting that flag, and this runs under the same mutex, so the region below is
+    // always the one that frame was rendered at.
+    auto* renderParam = static_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+    if (renderParam == nullptr || !renderParam->HasViewportUpdate()) {
+        return;
+    }
+    // AiGetRenderOutput() copies the whole render region and cannot check that the destination is large enough
+    // for it, so only read back when the region is the size of this buffer.
+    if (_regionWidth != _width || _regionHeight != _height) {
+        return;
+    }
+
+    // Arnold writes the AOV's own layout, a single float for Z and four for the beauty, top row first. It can
+    // convert to half floats on the GPU, anything else is converted when writing to the buffer below.
+    AtRenderOutputProperties properties;
+    properties.half_float = HdGetComponentFormat(_format) == HdFormatFloat16;
+    const bool scalar = HdGetComponentCount(_format) == 1;
+    const HdFormat readFormat = properties.half_float ? (scalar ? HdFormatFloat16 : HdFormatFloat16Vec4)
+                                                      : (scalar ? HdFormatFloat32 : HdFormatFloat32Vec4);
+    _readBuffer.resize(static_cast<size_t>(_width) * _height * HdDataSizeOfFormat(readFormat));
+
+    const AtRenderErrorCode rc = AiGetRenderOutput(
+        rs, AtString(_aovName.GetText()), reinterpret_cast<uint64_t>(_readBuffer.data()),
+        AtGetRenderOutputHandleType::CPU, properties);
+    if (rc != AI_SUCCESS) {
+        // Arnold logs a warning of its own for each failure, so only report the first one.
+        if (!_readbackWarned) {
+            _readbackWarned = true;
+            TF_WARN("AiGetRenderOutput failed for AOV \"%s\" (code %d)", _aovName.GetText(), static_cast<int>(rc));
+        }
+        return;
+    }
+    _readbackWarned = false;
+    // Flips the image to the buffer's bottom row first layout, converting it if needed.
+    _WriteBucketUnlocked(0, 0, _width, _height, readFormat, _readBuffer.data());
+}
+#endif
 
 void HdArnoldRenderBuffer::Unmap()
 {
@@ -659,6 +725,13 @@ void HdArnoldRenderBuffer::WriteBucket(
         return;
     }
     std::lock_guard<std::mutex> _guard(_mutex);
+    _WriteBucketUnlocked(bucketXO, bucketYO, bucketWidth, bucketHeight, format, bucketData);
+}
+
+void HdArnoldRenderBuffer::_WriteBucketUnlocked(
+    unsigned int bucketXO, unsigned int bucketYO, unsigned int bucketWidth, unsigned int bucketHeight, HdFormat format,
+    const void* bucketData)
+{
     // Checking for empty buffers.
     if (_buffer.empty()) {
         return;
