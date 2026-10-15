@@ -25,9 +25,12 @@ elseif (APPLE)
     if (BUILD_WITH_USD_STATIC)
         if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
             target_link_options(${PROC_NAME} PRIVATE
-                "LINKER:-S"
                 "LINKER:-x"
                 "LINKER:-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
+            # -S leaves out the debug map, which dsymutil needs to make a .dSYM
+            if (NOT ENABLE_SYMBOLS)
+                target_link_options(${PROC_NAME} PRIVATE "LINKER:-S")
+            endif ()
         endif ()
     endif ()
 endif ()
@@ -68,6 +71,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
+install_symbols(${PROC_NAME} "${PREFIX_PROCEDURAL}")
 
 if (BUILD_WITH_USD_STATIC)
     # We need to install the plugInfos for the included usd plugins coming with the static usd lib.

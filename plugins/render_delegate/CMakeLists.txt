@@ -53,6 +53,7 @@ if (BUILD_RENDER_DELEGATE)
 
         install(TARGETS hdArnold
             DESTINATION "${PREFIX_PLUGINS}")
+        install_symbols(hdArnold "${PREFIX_PLUGINS}")
 
         install(FILES "${HDARNOLD_PLUGINFO}"
             DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")

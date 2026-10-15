@@ -83,6 +83,7 @@ endif()
 
 # Install the Bundle inside a new directory to avoid any collision with other installed plugins
 install(TARGETS ${BUNDLE_NAME} DESTINATION "${PREFIX_BUNDLE}")
+install_symbols(${BUNDLE_NAME} "${PREFIX_BUNDLE}")
 
 # Install procedural usd directory as well - we shouldn't need to install this directory
 #install(DIRECTORY "${USD_LIBRARY_DIR}/usd"

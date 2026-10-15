@@ -49,6 +49,7 @@ else () # USD shared lib build
 endif ()
 
 install(TARGETS turntable DESTINATION "${PREFIX_BIN}")
+install_symbols(turntable "${PREFIX_BIN}")
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hdri"
     DESTINATION "${PREFIX_BIN}")
 

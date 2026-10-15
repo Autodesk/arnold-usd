@@ -1,3 +1,13 @@
+# Installs the .pdb of a target next to it, in the MSVC builds where ENABLE_SYMBOLS adds
+# debug info. install(TARGETS) does not install it
+function(install_symbols TARGET_NAME DESTINATION)
+    if (ENABLE_SYMBOLS AND MSVC)
+        install(FILES "$<TARGET_PDB_FILE:${TARGET_NAME}>"
+            DESTINATION "${DESTINATION}"
+            CONFIGURATIONS Release MinSizeRel)
+    endif ()
+endfunction()
+
 # Add the includes shared by all the modules
 # TARGET_NAME - Name of the target.
 # DEPENDENCIES - List of individual dependencies

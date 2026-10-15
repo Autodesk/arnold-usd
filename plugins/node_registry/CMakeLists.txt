@@ -49,6 +49,7 @@ if (BUILD_NDR_PLUGIN)
 
         install(TARGETS nodeRegistryArnold
             DESTINATION "${PREFIX_PLUGINS}")
+        install_symbols(nodeRegistryArnold "${PREFIX_PLUGINS}")
 
         # Why do we intall the headers ??
         #install(FILES ${HDR}

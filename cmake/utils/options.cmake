@@ -80,6 +80,9 @@ if (NOT ENABLE_TRACING)
     # compiled in where the SCons build has none.
     add_compile_definitions(TRACE_ENABLE=0)
 endif()
+# Matches ENABLE_SYMBOLS in the SConstruct, where opt is the mode with no debug info. Here
+# Release and MinSizeRel are the configurations without it.
+option(ENABLE_SYMBOLS "Keep what separate symbol files are made from after the build: debug info in Release and MinSizeRel, a build-id on Linux, the installed .pdb of each binary in MSVC Release and MinSizeRel builds, and the debug map of the procedural on macOS." OFF)
 option(MTOA_BUILD "Build MtoA-specific plugins (e.g. the ai<Name> primvar remap scene index)" OFF)
 if (MTOA_BUILD AND BUILD_BUNDLE)
     # The MtoA primvar remap SIP is useful only if the scene index ships in the bundle.
