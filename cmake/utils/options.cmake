@@ -88,6 +88,8 @@ endif()
 
 option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
 
+option(ZERO_DEPTH_BACKGROUND "If true, mask the depth AOV to 0.0 on pixels with no alpha/id coverage, rather than trusting Arnold's raw Z value for them. Off by default so existing hosts (e.g. mayaHydra) keep their current behavior unless they opt in" OFF)
+
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")

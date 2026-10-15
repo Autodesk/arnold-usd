@@ -205,8 +205,29 @@ driver_process_bucket
     const auto* colorIn = colorData != nullptr ? static_cast<const AtRGBA*>(colorData) : nullptr;
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
-        driverData->depthBuffer->WriteBucket(
-            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, in);
+#ifdef ZERO_DEPTH_BACKGROUND
+        // Don't trust whatever raw Z happens to contain for a pixel with no
+        // coverage this pass. Arnold's interactive depth accumulation can
+        // leave a pixel's Z untouched when it gets no new samples, so a
+        // background pixel can read back as a plausible leftover depth from
+        // before - not something we could catch just by checking the value
+        // itself. Mask explicitly using the same alpha/id coverage test the
+        // P-based path below uses, which reflects actual coverage this pass.
+        if (colorIn != nullptr || !ids.empty()) {
+            auto& depth = driverData->depths[tid];
+            depth.resize(pixelCount);
+            for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                const bool hasCoverage = colorIn != nullptr ? colorIn[i].a > 0.0f : ids[i] != -1;
+                depth[i] = hasCoverage ? in[i] : 0.0f;
+            }
+            driverData->depthBuffer->WriteBucket(
+                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
+        } else
+#endif
+        {
+            driverData->depthBuffer->WriteBucket(
+                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, in);
+        }
     } else if (positionData != nullptr && driverData->depthBuffer != nullptr) {
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount, 1.0f);
