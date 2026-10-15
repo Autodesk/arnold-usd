@@ -205,6 +205,7 @@ driver_process_bucket
     const auto* colorIn = colorData != nullptr ? static_cast<const AtRGBA*>(colorData) : nullptr;
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
+#ifdef ZERO_DEPTH_BACKGROUND
         // Don't trust whatever raw Z happens to contain for a pixel with no
         // coverage this pass. Arnold's interactive depth accumulation can
         // leave a pixel's Z untouched when it gets no new samples, so a
@@ -221,7 +222,9 @@ driver_process_bucket
             }
             driverData->depthBuffer->WriteBucket(
                 bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
-        } else {
+        } else
+#endif
+        {
             driverData->depthBuffer->WriteBucket(
                 bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, in);
         }
