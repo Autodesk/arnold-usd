@@ -25,6 +25,7 @@ if (ENABLE_SYMBOLS)
         add_link_options("$<$<CONFIG:Release,MinSizeRel>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF>")
     else ()
         add_compile_options("$<$<CONFIG:Release,MinSizeRel>:-g>")
+        add_link_options("$<$<CONFIG:Release,MinSizeRel>:-g>")
     endif ()
     if (LINUX)
         # The clang driver does not ask the linker for a build-id. Tools that pair
