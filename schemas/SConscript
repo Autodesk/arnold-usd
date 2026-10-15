@@ -16,9 +16,11 @@
 import os
 import sys
 import filecmp
+import shutil
 
-from utils.system import is_windows, is_darwin, is_linux
+from utils.system import is_windows, is_darwin, is_linux, LIB_EXTENSION
 from utils.pluginfo import update_plug_info
+from utils import dependencies
 
 # import build env
 Import('env')
@@ -97,6 +99,25 @@ if myenv.get('USDGENSCHEMA_CMD'):
 elif not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
+# The usdArnold library registers the compute extent functions of the Arnold procedural schemas,
+# USD loads it on demand through the schema plugInfo.json. It only depends on USD.
+# With a static USD the schemas are embedded in the procedural, we don't build it.
+USD_ARNOLD = []
+schemasLibraryPath = None
+if env['USD_BUILD_MODE'] != 'static':
+    libenv = env.Clone()
+    if not is_windows:
+        libenv.Append(CXXFLAGS = Split('-fPIC'))
+    # Name under which the TF_REGISTRY_FUNCTIONs are registered
+    libenv.Append(CPPDEFINES = {'MFB_PACKAGE_NAME': 'usdArnold', 'MFB_ALT_PACKAGE_NAME': 'usdArnold'})
+    source_files, usd_deps = dependencies.schemas_library(libenv, ['compute_extent.cpp'])
+    libenv.Append(LIBS = usd_deps)
+    USD_ARNOLD = libenv.SharedLibrary('usdArnold', source_files, SHLIBPREFIX='')
+    # Relative to the plugin root, i.e. the schema usdArnold folder
+    schemasLibraryPath = 'usdArnold{}'.format(LIB_EXTENSION)
+
+embeddedPlugInfo = os.path.join(schemasBuildBase, 'embedded', 'plugInfo.json')
+
 def create_schema(target, source, env):
     if not os.path.exists(schemasBuildFolder):
         os.makedirs(schemasBuildFolder)
@@ -112,7 +133,12 @@ def create_schema(target, source, env):
     })
     print(cmd)
     os.system(cmd)
-    update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
+    update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'), schemasLibraryPath)
+    # plugInfo.json for the executables linking the usdArnold code (e.g. turntable), it doesn't load any library
+    if not os.path.exists(os.path.dirname(embeddedPlugInfo)):
+        os.makedirs(os.path.dirname(embeddedPlugInfo))
+    shutil.copy2(os.path.join(schemasBuildFolder, 'plugInfo.json'), embeddedPlugInfo)
+    update_plug_info(embeddedPlugInfo, '')
 
 builder = Builder(action = Action(create_schema, "Flattening schema..."))
 
@@ -121,6 +147,7 @@ myenv.Append(BUILDERS = {'GenerateSchema' : builder})
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
 
 myenv.Depends(plugInfo, generatedSchema)
+myenv.Depends(embeddedPlugInfo, generatedSchema)
 
 GENERATE_SCHEMA = myenv.GenerateSchema(generatedSchema, schemaFile)
-Return(['GENERATE_SCHEMA', 'plugInfo', 'schemaFile'])
+Return(['GENERATE_SCHEMA', 'plugInfo', 'schemaFile', 'USD_ARNOLD', 'embeddedPlugInfo'])

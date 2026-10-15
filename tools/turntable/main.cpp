@@ -12,6 +12,7 @@
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
 #include <pxr/base/arch/systemInfo.h>
+#include <pxr/base/plug/registry.h>
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/tf/pxrCLI11/CLI11.h>
 #include <pxr/base/tf/stringUtils.h>
@@ -311,6 +312,18 @@ std::string _NormalizePath(const std::string &path)
 std::string _GetExecutablePath()
 {
     return _NormalizePath(ArchGetExecutablePath());
+}
+
+// The Arnold schemas configuration (plugInfo.json) is installed next to the executable, the code
+// computing the extent of the Arnold procedurals being linked in it. With a static USD this folder
+// is already scanned, but a shared USD only knows about its own plugins and PXR_PLUGINPATH_NAME.
+void _RegisterEmbeddedPlugins()
+{
+    const std::string schemasDir =
+        TfStringCatPaths(TfGetPathName(_GetExecutablePath()), "usd/usdArnold/resources");
+    if (_DirectoryExists(schemasDir)) {
+        PlugRegistry::GetInstance().RegisterPlugins(schemasDir);
+    }
 }
 
 std::vector<std::string> _GetHdriSearchDirs(const Args &args)
@@ -1650,5 +1663,6 @@ int main(int argc, char const *argv[])
     Configure(&app, args);
     CLI11_PARSE(app, argc, argv);
 
+    _RegisterEmbeddedPlugins();
     return Run(args);
 }

@@ -147,6 +147,20 @@ def ndr_plugin(env, sources):
         usd_libs += ['ndr',]
     return add_plugin_deps(env, sources, usd_libs, False)
 
+def schemas_library(env, sources):
+    usd_libs = [
+        'ar',
+        'arch',
+        'gf',
+        'plug',
+        'tf',
+        'vt',
+        'sdf',
+        'usd',
+        'usdGeom',
+    ]
+    return add_plugin_deps(env, sources, usd_libs, False)
+
 def usd_imaging_plugin(env, sources):
     usd_libs = [
         'ar',

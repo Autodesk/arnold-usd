@@ -80,6 +80,11 @@ endif()
   if (ENABLE_SCENE_INDEX_IN_BUNDLE)                                                                                                                                             
       target_link_libraries(${BUNDLE_NAME} PRIVATE sceneIndexArnoldObjects)                                                                                                     
   endif()
+# The usdArnold schema code (compute extent functions). The usdArnoldObjects target is defined
+# later in schemas/, target names are resolved at generation time.
+if (ENABLE_SCHEMAS_IN_BUNDLE)
+	target_link_libraries(${BUNDLE_NAME} PRIVATE usdArnoldObjects)
+endif()
 
 # Install the Bundle inside a new directory to avoid any collision with other installed plugins
 install(TARGETS ${BUNDLE_NAME} DESTINATION "${PREFIX_BUNDLE}")

@@ -71,6 +71,10 @@ option(ENABLE_SCENE_INDEX_IN_BUNDLE "Add the scene index filters in the bundle" 
 # second copy would duplicate it and make the bundle something Arnold has to discover as
 # well as USD. ON preserves the existing behaviour.
 option(ENABLE_PROCEDURAL_IN_BUNDLE "Include the Arnold procedural in the bundle" ON)
+# The usdArnold schema library (the procedural compute extent functions) is built as a
+# separate library by default. When enabled, its code is linked in the bundle instead and the
+# schema plugInfo.json loads the bundle.
+option(ENABLE_SCHEMAS_IN_BUNDLE "Add the usdArnold schema library in the bundle" OFF)
 option(ENABLE_TRACING "Enable USD trace instrumentation (TRACE_FUNCTION/TRACE_SCOPE)." OFF)
 if (NOT ENABLE_TRACING)
     # Apply globally, matching SConstruct:386-387 which appends TRACE_ENABLE=0 to the

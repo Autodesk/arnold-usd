@@ -2,6 +2,12 @@ set(SRC main.cpp)
 
 add_executable(turntable ${SRC})
 
+# Embed the extent computation of the Arnold procedural schemas, so that their bounding box
+# can be computed. Their configuration is installed next to the executable (see below).
+if (TARGET usdArnoldObjects)
+    target_sources(turntable PRIVATE $<TARGET_OBJECTS:usdArnoldObjects>)
+endif ()
+
 add_custom_command(TARGET turntable POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_CURRENT_SOURCE_DIR}/hdri"
@@ -44,13 +50,20 @@ else () # USD shared lib build
         if (LINUX)
             target_link_libraries(turntable PRIVATE dl pthread)
         endif ()
-        target_link_libraries(turntable PRIVATE tf;sdf;usd;usdGeom;usdLux;usdRender;usdShade)
+        target_link_libraries(turntable PRIVATE ar;arch;gf;plug;tf;vt;sdf;usd;usdGeom;usdLux;usdRender;usdShade)
     endif ()
 endif ()
 
 install(TARGETS turntable DESTINATION "${PREFIX_BIN}")
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/hdri"
     DESTINATION "${PREFIX_BIN}")
+
+# Arnold schemas configuration, it doesn't load any library as the code is linked in the turntable.
+# A static USD finds it under <bin>/usd, with a shared USD the turntable registers it at startup.
+if (TARGET usdArnoldObjects)
+    install(FILES "${SCHEMAS_EMBEDDED_PLUGINFO}" "${SCHEMAS_GENERATED_SCHEMA}"
+        DESTINATION "${PREFIX_BIN}/usd/usdArnold/resources")
+endif ()
 
 if (BUILD_WITH_USD_STATIC)
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
