@@ -206,15 +206,9 @@ driver_process_bucket
     if (depthData != nullptr && driverData->depthBuffer != nullptr) {
         const auto* in = static_cast<const float*>(depthData);
 #ifdef ZERO_DEPTH_BACKGROUND
-        // For camera rays that hit nothing (including a visible skydome or background shader), Arnold returns
-        // a Z at or beyond the camera far_clip (AI_INFINITE by default). Like Karma, write 0 for these pixels
-        // instead, as Houdini uses the linear depth under the cursor to drive the viewport camera moves. The
-        // alpha can't be used to detect them, since a skydome visible to the camera has an alpha of 1. The small
-        // tolerance absorbs the float rounding of a Z clamped to far_clip.
-        const AtNode* options = AiUniverseGetOptions(AiNodeGetUniverse(node));
-        const AtNode* camera = static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
-        const float farClip = camera != nullptr ? AiNodeGetFlt(camera, str::far_clip) : AI_INFINITE;
-        const float backgroundZ = farClip * (1.0f - 1e-5f);
+        // Like Karma, write 0 for background pixels instead of trusting Arnold's raw Z -
+        // see HdArnoldGetBackgroundDepthZ for why.
+        const float backgroundZ = HdArnoldGetBackgroundDepthZ(AiNodeGetUniverse(node));
         auto& depth = driverData->depths[tid];
         depth.resize(pixelCount);
         std::transform(in, in + pixelCount, depth.begin(), [backgroundZ](float z) -> float {

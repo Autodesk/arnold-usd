@@ -711,4 +711,18 @@ inline void SampleTransform(
 #endif
 }
 
+#ifdef ZERO_DEPTH_BACKGROUND
+/// A ray that hits nothing - including a visible skydome or background shader - reports a
+/// Z at or beyond the camera's far_clip. Houdini drives viewport camera moves from the
+/// depth under the cursor, so these pixels need to read back as 0 instead, the same as
+/// Karma writes (alpha can't be used for this: a visible skydome has an alpha of 1).
+///
+/// @param universe The Arnold universe to read the active camera's far_clip from.
+/// @return The Z value at or above which a pixel should be treated as background and
+/// written as 0. Includes a small tolerance for the float rounding of a Z clamped to
+/// far_clip.
+HDARNOLD_API
+float HdArnoldGetBackgroundDepthZ(AtUniverse* universe);
+#endif
+
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -90,6 +90,8 @@ if (MTOA_BUILD AND BUILD_BUNDLE)
     set(ENABLE_SCENE_INDEX_IN_BUNDLE ON CACHE BOOL "Add the scene index filters in the bundle" FORCE)
 endif()
 
+option(DIRECT_OUTPUTS_CPU_BUFFER "If true, the accelerated viewport is read back into CPU buffers through Map() instead of GL textures through GetResource(), for hosts that no longer display the latter" OFF)
+
 option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
 
 option(ZERO_DEPTH_BACKGROUND "If true, write 0.0 in the depth AOV for background pixels (Z at or beyond the camera far_clip) rather than Arnold's raw Z value, as Houdini expects. Off by default so existing hosts (e.g. mayaHydra) keep their current behavior unless they opt in" OFF)
