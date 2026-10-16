@@ -65,6 +65,7 @@ if (BUILD_USD_IMAGING_PLUGIN)
         
         install(TARGETS usdImagingArnold
             DESTINATION "${PREFIX_PLUGINS}")
+        install_symbols(usdImagingArnold "${PREFIX_PLUGINS}")
         set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
         install_usdimaging_arnold_pluginfo(
                 ../usdImagingArnold

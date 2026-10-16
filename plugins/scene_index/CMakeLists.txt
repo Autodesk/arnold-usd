@@ -72,6 +72,7 @@ if (BUILD_SCENE_INDEX_PLUGIN)
         
         install(TARGETS sceneIndexArnold
             DESTINATION "${PREFIX_PLUGINS}")
+        install_symbols(sceneIndexArnold "${PREFIX_PLUGINS}")
         set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
         install_sceneIndex_arnold_pluginfo(
                 ../sceneIndexArnold

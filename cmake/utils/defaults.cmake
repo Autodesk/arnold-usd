@@ -16,6 +16,24 @@ else ()
     add_link_options(/DEBUG)
 endif ()
 
+if (ENABLE_SYMBOLS)
+    if (MSVC)
+        # /Z7 puts the debug info in each object file, so parallel compiles do not
+        # write a shared .pdb. The /DEBUG above makes /INCREMENTAL and
+        # /OPT:NOREF,NOICF the defaults
+        add_compile_options("$<$<CONFIG:Release,MinSizeRel>:/Z7>")
+        add_link_options("$<$<CONFIG:Release,MinSizeRel>:/INCREMENTAL:NO;/OPT:REF;/OPT:ICF>")
+    else ()
+        add_compile_options("$<$<CONFIG:Release,MinSizeRel>:-g>")
+        add_link_options("$<$<CONFIG:Release,MinSizeRel>:-g>")
+    endif ()
+    if (LINUX)
+        # The clang driver does not ask the linker for a build-id. Tools that pair
+        # a binary with its symbol file compare it
+        add_link_options("-Wl,--build-id=sha1")
+    endif ()
+endif ()
+
 # Compilation options specific to USD
 if (${USD_VERSION} VERSION_GREATER_EQUAL "0.23.11")
     message(STATUS "Setting C++ standard to C++17")
