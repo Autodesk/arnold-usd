@@ -827,4 +827,14 @@ size_t ExtrapolatePositions(
     return numKeys;
 }
 
+#ifdef ZERO_DEPTH_BACKGROUND
+float HdArnoldGetBackgroundDepthZ(AtUniverse* universe)
+{
+    const AtNode* options = AiUniverseGetOptions(universe);
+    const AtNode* camera = static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
+    const float farClip = camera != nullptr ? AiNodeGetFlt(camera, str::far_clip) : AI_INFINITE;
+    return farClip * (1.0f - 1e-5f);
+}
+#endif
+
 PXR_NAMESPACE_CLOSE_SCOPE

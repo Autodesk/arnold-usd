@@ -17,6 +17,7 @@
 // limitations under the License.
 #include "render_buffer.h"
 #include "render_delegate.h"
+#include "utils.h"
 #include <pxr/base/tf/diagnostic.h>
 
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
@@ -690,6 +691,16 @@ void HdArnoldRenderBuffer::_ReadDirectOutput()
         return;
     }
     _readbackWarned = false;
+#ifdef ZERO_DEPTH_BACKGROUND
+    // Depth only, and only HdFormatFloat32: GetDefaultAovDescriptor() declares depth as
+    // that format, so this skips the (unused) half-float case rather than handling it.
+    if (_aovName == str::t_Z && readFormat == HdFormatFloat32) {
+        auto* z = reinterpret_cast<float*>(_readBuffer.data());
+        const float backgroundZ = HdArnoldGetBackgroundDepthZ(_renderDelegate->GetUniverse());
+        const auto numPixels = static_cast<size_t>(_width) * _height;
+        std::transform(z, z + numPixels, z, [backgroundZ](float v) { return v >= backgroundZ ? 0.0f : v; });
+    }
+#endif
     // Flips the image to the buffer's bottom row first layout, converting it if needed.
     _WriteBucketUnlocked(0, 0, _width, _height, readFormat, _readBuffer.data());
 }
