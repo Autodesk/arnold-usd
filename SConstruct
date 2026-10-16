@@ -137,6 +137,7 @@ vars.AddVariables(
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
+    BoolVariable('DIRECT_OUTPUTS_CPU_BUFFER', 'If true, the accelerated viewport is read back into CPU buffers through Map() instead of GL textures through GetResource(), for hosts that no longer display the latter', False),
     BoolVariable('HYDRA_NORMALIZE_DEPTH', 'If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth', True),
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
@@ -382,6 +383,9 @@ env['ENV']['ARNOLD_PATH'] = os.path.abspath(ARNOLD_PATH)
 env['ENV']['ARNOLD_BINARIES'] = os.path.abspath(ARNOLD_BINARIES)
 env['ENV']['PREFIX_BIN'] = os.path.abspath(PREFIX_BIN)
 env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
+
+if env['DIRECT_OUTPUTS_CPU_BUFFER']:
+    env.Append(CPPDEFINES = Split('DIRECT_OUTPUTS_CPU_BUFFER'))
 
 if env['HYDRA_NORMALIZE_DEPTH']:
     env.Append(CPPDEFINES = Split('HYDRA_NORMALIZE_DEPTH'))

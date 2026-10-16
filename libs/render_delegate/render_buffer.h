@@ -87,7 +87,8 @@ public:
     bool IsMapped() const override;
 
     /// Returns the GPU texture backing this render buffer, wrapped in a VtValue.
-    /// Returns an empty VtValue when no Hgi was provided (CPU path).
+    /// Returns an empty VtValue when no Hgi was provided (CPU path), and always when built with
+    /// DIRECT_OUTPUTS_CPU_BUFFER, where Map() reads the accelerated viewport back instead.
     HDARNOLD_API
     VtValue GetResource(bool multiSampled) const override;
 
@@ -155,6 +156,18 @@ public:
         _aovName = aovName;
     }
 
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    /// Provide the size of the render region Arnold renders, which is what AiGetRenderOutput copies.
+    ///
+    /// Call this after HdArnoldRenderParam::ResetViewportUpdate(), so a readback never pairs the new size with a
+    /// frame rendered at the old one.
+    ///
+    /// @param width Region width.
+    /// @param height Region height.
+    HDARNOLD_API
+    void SetRegionSize(unsigned int width, unsigned int height);
+#endif
+
     /// Zeroes the CPU buffer, leaving its allocation alone.
     ///
     /// An AOV that Arnold stops writing keeps whatever the last render left in it, which the host keeps reading:
@@ -170,6 +183,18 @@ private:
     /// Hands the GPU textures to the render delegate, which destroys them on the GL thread.
     void _QueueTexturesForDestruction();
 
+    /// WriteBucket() for a caller already holding the buffer's mutex.
+    void _WriteBucketUnlocked(
+        unsigned int bucketXO, unsigned int bucketYO, unsigned int bucketWidth, unsigned int bucketHeight,
+        HdFormat format, const void* bucketData);
+
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    /// Copies Arnold's latest direct output for this buffer's AOV into the CPU buffer with AiGetRenderOutput(),
+    /// for hosts that read the accelerated viewport through Map() rather than GetResource(). Caller holds the
+    /// buffer's mutex.
+    void _ReadDirectOutput();
+#endif
+
 #ifdef SUPPORT_ACCELERATED_VIEWPORT
     /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
     /// @return True if _texture was updated, false to use _aovTexture as-is.
@@ -177,6 +202,9 @@ private:
 #endif
 
     std::vector<uint8_t> _buffer;                    ///< Storing render data (CPU path only).
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    std::vector<uint8_t> _readBuffer;                ///< AiGetRenderOutput() target, in Arnold's layout.
+#endif
     Hgi* _hgi = nullptr;                             ///< Borrowed Hgi instance, owned by the render delegate's host.
     mutable HgiTextureHandle _aovTexture;            ///< AiGetRenderOutput target (Arnold image-space Y).
     mutable HgiTextureHandle _texture;               ///< Hydra-facing texture after Y flip (GPU path only).
@@ -184,6 +212,10 @@ private:
     std::mutex _mutex;                               ///< Mutex for the parallel writes.
     unsigned int _width = 0;                         ///< Buffer width.
     unsigned int _height = 0;                        ///< Buffer height.
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    unsigned int _regionWidth = 0;                   ///< Width of the render region Arnold renders.
+    unsigned int _regionHeight = 0;                  ///< Height of the render region Arnold renders.
+#endif
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
     HdArnoldRenderDelegate* _renderDelegate = nullptr; ///< Borrowed delegate pointer for accessing the render session.
     bool _converged = false;                         ///< Store if the render buffer has converged.
