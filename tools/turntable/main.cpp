@@ -84,6 +84,7 @@ struct Args {
     std::string lightRig  = "auto";
     double      lightIntensity = 1.0; // Multiplier applied to every rig's light intensity.
     bool        listLightRigs = false;
+    bool        showDome = false; // Make the dome light visible to camera rays.
     std::string upAxis;   // empty = auto-detect from stage
     double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
@@ -233,6 +234,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--light-intensity", args.lightIntensity,
         "Multiplier applied to the selected light rig's intensity (default: 1.0, must be >= 0)")
         ->option_text("MULT");
+
+    app->add_flag("--show-dome", args.showDome,
+        "Make the dome light visible to the camera, showing the HDRI as background (default: hidden)");
 
     app->add_flag("--list-light-rigs", args.listLightRigs,
         "List discovered light rig names and exit");
@@ -1141,7 +1145,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 
 // /lights/dome  —  dome light, optionally driven by an HDRI texture or color
 static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
-                            const std::string &hdri, float intensity = 1.0f,
+                            const std::string &hdri, float intensity, bool showDome,
                             const GfVec3f &color = GfVec3f(1.0f))
 {
     UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, lightPath);
@@ -1150,7 +1154,7 @@ static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPat
     api.CreateColorAttr().Set(color);
     dome.GetPrim()
         .CreateAttribute(TfToken("primvars:arnold:camera"), SdfValueTypeNames->Float, true)
-        .Set(0.0f);
+        .Set(showDome ? 1.0f : 0.0f);
     if (!hdri.empty()) {
         dome.CreateTextureFileAttr().Set(SdfAssetPath(hdri));
         dome.CreateTextureFormatAttr().Set(UsdLuxTokens->latlong);
@@ -1270,9 +1274,10 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
             // Use white color for white_dome rig, otherwise no color override
             if (rig.name == "white_dome") {
                 _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity,
-                                GfVec3f(1.0f, 1.0f, 1.0f));
+                                args.showDome, GfVec3f(1.0f, 1.0f, 1.0f));
             } else {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity);
+                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity,
+                                args.showDome);
             }
         }
     }
@@ -1637,6 +1642,9 @@ int Run(const Args &args)
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());
+    if (chosenRig && !chosenRig->isNoLight && !chosenRig->isTwoQuad) {
+        printf("  Show dome : %s\n", args.showDome ? "yes" : "no");
+    }
     if (chosenRig && chosenRig->isNoLight) {
         printf("  Asset lights: kept (no_light rig)\n");
     } else {

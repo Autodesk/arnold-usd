@@ -21,6 +21,7 @@
 - [usd#2758](https://github.com/Autodesk/arnold-usd/issues/2758) - Support shader imagers with interactive updates
 - [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
 - [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2777) - Add Houdini logger support
+- [usd#2779](https://github.com/Autodesk/arnold-usd/issues/2779) - Add turntable --show-dome option to make the dome light visible to the camera
 
 ### Bug fixes
 
