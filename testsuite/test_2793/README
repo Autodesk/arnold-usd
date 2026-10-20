@@ -1,0 +1,5 @@
+The ArnoldUsdBundle registers its own plugInfo files, without PXR_PLUGINPATH_NAME
+
+See #2793
+
+author: cyril.pichard@autodesk.com
