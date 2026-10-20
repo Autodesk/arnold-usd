@@ -1465,6 +1465,12 @@ int Run(const Args &args)
         return 1;
     }
 
+    // The background shader handles camera rays that miss geometry, so it hides the dome.
+    if (args.showDome && args.backgroundColor.size() == 3) {
+        fprintf(stderr, "turntable: warning: --background-color overrides --show-dome; "
+                "the dome light will not be visible to the camera\n");
+    }
+
     TurntableMode mode;
     if (!_ParseMode(args.mode, mode)) {
         fprintf(stderr, "turntable: unknown --mode '%s' (expected camera, object, or light)\n",
