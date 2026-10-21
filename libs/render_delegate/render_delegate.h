@@ -682,15 +682,15 @@ public:
             }
             
             std::lock_guard<std::mutex> lock(_nodesMutex);
-            // A destroyed node's address can be reused by a new node
-            _removedNodes.erase(node);
-            _nodes.push_back(node);
+            // A destroyed node's address can be reused by a new node, which then already has
+            // its entry in _nodes
+            if (_removedNodes.erase(node) == 0)
+                _nodes.push_back(node);
         }
         return node;
     };
 
-    /// Returns the nodes created under the procedural parent, without the ones destroyed or
-    /// retired since (see DestroyArnoldNode).
+    /// Returns the nodes created under the procedural parent, without the ones destroyed since.
     std::vector<AtNode*>& GetProceduralNodes()
     {
         std::lock_guard<std::mutex> lock(_nodesMutex);
@@ -735,23 +735,36 @@ public:
         // we must avoid deleting nodes: this can happen during procedural_update,
         // which is not allowed in batch sessions. Arnold also refuses to destroy nodes
         // while rendering, which is when a procedural is usually expanded.
-        bool destroyed = false;
-        if (!(_procParent && _isBatch))
-            destroyed = AiNodeDestroy(node);
-        if (!destroyed) {
-            // Retire the node instead: disable it, and free its name, otherwise regenerating a
-            // node with the same name (e.g. the geometry deduplication replacing a shape by a
-            // ginstance) causes naming conflicts (see #2277).
-            const std::string retiredName =
-                std::string(AiNodeGetName(node)) + "/__arnold_retired_" + std::to_string(++_retiredNodeCounter);
-            AiNodeSetStr(node, str::name, AtString(retiredName.c_str()));
-            AiNodeSetDisabled(node, true);
+        if (!(_procParent && _isBatch) && AiNodeDestroy(node)) {
+            // The node must not be returned to the procedural parent anymore
+            if (_procParent) {
+                std::lock_guard<std::mutex> lock(_nodesMutex);
+                _removedNodes.insert(node);
+            }
+            return;
         }
-        // Destroyed or retired, the node must not be returned to the procedural parent anymore
-        if (_procParent) {
-            std::lock_guard<std::mutex> lock(_nodesMutex);
-            _removedNodes.insert(node);
-        }
+        // Retire the node instead: disable it, and free its name when possible, otherwise
+        // regenerating a node with the same name (e.g. the geometry deduplication replacing a
+        // shape by a ginstance) causes naming conflicts (see #2277). Under a procedural parent,
+        // it is still returned to it, which owns it and destroys it along with its children.
+        RenameToUniqueName(node, AiNodeGetName(node), "retired");
+        AiNodeSetDisabled(node, true);
+    }
+
+    /// Renames @p node to "<base>/__arnold_<tag>_<n>", a unique name, to free its current one.
+    /// Under a procedural parent, a node is only renamed once the procedural has collected it:
+    /// before that, its name is registered in the procedural's scope, but Arnold would rename
+    /// it in the global one.
+    ///
+    /// @return True if the node was renamed.
+    bool RenameToUniqueName(AtNode* node, const std::string& base, const char* tag)
+    {
+        if (_procParent != nullptr && AiNodeGetParent(node) == nullptr)
+            return false;
+        const std::string name =
+            base + "/__arnold_" + tag + "_" + std::to_string(++_uniqueNameCounter);
+        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        return true;
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
@@ -814,8 +827,8 @@ public:
 #endif
 
     std::vector<AtNode*> _nodes;
-    std::unordered_set<AtNode*> _removedNodes;     ///< Nodes destroyed or retired since they were added to _nodes.
-    std::atomic<uint32_t> _retiredNodeCounter{0};  ///< Unique names for retired nodes.
+    std::unordered_set<AtNode*> _removedNodes;     ///< Nodes destroyed since they were added to _nodes.
+    std::atomic<uint32_t> _uniqueNameCounter{0};   ///< See RenameToUniqueName.
 
     void RegisterMeshLight(AtNode *meshLight) {
         std::lock_guard<std::mutex> guard(_meshLightsMutex);
@@ -1001,7 +1014,6 @@ private:
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
-    std::atomic<uint32_t> _adoptedGeometryCounter{0}; ///< Unique names for adopted canonical nodes.
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.

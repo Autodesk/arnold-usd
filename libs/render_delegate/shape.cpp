@@ -354,10 +354,7 @@ void HdArnoldShape::_SyncInstances(
     if (_sharedGeometry != nullptr || _forceInstancerNode || _perInstanceLightLinking ||
         UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
-        for (auto &instancerNode : _instancers) {
-            _renderDelegate->DestroyArnoldNode(instancerNode);
-        }
-        _instancers.clear();
+        DestroyInstancers();
 
         // We need to hide the source mesh.
         AiNodeSetByte(_shape, str::visibility, 0);
@@ -417,13 +414,8 @@ void HdArnoldShape::_SyncInstances(
     {
         // The geometry deduplication can switch a shape from the instancer-node path to this
         // one: drop the previous instancers, and show the shape again which they had hidden.
-        if (!_instancers.empty()) {
-            for (auto &instancerNode : _instancers) {
-                _renderDelegate->DestroyArnoldNode(instancerNode);
-            }
-            _instancers.clear();
+        if (DestroyInstancers())
             AiNodeSetByte(_shape, str::visibility, _visibility);
-        }
 
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.

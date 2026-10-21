@@ -265,13 +265,15 @@ protected:
         uint64_t hash = 0;
         eligible = eligible && hashTopology(hash) &&
                    _HashGeometryState(hash, sceneDelegate, id, points, primvars, instanced, displaceable);
-        bool unchanged = false;
-        if (_ApplyGeometryDedup(id, shapeType, eligible, instanced, hash, param, unchanged)) {
+        const _DedupChange change = _ApplyGeometryDedup(id, shapeType, eligible, instanced, hash, param);
+        if (change == _DedupChange::Node) {
             *dirtyBits |= _rebuiltNodeDirtyBits;
             for (auto& primvar : primvars)
                 primvar.second.dirtied = true;
             dirtyPrimvars = true;
-        } else if (unchanged && !_IsDuplicate()) {
+        } else if (change == _DedupChange::Instancers) {
+            *dirtyBits |= HdChangeTracker::DirtyInstancer;
+        } else if (change == _DedupChange::SameHash && !_IsDuplicate()) {
             // The canonical geometry hashes the same, so its points, primvars and topology are
             // the same as what its node already has: don't set them again. Setting them is not
             // free, and it must be avoided: the instancers and ginstances rendering this node
@@ -380,15 +382,21 @@ private:
         return true;
     }
 
+    /// What _ApplyGeometryDedup changed.
+    enum class _DedupChange {
+        None,       ///< Nothing.
+        SameHash,   ///< Nothing, the rprim is still registered with the same geometry.
+        Instancers, ///< The Arnold instancers were destroyed, the node is unchanged.
+        Node        ///< The Arnold node was replaced or rewired.
+    };
+
     /// Registers this rprim as the canonical or a duplicate of the geometry identified by
-    /// @p hash, or makes it a plain geometry again if not @p eligible. Returns true if the
-    /// Arnold node was replaced or rewired. Nothing is touched, and the render is not
-    /// interrupted, when the dedup state does not change.
-    bool _ApplyGeometryDedup(
+    /// @p hash, or makes it a plain geometry again if not @p eligible. Nothing is touched, and
+    /// the render is not interrupted, when the dedup state does not change.
+    _DedupChange _ApplyGeometryDedup(
         const SdfPath& id, const AtString& shapeType, bool eligible, bool instanced, uint64_t hash,
-        HdArnoldRenderParamInterrupt& param, bool& unchanged)
+        HdArnoldRenderParamInterrupt& param)
     {
-        unchanged = false;
         _shape.SetForceInstancerNode(eligible && instanced);
         if (!eligible)
             return _LeaveGeometryDedup(id, shapeType, param);
@@ -397,25 +405,25 @@ private:
         typedHash += typedHash == 0;
         AtNode* const canonical = _shape.GetSharedGeometry();
         if (typedHash == _dedupHash) {
-            unchanged = true;
             // Still the canonical, or a duplicate of the same node. Only the way a duplicate
             // instances it can change, when the prim becomes instanced or not.
             if (canonical == nullptr || instanced != _shape.IsInstanceNode())
-                return false;
+                return _DedupChange::SameHash;
             param.Interrupt();
             _InstanceSharedGeometry(id, shapeType, canonical, instanced);
-            return true;
+            return _DedupChange::Node;
         }
         param.Interrupt();
         // Our Arnold instancers keep referencing the previous canonical node until the
         // instances sync rebuilds them, which happens after this. Leaving or releasing that
         // canonical below can destroy it, and Arnold instances share their prototype's arrays:
         // destroy our instancers first, so that nothing references a destroyed node.
-        bool rebuilt = _shape.DestroyInstancers();
+        const bool droppedInstancers = _shape.DestroyInstancers();
+        bool rebuilt = false;
         // A duplicate stays registered to its previous geometry until it is rewired below, as
         // releasing it can destroy the node it references.
         if (_dedupHash != 0 && canonical == nullptr)
-            rebuilt = _LeaveCanonicalGeometry(id, shapeType) || rebuilt;
+            rebuilt = _LeaveCanonicalGeometry(id, shapeType);
         AtNode* shared = _renderDelegate->AcquireCanonicalGeometry(typedHash, canonical ? nullptr : GetArnoldNode());
         if (shared == nullptr && canonical != nullptr) {
             // Nobody owns this geometry: become its canonical, which requires a real node.
@@ -430,15 +438,14 @@ private:
         if (canonical != nullptr)
             _renderDelegate->ReleaseCanonicalGeometry(_dedupHash);
         _dedupHash = typedHash;
-        return rebuilt;
+        return _ToDedupChange(rebuilt, droppedInstancers);
     }
 
-    /// Leaves the dedup registry and makes this rprim a plain geometry. Returns true if the
-    /// Arnold node was replaced or rewired.
-    bool _LeaveGeometryDedup(const SdfPath& id, const AtString& shapeType, HdArnoldRenderParamInterrupt& param)
+    /// Leaves the dedup registry and makes this rprim a plain geometry.
+    _DedupChange _LeaveGeometryDedup(const SdfPath& id, const AtString& shapeType, HdArnoldRenderParamInterrupt& param)
     {
         if (_dedupHash == 0)
-            return false;
+            return _DedupChange::None;
         param.Interrupt();
         // Our instancers can reference the canonical node, see _ApplyGeometryDedup.
         const bool droppedInstancers = _shape.DestroyInstancers();
@@ -448,10 +455,15 @@ private:
             _RestoreRealGeometryNode(id, shapeType);
             _renderDelegate->ReleaseCanonicalGeometry(_dedupHash);
         } else {
-            rebuilt = _LeaveCanonicalGeometry(id, shapeType) || droppedInstancers;
+            rebuilt = _LeaveCanonicalGeometry(id, shapeType);
         }
         _dedupHash = 0;
-        return rebuilt;
+        return _ToDedupChange(rebuilt, droppedInstancers);
+    }
+
+    static _DedupChange _ToDedupChange(bool rebuilt, bool droppedInstancers)
+    {
+        return rebuilt ? _DedupChange::Node : droppedInstancers ? _DedupChange::Instancers : _DedupChange::None;
     }
 
     /// Releases the canonical registration of this rprim. If duplicates still reference its
