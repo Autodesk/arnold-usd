@@ -46,7 +46,10 @@
 #include <pxr/imaging/hgi/hgi.h>
 
 #include <tbb/concurrent_queue.h>
+#include <algorithm>
+#include <atomic>
 #include <functional>
+#include <unordered_set>
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
@@ -679,10 +682,27 @@ public:
             }
             
             std::lock_guard<std::mutex> lock(_nodesMutex);
-            _nodes.push_back(node);
+            // A destroyed node's address can be reused by a new node, which then already has
+            // its entry in _nodes
+            if (_removedNodes.erase(node) == 0)
+                _nodes.push_back(node);
         }
         return node;
     };
+
+    /// Returns the nodes created under the procedural parent, without the ones destroyed since.
+    std::vector<AtNode*>& GetProceduralNodes()
+    {
+        std::lock_guard<std::mutex> lock(_nodesMutex);
+        if (!_removedNodes.empty()) {
+            _nodes.erase(
+                std::remove_if(_nodes.begin(), _nodes.end(),
+                               [this](AtNode* node) { return _removedNodes.count(node) != 0; }),
+                _nodes.end());
+            _removedNodes.clear();
+        }
+        return _nodes;
+    }
 
     // Lookup for a node of a given name and type and return it, otherwise create a new one
     inline 
@@ -713,14 +733,38 @@ public:
         }
         // If we have a procedural parent and the parent render is a batch render,
         // we must avoid deleting nodes: this can happen during procedural_update,
-        // which is not allowed in batch sessions. For interactive renders we do
-        // want to destroy the node, otherwise regenerating a node with the same
-        // name later on causes naming conflicts (see #2277).
-        if (_procParent && _isBatch) {
-            AiNodeSetDisabled(node, true);
+        // which is not allowed in batch sessions. Arnold also refuses to destroy nodes
+        // while rendering, which is when a procedural is usually expanded.
+        if (!(_procParent && _isBatch) && AiNodeDestroy(node)) {
+            // The node must not be returned to the procedural parent anymore
+            if (_procParent) {
+                std::lock_guard<std::mutex> lock(_nodesMutex);
+                _removedNodes.insert(node);
+            }
+            return;
         }
-        else
-            AiNodeDestroy(node);
+        // Retire the node instead: disable it, and free its name when possible, otherwise
+        // regenerating a node with the same name (e.g. the geometry deduplication replacing a
+        // shape by a ginstance) causes naming conflicts (see #2277). Under a procedural parent,
+        // it is still returned to it, which owns it and destroys it along with its children.
+        RenameToUniqueName(node, AiNodeGetName(node), "retired");
+        AiNodeSetDisabled(node, true);
+    }
+
+    /// Renames @p node to "<base>/__arnold_<tag>_<n>", a unique name, to free its current one.
+    /// Under a procedural parent, a node is only renamed once the procedural has collected it:
+    /// before that, its name is registered in the procedural's scope, but Arnold would rename
+    /// it in the global one.
+    ///
+    /// @return True if the node was renamed.
+    bool RenameToUniqueName(AtNode* node, const std::string& base, const char* tag)
+    {
+        if (_procParent != nullptr && AiNodeGetParent(node) == nullptr)
+            return false;
+        const std::string name =
+            base + "/__arnold_" + tag + "_" + std::to_string(++_uniqueNameCounter);
+        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        return true;
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
@@ -783,6 +827,8 @@ public:
 #endif
 
     std::vector<AtNode*> _nodes;
+    std::unordered_set<AtNode*> _removedNodes;     ///< Nodes destroyed since they were added to _nodes.
+    std::atomic<uint32_t> _uniqueNameCounter{0};   ///< See RenameToUniqueName.
 
     void RegisterMeshLight(AtNode *meshLight) {
         std::lock_guard<std::mutex> guard(_meshLightsMutex);
@@ -968,7 +1014,6 @@ private:
     LightLinkingMap _lightLinks;                    ///< Light Link categories.
     LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
-    std::atomic<uint32_t> _adoptedGeometryCounter{0}; ///< Unique names for adopted canonical nodes.
     DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     bool _delegateRenderProductsDirty = false;      ///< Flag to know if the arnold render products have been modified
     TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.

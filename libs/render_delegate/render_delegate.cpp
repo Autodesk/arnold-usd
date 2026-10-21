@@ -2502,11 +2502,10 @@ bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node,
     }
     // Once the nodes belong to Arnold (see EnableNodesDestruction) they must not be touched.
     if (_enableNodesDestruction) {
-        // Give the node's name back to the rprim, which creates its new node under it, and stop
+        // Give the node's name back to the rprim, which creates its new node under it (when
+        // possible, see RenameToUniqueName), and stop
         // rendering it on its own. Its instances are unaffected, they set their own visibility.
-        const std::string name =
-            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
-        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        RenameToUniqueName(node, id.GetString(), "shared_geometry");
         AiNodeSetByte(node, str::visibility, 0);
     }
     return true;
