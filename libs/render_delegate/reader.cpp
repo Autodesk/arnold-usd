@@ -251,7 +251,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
-    return _renderDelegate.Get() ? GetArnoldRenderDelegate()->_nodes : _nodes; }
+    return _renderDelegate.Get() ? GetArnoldRenderDelegate()->GetProceduralNodes() : _nodes; }
 
 void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath)
 {
@@ -454,7 +454,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
-        std::swap(_nodes, arnoldRenderDelegate->_nodes);
+        std::swap(_nodes, arnoldRenderDelegate->GetProceduralNodes());
         
         _renderDelegate = nullptr;
     }

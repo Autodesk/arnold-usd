@@ -46,7 +46,10 @@
 #include <pxr/imaging/hgi/hgi.h>
 
 #include <tbb/concurrent_queue.h>
+#include <algorithm>
+#include <atomic>
 #include <functional>
+#include <unordered_set>
 #include "hdarnold.h"
 #include "render_param.h"
 #include "api_adapter.h"
@@ -679,10 +682,27 @@ public:
             }
             
             std::lock_guard<std::mutex> lock(_nodesMutex);
+            // A destroyed node's address can be reused by a new node
+            _removedNodes.erase(node);
             _nodes.push_back(node);
         }
         return node;
     };
+
+    /// Returns the nodes created under the procedural parent, without the ones destroyed or
+    /// retired since (see DestroyArnoldNode).
+    std::vector<AtNode*>& GetProceduralNodes()
+    {
+        std::lock_guard<std::mutex> lock(_nodesMutex);
+        if (!_removedNodes.empty()) {
+            _nodes.erase(
+                std::remove_if(_nodes.begin(), _nodes.end(),
+                               [this](AtNode* node) { return _removedNodes.count(node) != 0; }),
+                _nodes.end());
+            _removedNodes.clear();
+        }
+        return _nodes;
+    }
 
     // Lookup for a node of a given name and type and return it, otherwise create a new one
     inline 
@@ -713,14 +733,25 @@ public:
         }
         // If we have a procedural parent and the parent render is a batch render,
         // we must avoid deleting nodes: this can happen during procedural_update,
-        // which is not allowed in batch sessions. For interactive renders we do
-        // want to destroy the node, otherwise regenerating a node with the same
-        // name later on causes naming conflicts (see #2277).
-        if (_procParent && _isBatch) {
+        // which is not allowed in batch sessions. Arnold also refuses to destroy nodes
+        // while rendering, which is when a procedural is usually expanded.
+        bool destroyed = false;
+        if (!(_procParent && _isBatch))
+            destroyed = AiNodeDestroy(node);
+        if (!destroyed) {
+            // Retire the node instead: disable it, and free its name, otherwise regenerating a
+            // node with the same name (e.g. the geometry deduplication replacing a shape by a
+            // ginstance) causes naming conflicts (see #2277).
+            const std::string retiredName =
+                std::string(AiNodeGetName(node)) + "/__arnold_retired_" + std::to_string(++_retiredNodeCounter);
+            AiNodeSetStr(node, str::name, AtString(retiredName.c_str()));
             AiNodeSetDisabled(node, true);
         }
-        else
-            AiNodeDestroy(node);
+        // Destroyed or retired, the node must not be returned to the procedural parent anymore
+        if (_procParent) {
+            std::lock_guard<std::mutex> lock(_nodesMutex);
+            _removedNodes.insert(node);
+        }
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
@@ -783,6 +814,8 @@ public:
 #endif
 
     std::vector<AtNode*> _nodes;
+    std::unordered_set<AtNode*> _removedNodes;     ///< Nodes destroyed or retired since they were added to _nodes.
+    std::atomic<uint32_t> _retiredNodeCounter{0};  ///< Unique names for retired nodes.
 
     void RegisterMeshLight(AtNode *meshLight) {
         std::lock_guard<std::mutex> guard(_meshLightsMutex);

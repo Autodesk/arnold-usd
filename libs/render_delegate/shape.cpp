@@ -70,12 +70,12 @@ HdArnoldShape::~HdArnoldShape()
     DestroyNodes();
 }
 
-void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId)
+void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId, bool recreate)
 {
     // An initialized ginstance mutates into a copy of its prototype, so AiNodeIs cannot be
     // trusted on it, and it cannot be updated nor pointed at another prototype: always
     // recreate it.
-    if (_shape != nullptr && (_isInstance || !AiNodeIs(_shape, shapeType))) {
+    if (_shape != nullptr && (recreate || _isInstance || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
@@ -107,12 +107,20 @@ void HdArnoldShape::ReleaseShapeOwnership()
 
 void HdArnoldShape::DestroyNodes()
 {
+    DestroyInstancers();
+    _renderDelegate->DestroyArnoldNode(_shape);
+    ReleaseShapeOwnership();
+}
+
+bool HdArnoldShape::DestroyInstancers()
+{
+    if (_instancers.empty())
+        return false;
     for (auto& instancer : _instancers) {
         _renderDelegate->DestroyArnoldNode(instancer);
     }
     _instancers.clear();
-    _renderDelegate->DestroyArnoldNode(_shape);
-    ReleaseShapeOwnership();
+    return true;
 }
 
 void HdArnoldShape::Sync(
