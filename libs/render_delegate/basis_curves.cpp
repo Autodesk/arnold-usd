@@ -352,8 +352,8 @@ void HdArnoldBasisCurves::Sync(
         UpdateVisibilityAndSidedness();
     }
 
-    if (dirtyPrimvars && _shape.IsInstanceNode()) {
-        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken& name) {
+    if (dirtyPrimvars && _IsNonInstancedDuplicate()) {
+        _SyncDuplicateConstantPrimvars(_primvars, param, [](const TfToken& name) {
             return name == _tokens->orientations || name == _tokens->basis;
         });
     }

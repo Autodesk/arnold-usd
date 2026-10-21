@@ -745,7 +745,7 @@ public:
         }
         // Retire the node instead: disable it, and free its name when possible, otherwise
         // regenerating a node with the same name (e.g. the geometry deduplication replacing a
-        // shape by a ginstance) causes naming conflicts (see #2277). Under a procedural parent,
+        // shape node) causes naming conflicts (see #2277). Under a procedural parent,
         // it is still returned to it, which owns it and destroys it along with its children.
         RenameToUniqueName(node, AiNodeGetName(node), "retired");
         AiNodeSetDisabled(node, true);

@@ -662,8 +662,8 @@ void HdArnoldMesh::Sync(
         }        
     }
 
-    if (dirtyPrimvars && _shape.IsInstanceNode()) {
-        _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken&) { return false; });
+    if (dirtyPrimvars && _IsNonInstancedDuplicate()) {
+        _SyncDuplicateConstantPrimvars(_primvars, param, [](const TfToken&) { return false; });
     }
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
