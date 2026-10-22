@@ -33,6 +33,7 @@
 - [usd#2781](https://github.com/Autodesk/arnold-usd/pull/2781) - Fix export of subdivisionScheme from MayaUSD
 - [usd#2784](https://github.com/Autodesk/arnold-usd/pull/2784) - Register lights without link value when lightLinking
 - [usd#2787](https://github.com/Autodesk/arnold-usd/issues/2787) - Skip unauthored attributes on ArnoldProceduralCustom prims with Hydra
+- [usd#2793](https://github.com/Autodesk/arnold-usd/issues/2793) - Fix a crash in the ArnoldUsdBundle procedural when HdArnoldRendererPlugin cannot be found, and register the bundle plugInfo files automatically
 
 ## [7.5.3.2] (Unreleased)
 

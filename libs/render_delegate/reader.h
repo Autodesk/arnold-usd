@@ -66,7 +66,7 @@ private:
     unsigned int _id;
     HdArnoldRenderDelegate* GetArnoldRenderDelegate()const {return static_cast<HdArnoldRenderDelegate*>(_renderDelegate.Get());}
     TfToken _purpose;
-    HdRenderIndex* _renderIndex;
+    HdRenderIndex* _renderIndex = nullptr;
     UsdArnoldProcImagingDelegate* _imagingDelegate = nullptr;
     HdEngine _engine;
     HdPluginRenderDelegateUniqueHandle _renderDelegate;
