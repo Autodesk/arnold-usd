@@ -93,6 +93,7 @@ vars.AddVariables(
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
     BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
     StringVariable('EXTRA_STATIC_LIBS', 'Extra static libraries to link against when using usd static library', ''),
+    StringVariable('EXTRA_SHLINKFLAGS', 'Extra flags appended when linking shared libraries and plugins', ''),
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathAccept),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
@@ -480,6 +481,8 @@ elif env['_COMPILER'] == 'msvc':
     if env['WARN_LEVEL'] == 'strict':
         env.Append(CCFLAGS=Split('/WX'))
 
+# Shared libraries and plugins only, executables are unaffected
+env.Append(SHLINKFLAGS = Split(env['EXTRA_SHLINKFLAGS']))
 
 if not env['SHOW_CMDS']:
     # Hide long compile lines from the user
