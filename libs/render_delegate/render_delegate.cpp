@@ -44,9 +44,6 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/imaging/hd/driver.h>
-#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
-#include <pxr/imaging/hgi/tokens.h>
-#endif
 
 #ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
@@ -78,6 +75,11 @@
 #include <algorithm>
 #include <map>
 #include "render_settings.h"
+
+// After config.h, which defines ACCELERATED_VIEWPORT_GL_TEXTURES
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
+#include <pxr/imaging/hgi/tokens.h>
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
