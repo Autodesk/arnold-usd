@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.4.0] (Unreleased)
+## [7.5.4.1] 2026-10-27
+
+### Bug fixes
+
+- [usd#2800](https://github.com/Autodesk/arnold-usd/issues/2800) - Remove HGI dependency for accelerated viewport CPU buffers
+
+## [7.5.4.0] 2026-10-22
 
 ### Features
 
