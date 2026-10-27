@@ -280,7 +280,8 @@ protected:
             // share its arrays, and re-setting some of them makes Arnold reinitialize the node
             // (e.g. the points of a curves node), leaving these instances with freed arrays.
             // The primvars keep their dirtied flags, so they are still applied if the node is
-            // rebuilt later.
+            // rebuilt later. Note that a hash collision would then also keep the canonical node
+            // from being updated, not only make its duplicates render the wrong geometry.
             *dirtyBits &= ~(HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyPoints |
                             HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths |
                             HdChangeTracker::DirtyNormals);
@@ -494,8 +495,10 @@ private:
     }
 
     /// Returns true if the Arnold node of this rprim holds a geometry of type @p shapeType.
+    /// Only meshes and curves are deduplicated.
     bool _HasOwnGeometry(const AtString& shapeType) const
     {
+        TF_VERIFY(shapeType == str::polymesh || shapeType == str::curves);
         const AtNode* node = GetArnoldNode();
         if (node == nullptr || _shape.IsInstanceNode())
             return false;

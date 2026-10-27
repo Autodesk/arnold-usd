@@ -683,7 +683,8 @@ public:
             
             std::lock_guard<std::mutex> lock(_nodesMutex);
             // A destroyed node's address can be reused by a new node, which then already has
-            // its entry in _nodes
+            // its entry in _nodes. This assumes that _removedNodes only holds nodes of _nodes,
+            // see DestroyArnoldNode.
             if (_removedNodes.erase(node) == 0)
                 _nodes.push_back(node);
         }
@@ -691,17 +692,22 @@ public:
     };
 
     /// Returns the nodes created under the procedural parent, without the ones destroyed since.
-    std::vector<AtNode*>& GetProceduralNodes()
+    /// The returned list is not protected by the lock: it must not be used while nodes can be
+    /// created or destroyed, which the procedural guarantees when it collects them.
+    const std::vector<AtNode*>& GetProceduralNodes()
     {
         std::lock_guard<std::mutex> lock(_nodesMutex);
-        if (!_removedNodes.empty()) {
-            _nodes.erase(
-                std::remove_if(_nodes.begin(), _nodes.end(),
-                               [this](AtNode* node) { return _removedNodes.count(node) != 0; }),
-                _nodes.end());
-            _removedNodes.clear();
-        }
+        _CompactProceduralNodes();
         return _nodes;
+    }
+
+    /// Moves the nodes created under the procedural parent, without the ones destroyed since,
+    /// into @p nodes, and gets the previous content of @p nodes instead.
+    void SwapProceduralNodes(std::vector<AtNode*>& nodes)
+    {
+        std::lock_guard<std::mutex> lock(_nodesMutex);
+        _CompactProceduralNodes();
+        std::swap(_nodes, nodes);
     }
 
     // Lookup for a node of a given name and type and return it, otherwise create a new one
@@ -736,7 +742,9 @@ public:
         // which is not allowed in batch sessions. Arnold also refuses to destroy nodes
         // while rendering, which is when a procedural is usually expanded.
         if (!(_procParent && _isBatch) && AiNodeDestroy(node)) {
-            // The node must not be returned to the procedural parent anymore
+            // The node must not be returned to the procedural parent anymore. It must have been
+            // created by CreateArnoldNode, otherwise its address would stay in _removedNodes
+            // and a new node reusing it would not be returned to the procedural.
             if (_procParent) {
                 std::lock_guard<std::mutex> lock(_nodesMutex);
                 _removedNodes.insert(node);
@@ -924,6 +932,18 @@ private:
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    /// Removes the destroyed nodes from _nodes. _nodesMutex must be locked.
+    void _CompactProceduralNodes()
+    {
+        if (_removedNodes.empty())
+            return;
+        _nodes.erase(
+            std::remove_if(_nodes.begin(), _nodes.end(),
+                           [this](AtNode* node) { return _removedNodes.count(node) != 0; }),
+            _nodes.end());
+        _removedNodes.clear();
+    }
 
     /// Drops every reference the main drivers hold to a render buffer that is about to be destroyed.
     ///

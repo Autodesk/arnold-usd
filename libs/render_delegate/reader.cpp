@@ -454,7 +454,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
-        std::swap(_nodes, arnoldRenderDelegate->GetProceduralNodes());
+        arnoldRenderDelegate->SwapProceduralNodes(_nodes);
         
         _renderDelegate = nullptr;
     }
