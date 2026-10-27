@@ -1,0 +1,12 @@
+Arnold shaders shouldn't overwrite a foreign shader prim in a bound material
+
+A material authored by another exporter (here a MaterialX network like the one
+mayaUSD writes) already holds shader prims named like the arnold ones. Writing
+the arnold scene on top of it, in append mode over two frames, must leave these
+prims untouched and author the arnold shading tree in an "arnold" node graph
+under the material. A material created by the writer itself keeps its shaders
+directly under it.
+
+See #2803
+
+author: sebastien.ortega

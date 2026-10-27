@@ -1,0 +1,48 @@
+#usda 1.0
+(
+    defaultPrim = "geo"
+    metersPerUnit = 0.01
+    upAxis = "Y"
+)
+
+def Xform "geo"
+{
+    def Mesh "mesh" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        rel material:binding = </mtl/mySG>
+    }
+}
+
+def Scope "mtl"
+{
+    def Material "mySG"
+    {
+        string inputs:myTex:varname = "st"
+        token outputs:mtlx:surface.connect = </mtl/mySG/myShader.outputs:out>
+
+        def Shader "myShader"
+        {
+            uniform token info:id = "ND_open_pbr_surface_surfaceshader"
+            color3f inputs:base_color.connect = </mtl/mySG/MayaNG_mySG.outputs:baseColor>
+            token outputs:out
+        }
+
+        def NodeGraph "MayaNG_mySG"
+        {
+            string inputs:myTex:varname.connect = </mtl/mySG.inputs:myTex:varname>
+            color3f outputs:baseColor.connect = </mtl/mySG/MayaNG_mySG/myTex.outputs:out>
+
+            def Shader "myTex"
+            {
+                uniform token info:id = "ND_image_color3"
+                asset inputs:file = @tex.png@
+                color3f outputs:out
+            }
+        }
+    }
+}
