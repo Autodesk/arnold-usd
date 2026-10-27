@@ -621,6 +621,10 @@ public:
     /// did not provide one (e.g. batch / husk without a GL context).
     Hgi* GetHgi() const { return _hgi; }
 
+    /// Returns true if the host application provided a render driver, i.e. it can show the accelerated
+    /// viewport. Only tracked for builds that read the accelerated viewport into CPU buffers.
+    bool HasRenderDriver() const { return _hasRenderDriver; }
+
     /// Queues a GPU texture for destruction on the thread that owns the GL context.
     ///
     /// Hgi textures must be created and destroyed on the main thread, but render buffers are allocated and
@@ -1054,6 +1058,7 @@ private:
     bool _acceleratedViewport = false;
     bool _gpuRenderingEnabled = false; ///< Last explicitly requested "Enable GPU Rendering" state, used to restore the render device when accelerated viewport is disabled.
     Hgi* _hgi = nullptr;            ///< Borrowed pointer to the host application's Hgi (set via SetDrivers).
+    bool _hasRenderDriver = false;  ///< Whether the host provided a render driver (set via SetDrivers).
     std::vector<HgiTextureHandle> _texturesToDestroy; ///< Textures waiting for the GL thread.
     std::mutex _texturesToDestroyMutex;               ///< Guards _texturesToDestroy.
 

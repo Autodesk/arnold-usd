@@ -44,7 +44,6 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/imaging/hd/driver.h>
-#include <pxr/imaging/hgi/tokens.h>
 
 #ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dirtyBitsTranslator.h>
@@ -76,6 +75,11 @@
 #include <algorithm>
 #include <map>
 #include "render_settings.h"
+
+// After config.h, which defines ACCELERATED_VIEWPORT_GL_TEXTURES
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
+#include <pxr/imaging/hgi/tokens.h>
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -2527,6 +2531,7 @@ void HdArnoldRenderDelegate::SetDrivers(HdDriverVector const& drivers)
     if (_isBatch || _procParent != nullptr)
         return;
 
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
     for (HdDriver* driver : drivers) {
         if (driver != nullptr && driver->name == HgiTokens->renderDriver &&
             driver->driver.IsHolding<Hgi*>()) {
@@ -2534,6 +2539,16 @@ void HdArnoldRenderDelegate::SetDrivers(HdDriverVector const& drivers)
             break;
         }
     }
+#elif defined(SUPPORT_ACCELERATED_VIEWPORT)
+    // The CPU buffers don't need the Hgi, only to know there is an interactive host. Compared by name so this
+    // doesn't link hgi.
+    static const TfToken renderDriver("renderDriver");
+    _hasRenderDriver = std::any_of(drivers.begin(), drivers.end(), [](const HdDriver* driver) {
+        return driver != nullptr && driver->name == renderDriver;
+    });
+#else
+    TF_UNUSED(drivers);
+#endif
 }
 
 bool HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)

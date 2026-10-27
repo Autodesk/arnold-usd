@@ -53,6 +53,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 #define SUPPORT_ACCELERATED_VIEWPORT 1
 #endif
 
+// Reading the accelerated viewport into GL textures needs hgi, hgiGL and garch. Reading it into CPU buffers
+// needs none of them, so those builds leave the GL texture code out.
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && !defined(DIRECT_OUTPUTS_CPU_BUFFER)
+#define ACCELERATED_VIEWPORT_GL_TEXTURES 1
+#endif
+
 /// Class that holds the global configuration values for the Render Delegate.
 ///
 /// Note: we are not following the coding conventions for the members, as we want

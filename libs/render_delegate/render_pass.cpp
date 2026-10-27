@@ -1047,12 +1047,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             const bool isGpuBacked = _acceleratedViewport && isRaw &&
                 (sourceName == HdAovTokens->color || sourceName == HdAovTokens->depth);
             if (buffer.buffer != nullptr) {
-                buffer.buffer->SetHgi(isGpuBacked ? _renderDelegate->GetHgi() : nullptr);
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+                buffer.buffer->SetDirectOutput(isGpuBacked && _renderDelegate->HasRenderDriver());
                 if (isGpuBacked) {
                     buffer.buffer->SetRegionSize(
                         _framing.dataWindow.GetWidth(), _framing.dataWindow.GetHeight());
                 }
+#else
+                buffer.buffer->SetHgi(isGpuBacked ? _renderDelegate->GetHgi() : nullptr);
 #endif
             }
             if (_acceleratedViewport && !isBeauty && !isGpuBacked) {
