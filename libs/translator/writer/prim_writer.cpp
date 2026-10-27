@@ -26,6 +26,7 @@
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <cstdio>
@@ -1304,6 +1305,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (!matTargets.empty()) {
         mat = UsdShadeMaterial(writer.GetUsdStage()->GetPrimAtPath(matTargets[0]));
     }
+    const bool reusedMaterial = static_cast<bool>(mat);
     if (mat) {
         materialName = mat.GetPath().GetString();
     } else {
@@ -1366,7 +1368,31 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     std::string materialPath = TfGetPathName(shaderName);
     if (materialPath != "/")
         writer.SetStripHierarchy(materialPath);
-    
+
+    // A material authored by another exporter (e.g. the MaterialX shaders written by MayaUSD)
+    // can already hold a shader prim with the same name as the arnold one, since both are named
+    // after the DCC node. Writing on top of it would mix both render contexts in a single prim,
+    // overriding its info:id and appending connections. In that case we author the arnold
+    // shading tree in a dedicated "arnold" node graph under the material.
+    if (reusedMaterial) {
+        const std::string arnoldScope = materialName + "/arnold";
+        UsdStageRefPtr stage = writer.GetUsdStage();
+        auto isForeignPrim = [&](const AtNode* node) {
+            if (node == nullptr)
+                return false;
+            UsdPrim existing = stage->GetPrimAtPath(SdfPath(UsdArnoldPrimWriter::GetArnoldNodeName(node, writer)));
+            if (!existing)
+                return false;
+            TfToken shaderId;
+            return !existing.IsA<UsdShadeShader>() || !UsdShadeShader(existing).GetShaderId(&shaderId) ||
+                   !TfStringStartsWith(shaderId.GetString(), "arnold:");
+        };
+        if (stage->GetPrimAtPath(SdfPath(arnoldScope)) || isForeignPrim(shader) || isForeignPrim(displacement)) {
+            UsdShadeNodeGraph::Define(stage, SdfPath(arnoldScope));
+            writer.SetScope(arnoldScope);
+        }
+    }
+
     const TfToken arnoldContext("arnold");
     if (shader) {
         // Write the surface shader under the material's scope.
