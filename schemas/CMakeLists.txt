@@ -146,7 +146,7 @@ elseif (NOT BUILD_WITH_USD_STATIC)
     if (USD_MONOLITHIC_BUILD)
         target_link_libraries(usdArnold PRIVATE usd_ms)
     else ()
-        target_link_libraries(usdArnold PRIVATE ar;arch;gf;plug;tf;vt;sdf;usd;usdGeom)
+        target_link_libraries(usdArnold PRIVATE ar;arch;gf;plug;tf;vt;work;sdf;usd;usdGeom)
     endif ()
     target_link_libraries(usdArnold PRIVATE ${USD_TRANSITIVE_SHARED_LIBS})
 

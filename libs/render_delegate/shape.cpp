@@ -402,9 +402,10 @@ void HdArnoldShape::_SyncInstances(
     } else
     {
         // The geometry deduplication can switch a shape from the instancer-node path to this
-        // one: drop the previous instancers, and show the shape again which they had hidden.
-        if (DestroyInstancers())
-            AiNodeSetByte(_shape, str::visibility, _visibility);
+        // one: drop the previous instancers, if it did not already. Always show the shape again,
+        // which the instancer-node path or a previous sync of this one could have hidden.
+        DestroyInstancers();
+        AiNodeSetByte(_shape, str::visibility, _visibility);
 
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.
