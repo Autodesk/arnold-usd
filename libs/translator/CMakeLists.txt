@@ -97,7 +97,11 @@ else () # USD shared lib build
         if (LINUX)
             target_link_libraries(translator INTERFACE dl pthread)
         endif ()
-        target_link_libraries(translator INTERFACE gf sdf tf usd ar arch pcp vt work hgi hgiGL js)
+        target_link_libraries(translator INTERFACE gf sdf tf usd ar arch pcp vt work js)
+        # For the render delegate's accelerated viewport, unless it reads into CPU buffers
+        if (NOT DIRECT_OUTPUTS_CPU_BUFFER)
+            target_link_libraries(translator INTERFACE hgi hgiGL)
+        endif ()
         target_link_libraries(translator INTERFACE usdGeom usdShade usdUtils usdLux usdVol usdSkel usdRender)
     endif ()
 endif ()
