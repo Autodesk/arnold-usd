@@ -6,6 +6,7 @@
 ### Bug fixes
 
 - [usd#2800](https://github.com/Autodesk/arnold-usd/issues/2800) - Remove HGI dependency for accelerated viewport CPU buffers
+- [usd#2803](https://github.com/Autodesk/arnold-usd/issues/2803) - Don't overwrite a foreign shader prim when the bound material already exists
 
 ## [7.5.4.0] 2026-10-22
 
