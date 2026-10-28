@@ -1,0 +1,103 @@
+#usda 1.0
+(
+    renderSettingsPrimPath = "/Render/rendersettings"
+    upAxis = "Y"
+)
+
+def Xform "geo"
+{
+    # Transparent sphere, opaque is left to its default (true). With smart opaque
+    # disabled, opaque is honored and the sphere must render solid red.
+    def Sphere "sphere" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double radius = 1
+        rel material:binding = </mtl/transparent>
+    }
+
+    def Cube "backdrop" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        double size = 1
+        double3 xformOp:translate = (0, 0, -3)
+        float3 xformOp:scale = (8, 8, 0.1)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        rel material:binding = </mtl/green>
+    }
+}
+
+def Scope "mtl"
+{
+    def Material "transparent"
+    {
+        token outputs:arnold:surface.connect = </mtl/transparent/ss.outputs:out>
+        def Shader "ss"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            float inputs:base = 0
+            float inputs:specular = 0
+            float inputs:emission = 1
+            color3f inputs:emission_color = (1, 0, 0)
+            color3f inputs:opacity = (0.2, 0.2, 0.2)
+            token outputs:out
+        }
+    }
+
+    def Material "green"
+    {
+        token outputs:arnold:surface.connect = </mtl/green/ss.outputs:out>
+        def Shader "ss"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            float inputs:base = 0
+            float inputs:specular = 0
+            float inputs:emission = 1
+            color3f inputs:emission_color = (0, 1, 0)
+            token outputs:out
+        }
+    }
+}
+
+def Camera "camera"
+{
+    float focalLength = 35
+    float horizontalAperture = 36
+    float verticalAperture = 36
+    double3 xformOp:translate = (0, 0, 6)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "C"
+            {
+                token dataType = "color4f"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = </Render/Products/Vars/C>
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings"
+    {
+        rel camera = </camera>
+        rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 160)
+        custom int arnold:global:AA_samples = 3
+        # Primvars on the render settings are translated as user data on the options
+        bool primvars:disable_smart_opaque = 1
+    }
+}
