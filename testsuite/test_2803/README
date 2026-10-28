@@ -4,8 +4,11 @@ A material authored by another exporter (here a MaterialX network like the one
 mayaUSD writes) already holds shader prims named like the arnold ones. Writing
 the arnold scene on top of it, in append mode over two frames, must leave these
 prims untouched and author the arnold shading tree in an "arnold" node graph
-under the material. A material created by the writer itself keeps its shaders
-directly under it.
+under the material, connected to the material through node graph outputs. This
+also applies when only a texture collides (a UsdPreviewSurface material sharing
+a file texture with an arnold shader of another name). A material created by
+the writer itself keeps its shaders directly under it. The file is read back to
+check the arnold shaders are found through the node graph.
 
 See #2803
 

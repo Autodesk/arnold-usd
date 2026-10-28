@@ -37,6 +37,20 @@ for frame in range(2):
     AiNodeSetArray(control, 'vidxs', AiArray(4, 1, AI_TYPE_UINT, 0, 1, 2, 3))
     AiNodeSetPtr(control, 'shader', controlShader)
 
+    # This mesh is bound to a UsdPreviewSurface material. The arnold top shader has
+    # another name (e.g. an aiSurfaceShader override) but shares the file texture,
+    # which collides with the UsdUVTexture prim
+    file1 = AiNode(universe, 'image', '/file1')
+    AiNodeSetStr(file1, 'filename', 'tex.png')
+    previewShader = AiNode(universe, 'standard_surface', '/aiStandardSurface1')
+    AiNodeLink(file1, 'base_color', previewShader)
+    preview = AiNode(universe, 'polymesh', '/geo/preview')
+    AiNodeSetArray(preview, 'vlist', AiArray(4, 1, AI_TYPE_VECTOR,
+        AtVector(-1, -1, 2), AtVector(1, -1, 2), AtVector(1, 1, 2), AtVector(-1, 1, 2)))
+    AiNodeSetArray(preview, 'nsides', AiArray(1, 1, AI_TYPE_UINT, 4))
+    AiNodeSetArray(preview, 'vidxs', AiArray(4, 1, AI_TYPE_UINT, 0, 1, 2, 3))
+    AiNodeSetPtr(preview, 'shader', previewShader)
+
     params = AiParamValueMap()
     AiParamValueMapSetBool(params, 'binary', False)
     AiParamValueMapSetFlt(params, 'frame', float(frame))
@@ -49,6 +63,26 @@ for frame in range(2):
         print('ERROR: Scene export failed on frame %d' % frame)
         AiEnd()
         sys.exit(-1)
+
+# Read the file back: the arnold shading trees must be found through the
+# node graph outputs
+universe = AiUniverse()
+AiSceneLoad(universe, usdScene, None)
+readErrors = []
+for meshName, shaderEntry, linkedEntry in [('/geo/mesh', 'standard_surface', 'image'),
+                                           ('/geo/preview', 'standard_surface', 'image')]:
+    readMesh = AiNodeLookUpByName(universe, meshName)
+    readShader = AiNodeGetPtr(readMesh, 'shader') if readMesh else None
+    if not readShader:
+        readErrors.append('%s: no shader after reading the file back' % meshName)
+        continue
+    entry = AiNodeEntryGetName(AiNodeGetNodeEntry(readShader))
+    link = AiNodeGetLink(readShader, 'base_color')
+    linkEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(link)) if link else None
+    if entry != shaderEntry or linkEntry != linkedEntry:
+        readErrors.append('%s: expected %s <- %s after reading the file back, got %s (%s) <- %s'
+                          % (meshName, shaderEntry, linkedEntry, entry, AiNodeGetName(readShader), linkEntry))
+AiUniverseDestroy(universe)
 
 AiEnd()
 
@@ -86,7 +120,7 @@ for line in content.splitlines():
     if match and stack and stack[-1] is not None:
         shaderIds['/' + '/'.join(stack)] = match.group(1)
 
-errors = []
+errors = readErrors
 
 def checkId(path, expected):
     if shaderIds.get(path) != expected:
@@ -103,19 +137,30 @@ if primTypes.get('/mtl/mySG/arnold') != 'NodeGraph':
     errors.append('/mtl/mySG/arnold is not a NodeGraph')
 checkId('/mtl/mySG/arnold/myShader', 'arnold:standard_surface')
 checkId('/mtl/mySG/arnold/myTex', 'arnold:image')
-if 'outputs:arnold:surface.connect = </mtl/mySG/arnold/myShader.outputs:out>' not in content:
-    errors.append('outputs:arnold:surface is not connected to the arnold shader')
+# and the material output goes through a node graph output (USD encapsulation)
+if 'outputs:arnold:surface.connect = </mtl/mySG/arnold.outputs:surface>' not in content:
+    errors.append('outputs:arnold:surface is not connected to the arnold node graph output')
+if 'outputs:surface.connect = </mtl/mySG/arnold/myShader.outputs:out>' not in content:
+    errors.append('the arnold node graph output is not connected to the arnold shader')
 
-# 3) No input ends up with several connection sources
+# 3) A material where only a texture name collides also uses the node graph
+checkId('/mtl/previewSG/usdPreviewSurface1', 'UsdPreviewSurface')
+checkId('/mtl/previewSG/file1', 'UsdUVTexture')
+checkId('/mtl/previewSG/arnold/aiStandardSurface1', 'arnold:standard_surface')
+checkId('/mtl/previewSG/arnold/file1', 'arnold:image')
+if 'outputs:arnold:surface.connect = </mtl/previewSG/arnold.outputs:surface>' not in content:
+    errors.append('previewSG outputs:arnold:surface is not connected to the arnold node graph output')
+
+# 4) No input ends up with several connection sources
 if re.search(r'\.connect = \[', content):
     errors.append('an attribute has several connection sources')
 
-# 4) The material created by the writer keeps its shaders directly under it
+# 5) The material created by the writer keeps its shaders directly under it
 controlPaths = [p for p, i in shaderIds.items() if i == 'arnold:standard_surface' and p.endswith('/controlShader')]
 if len(controlPaths) != 1:
     errors.append('expected one controlShader prim, got %s' % controlPaths)
-nodeGraphs = [p for p, t in primTypes.items() if t == 'NodeGraph' and p.endswith('/arnold')]
-if nodeGraphs != ['/mtl/mySG/arnold']:
+nodeGraphs = sorted(p for p, t in primTypes.items() if t == 'NodeGraph' and p.endswith('/arnold'))
+if nodeGraphs != ['/mtl/mySG/arnold', '/mtl/previewSG/arnold']:
     errors.append('unexpected arnold node graphs: %s' % nodeGraphs)
 
 if errors:

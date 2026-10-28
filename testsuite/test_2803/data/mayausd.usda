@@ -16,6 +16,16 @@ def Xform "geo"
         point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
         rel material:binding = </mtl/mySG>
     }
+
+    def Mesh "preview" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 2), (1, -1, 2), (1, 1, 2), (-1, 1, 2)]
+        rel material:binding = </mtl/previewSG>
+    }
 }
 
 def Scope "mtl"
@@ -43,6 +53,25 @@ def Scope "mtl"
                 asset inputs:file = @tex.png@
                 color3f outputs:out
             }
+        }
+    }
+
+    def Material "previewSG"
+    {
+        token outputs:surface.connect = </mtl/previewSG/usdPreviewSurface1.outputs:surface>
+
+        def Shader "usdPreviewSurface1"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor.connect = </mtl/previewSG/file1.outputs:rgb>
+            token outputs:surface
+        }
+
+        def Shader "file1"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @tex.png@
+            float3 outputs:rgb
         }
     }
 }
