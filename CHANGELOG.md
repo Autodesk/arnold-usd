@@ -6,6 +6,7 @@
 ### Bug fixes
 
 - [usd#2800](https://github.com/Autodesk/arnold-usd/issues/2800) - Remove HGI dependency for accelerated viewport CPU buffers
+- [usd#2807](https://github.com/Autodesk/arnold-usd/issues/2807) - Deduplicated point-instancer prototypes ignore their visibility primvars
 
 ## [7.5.4.0] 2026-10-22
 
