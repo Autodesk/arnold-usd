@@ -1,0 +1,18 @@
+Deduplicated point-instancer prototypes keep their visibility primvars
+
+With the default geometry deduplication (HDARNOLD_GEOM_DEDUP=1, Instances), identical
+point-instancer prototypes are rendered from a single canonical node, and each duplicate's
+instancer overrides the visibility of its instances. A duplicate skipped its primvars, so its
+visibility ignored primvars:arnold:visibility (full mask) and primvars:arnold:visibility:<ray>,
+and its instances rendered even when its prototype was hidden from the camera.
+
+The scene has a mesh and a curves point instancer, each with two identical prototypes hidden
+from the camera (deduplicated) and a slightly different visible prototype. The meshes are hidden
+with primvars:arnold:visibility:camera, the curves with the full primvars:arnold:visibility
+mask. Only the visible prototypes must render. The deduplication only exists in the render
+delegate, so the test is skipped for the usd pass (see pass_usd in testsuite/groups), which
+also ignores the visibility primvars of point-instancer prototypes.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
