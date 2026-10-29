@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -1070,6 +1071,59 @@ static bool _FindAssetRenderSettings(const std::string &assetPath,
     return true;
 }
 
+// Returns the near/far clipping range covering the asset and the active studio sets from every
+// camera position. The studio sets live under /__turntable with the camera, so their boxes are
+// taken in that space. The asset is bounded by its sphere, which stays valid when object mode
+// spins /__turntable around the asset center.
+static GfVec2f _ComputeClippingRange(const UsdStageRefPtr &stage, const AssetBounds &bounds,
+                                     const std::vector<GfVec3d> &eyes)
+{
+    std::vector<GfRange3d> studioSetRanges;
+    const UsdPrim root = stage->GetPrimAtPath(SdfPath("/__turntable"));
+    const UsdPrim studioSet = stage->GetPrimAtPath(SdfPath("/__turntable/studioSet"));
+    if (root && studioSet) {
+        UsdGeomBBoxCache bboxCache(UsdTimeCode::Default(), {UsdGeomTokens->default_, UsdGeomTokens->render});
+        // GetChildren skips the inactive studio sets.
+        for (const UsdPrim &child : studioSet.GetChildren()) {
+            const GfRange3d range = bboxCache.ComputeRelativeBound(child, root).ComputeAlignedRange();
+            if (!range.IsEmpty()) {
+                studioSetRanges.push_back(range);
+            }
+        }
+    }
+
+    double nearest = std::numeric_limits<double>::max();
+    double farthest = 0.0;
+    for (const GfVec3d &eye : eyes) {
+        const double centerDistance = (eye - bounds.center).GetLength();
+        nearest = std::min(nearest, centerDistance - bounds.radius);
+        farthest = std::max(farthest, centerDistance + bounds.radius);
+
+        for (const GfRange3d &range : studioSetRanges) {
+            GfVec3d closest;
+            GfVec3d furthest;
+            for (int axis = 0; axis < 3; ++axis) {
+                const double minValue = range.GetMin()[axis];
+                const double maxValue = range.GetMax()[axis];
+                closest[axis] = std::max(minValue, std::min(eye[axis], maxValue));
+                furthest[axis] = std::abs(eye[axis] - minValue) > std::abs(eye[axis] - maxValue) ? minValue : maxValue;
+            }
+            // The camera orbits inside the cyclo, only the sets seen from outside bring the near plane closer.
+            const double closestDistance = (closest - eye).GetLength();
+            if (closestDistance > 0.0) {
+                nearest = std::min(nearest, closestDistance);
+            }
+            farthest = std::max(farthest, (furthest - eye).GetLength());
+        }
+    }
+
+    // Keep a margin on both planes, and a near plane above zero when the camera is zoomed inside
+    // the asset bounding sphere.
+    const double farClip = farthest * 1.1;
+    const double nearClip = std::max(nearest * 0.5, farClip * 1e-5);
+    return GfVec2f(float(nearClip), float(farClip));
+}
+
 // /camera  —  camera with a time-sampled look-at matrix that orbits the asset center
 static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                             const AssetBounds &bounds, TurntableMode mode,
@@ -1077,8 +1131,6 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 {
     const SdfPath cameraPath("/__turntable/camera");
     const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
-    const double nearClip    = std::max(1.0, camDistance * 0.01);
-    const double farClip     = camDistance * 10.0;
 
     UsdGeomCamera cam = UsdGeomCamera::Define(stage, cameraPath);
 
@@ -1091,6 +1143,8 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     const double targetHeight = _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax);
 
     const int sampleCount = (mode == TurntableMode::RotateCamera) ? args.frames : 1;
+    std::vector<GfVec3d> eyes;
+    eyes.reserve(sampleCount);
     for (int i = 0; i < sampleCount; ++i) {
         const double angle = (mode == TurntableMode::RotateCamera)
             ? (2.0 * _kPi * double(i) / double(args.frames))
@@ -1111,6 +1165,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                           bounds.center[2] + camDistance * std::cos(angle));
             target = GfVec3d(bounds.center[0], targetHeight, bounds.center[2]);
         }
+        eyes.push_back(eye);
 
         // Look-at toward a target at relative bbox height on the up axis.
         const GfVec3d forward = (target - eye).GetNormalized();
@@ -1138,7 +1193,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     cam.GetHorizontalApertureAttr().Set(haperture);
     cam.GetVerticalApertureAttr().Set(vaperture);
     cam.GetFocalLengthAttr().Set(35.0f);
-    cam.GetClippingRangeAttr().Set(GfVec2f(float(nearClip), float(farClip)));
+    cam.GetClippingRangeAttr().Set(_ComputeClippingRange(stage, bounds, eyes));
 
     return cameraPath;
 }

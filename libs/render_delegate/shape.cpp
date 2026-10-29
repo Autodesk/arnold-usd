@@ -70,12 +70,12 @@ HdArnoldShape::~HdArnoldShape()
     DestroyNodes();
 }
 
-void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId)
+void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId, bool recreate)
 {
     // An initialized ginstance mutates into a copy of its prototype, so AiNodeIs cannot be
     // trusted on it, and it cannot be updated nor pointed at another prototype: always
     // recreate it.
-    if (_shape != nullptr && (_isInstance || !AiNodeIs(_shape, shapeType))) {
+    if (_shape != nullptr && (recreate || _isInstance || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
@@ -107,12 +107,20 @@ void HdArnoldShape::ReleaseShapeOwnership()
 
 void HdArnoldShape::DestroyNodes()
 {
+    DestroyInstancers();
+    _renderDelegate->DestroyArnoldNode(_shape);
+    ReleaseShapeOwnership();
+}
+
+bool HdArnoldShape::DestroyInstancers()
+{
+    if (_instancers.empty())
+        return false;
     for (auto& instancer : _instancers) {
         _renderDelegate->DestroyArnoldNode(instancer);
     }
     _instancers.clear();
-    _renderDelegate->DestroyArnoldNode(_shape);
-    ReleaseShapeOwnership();
+    return true;
 }
 
 void HdArnoldShape::Sync(
@@ -346,10 +354,7 @@ void HdArnoldShape::_SyncInstances(
     if (_sharedGeometry != nullptr || _forceInstancerNode || _perInstanceLightLinking ||
         UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
-        for (auto &instancerNode : _instancers) {
-            _renderDelegate->DestroyArnoldNode(instancerNode);
-        }
-        _instancers.clear();
+        DestroyInstancers();
 
         // We need to hide the source mesh.
         AiNodeSetByte(_shape, str::visibility, 0);
@@ -408,14 +413,10 @@ void HdArnoldShape::_SyncInstances(
     } else
     {
         // The geometry deduplication can switch a shape from the instancer-node path to this
-        // one: drop the previous instancers, and show the shape again which they had hidden.
-        if (!_instancers.empty()) {
-            for (auto &instancerNode : _instancers) {
-                _renderDelegate->DestroyArnoldNode(instancerNode);
-            }
-            _instancers.clear();
-            AiNodeSetByte(_shape, str::visibility, _visibility);
-        }
+        // one: drop the previous instancers, if it did not already. Always show the shape again,
+        // which the instancer-node path or a previous sync of this one could have hidden.
+        DestroyInstancers();
+        AiNodeSetByte(_shape, str::visibility, _visibility);
 
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         // GetInstancer can return a non-HdArnoldInstancer or null, so use dynamic_cast and bail safely.
