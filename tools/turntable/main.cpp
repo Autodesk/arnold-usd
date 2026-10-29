@@ -30,6 +30,7 @@
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/imageable.h>
 #include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/scope.h>
 #include <pxr/usd/usdGeom/tokens.h>
@@ -93,6 +94,7 @@ struct Args {
     bool        listStudioSets = false;
     std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
     std::string renderSettings = ""; // RenderSettings path to use.
+    bool        probes = false; // Add grey/chrome balls and a Macbeth chart in the camera frame.
 };
 
 struct LightRig {
@@ -267,6 +269,10 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--background-color", args.backgroundColor,
         "Solid background color as 3 linear floats: R G B (default: no background)")
         ->expected(3)->option_text("R G B");
+
+    app->add_flag("--probes", args.probes,
+        "Add light probes in the bottom corners of the camera frame: a grey ball and a chrome ball "
+        "(left), and a Macbeth chart (right)");
 
     app->add_option("--render-settings", args.renderSettings, "RenderSettings prim path to use")
         ->option_text("PATH");
@@ -1139,6 +1145,153 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     return cameraPath;
 }
 
+static double _SRGBToLinear(double v)
+{
+    return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
+}
+
+static UsdShadeMaterial _CreateProbeMaterial(const UsdStageRefPtr &stage, const char *name,
+                                             const GfVec3f &diffuse, const GfVec3f &specular,
+                                             float metallic, float roughness,
+                                             bool useDisplayColor = false)
+{
+    const SdfPath materialPath = SdfPath("/__turntable/materials").AppendChild(TfToken(name));
+    UsdShadeMaterial material = UsdShadeMaterial::Define(stage, materialPath);
+    UsdShadeShader shader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("previewSurface")));
+    shader.CreateIdAttr(VtValue(TfToken("UsdPreviewSurface")));
+    UsdShadeInput diffuseInput = shader.CreateInput(TfToken("diffuseColor"), SdfValueTypeNames->Color3f);
+    if (useDisplayColor) {
+        UsdShadeShader reader = UsdShadeShader::Define(stage, materialPath.AppendChild(TfToken("displayColor")));
+        reader.CreateIdAttr(VtValue(TfToken("UsdPrimvarReader_float3")));
+        reader.CreateInput(TfToken("varname"), SdfValueTypeNames->String).Set(std::string("displayColor"));
+        diffuseInput.ConnectToSource(reader.CreateOutput(TfToken("result"), SdfValueTypeNames->Float3));
+    } else {
+        diffuseInput.Set(diffuse);
+    }
+    shader.CreateInput(TfToken("specularColor"), SdfValueTypeNames->Color3f).Set(specular);
+    shader.CreateInput(TfToken("roughness"), SdfValueTypeNames->Float).Set(roughness);
+    shader.CreateInput(TfToken("metallic"), SdfValueTypeNames->Float).Set(metallic);
+    material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), TfToken("surface"));
+    return material;
+}
+
+// 24 ColorChecker patches, row by row from the top-left, as 8-bit sRGB values.
+static const int _kMacbethSRGB[24][3] = {
+    {115,  82,  68}, {194, 150, 130}, { 98, 122, 157}, { 87, 108,  67}, {133, 128, 177}, {103, 189, 170},
+    {214, 126,  44}, { 80,  91, 166}, {193,  90,  99}, { 94,  60, 108}, {157, 188,  64}, {224, 163,  46},
+    { 56,  61, 150}, { 70, 148,  73}, {175,  54,  60}, {231, 199,  31}, {187,  86, 149}, {  8, 133, 161},
+    {243, 243, 242}, {200, 200, 200}, {160, 160, 160}, {122, 122, 121}, { 85,  85,  85}, { 52,  52,  52},
+};
+
+// /__turntable/camera/probes  —  grey and chrome balls (bottom left) and a Macbeth chart
+// (bottom right), parented to the camera so they stay fixed in the frame while the
+// asset turns. They sit at the orbit distance, in the corners of the frame, which is
+// outside the asset's bounding sphere at the default zoom.
+static void _SetupProbes(const UsdStageRefPtr &stage, const Args &args, const AssetBounds &bounds,
+                         const SdfPath &cameraPath, int effectiveWidth, int effectiveHeight,
+                         bool hasFloor)
+{
+    const SdfPath probesPath = cameraPath.AppendChild(TfToken("probes"));
+    UsdGeomXform probes = UsdGeomXform::Define(stage, probesPath);
+
+    // Frame half extents at the probe depth, from the 35 mm lens on a 36 mm gate.
+    const double depth = bounds.radius * 3.0 / args.cameraZoom;
+    const double halfW = depth * 18.0 / 35.0;
+    const double halfH = halfW * double(effectiveHeight) / double(effectiveWidth);
+    const double unit = std::min(halfH, halfW * 0.5);
+    const double margin = unit * 0.05;
+
+    const double radius = unit * 0.09;
+    const double cell = unit * 0.07;
+    const double probesHeight = std::max(radius * 2.0, cell * 4.0);
+
+    // With a studio set (cyclo or pedestal) the frame bottom can fall below its floor, which
+    // would bury the probes. Raise them in the frame until they clear the floor, as long as
+    // they still fit under the top edge.
+    double lift = 0.0;
+    if (hasFloor) {
+        GfVec3d eye, target, up;
+        _ComputeCameraEyeAndTarget(args, bounds, eye, target, up);
+        const GfVec3d forward = (target - eye).GetNormalized();
+        const GfVec3d right = GfCross(forward, up).GetNormalized();
+        const GfVec3d camUp = GfCross(right, forward);
+        const int upIndex = _GetUpAxisIndex(bounds.upAxis);
+        const double camUpWorld = camUp[upIndex];
+        if (camUpWorld > 1e-6) {
+            // World height of the probes' lowest edge is: eye + forward * depth + camUp * y.
+            const double bottomY = -halfH + margin;
+            const double lowestWorld = eye[upIndex] + forward[upIndex] * depth + camUpWorld * bottomY;
+            const double floorClearance = bounds.upMin + margin;
+            const double maxLift = std::max(0.0, 2.0 * (halfH - margin) - probesHeight);
+            lift = std::min(std::max(0.0, (floorClearance - lowestWorld) / camUpWorld), maxLift);
+        }
+    }
+
+    // The camera looks down its local -Z.
+    UsdGeomXformable(probes.GetPrim()).AddTranslateOp().Set(GfVec3d(0.0, lift, -depth));
+
+    // Balls.
+    const double ballY = -halfH + margin + radius;
+    const struct { const char *name; UsdShadeMaterial material; double x; } balls[] = {
+        {"grey_ball", _CreateProbeMaterial(stage, "probe_grey", GfVec3f(0.18f), GfVec3f(0.0f), 0.0f, 1.0f),
+            -halfW + margin + radius},
+        {"chrome_ball", _CreateProbeMaterial(stage, "probe_chrome", GfVec3f(1.0f), GfVec3f(1.0f), 1.0f, 0.0f),
+            -halfW + margin + radius * 3.0 + margin},
+    };
+    for (const auto &ball : balls) {
+        // ArnoldSphere is a codeless schema type, so it is defined by type name.
+        UsdPrim sphere = stage->DefinePrim(probesPath.AppendChild(TfToken(ball.name)), TfToken("ArnoldSphere"));
+        sphere.CreateAttribute(TfToken("arnold:radius"), SdfValueTypeNames->FloatArray, false)
+            .Set(VtFloatArray{float(radius)});
+        UsdGeomXformable(sphere).AddTranslateOp().Set(GfVec3d(ball.x, ballY, 0.0));
+        UsdShadeMaterialBindingAPI::Apply(sphere).Bind(ball.material);
+    }
+
+    // Macbeth chart: one quad per patch, colored through a per-face displayColor.
+    const int columns = 6;
+    const int rows = 4;
+    const double gap = cell * 0.08;
+    const double left = halfW - margin - cell * columns;
+    const double bottom = -halfH + margin;
+
+    VtVec3fArray points;
+    VtIntArray faceVertexCounts;
+    VtIntArray faceVertexIndices;
+    VtVec3fArray colors;
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < columns; ++col) {
+            const double x0 = left + col * cell + gap * 0.5;
+            const double x1 = left + (col + 1) * cell - gap * 0.5;
+            const double y1 = bottom + (rows - row) * cell - gap * 0.5;
+            const double y0 = bottom + (rows - row - 1) * cell + gap * 0.5;
+            const int base = int(points.size());
+            points.push_back(GfVec3f(float(x0), float(y0), 0.0f));
+            points.push_back(GfVec3f(float(x1), float(y0), 0.0f));
+            points.push_back(GfVec3f(float(x1), float(y1), 0.0f));
+            points.push_back(GfVec3f(float(x0), float(y1), 0.0f));
+            faceVertexCounts.push_back(4);
+            for (int i = 0; i < 4; ++i) {
+                faceVertexIndices.push_back(base + i);
+            }
+            const int *srgb = _kMacbethSRGB[row * columns + col];
+            colors.push_back(GfVec3f(float(_SRGBToLinear(srgb[0] / 255.0)),
+                                     float(_SRGBToLinear(srgb[1] / 255.0)),
+                                     float(_SRGBToLinear(srgb[2] / 255.0))));
+        }
+    }
+
+    UsdGeomMesh chart = UsdGeomMesh::Define(stage, probesPath.AppendChild(TfToken("macbeth_chart")));
+    chart.CreatePointsAttr().Set(points);
+    chart.CreateFaceVertexCountsAttr().Set(faceVertexCounts);
+    chart.CreateFaceVertexIndicesAttr().Set(faceVertexIndices);
+    chart.CreateSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
+    chart.CreateDoubleSidedAttr().Set(true);
+    UsdGeomPrimvarsAPI(chart).CreatePrimvar(UsdGeomTokens->primvarsDisplayColor, SdfValueTypeNames->Color3fArray,
+                                            UsdGeomTokens->uniform).Set(colors);
+    UsdShadeMaterialBindingAPI::Apply(chart.GetPrim())
+        .Bind(_CreateProbeMaterial(stage, "probe_macbeth", GfVec3f(0.0f), GfVec3f(0.0f), 0.0f, 1.0f, true));
+}
+
 // /lights/dome  —  dome light, optionally driven by an HDRI texture or color
 static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
                             const std::string &hdri, float intensity = 1.0f,
@@ -1592,6 +1745,9 @@ int Run(const Args &args)
         return 1;
     }
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode, effectiveWidth, effectiveHeight);
+    if (args.probes) {
+        _SetupProbes(stage, args, bounds, cameraPath, effectiveWidth, effectiveHeight, !studioSets.empty());
+    }
     _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
 
     // Unless the no_light rig was chosen, deactivate the asset's own lights so the
