@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.4.0] (Unreleased)
+## Unreleased
+
+### Bug fixes
+
+- [usd#2808](https://github.com/Autodesk/arnold-usd/issues/2808) - Fix turnable clipping plane computation for small objects. 
+
+## [7.5.4.0] 
 
 ### Features
 
