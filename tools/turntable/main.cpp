@@ -85,6 +85,7 @@ struct Args {
     std::string lightRig  = "auto";
     double      lightIntensity = 1.0; // Multiplier applied to every rig's light intensity.
     bool        listLightRigs = false;
+    bool        showDome = false; // Make the dome light visible to camera rays.
     std::string upAxis;   // empty = auto-detect from stage
     double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
@@ -234,6 +235,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--light-intensity", args.lightIntensity,
         "Multiplier applied to the selected light rig's intensity (default: 1.0, must be >= 0)")
         ->option_text("MULT");
+
+    app->add_flag("--show-dome", args.showDome,
+        "Make the dome light visible to the camera, showing the HDRI as background (default: hidden)");
 
     app->add_flag("--list-light-rigs", args.listLightRigs,
         "List discovered light rig names and exit");
@@ -1196,7 +1200,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 
 // /lights/dome  —  dome light, optionally driven by an HDRI texture or color
 static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
-                            const std::string &hdri, float intensity = 1.0f,
+                            const std::string &hdri, float intensity, bool showDome,
                             const GfVec3f &color = GfVec3f(1.0f))
 {
     UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, lightPath);
@@ -1205,7 +1209,7 @@ static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPat
     api.CreateColorAttr().Set(color);
     dome.GetPrim()
         .CreateAttribute(TfToken("primvars:arnold:camera"), SdfValueTypeNames->Float, true)
-        .Set(0.0f);
+        .Set(showDome ? 1.0f : 0.0f);
     if (!hdri.empty()) {
         dome.CreateTextureFileAttr().Set(SdfAssetPath(hdri));
         dome.CreateTextureFormatAttr().Set(UsdLuxTokens->latlong);
@@ -1321,14 +1325,8 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
         } else if (rig.isTwoQuad) {
             _SetupTwoQuadRig(stage, bounds, args);
         } else {
-            const float intensity = static_cast<float>(args.lightIntensity);
-            // Use white color for white_dome rig, otherwise no color override
-            if (rig.name == "white_dome") {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity,
-                                GfVec3f(1.0f, 1.0f, 1.0f));
-            } else {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity);
-            }
+            _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri,
+                            static_cast<float>(args.lightIntensity), args.showDome);
         }
     }
 
@@ -1657,12 +1655,34 @@ int Run(const Args &args)
         deactivatedAssetLights = _DeactivateAssetLights(stage);
     }
 
+    const SdfPath settingsPath = hasAssetSettings ? assetSettingsPath : SdfPath("/Render/TurntableSettings");
     if (hasAssetSettings) {
         _OverrideAssetRenderSettings(stage, assetSettingsPath, cameraPath, args);
-        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, assetSettingsPath.GetString());
     } else {
         _SetupRenderSettings(stage, args, cameraPath);
-        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, std::string("/Render/TurntableSettings"));
+    }
+    stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, settingsPath.GetString());
+
+    // A background shader handles the camera rays that miss geometry, so it hides
+    // the dome. It comes from --background-color or from the asset render settings.
+    const bool isDomeRig = chosenRig && !chosenRig->isNoLight && !chosenRig->isTwoQuad;
+    std::string background;
+    if (UsdPrim settingsPrim = stage->GetPrimAtPath(settingsPath)) {
+        settingsPrim.GetAttribute(TfToken("arnold:global:background")).Get(&background);
+    }
+    const bool domeVisible = args.showDome && isDomeRig && background.empty();
+    if (args.showDome && !isDomeRig) {
+        fprintf(stderr, "turntable: warning: --show-dome has no effect with the '%s' light rig\n",
+                selectedRigName.c_str());
+    } else if (args.showDome && !background.empty()) {
+        if (args.backgroundColor.size() == 3) {
+            fprintf(stderr, "turntable: warning: --background-color overrides --show-dome; "
+                    "the dome light will not be visible to the camera\n");
+        } else {
+            fprintf(stderr, "turntable: warning: render settings '%s' set background '%s', which hides "
+                    "the dome light from the camera despite --show-dome\n",
+                    settingsPath.GetText(), background.c_str());
+        }
     }
 
     stage->GetRootLayer()->Save();
@@ -1686,12 +1706,16 @@ int Run(const Args &args)
     }
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  RenderSettings: %s (%s)\n",
-           hasAssetSettings ? assetSettingsPath.GetText() : "/Render/TurntableSettings",
+           settingsPath.GetText(),
            hasAssetSettings ? "asset" : "generated");
     printf("  Resolution: %dx%d\n", effectiveWidth, effectiveHeight);
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());
+    if (isDomeRig) {
+        printf("  Show dome : %s\n",
+               domeVisible ? "yes" : (args.showDome ? "no (hidden by background)" : "no"));
+    }
     if (chosenRig && chosenRig->isNoLight) {
         printf("  Asset lights: kept (no_light rig)\n");
     } else {
