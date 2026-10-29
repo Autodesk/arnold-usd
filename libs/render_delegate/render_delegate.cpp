@@ -2504,9 +2504,10 @@ bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node,
     if (_enableNodesDestruction) {
         // Give the node's name back to the rprim, which creates its new node under it, and stop
         // rendering it on its own. Its instances are unaffected, they set their own visibility.
-        const std::string name =
-            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
-        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        // The rename is not possible under a procedural parent before it collected the node
+        // (e.g. between the sync passes of HydraArnoldReader::ReadStage): Arnold then renames the
+        // rprim's new node to an empty string instead, as it did before the rename was guarded.
+        RenameToUniqueName(node, id.GetString(), "shared_geometry");
         AiNodeSetByte(node, str::visibility, 0);
     }
     return true;
