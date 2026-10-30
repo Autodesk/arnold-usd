@@ -54,7 +54,8 @@ class Test:
          plugin_sources      = '*.c *.cc *.cpp *.cxx',
          program_sources     = '',
          program_name        = 'test',
-         output_image        = 'testrender.tif',     ## can be '' if the test does not generate an image
+         program_env         = None,  ## name of a build environment for the program, see TEST_PROGRAM_ENVS in testsuite/SConscript
+         output_image       = 'testrender.tif',     ## can be '' if the test does not generate an image
          reference_image     = '',
          progressive         = False,
          kick_params         = '',
@@ -78,6 +79,7 @@ class Test:
       self.plugin_sources = plugin_sources
       self.program_sources = program_sources
       self.program_name = program_name
+      self.program_env = program_env
       self.out_image = output_image
       self.ref_image = reference_image
       self.progressive = progressive
@@ -177,6 +179,11 @@ class Test:
             self.script = os.path.join(self.target, 'test')
          self.program_name    = 'test'
          self.program_sources = 'test.cpp'
+
+      # A program needing a build environment that this configuration doesn't provide can't be built, skip the test
+      if self.program_env and env is not None and self.program_env not in env.get('TEST_PROGRAM_ENVS', {}):
+         self.has_to_build = True
+         return False
 
       if os.path.exists(os.path.join(source_data, 'test.py')):
          if not self.script:
@@ -305,9 +312,14 @@ class Test:
          # Configure SCons builder for compiling a program
          if self.program_sources:
             program_source = [os.path.join(source_data, f) for f in self.program_sources.split()]
+            # Some tests need their own build environment, e.g. to link USD or the render delegate in the test
+            # program (see TEST_PROGRAM_ENVS in testsuite/SConscript)
+            program_env = env['TEST_PROGRAM_ENVS'][self.program_env] if self.program_env else None
             if 'UNIVERSAL_ENVS' in env:
                program_targets = []
-               for i, e in enumerate(env['UNIVERSAL_ENVS']):
+               for i, e in enumerate(program_env if program_env is not None else env['UNIVERSAL_ENVS']):
+                  if program_env is not None and not self.testsuite.want_to_distribute:
+                     e['PRINT_CMD_LINE_FUNC'] = env['PRINT_CMD_LINE_FUNC']
                   target_build_arch = os.path.join(target_build, e['ARCH'])
                   program_objs = []
                   for cpp in program_source:
@@ -319,13 +331,17 @@ class Test:
                program_target = os.path.join(target_build, program_targets[0].name)
                program_target = env.lipo(program_target, program_targets)
             else:
+               if program_env is None:
+                  program_env = env
+               elif not self.testsuite.want_to_distribute:
+                  program_env['PRINT_CMD_LINE_FUNC'] = env['PRINT_CMD_LINE_FUNC']
                program_objs = []
                for cpp in program_source:
                   name = os.path.splitext(os.path.basename(cpp))[0]
                   obj = os.path.join(target_build, '{}.{}'.format(name, obj_st_ext))
-                  program_objs.extend(env.Object(obj, cpp))
+                  program_objs.extend(program_env.Object(obj, cpp))
                program_target = os.path.join(target_build, self.program_name)
-               program_target = env.Program(program_target, program_objs)[0]
+               program_target = program_env.Program(program_target, program_objs)[0]
             TARGETS += env.Install(target_dist, program_target)
          if self.testsuite.want_to_distribute:
             self.scons_target = TARGETS

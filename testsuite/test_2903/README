@@ -1,0 +1,14 @@
+Interactive USD edits of a point instancer, with the usd procedural cache_id and with the render delegate
+
+A point instancer of a cube and a sphere has its positions, prototype indices, a prototype material, its invisible
+instances and its transform edited, the stage being re-rendered after each edit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp). The "usd" pass has its own reference image (ref/reference.usd.tif), showing the known issues of the
+legacy reader.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

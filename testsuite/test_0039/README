@@ -3,3 +3,5 @@ Testing the Hydra Render Buffer implementations.
 see #8
 
 author: Pal Mezei
+
+PARAMS: {'program_env': 'render_delegate'}

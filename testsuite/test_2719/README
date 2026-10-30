@@ -44,3 +44,5 @@ something specific to this test.
 Fixes #2719
 
 author: cyril.pichard@autodesk.com
+
+PARAMS: {'program_env': 'render_delegate'}

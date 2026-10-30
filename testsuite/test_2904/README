@@ -1,0 +1,14 @@
+Interactive USD edits of a prim hierarchy and native instances, with the usd procedural and the render delegate
+
+A sphere has its parent transform and visibility, and its purpose edited. Two native instances of a cube have their
+prototype edited, then one of them is made not instanceable and edited. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of step 5 is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp). The "usd" pass has its own reference image (ref/reference.usd.tif), showing the known issues of the
+legacy reader.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
