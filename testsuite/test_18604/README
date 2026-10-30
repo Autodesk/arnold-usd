@@ -1,0 +1,11 @@
+Primvars on the render settings prim are translated as user data on the options
+
+primvars:disable_smart_opaque is authored on the render settings, so the
+transparent sphere must render opaque (solid red) since its opaque attribute is
+left on. Without the user data, the green backdrop shows through the sphere.
+
+It works only in hydra2 mode with the render settings prim.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda'}

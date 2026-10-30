@@ -77,7 +77,8 @@ public:
     /// @param shapeType New node entry for this Arnold shape node
     /// @param id Path to the primitive.
     /// @param primId Prim ID of the owning rprim, applied to a recreated node.
-    void SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId);
+    /// @param recreate Recreate the node even if it already has this type, to get an empty node.
+    void SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId, bool recreate = false);
 
     /// Turns this shape into a ginstance of @p proto (geometry deduplication). The instance
     /// keeps its own transform and surface shader, and shares the geometry of @p proto.
@@ -110,6 +111,11 @@ public:
     /// Destroys the Arnold node and instancers now, rather than with this shape.
     HDARNOLD_API
     void DestroyNodes();
+
+    /// Destroys the Arnold instancer nodes, which the next instances sync rebuilds. Returns true
+    /// if there were any.
+    HDARNOLD_API
+    bool DestroyInstancers();
 
     /// Hides or shows everything this shape renders through (see HdArnoldRprim::SkipHiddenPrim):
     /// the instancers if any, otherwise the shape node itself. A node shared with other rprims

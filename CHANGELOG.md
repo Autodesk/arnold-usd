@@ -1,7 +1,17 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.5.4.0] (Unreleased)
+## Unreleased
+
+### Features
+
+- [usd#2779](https://github.com/Autodesk/arnold-usd/issues/2779) - Add turntable --show-dome option to make the dome light visible to the camera
+
+### Bug fixes
+
+- [usd#2808](https://github.com/Autodesk/arnold-usd/issues/2808) - Fix turnable clipping plane computation for small objects. 
+
+## [7.5.4.0] 
 
 ### Features
 
@@ -21,6 +31,7 @@
 - [usd#2758](https://github.com/Autodesk/arnold-usd/issues/2758) - Support shader imagers with interactive updates
 - [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
 - [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2777) - Add Houdini logger support
+- [usd#2786](https://github.com/Autodesk/arnold-usd/issues/2786) - Support user data on render settings primitives
 
 ### Bug fixes
 

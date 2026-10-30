@@ -71,6 +71,7 @@
 #include "procedural_custom.h"
 #include "render_buffer.h"
 #include "render_pass.h"
+#include "utils.h"
 #include "volume.h"
 #include <cctype>
 #include <algorithm>
@@ -90,6 +91,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldDriver, "arnold:driver"))
     ((arnoldNamespace, "arnold:"))
     ((colorManagerNamespace, "color_manager:"))
+    ((primvarsNamespace, "primvars:"))
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
@@ -1064,7 +1066,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                 _SetNodeParam(colorManager, TfToken(cmParamCStr), value);
             }
         }
-    } 
+    } else if (TfStringStartsWith(key.GetString(), _tokens->primvarsNamespace)) {
+        // Primvars are translated as constant user data on the options. primvars:arnold:xyz
+        // are set as builtin options parameters.
+        const TfToken primvarName(key.GetText() + _tokens->primvarsNamespace.size());
+        HdArnoldSetConstantPrimvar(_options, primvarName, TfToken(), value, nullptr, nullptr, nullptr, this);
+    }
     else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -2497,9 +2504,10 @@ bool HdArnoldRenderDelegate::LeaveCanonicalGeometry(uint64_t hash, AtNode* node,
     if (_enableNodesDestruction) {
         // Give the node's name back to the rprim, which creates its new node under it, and stop
         // rendering it on its own. Its instances are unaffected, they set their own visibility.
-        const std::string name =
-            id.GetString() + "/__arnold_shared_geometry_" + std::to_string(++_adoptedGeometryCounter);
-        AiNodeSetStr(node, str::name, AtString(name.c_str()));
+        // The rename is not possible under a procedural parent before it collected the node
+        // (e.g. between the sync passes of HydraArnoldReader::ReadStage): Arnold then renames the
+        // rprim's new node to an empty string instead, as it did before the rename was guarded.
+        RenameToUniqueName(node, id.GetString(), "shared_geometry");
         AiNodeSetByte(node, str::visibility, 0);
     }
     return true;
