@@ -50,7 +50,7 @@ public:
 
     /// Destructor for HdArnoldShape.
     ///
-    /// Frees the shape and all the ginstances created.
+    /// Frees the shape and its instancers.
     HDARNOLD_API
     ~HdArnoldShape();
 
@@ -71,8 +71,7 @@ public:
     /// This can happen e.g. with primitives of type ArnoldProceduralCustom
     /// where the node type is an attribute
     ///
-    /// The node is recreated if it is not of @p shapeType, or if it is a ginstance: those
-    /// cannot be reused once initialized.
+    /// The node is recreated if it is not of @p shapeType.
     ///
     /// @param shapeType New node entry for this Arnold shape node
     /// @param id Path to the primitive.
@@ -80,30 +79,19 @@ public:
     /// @param recreate Recreate the node even if it already has this type, to get an empty node.
     void SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId, bool recreate = false);
 
-    /// Turns this shape into a ginstance of @p proto (geometry deduplication). The instance
-    /// keeps its own transform and surface shader, and shares the geometry of @p proto.
-    ///
-    /// @param proto The canonical Arnold node to instance.
-    /// @param id Path to the primitive.
-    /// @param primId Prim ID of the owning rprim.
-    void ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId);
-
-    /// Makes this shape's Arnold instancer reference @p proto instead of this shape's own node
-    /// (geometry deduplication of point-instancer prototypes), or its own node again if null.
+    /// Makes this shape render @p proto instead of its own node (geometry deduplication), or
+    /// its own node again if null. A point-instancer prototype renders it through its Arnold
+    /// instancers, any other shape through a single-instance Arnold instancer of its own (see
+    /// _SyncSharedGeometryInstancer). The own node stays, empty and hidden.
     ///
     /// @param proto The canonical geometry node to instance, or nullptr.
     void SetPrototypeOverride(AtNode* proto) { _sharedGeometry = proto; }
 
-    /// Returns the canonical node this shape renders instead of its own geometry, either as
-    /// a ginstance (ConvertToInstanceOf) or through its instancer (SetPrototypeOverride).
+    /// Returns the canonical node this shape renders instead of its own geometry (see
+    /// SetPrototypeOverride).
     ///
     /// @return The shared geometry node, or nullptr.
     AtNode* GetSharedGeometry() const { return _sharedGeometry; }
-
-    /// Returns true if the Arnold node is a ginstance (see ConvertToInstanceOf).
-    ///
-    /// @return True if the Arnold node is a ginstance.
-    bool IsInstanceNode() const { return _isInstance; }
 
     /// Forgets the Arnold node without destroying it, when its ownership was transferred.
     void ReleaseShapeOwnership();
@@ -208,6 +196,22 @@ protected:
     /// @param param Reference to HdArnoldRenderParamInterrupt.
     HDARNOLD_API
     void _UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param);
+    /// Renders the shared geometry of a shape that is not instanced, through a single-instance
+    /// Arnold instancer. The own node of the shape still receives the state of the rprim, which
+    /// can differ from the canonical's (transform, visibility, sidedness, surface shader), and
+    /// which is overridden on the instance. Everything else is hashed, so the instance can
+    /// inherit it from the canonical.
+    ///
+    /// @param dirtyBits Dirty Bits to sync.
+    /// @param sceneDelegate Pointer to the Scene Delegate.
+    /// @param param Reference to HdArnoldRenderParamInterrupt.
+    /// @param id Path to the primitive.
+    /// @param primId Prim ID of the primitive.
+    /// @param cryptoObject Cryptomatte object name of the primitive, if overridden.
+    HDARNOLD_API
+    void _SyncSharedGeometryInstancer(
+        HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
+        const SdfPath& id, int32_t primId, const SdfPath& cryptoObject);
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
     std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
@@ -229,8 +233,6 @@ protected:
     bool _perInstanceLightLinking = false;
     /// True if the scene had light linking when the instance categories were computed.
     bool _hasLightLinking = false;
-    /// True when _shape was created as a ginstance: AiNodeIs cannot tell once it is initialized.
-    bool _isInstance = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

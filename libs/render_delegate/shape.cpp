@@ -60,7 +60,6 @@ HdArnoldShape::HdArnoldShape(
 {
     if (!shapeType.empty()) {
         _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
-        _isInstance = shapeType == str::ginstance;
         _SetPrimId(primId);
     }
 }
@@ -72,16 +71,12 @@ HdArnoldShape::~HdArnoldShape()
 
 void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, int32_t primId, bool recreate)
 {
-    // An initialized ginstance mutates into a copy of its prototype, so AiNodeIs cannot be
-    // trusted on it, and it cannot be updated nor pointed at another prototype: always
-    // recreate it.
-    if (_shape != nullptr && (recreate || _isInstance || !AiNodeIs(_shape, shapeType))) {
+    if (_shape != nullptr && (recreate || !AiNodeIs(_shape, shapeType))) {
         _renderDelegate->DestroyArnoldNode(_shape);
         _shape = nullptr;
     }
     if (_shape == nullptr) {
         _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
-        _isInstance = shapeType == str::ginstance;
         _sharedGeometry = nullptr;
         _hiddenBy = HiddenBy::None;
         // Sync only applies the prim id when it is dirty.
@@ -89,19 +84,9 @@ void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id, i
     }
 }
 
-void HdArnoldShape::ConvertToInstanceOf(AtNode* proto, const SdfPath& id, int32_t primId)
-{
-    SetShapeType(str::ginstance, id, primId);
-    // The instance gets its own matrix during Sync.
-    AiNodeSetBool(_shape, str::inherit_xform, false);
-    AiNodeSetPtr(_shape, str::node, proto);
-    _sharedGeometry = proto;
-}
-
 void HdArnoldShape::ReleaseShapeOwnership()
 {
     _shape = nullptr;
-    _isInstance = false;
     _sharedGeometry = nullptr;
 }
 
@@ -161,6 +146,10 @@ void HdArnoldShape::Sync(
      }
 #endif
 
+    if (_sharedGeometry != nullptr && rprim->GetInstancerId().IsEmpty()) {
+        _SyncSharedGeometryInstancer(dirtyBits, sceneDelegate, param, id, rprim->GetPrimId(), primOriginPath);
+        return;
+    }
     _SyncInstances(
         dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force, rprim->GetPrimId(),
         primOriginPath);
@@ -430,6 +419,80 @@ void HdArnoldShape::_SyncInstances(
             AiNodeSetByte(_shape, str::visibility, 0);
         }
     }
+}
+
+void HdArnoldShape::_SyncSharedGeometryInstancer(
+    HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param, const SdfPath& id,
+    int32_t primId, const SdfPath& cryptoObject)
+{
+    // What can change the state overridden on the instance. The instancer is destroyed by the
+    // geometry deduplication when the canonical changes (see HdArnoldRprim::_ApplyGeometryDedup).
+    constexpr HdDirtyBits instanceDirtyBits =
+        HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility | HdChangeTracker::DirtyDoubleSided |
+        HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimvar |
+        HdChangeTracker::DirtyPrimID | HdChangeTracker::DirtyInstancer;
+    if (!_instancers.empty() && (dirtyBits & instanceDirtyBits) == 0)
+        return;
+    param.Interrupt();
+    if (_instancers.empty()) {
+        // The instancer is kept and updated in place afterwards: a node can't always be destroyed
+        // while the procedural is expanded, which would leave the name of a new one taken.
+        AtNode* instancer = _renderDelegate->CreateArnoldNode(
+            str::instancer, AtString((id.GetString() + "/shared_geometry_instancer").c_str()));
+        _instancers.push_back(instancer);
+        AiNodeSetPtr(instancer, str::nodes, _sharedGeometry);
+        if (AiNodeLookUpUserParameter(instancer, str::instance_inherit_xform) == nullptr)
+            AiNodeDeclare(instancer, str::instance_inherit_xform, str::constantArrayBool);
+        AiNodeSetArray(instancer, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, false));
+        _renderDelegate->TrackRenderTag(instancer, sceneDelegate->GetRenderTag(id));
+        // The own node only carries the state of the rprim.
+        AiNodeSetByte(_shape, str::visibility, 0);
+    }
+    AtNode* const instancer = _instancers.front();
+    auto setUserArray = [&](const AtString& name, const AtString& declaration, AtArray* value) {
+        if (AiNodeLookUpUserParameter(instancer, name) == nullptr)
+            AiNodeDeclare(instancer, name, declaration);
+        AiNodeSetArray(instancer, name, value);
+    };
+    auto resetUserArray = [&](const AtString& name) {
+        if (AiNodeLookUpUserParameter(instancer, name) != nullptr)
+            AiNodeResetParameter(instancer, name);
+    };
+
+    // The instancer reinitializes, and so rebuilds its instance, when its matrices are set. It
+    // doesn't for all the other parameters, so they are always set along with the matrices.
+    const AtArray* matrices = AiNodeGetArray(_shape, str::matrix);
+    AiNodeSetArray(
+        instancer, str::instance_matrix,
+        matrices != nullptr ? AiArrayCopy(matrices) : AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+    // Without transform keys, the instance keeps the motion range of the canonical's deformation.
+    if (matrices != nullptr && AiArrayGetNumKeys(matrices) > 1) {
+        setUserArray(
+            str::instance_motion_start, str::constantArrayFloat,
+            AiArray(1, 1, AI_TYPE_FLOAT, AiNodeGetFlt(_shape, str::motion_start)));
+        setUserArray(
+            str::instance_motion_end, str::constantArrayFloat,
+            AiArray(1, 1, AI_TYPE_FLOAT, AiNodeGetFlt(_shape, str::motion_end)));
+    } else {
+        resetUserArray(str::instance_motion_start);
+        resetUserArray(str::instance_motion_end);
+    }
+    AiNodeSetArray(instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+    setUserArray(
+        str::instance_sidedness, str::constantArrayByte,
+        AiArray(1, 1, AI_TYPE_BYTE, AiNodeGetByte(_shape, str::sidedness)));
+    // A duplicate has no geometry subsets, so a single surface shader.
+    const AtArray* shaders = AiNodeGetArray(_shape, str::shader);
+    if (shaders != nullptr && AiArrayGetNumElements(shaders) > 0)
+        AiNodeSetArray(instancer, str::instance_shader, AiArray(1, 1, AI_TYPE_NODE, AiArrayGetPtr(shaders, 0)));
+    else
+        AiNodeResetParameter(instancer, str::instance_shader);
+    // The prim id and cryptomatte object name of the canonical would apply otherwise. The
+    // instance is named after the instancer, so the object name defaults to the prim path.
+    setUserArray(str::instance_hydraPrimId, str::constantArrayInt, AiArray(1, 1, AI_TYPE_INT, primId + 1));
+    AtArray* cryptoArray = AiArrayAllocate(1, 1, AI_TYPE_STRING);
+    AiArraySetStr(cryptoArray, 0, AtString(cryptoObject.IsEmpty() ? id.GetText() : cryptoObject.GetText()));
+    setUserArray(str::instance_crypto_object, str::constantArrayString, cryptoArray);
 }
 
 void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param)

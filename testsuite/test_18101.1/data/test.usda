@@ -1,0 +1,261 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    upAxis = "Y"
+)
+
+def RenderSettings "options"
+{
+    int arnold:AA_samples = 6
+    rel camera = </World/camera>
+    bool arnold:usd_override_double_sided = 0
+    int arnold:xres = 320
+    int arnold:yres = 240
+}
+
+def Xform "World"
+{
+    def Camera "camera"
+    {
+        float focalLength = 50
+        float horizontalAperture = 50.95
+        float verticalAperture = 38.21
+        double shutter:open = -0.25
+        double shutter:close = 0.25
+        double3 xformOp:translate = (0, 0, 26)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def DistantLight "light"
+    {
+        float inputs:intensity = 3
+    }
+
+    def DomeLight "dome"
+    {
+        float inputs:intensity = 0.3
+    }
+
+    def Scope "materials"
+    {
+        def Material "red"
+        {
+            token outputs:surface.connect = </World/materials/red/surface.outputs:surface>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.9, 0.1, 0.1)
+                token outputs:surface
+            }
+        }
+        def Material "green"
+        {
+            token outputs:surface.connect = </World/materials/green/surface.outputs:surface>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.1, 0.9, 0.1)
+                token outputs:surface
+            }
+        }
+        def Material "blue"
+        {
+            token outputs:surface.connect = </World/materials/blue/surface.outputs:surface>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.1, 0.1, 0.9)
+                token outputs:surface
+            }
+        }
+    }
+
+    # Identical quads, only differing in their transform, material, doubleSided and visibility,
+    # which are not part of the deduplication hash of a non-instanced shape.
+    # Facing the camera.
+    def Mesh "quadRed" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        rel material:binding = </World/materials/red>
+        double3 xformOp:translate = (-6, 4, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Facing away, double sided: visible.
+    def Mesh "quadDoubleSided" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 1
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate = (-2, 4, 0)
+        float3 xformOp:rotateXYZ = (0, 180, 30)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+    # Facing away, single sided: not visible.
+    def Mesh "quadSingleSided" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate = (2, 4, 0)
+        float3 xformOp:rotateXYZ = (0, 180, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+    # Scaled.
+    def Mesh "quadScaled" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        rel material:binding = </World/materials/blue>
+        double3 xformOp:translate = (6, 4, 0)
+        float3 xformOp:scale = (1.5, 0.5, 1)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+    # Invisible.
+    def Mesh "quadInvisible" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        token visibility = "invisible"
+        rel material:binding = </World/materials/blue>
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Moving: motion-blurred transform.
+    def Mesh "quadMoving" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        rel material:binding = </World/materials/red>
+        double3 xformOp:translate.timeSamples = { -0.25: (-8, 0, 0), 0.25: (-4, 0, 0) }
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Moving along a curved path: 3 transform keys.
+    def Mesh "quadMovingCurved" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+        uniform bool doubleSided = 0
+        rel material:binding = </World/materials/blue>
+        double3 xformOp:translate.timeSamples = { -0.25: (-2.5, -1.5, 0), 0: (-1, 1, 0), 0.25: (0.5, -1.5, 0) }
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    # Identical deforming quads (motion-blurred points), static or moving.
+    # Static transform.
+    def Mesh "deformStatic" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points.timeSamples = {
+            -0.25: [(-0.5, -1, 0), (0.5, -1, 0), (0.5, 1, 0), (-0.5, 1, 0)],
+            0.25: [(-2, -1, 0), (2, -1, 0), (2, 1, 0), (-2, 1, 0)],
+        }
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate = (3.5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Moving: deformation and transform keys.
+    def Mesh "deformMoving" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points.timeSamples = {
+            -0.25: [(-0.5, -1, 0), (0.5, -1, 0), (0.5, 1, 0), (-0.5, 1, 0)],
+            0.25: [(-2, -1, 0), (2, -1, 0), (2, 1, 0), (-2, 1, 0)],
+        }
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate.timeSamples = { -0.25: (8, -1, 0), 0.25: (8, 1, 0) }
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    # Identical curves, only differing in their transform, material and visibility.
+    # Static.
+    def BasisCurves "curveRed" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token type = "linear"
+        int[] curveVertexCounts = [4]
+        point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+        float[] widths = [0.2] (interpolation = "constant")
+        rel material:binding = </World/materials/red>
+        double3 xformOp:translate = (-6, -4.5, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Rotated.
+    def BasisCurves "curveRotated" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token type = "linear"
+        int[] curveVertexCounts = [4]
+        point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+        float[] widths = [0.2] (interpolation = "constant")
+        rel material:binding = </World/materials/blue>
+        double3 xformOp:translate = (-2, -4.5, 0)
+        float3 xformOp:rotateXYZ = (0, 0, 90)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+    # Invisible.
+    def BasisCurves "curveInvisible" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token type = "linear"
+        int[] curveVertexCounts = [4]
+        point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+        float[] widths = [0.2] (interpolation = "constant")
+        token visibility = "invisible"
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate = (2, -4.5, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    # Moving: motion-blurred transform.
+    def BasisCurves "curveMoving" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token type = "linear"
+        int[] curveVertexCounts = [4]
+        point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+        float[] widths = [0.2] (interpolation = "constant")
+        rel material:binding = </World/materials/green>
+        double3 xformOp:translate.timeSamples = { -0.25: (2, -4.5, 0), 0.25: (7, -4.5, 0) }
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
