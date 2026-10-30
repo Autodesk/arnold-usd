@@ -7,7 +7,7 @@ from utils.contrib.bottle import SimpleTemplate
 
 ## load our own python modules
 import utils as sa
-from utils.build_tools     import process_return_code
+from utils.build_tools     import link_usd_libraries, process_return_code
 from utils.system          import print_safe, is_string
 from utils                 import dependencies
 from test                  import Testsuite
@@ -39,26 +39,23 @@ else:
    test_env.Append(LIBPATH = env['ARNOLD_BINARIES'])
    test_env.Append(LIBS = Split('ai'))
 
-# Tests that construct the Hydra render delegate directly in C++ (e.g. test_2719,
-# which drives HdArnoldRenderDelegate::Pause()/Resume()/Stop()/IsPaused() against a
-# live render to guard against #2719-style state bugs) additionally need the
-# render_delegate/common static libraries and their USD dependencies. There is no
-# per-test env override hook in Test.prepare(), so this is added to every test.cpp
-# build rather than just the one that needs it -- harmless for tests that don't
-# reference any of these symbols, since unused static library members simply aren't
-# pulled in at link time.
+# Build environments that a test can select for its test.cpp program, with PARAMS: {'program_env': '<name>'} in its
+# README. In macOS universal builds, an environment is a list with one environment per architecture, as
+# UNIVERSAL_ENVS. Tests asking for an environment that this configuration doesn't provide are skipped.
+program_envs = {}
+
+# 'render_delegate': for tests constructing the Hydra render delegate directly in C++ (e.g. test_2719, which drives
+# HdArnoldRenderDelegate::Pause()/Resume()/Stop()/IsPaused() against a live render to guard against #2719-style state
+# bugs). They additionally need the render_delegate/common static libraries and their USD dependencies. Only these
+# tests link them: with a static USD on Windows, dependencies.render_delegate() whole-archives libusd_m, which would
+# otherwise put a full copy of USD in every test program.
 # This mirrors the condition SConstruct uses to decide whether libs/render_delegate
 # is built at all -- not just BUILD_RENDER_DELEGATE: the cmake `testsuite` target
 # runs abuild with BUILD_RENDER_DELEGATE=0 (cmake has already built the delegate
 # itself), so keying off that alone would silently produce an unlinkable test there.
-# Tests needing the library are skipped when it isn't available, see below.
 render_delegate_lib_built = bool(
    env.get('BUILD_RENDER_DELEGATE') or
    (env.get('BUILD_PROCEDURAL') and env.get('ENABLE_HYDRA_IN_USD_PROCEDURAL')))
-
-# Tests whose test.cpp links libs/render_delegate, and so cannot even be compiled in a
-# configuration that doesn't build it.
-render_delegate_tests = ['test_2719']
 
 if render_delegate_lib_built:
    def _add_render_delegate_test_deps(e):
@@ -91,10 +88,109 @@ if render_delegate_lib_built:
          e.Append(FRAMEWORKS = e['EXTRA_FRAMEWORKS'].split(';'))
 
    if 'UNIVERSAL_ENVS' in test_env:
-      for e in test_env['UNIVERSAL_ENVS']:
+      program_envs['render_delegate'] = [e.Clone() for e in test_env['UNIVERSAL_ENVS']]
+      for e in program_envs['render_delegate']:
          _add_render_delegate_test_deps(e)
    else:
-      _add_render_delegate_test_deps(test_env)
+      program_envs['render_delegate'] = test_env.Clone()
+      _add_render_delegate_test_deps(program_envs['render_delegate'])
+
+# 'interactive_usd': for the interactive USD tests, selecting it with PARAMS: {'program_env': 'interactive_usd'} in
+# their README. Their test.cpp describes a scenario (a UsdStage and edits to render) that testsuite/common/interactive_usd_test
+# renders with the usd procedural and with the render delegate, see interactive_usd_test.h. The test program, the
+# procedural and the render delegate must share the same USD, for the stage created by the test to be visible to them
+# (the procedural finds it through UsdUtilsStageCache). The framework is compiled once, in a static library shared by
+# all these tests. Its two modes are:
+#  - embedded, with a static USD: usd_proc and the arnold hydra plugins embed their own private copy of USD, so instead
+#    of loading them, the test programs link the procedural and the hydra plugins, the same way
+#    plugins/procedural/SConscript links usd_proc. The procedural is compiled in the framework library.
+#  - shared, with a monolithic or shared USD: the test programs only link USD, and load the usd_proc and hdArnold built
+#    here, as hosts do.
+# macOS universal builds aren't supported.
+interactive_usd_embedded = env['USD_BUILD_MODE'] == 'static'
+if not env.get('BUILD_PROCEDURAL') or 'UNIVERSAL_ENVS' in test_env:
+   interactive_usd_supported = False
+elif interactive_usd_embedded:
+   # The static usd_proc only embeds the hydra plugins with ENABLE_HYDRA_IN_USD_PROCEDURAL
+   interactive_usd_supported = bool(env.get('ENABLE_HYDRA_IN_USD_PROCEDURAL') and render_delegate_lib_built)
+else:
+   interactive_usd_supported = bool(env.get('BUILD_RENDER_DELEGATE'))
+
+if interactive_usd_supported:
+   build_base_dir = os.path.abspath(env['BUILD_BASE_DIR'])
+   framework_sources = [os.path.join(testsuite_common, 'interactive_usd_test.cpp')]
+   if interactive_usd_embedded:
+      framework_env = program_envs['render_delegate'].Clone()
+      framework_env.Append(CPPPATH = [
+         os.path.join(root_path, 'plugins', 'procedural'),
+         os.path.join(root_path, 'libs', 'translator', 'reader'),
+         os.path.join(root_path, 'libs', 'translator', 'writer'),
+      ])
+      framework_env.Append(CPPDEFINES = [
+         'USD_PROCEDURAL_NAME=%s' % env['USD_PROCEDURAL_NAME'],
+         'ENABLE_HYDRA_IN_USD_PROCEDURAL',
+         'INTERACTIVE_USD_EMBEDDED',
+      ])
+      if env['ARNOLD_HAS_SCENE_FORMAT_API']:
+         framework_env.Append(CPPDEFINES = ['ARNOLD_HAS_SCENE_FORMAT_API'])
+      framework_env.Append(LIBPATH = [
+         os.path.join(build_base_dir, 'libs', 'translator'),
+         os.path.join(build_base_dir, 'plugins', 'node_registry'),
+         os.path.join(build_base_dir, 'plugins', 'usd_imaging'),
+         os.path.join(build_base_dir, 'plugins', 'render_delegate'),
+         os.path.join(build_base_dir, 'plugins', 'scene_index'),
+      ])
+      # The plugins register themselves with USD through static initializers, nothing references them explicitly
+      whole_archives = [
+         ('nodeRegistryArnold', os.path.join('plugins', 'node_registry')),
+         ('usdImagingArnold', os.path.join('plugins', 'usd_imaging')),
+         ('hdArnold', os.path.join('plugins', 'render_delegate')),
+         ('render_delegate', os.path.join('libs', 'render_delegate')),
+      ]
+      if env.get('BUILD_SCENE_INDEX_PLUGIN'):
+         whole_archives.append(('sceneIndexArnold', os.path.join('plugins', 'scene_index')))
+      if sa.system.is_windows:
+         framework_env.Prepend(LIBS = ['usd_translator'] + ['-WHOLEARCHIVE:%s' % name for name, _ in whole_archives])
+      else:
+         archives = [os.path.join(build_base_dir, path, 'lib%s.a' % name) for name, path in whole_archives]
+         # Unlike on Windows, dependencies.render_delegate() doesn't whole-archive libusd_m here, but USD's own
+         # plugins (file formats, schemas, ...) also register through static initializers
+         archives.append(os.path.join(framework_env.subst(env['USD_LIB']), 'libusd_m.a'))
+         if env['TBB_STATIC']:
+            archives.append(os.path.join(framework_env.subst(env['TBB_LIB']), 'libtbb.a'))
+         archives.extend([lib for lib in env['EXTRA_STATIC_LIBS'].split(';') if lib])
+         if sa.system.is_linux:
+            framework_env.Append(LINKFLAGS = ['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(archives)])
+         else:
+            framework_env.Append(LINKFLAGS = ['-Wl,-force_load,%s' % archive for archive in archives])
+         framework_env.Prepend(LIBS = ['usd_translator'])
+      framework_sources += [os.path.join(root_path, 'plugins', 'procedural', f) for f in ['main.cpp', 'asset_utils.cpp']]
+   else:
+      framework_env = test_env.Clone()
+      framework_env.Append(LIBPATH = [os.path.abspath(env['USD_LIB'])])
+      if env.get('ENABLE_HYDRA_IN_USD_PROCEDURAL'):
+         framework_env.Append(CPPDEFINES = ['INTERACTIVE_USD_PROCEDURAL_HYDRA'])
+      _, usd_deps = dependencies.render_delegate(framework_env, [])
+      if env['USD_BUILD_MODE'] == 'shared_libs':
+         # UsdUtilsStageCache, for the procedural cache_id
+         usd_deps += link_usd_libraries(framework_env, ['usdUtils'])[0]
+      framework_env.Append(LIBS = usd_deps)
+      if sa.system.is_darwin and framework_env.get('EXTRA_FRAMEWORKS'):
+         framework_env.Append(FRAMEWORKS = framework_env['EXTRA_FRAMEWORKS'].split(';'))
+   framework_env.Append(CPPPATH = [testsuite_common]) # interactive_usd_test.h
+   if env.get('BUILD_SCENE_INDEX_PLUGIN'):
+      framework_env.Append(CPPDEFINES = ['ENABLE_SCENE_INDEX'])
+
+   framework_dir = os.path.join(build_base_dir, 'testsuite', 'interactive_usd_test')
+   framework_objects = [
+      framework_env.Object(os.path.join(framework_dir, os.path.splitext(os.path.basename(f))[0]), f)
+      for f in framework_sources]
+   framework_env.StaticLibrary(os.path.join(framework_dir, 'interactive_usd_test'), framework_objects)
+   interactive_usd_env = framework_env.Clone()
+   interactive_usd_env.Prepend(LIBPATH = [framework_dir], LIBS = ['interactive_usd_test'])
+   program_envs['interactive_usd'] = interactive_usd_env
+
+test_env['TEST_PROGRAM_ENVS'] = program_envs
 
 os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
 os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']
@@ -160,14 +256,6 @@ args_prepare = dict(
 
 if len(testsuite_targets) > 0:
    testsuite = Testsuite.load(**args_load)
-   if not render_delegate_lib_built:
-      # Their test.cpp links libs/render_delegate, which this configuration doesn't build, so they can't be
-      # compiled at all here. Ignore them explicitly instead of letting the link fail the whole run.
-      skipped = set(render_delegate_tests) & testsuite.tests_found
-      if skipped:
-         testsuite.skipped_tests['ignore'] |= skipped
-         print('Ignoring {} test(s) needing the render delegate library, which this '
-               'configuration does not build: {}'.format(len(skipped), ' '.join(sorted(skipped))))
    print('Found {} tests in {}'.format(len(testsuite.tests_found), testsuite.source))
    print('Filtering tests with patterns: {} ...'.format(' '.join(testsuite_targets)))
    TESTSUITE_TARGET = testsuite.prepare(**args_prepare)

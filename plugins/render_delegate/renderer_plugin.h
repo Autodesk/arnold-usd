@@ -69,7 +69,7 @@ public:
     ///
     /// @param settingsMap Initial render settings for the Render Delegate.
     /// @return Pointer to the newly created Arnold Render Delegate.
-    HD_API
+    HDARNOLD_API
     HdRenderDelegate* CreateRenderDelegate(const HdRenderSettingsMap& settingsMap) override;
 
     /// Deletes an Arnold Render Delegate.

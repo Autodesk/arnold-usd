@@ -1,0 +1,11 @@
+Interactive USD edits of lights and cameras, with the usd procedural cache_id and with the render delegate
+
+A grey sphere is lit by a distant light whose color and intensity change, then the camera moves away from the
+sphere and back, the stage being re-rendered after each edit. The scenario runs with the "usd" procedural reading the
+stage through its cache_id in an interactive render session, and with the HdArnoldRendererPlugin render delegate
+driven like a Hydra host, see testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the
+last procedural render is compared against the reference image.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
