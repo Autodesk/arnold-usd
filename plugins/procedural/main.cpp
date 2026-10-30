@@ -32,6 +32,13 @@
 #include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/arch/env.h>
+#ifdef ARNOLD_USD_BUNDLE
+#include <pxr/base/arch/symbols.h>
+#include <pxr/base/plug/registry.h>
+#include <pxr/base/tf/fileUtils.h>
+#include <pxr/base/tf/stringUtils.h>
+#include <mutex>
+#endif
 #include "procedural_reader.h"
 #include <pxr/usd/usd/stageCache.h>
 #include <pxr/usd/usdUtils/stageCache.h>
@@ -54,8 +61,41 @@
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
+#ifdef ARNOLD_USD_BUNDLE
+// The bundle is linked against a shared USD, so unlike the static usd_proc it doesn't embed
+// its plugInfo files. They are installed next to the bundle library and point back to it,
+// so we register them ourselves, which makes the bundle work in kick or any other standalone
+// Arnold host without setting PXR_PLUGINPATH_NAME (#2793).
+// Registering the same path twice is a no-op, and if the host already registered plugins
+// with the same names from another location, USD keeps the ones registered first.
+// Note that the hydra plugin registries only discover the plugins once, so this has to
+// happen before the first render delegate is created.
+static void RegisterBundlePlugins()
+{
+    static std::once_flag s_registerOnce;
+    std::call_once(s_registerOnce, []() {
+        std::string libraryPath;
+        if (!ArchGetAddressInfo(
+                reinterpret_cast<void *>(&RegisterBundlePlugins), &libraryPath, nullptr, nullptr, nullptr) ||
+            libraryPath.empty()) {
+            AiMsgDebug("[usd] Unable to find the location of the bundle library to register its plugins");
+            return;
+        }
+        const std::string plugInfoPath = TfStringCatPaths(TfGetPathName(libraryPath), "plugInfo.json");
+        if (!TfIsFile(plugInfoPath)) {
+            AiMsgDebug("[usd] No plugInfo.json found next to %s", libraryPath.c_str());
+            return;
+        }
+        PlugRegistry::GetInstance().RegisterPlugins(plugInfoPath);
+    });
+}
+#endif
+
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = true, AtNode* procParent = nullptr)
 {
+#ifdef ARNOLD_USD_BUNDLE
+    RegisterBundlePlugins();
+#endif
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     // Enable the hydra procedural if it's required by the procedural parameters, 
     // or if the environment variable is defined
@@ -334,6 +374,9 @@ procedural_viewport
 
     // For now we always create a new reader for the viewport display,
     // can we reuse the eventual existing one ?
+#ifdef ARNOLD_USD_BUNDLE
+    RegisterBundlePlugins();
+#endif
     ProceduralReader *reader = new UsdArnoldReader(universe);
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
