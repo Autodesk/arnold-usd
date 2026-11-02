@@ -42,13 +42,6 @@
 #include <sstream>
 #include <thread>
 
-#ifdef __linux__
-#include <execinfo.h>
-#include <fcntl.h>
-#include <signal.h>
-#include <unistd.h>
-#endif
-
 #ifdef INTERACTIVE_USD_EMBEDDED
 // Defined by the node_loader of plugins/procedural/main.cpp, compiled in the same library
 AI_EXPORT_LIB bool NodeLoader(int i, AtNodeLib* node);
@@ -85,80 +78,6 @@ void SetEnv(const char* name, const std::string& value)
     setenv(name, value.c_str(), 1);
 #endif
 }
-
-#ifdef __linux__
-// TEMPORARY, to investigate the crashes of the procedural with the hydra 1 reader on Linux: Arnold's crash handler dies
-// before printing its backtrace, likely because the heap is already corrupted. This handler replaces it and only uses
-// functions that don't allocate: it prints the backtrace of the crashing thread (the program is linked with -rdynamic,
-// for the names of its own functions) and the mappings of the program, then lets the signal kill the process.
-void WriteString(const char* text)
-{
-    ssize_t ignored = write(STDERR_FILENO, text, strlen(text));
-    (void)ignored;
-}
-
-void CrashHandler(int signal)
-{
-    WriteString("\n[interactive_usd_test] caught signal ");
-    WriteString(signal == SIGSEGV ? "SIGSEGV" : signal == SIGABRT ? "SIGABRT" : signal == SIGBUS ? "SIGBUS" :
-        signal == SIGFPE ? "SIGFPE" : signal == SIGILL ? "SIGILL" : "?");
-    WriteString(", backtrace:\n");
-    void* frames[128];
-    backtrace_symbols_fd(frames, backtrace(frames, 128), STDERR_FILENO);
-
-    // The mappings of the program itself, to find the functions of frames without a name in the binary
-    WriteString("[interactive_usd_test] mappings of the program:\n");
-    static char exe[4096];
-    const ssize_t exeLength = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
-    static char maps[1 << 20];
-    const int fd = open("/proc/self/maps", O_RDONLY);
-    if (exeLength > 0 && fd >= 0) {
-        exe[exeLength] = '\0';
-        ssize_t size = 0;
-        for (ssize_t n; size < ssize_t(sizeof(maps)) - 1 && (n = read(fd, maps + size, sizeof(maps) - 1 - size)) > 0;)
-            size += n;
-        maps[size] = '\0';
-        for (char* line = maps; *line;) {
-            char* end = strchr(line, '\n');
-            if (end)
-                *end = '\0';
-            if (strstr(line, exe)) {
-                WriteString(line);
-                WriteString("\n");
-            }
-            if (!end)
-                break;
-            line = end + 1;
-        }
-    }
-    if (fd >= 0)
-        close(fd);
-
-    ::signal(signal, SIG_DFL);
-    raise(signal);
-}
-
-// Must be called before AiBegin, so that Arnold doesn't install its own handlers
-void InstallCrashHandler()
-{
-    SetEnv("ARNOLD_SYSTEM_HANDLER_MASK", "0");
-    // The first call of backtrace can allocate, to load libgcc
-    void* frames[1];
-    backtrace(frames, 1);
-    // A separate stack, in case of a stack overflow
-    static char stack[1 << 16];
-    stack_t altStack = {};
-    altStack.ss_sp = stack;
-    altStack.ss_size = sizeof(stack);
-    sigaltstack(&altStack, nullptr);
-    struct sigaction action = {};
-    action.sa_handler = CrashHandler;
-    action.sa_flags = SA_ONSTACK;
-    sigemptyset(&action.sa_mask);
-    for (int signal : {SIGSEGV, SIGABRT, SIGBUS, SIGFPE, SIGILL})
-        sigaction(signal, &action, nullptr);
-}
-#endif
 
 // The same as HdArnoldIsSceneIndexEnabled (libs/render_delegate/utils.cpp), which isn't linked in the shared USD mode
 bool SceneIndexEnabled()
@@ -728,9 +647,6 @@ int Run(const Scenario& scenario)
 {
     if (!SetupEnvironment())
         return 1;
-#ifdef __linux__
-    InstallCrashHandler();
-#endif
     AiBegin(AI_SESSION_INTERACTIVE);
     AiMsgSetConsoleFlags(nullptr, AI_LOG_INFO | AI_LOG_WARNINGS | AI_LOG_ERRORS);
 
