@@ -452,7 +452,8 @@ void HdArnoldMesh::Sync(
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
         // Keep track of the materials assigned to this mesh
-        GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
+        _materialDependencies = std::move(nodeGraphs);
+        _TrackDependencies(id);
 
         // The displacement belongs to the geometry, shared by a duplicate.
         if (_IsDuplicate()) {
@@ -477,6 +478,8 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
+        SdfPathVector lightFilterPaths;
+        bool lightShadersComputed = false;
         const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
@@ -518,7 +521,9 @@ void HdArnoldMesh::Sync(
                     if (shouldSetOnLight) {
                         if (primvarStr == "arnold:shaders") {
                             HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id,
-                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight);
+                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight,
+                                &lightFilterPaths);
+                            lightShadersComputed = true;
                         } else {
                             HdArnoldSetConstantPrimvar(
                                 _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value,
@@ -647,6 +652,18 @@ void HdArnoldMesh::Sync(
             }
         }
 
+        // The light shaders are computed above when primvars:arnold:shaders is updated. If it isn't, 
+        // we still need the UsdLux light filters (light:filters) of the mesh light.
+        if (meshLight && !lightShadersComputed) {
+            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id,
+                TfToken("primvars:arnold:shaders"), meshLight, &lightFilterPaths);
+        }
+        // Make sure the mesh is updated when one of its light filters changes
+        if (lightFilterPaths != _lightFilterPaths) {
+            _lightFilterPaths = std::move(lightFilterPaths);
+            _TrackDependencies(id);
+        }
+
         UpdateVisibilityAndSidedness();
         const auto autobumpVisibility = _autobumpVisibilityFlags.Compose();
         AiNodeSetByte(node, str::autobump_visibility, autobumpVisibility);
@@ -684,6 +701,15 @@ void HdArnoldMesh::Sync(
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
     
     *dirtyBits = HdChangeTracker::Clean;
+}
+
+void HdArnoldMesh::_TrackDependencies(const SdfPath& id)
+{
+    HdArnoldRenderDelegate::PathSetWithDirtyBits dependencies = _materialDependencies;
+    for (const SdfPath& filterPath : _lightFilterPaths) {
+        dependencies.insert({filterPath, HdChangeTracker::DirtyPrimvar});
+    }
+    GetRenderDelegate()->TrackDependencies(id, dependencies);
 }
 
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const

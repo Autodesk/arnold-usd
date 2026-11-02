@@ -91,6 +91,12 @@ protected:
     /// Returns true if this mesh has a mesh light.
     bool _HasMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id) const;
 
+    /// Updates the dependencies of this mesh : the materials assigned to it, and the
+    /// UsdLux light filters of its mesh light.
+    void _TrackDependencies(const SdfPath& id);
+
+    HdArnoldRenderDelegate::PathSetWithDirtyBits _materialDependencies; ///< Materials assigned to this mesh.
+    SdfPathVector _lightFilterPaths;  ///< Light filters (light:filters) of the mesh light.
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtValue _vertexCountsVtValue;      ///< Vertex nsides. We need to keep it alive for left handed geometries.
