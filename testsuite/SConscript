@@ -188,6 +188,10 @@ if interactive_usd_supported:
    framework_env.StaticLibrary(os.path.join(framework_dir, 'interactive_usd_test'), framework_objects)
    interactive_usd_env = framework_env.Clone()
    interactive_usd_env.Prepend(LIBPATH = [framework_dir], LIBS = ['interactive_usd_test'])
+   if sa.system.is_linux:
+      # TEMPORARY, for the names of the program's functions in the backtraces of its crash handler (see
+      # InstallCrashHandler in interactive_usd_test.cpp)
+      interactive_usd_env.Append(LINKFLAGS = ['-rdynamic'])
    program_envs['interactive_usd'] = interactive_usd_env
 
 test_env['TEST_PROGRAM_ENVS'] = program_envs
