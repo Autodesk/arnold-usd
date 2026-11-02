@@ -294,6 +294,34 @@ protected:
         UpdateVisibilityAndSidedness();
     }
 
+    /// Applies the visibility primvars (arnold:visibility and arnold:visibility:<ray>) of a
+    /// duplicate rendered through its point instancers, which override the visibility of the
+    /// canonical node on the instances (see HdArnoldShape::_SyncInstances): like the canonical's,
+    /// it must include them. The other primvars are hashed, so the instances inherit them from
+    /// the canonical. Nothing is set on the own node of the duplicate, which must not render.
+    void _SyncInstancedDuplicateVisibility(const HdArnoldPrimvarMap& primvars, HdArnoldRenderParamInterrupt& param)
+    {
+        static const TfToken arnoldVisibility("arnold:visibility");
+        static const std::string visibilityPrefix("arnold:visibility:");
+        _visibilityFlags.ClearPrimvarFlags();
+        for (const auto& primvar : primvars) {
+            const auto& desc = primvar.second;
+            if (desc.interpolation != HdInterpolationConstant)
+                continue;
+            if (primvar.first == arnoldVisibility) {
+                // As in ConvertPrimvarToRayFlag, without setting the visibility of the node.
+                _visibilityFlags.SetPrimvarFlag(~static_cast<uint8_t>(VtValueGetInt(desc.value)), false);
+            } else if (TfStringStartsWith(primvar.first.GetString(), visibilityPrefix)) {
+                _visibilityFlags.SetRayFlag(primvar.first.GetText() + visibilityPrefix.size(), desc.value);
+            }
+        }
+        const uint8_t visibility = this->_sharedData.visible ? _visibilityFlags.Compose() : 0;
+        if (visibility != _shape.GetVisibility()) {
+            param.Interrupt();
+            _shape.SetVisibility(visibility);
+        }
+    }
+
     /// Leaves the dedup registry when this rprim is destroyed. Must be called from the derived
     /// destructor before anything else touches the Arnold node.
     void _ReleaseGeometryDedup()

@@ -356,6 +356,8 @@ void HdArnoldBasisCurves::Sync(
         _SyncInstanceNodePrimvars(_primvars, param, [](const TfToken& name) {
             return name == _tokens->orientations || name == _tokens->basis;
         });
+    } else if (dirtyPrimvars && _IsDuplicate()) {
+        _SyncInstancedDuplicateVisibility(_primvars, param);
     }
 
     // Set motion_start / motion_end if we have a non null shutter range

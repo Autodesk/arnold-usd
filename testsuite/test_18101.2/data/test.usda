@@ -1,0 +1,136 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    upAxis = "Y"
+)
+
+def RenderSettings "options"
+{
+    int arnold:AA_samples = 3
+    rel camera = </World/camera>
+    int arnold:xres = 320
+    int arnold:yres = 240
+}
+
+def Xform "World"
+{
+    def Camera "camera"
+    {
+        float focalLength = 50
+        float horizontalAperture = 50.95
+        float verticalAperture = 38.21
+        double3 xformOp:translate = (0, 0, 24)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def DistantLight "light"
+    {
+        float inputs:intensity = 3
+    }
+
+    def DomeLight "dome"
+    {
+        float inputs:intensity = 0.3
+    }
+
+    def Scope "materials"
+    {
+        def Material "red"
+        {
+            token outputs:surface.connect = </World/materials/red/surface.outputs:surface>
+
+            def Shader "surface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.9, 0.1, 0.1)
+                token outputs:surface
+            }
+        }
+    }
+
+    # Two identical mesh prototypes hidden from the camera (deduplicated), and a slightly
+    # different visible one.
+    def PointInstancer "meshes"
+    {
+        rel prototypes = [</World/meshes/prototypes/hiddenA>, </World/meshes/prototypes/hiddenB>, </World/meshes/prototypes/visible>]
+        int[] protoIndices = [0, 1, 2, 0, 1, 2]
+        point3f[] positions = [(-7, 5.0, 0), (-2.5, 5.0, 0), (2, 5.0, 0), (-7, 2.0, 0), (-2.5, 2.0, 0), (2, 2.0, 0)]
+
+        def Scope "prototypes"
+        {
+            def Mesh "hiddenA" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 2, 3]
+                point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+                rel material:binding = </World/materials/red>
+                bool primvars:arnold:visibility:camera = 0
+            }
+            def Mesh "hiddenB" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 2, 3]
+                point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1, 0), (-1, 1, 0)]
+                rel material:binding = </World/materials/red>
+                bool primvars:arnold:visibility:camera = 0
+            }
+            def Mesh "visible" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 2, 3]
+                point3f[] points = [(-1, -1, 0), (1, -1, 0), (1, 1.2, 0), (-1, 1, 0)]
+                rel material:binding = </World/materials/red>
+            }
+        }
+    }
+
+    # Same with curves, hidden through the full visibility mask (all rays but the camera).
+    def PointInstancer "curves"
+    {
+        rel prototypes = [</World/curves/prototypes/hiddenA>, </World/curves/prototypes/hiddenB>, </World/curves/prototypes/visible>]
+        int[] protoIndices = [0, 1, 2, 0, 1, 2]
+        point3f[] positions = [(-7, -2.0, 0), (-2.5, -2.0, 0), (2, -2.0, 0), (-7, -5.0, 0), (-2.5, -5.0, 0), (2, -5.0, 0)]
+
+        def Scope "prototypes"
+        {
+            def BasisCurves "hiddenA" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token type = "linear"
+                int[] curveVertexCounts = [4]
+                point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+                float[] widths = [0.3] (interpolation = "constant")
+                rel material:binding = </World/materials/red>
+                int primvars:arnold:visibility = 254
+            }
+            def BasisCurves "hiddenB" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token type = "linear"
+                int[] curveVertexCounts = [4]
+                point3f[] points = [(-1, -1, 0), (-0.3, 1, 0), (0.3, -1, 0), (1, 1, 0)]
+                float[] widths = [0.3] (interpolation = "constant")
+                rel material:binding = </World/materials/red>
+                int primvars:arnold:visibility = 254
+            }
+            def BasisCurves "visible" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform token type = "linear"
+                int[] curveVertexCounts = [4]
+                point3f[] points = [(-1, -1, 0), (-0.3, 1.2, 0), (0.3, -1, 0), (1, 1, 0)]
+                float[] widths = [0.3] (interpolation = "constant")
+                rel material:binding = </World/materials/red>
+            }
+        }
+    }
+}

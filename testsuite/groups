@@ -66,8 +66,10 @@ not_implemented: test_2608
 # Tests skipped for a specific pass (consumed as the 'pass_<name>' skip list).
 # CoordSys support (test_13221, test_2731) is implemented in the render
 # delegate only, so the procedural 'usd' pass would abort on the unresolved
-# coordinate space.
-pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2
+# coordinate space. test_18101.2 checks the geometry deduplication, which only
+# exists in the render delegate (the 'usd' pass also ignores the visibility
+# primvars of point-instancer prototypes).
+pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2
 
 ############################
 # USER-DEFINED TEST GROUPS #
