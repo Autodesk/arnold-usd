@@ -56,8 +56,10 @@ public:
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the material.
+    /// @param isLightFilter True if this node graph translates a UsdLux light filter. Hydra then
+    ///  uses the light dirty bits for this prim, which are converted to the material ones.
     HDARNOLD_API
-    HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
+    HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, bool isLightFilter = false);
 
     /// Destructor for HdArnoldNodeGraph.
     ///
@@ -461,6 +463,7 @@ protected:
 
     ArnoldNodeGraph _nodeGraphCache;         ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
+    bool _isLightFilter = false;             ///< Whether this node graph is a UsdLux light filter sprim.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
     bool _imagerGraph = false;
     std::unordered_map<std::string, AtNode*> _nodes;  /// List of nodes used in this translator

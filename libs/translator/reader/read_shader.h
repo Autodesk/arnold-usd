@@ -20,6 +20,7 @@
 #include <ai_nodes.h>
 
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/usdShade/shader.h>
 
 #include <string>
 #include <unordered_map>
@@ -37,6 +38,11 @@ public:
     AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
     static void ReadShaderInputs(const UsdPrim& prim, UsdArnoldReaderContext& context, 
     	AtNode* node);
+protected:
+    // Returns the id of the shader to create (e.g. "arnold:image"), overridable for prims that
+    // don't store it in info:id
+    virtual TfToken GetShaderId(const UsdPrim &prim, const UsdShadeShader &shader,
+        const TimeSettings &time) const;
 private:
 	static void _ReadShaderParameter(UsdShadeShader &shader, AtNode *node, 
 		const std::string &usdAttr, const std::string &arnoldAttr,
@@ -45,6 +51,14 @@ private:
     	const std::string& arnoldAttr, UsdArnoldReaderContext& context);
 
 
+};
+
+// Reader for UsdLuxLightFilter prims. They are created as arnold light filter nodes, their
+// inputs: are read like the ones of a UsdShadeShader and can be connected to shaders nested under them.
+class UsdArnoldReadLightFilter : public UsdArnoldReadShader {
+protected:
+    TfToken GetShaderId(const UsdPrim &prim, const UsdShadeShader &shader,
+        const TimeSettings &time) const override;
 };
 
 // Register readers for shaders relying on UsdShade

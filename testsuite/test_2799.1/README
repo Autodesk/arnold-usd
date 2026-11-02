@@ -1,0 +1,11 @@
+Gobo light filter (with an image shader as slidemap) authored with the UsdLux light:filters relationship
+
+see #2799
+
+Same as test_2799 but with only the spot light and its gobo, nested under the light and referenced
+under a deeper hierarchy. The image shader is a child of the LightFilter prim and is connected to the
+gobo slidemap input.
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}

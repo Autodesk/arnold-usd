@@ -1,0 +1,90 @@
+#usda 1.0
+(
+    defaultPrim = "asset"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "asset" (
+    kind = "component"
+)
+{
+    def Mesh "floor"
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        normal3f[] normals = [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+
+    # Light with a light filter authored through UsdLux light:filters.
+    # The target is a relationship, so it is remapped when the asset is referenced.
+    def SphereLight "light" (
+        prepend apiSchemas = ["LightAPI"]
+    )
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:intensity = 1
+        float inputs:exposure = 9
+        float inputs:radius = 0.1
+        rel light:filters = </asset/filters/decay>
+        double3 xformOp:translate = (-3, 3, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    # Spot light (cone shaping) carrying a gobo. Arnold gobo filters only work on spot lights.
+    def SphereLight "spot" (
+        prepend apiSchemas = ["LightAPI", "ShapingAPI"]
+    )
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:intensity = 1
+        float inputs:exposure = 10
+        float inputs:radius = 0.05
+        float inputs:shaping:cone:angle = 40
+        float inputs:shaping:cone:softness = 0.1
+        rel light:filters = </asset/spot/gobo>
+        double3 xformOp:translate = (3, 4, 0)
+        float3 xformOp:rotateXYZ = (-90, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+
+        # Light filter nested in its light (recommended by UsdLux).
+        def LightFilter "gobo"
+        {
+            uniform token lightFilter:shaderId = "arnold:gobo"
+            uniform token arnold:lightFilter:shaderId = "gobo"
+            float inputs:density = 0.5
+            float inputs:sscale = 1
+            float inputs:tscale = 1
+            # Connected to the image shader below, which must be a direct child
+            # of the filter (LightFilter requires encapsulation).
+            color3f inputs:slidemap.connect = </asset/spot/gobo/image.outputs:rgba>
+
+            def Shader "image"
+            {
+                uniform token info:id = "arnold:image"
+                asset inputs:filename = @./gobo.png@
+                color4f outputs:rgba
+            }
+        }
+    }
+
+    def Scope "filters"
+    {
+        # Strong falloff so a working filter is obvious in the render.
+        def LightFilter "decay"
+        {
+            uniform token lightFilter:shaderId = "arnold:light_decay"
+            uniform token arnold:lightFilter:shaderId = "light_decay"
+            float inputs:near_start = 1
+            float inputs:near_end = 2
+            bool inputs:use_near_atten = 1
+            float inputs:far_start = 2
+            float inputs:far_end = 4
+            bool inputs:use_far_atten = 1
+        }
+    }
+}

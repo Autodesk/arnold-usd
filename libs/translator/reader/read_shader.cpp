@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include <pxr/usd/usdLux/lightFilter.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usdShade/shader.h>
@@ -175,8 +176,7 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     UsdShadeShader shader(prim);
     const TimeSettings &time = context.GetTimeSettings();
     // The "Shader Id" will tell us what is the type of the shader
-    TfToken id;
-    shader.GetIdAttr().Get(&id, time.frame);
+    TfToken id = GetShaderId(prim, shader, time);
     if (id.IsEmpty())
         return nullptr;
 
@@ -249,7 +249,33 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     AtNode* shaderNode = ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
     return shaderNode;
 }
-                            
+
+TfToken UsdArnoldReadShader::GetShaderId(
+    const UsdPrim &prim, const UsdShadeShader &shader, const TimeSettings &time) const
+{
+    TfToken id;
+    shader.GetIdAttr().Get(&id, time.frame);
+    return id;
+}
+
+TfToken UsdArnoldReadLightFilter::GetShaderId(
+    const UsdPrim &prim, const UsdShadeShader &shader, const TimeSettings &time) const
+{
+    // A UsdLuxLightFilter stores its shader id in lightFilter:shaderId, optionally
+    // overridden per render context (arnold:lightFilter:shaderId).
+    UsdLuxLightFilter lightFilter(prim);
+    if (!lightFilter)
+        return TfToken();
+    static const TfTokenVector renderContexts = {TfToken("arnold")};
+    TfToken id = lightFilter.GetShaderId(renderContexts);
+    if (id.IsEmpty())
+        return id;
+    // The arnold context can omit the "arnold:" prefix that ReadShader expects
+    if (!TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()))
+        id = TfToken(str::t_arnold_prefix.GetString() + id.GetString());
+    return id;
+}
+
 void UsdArnoldReadShader::_ReadShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdAttr, const std::string &arnoldAttr,
     UsdArnoldReaderContext &context)

@@ -287,6 +287,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->coordSys,
                                  HdPrimTypeTokens->material,
                                  str::t_ArnoldNodeGraph,
+                                 HdPrimTypeTokens->lightFilter,
                                  HdPrimTypeTokens->distantLight,
                                  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,
@@ -1473,6 +1474,10 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
     if (typeId == str::t_ArnoldNodeGraph) {
         return (_mask & AI_NODE_SHADER) ? 
             new HdArnoldNodeGraph(this, sprimId) : nullptr;
+    }
+    if (typeId == HdPrimTypeTokens->lightFilter) {
+        return (_mask & AI_NODE_SHADER) ? 
+            new HdArnoldNodeGraph(this, sprimId, true) : nullptr;
     }
     if (typeId == _tokens->ArnoldOptions) {
         return (_mask & AI_NODE_OPTIONS) ? 
