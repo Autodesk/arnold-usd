@@ -92,8 +92,11 @@ bool SceneIndexEnabled()
 
 #ifdef INTERACTIVE_USD_EMBEDDED
 // Must be called before AiBegin and before using USD.
-// - ARNOLD_PLUGIN_PATH is cleared, so usd_proc and its private copy of USD don't get loaded from there. The usd_proc
-//   shipped in the Arnold SDK plugins folder is still loaded by AiBegin, so its node entry is replaced.
+// - No usd_proc must be loaded, as they have their own copy of USD: on macOS, loading one crashes, since the USD of this
+//   program runs the static constructors of every library loaded afterwards, including the ones of that copy of USD.
+//   Clearing ARNOLD_PLUGIN_PATH isn't enough, since AiBegin also loads the plugins of the Arnold SDK, including its
+//   usd_proc. So ARNOLD_PLUGIN_PATH only has the folder of the usd_proc guard, which installs no node and makes
+//   AiBegin skip the SDK's usd_proc, see testsuite/common/usd_proc_guard.cpp.
 // - The USD plugin resources installed next to the procedural are registered in the PlugRegistry. A few of them
 //   (hdArnold, nodeRegistryArnold...) load usd_proc as their library, so these are copied to the test folder, with an
 //   empty LibraryPath as their code is already linked in this program, like the USD plugins of a static build.
@@ -102,7 +105,10 @@ bool SceneIndexEnabled()
 bool SetupEnvironment()
 {
     namespace fs = std::filesystem;
-    SetEnv("ARNOLD_PLUGIN_PATH", "");
+    const char* guardPath = std::getenv("USD_PROCEDURAL_GUARD_PATH");
+    if (!Check_(guardPath != nullptr, "USD_PROCEDURAL_GUARD_PATH is not set"))
+        return false;
+    SetEnv("ARNOLD_PLUGIN_PATH", guardPath);
     SetEnv("PXR_PLUGINPATH_NAME", "");
     SetEnv("ARNOLD_PXR_PLUGINPATH_NAME", "");
 
@@ -462,14 +468,19 @@ private:
 };
 
 #ifdef INTERACTIVE_USD_EMBEDDED
-// Installs the node entry of the procedural compiled in this program, replacing the one of the SDK's usd_proc
+// Installs the node entry of the procedural compiled in this program. No usd_proc should have been loaded, see
+// SetupEnvironment.
 bool InstallProcedural()
 {
     AtNodeLib lib;
     if (!Check_(NodeLoader(0, &lib), "NodeLoader failed"))
         return false;
-    if (AiNodeEntryLookUp(AtString(lib.name)))
+    if (const AtNodeEntry* loaded = AiNodeEntryLookUp(AtString(lib.name))) {
+        const char* filename = AiNodeEntryGetFilename(loaded);
+        Check_(false, std::string("A ") + lib.name + " procedural was loaded from " +
+            (filename ? filename : "an unknown library") + ", it has its own copy of USD");
         AiNodeEntryUninstall(lib.name);
+    }
     AiNodeEntryInstall(lib.node_type, lib.output_type, lib.name, "interactive_usd_test",
         static_cast<const AtNodeMethods*>(lib.methods), lib.version);
     const AtNodeEntry* entry = AiNodeEntryLookUp(AtString(lib.name));
@@ -478,7 +489,9 @@ bool InstallProcedural()
 }
 #else
 // Makes sure the "usd" node entry comes from the procedural built here (USD_PROCEDURAL_PATH), rather than from the
-// usd_proc shipped in the SDK plugins folder, which AiBegin loads too and which has its own static USD
+// usd_proc shipped in the SDK plugins folder, which has its own static USD. The testsuite's ARNOLD_PLUGIN_PATH already
+// prevents AiBegin from loading the SDK's one (see testsuite/common/usd_proc_guard.cpp), this also covers running the
+// test program outside of the testsuite.
 bool InstallProcedural()
 {
     namespace fs = std::filesystem;

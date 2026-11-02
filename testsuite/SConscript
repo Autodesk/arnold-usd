@@ -192,8 +192,29 @@ if interactive_usd_supported:
 
 test_env['TEST_PROGRAM_ENVS'] = program_envs
 
+# A plugin named like the SDK's usd_proc, that installs no node, so that the tests never load the usd procedural
+# shipped in the Arnold SDK. Its folder is appended to ARNOLD_PLUGIN_PATH (see tools/test/testsuite.py): when the
+# procedural being tested can't be loaded, the tests fail instead of silently using the SDK's one. See
+# testsuite/common/usd_proc_guard.cpp
+usd_proc_guard_dir = os.path.join(os.path.abspath(env['BUILD_BASE_DIR']), 'testsuite', 'usd_proc_guard')
+usd_proc_guard_source = os.path.join(testsuite_common, 'usd_proc_guard.cpp')
+# Named with the extension of the SDK's usd_proc, as Arnold compares the full file names
+if 'UNIVERSAL_ENVS' in test_env:
+   usd_proc_guard_targets = []
+   for e in test_env['UNIVERSAL_ENVS']:
+      guard_env = e.Clone(SHLIBSUFFIX = sa.system.LIB_EXTENSION)
+      guard_dir_arch = os.path.join(usd_proc_guard_dir, e['ARCH'])
+      guard_obj = guard_env.SharedObject(os.path.join(guard_dir_arch, 'usd_proc_guard'), usd_proc_guard_source)
+      usd_proc_guard_targets.append(guard_env.SharedLibrary(os.path.join(guard_dir_arch, 'usd_proc'), guard_obj)[0])
+   USD_PROC_GUARD = test_env.lipo(os.path.join(usd_proc_guard_dir, usd_proc_guard_targets[0].name), usd_proc_guard_targets)
+else:
+   guard_env = test_env.Clone(SHLIBSUFFIX = sa.system.LIB_EXTENSION)
+   guard_obj = guard_env.SharedObject(os.path.join(usd_proc_guard_dir, 'usd_proc_guard'), usd_proc_guard_source)
+   USD_PROC_GUARD = guard_env.SharedLibrary(os.path.join(usd_proc_guard_dir, 'usd_proc'), guard_obj)
+
 os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
 os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']
+os.environ['USD_PROCEDURAL_GUARD_PATH'] = usd_proc_guard_dir
 os.environ['PREFIX_TEST_RENDERDELEGATE'] = test_env['PREFIX_RENDER_DELEGATE'] + os.pathsep + test_env['PREFIX_SCHEMAS']
 
 if test_env.get('ARNOLD_CER_AUTOSEND_EMAIL'):
@@ -433,6 +454,7 @@ TESTSUITE = None
 
 if len(testsuite_targets) > 0:
    TESTSUITE_TESTS.extend(test.scons_target for test in (testsuite.tests[_] for _ in testsuite.tests_prepared))
+   test_env.Depends(TESTSUITE_TESTS, USD_PROC_GUARD)
    TESTSUITE_REPORT = TESTSUITE_TARGET
    for target in TESTSUITE_TARGET:
       BUILD_TARGETS.append(target if is_string(target) else target.path)

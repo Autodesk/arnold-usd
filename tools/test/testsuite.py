@@ -159,7 +159,11 @@ class Testsuite(object):
          self.environment['ARNOLD_PLUGIN_PATH'] = self.environment['TESTSUITE_ARNOLD_PLUGIN_PATH']
       else:
          self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
-      
+      # Last, a plugin named like the SDK's usd_proc that installs no node, so the usd procedural shipped in the
+      # Arnold SDK is never loaded, see testsuite/common/usd_proc_guard.cpp
+      if self.environment.get('USD_PROCEDURAL_GUARD_PATH'):
+         self.environment['ARNOLD_PLUGIN_PATH'] += os.pathsep + self.environment['USD_PROCEDURAL_GUARD_PATH']
+
       if 'TESTSUITE_PXR_PLUGINPATH_NAME' in self.environment:
          self.environment['PXR_PLUGINPATH_NAME'] = self.environment['TESTSUITE_PXR_PLUGINPATH_NAME']
       else:
