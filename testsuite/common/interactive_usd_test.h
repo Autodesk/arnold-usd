@@ -81,6 +81,23 @@ struct KnownIssue {
     std::string description;
 };
 
+enum Platform : unsigned {
+    Windows = 1 << 0,
+    Linux = 1 << 1,
+    Darwin = 1 << 2,
+    AllPlatforms = Windows | Linux | Darwin,
+};
+
+// Modes in which a scenario isn't run on some platforms, e.g. because it crashes there. The reason is logged as a
+// warning. On every platform, these modes don't write the render compared against the reference image, the next
+// method does, so that the comparison is the same everywhere (see the per-pass reference images, e.g.
+// ref/reference.hydra.tif).
+struct SkippedModes {
+    unsigned modes;
+    std::string reason;
+    unsigned platforms = AllPlatforms;
+};
+
 struct Step {
     std::string description;
     // Edits the stage before the render, nothing is edited if empty (e.g. for the initial render)
@@ -101,6 +118,7 @@ struct Scenario {
     int aaSamples = 3;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
+    std::vector<SkippedModes> skippedModes;
 };
 
 // Runs the scenario with all its methods, returning the program exit code

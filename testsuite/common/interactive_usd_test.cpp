@@ -734,12 +734,29 @@ int Run(const Scenario& scenario)
     AiBegin(AI_SESSION_INTERACTIVE);
     AiMsgSetConsoleFlags(nullptr, AI_LOG_INFO | AI_LOG_WARNINGS | AI_LOG_ERRORS);
 
+#if defined(_WIN32)
+    const Platform platform = Windows;
+#elif defined(__APPLE__)
+    const Platform platform = Darwin;
+#else
+    const Platform platform = Linux;
+#endif
     bool first = true;
     for (Method method : {Procedural, RenderDelegate}) {
-        if (scenario.methods & method) {
-            RunMethod(scenario, method, first);
-            first = false;
+        if (!(scenario.methods & method))
+            continue;
+        const Mode mode = CurrentMode(method);
+        const auto skipped = std::find_if(scenario.skippedModes.begin(), scenario.skippedModes.end(),
+            [mode](const SkippedModes& skippedModes) { return (skippedModes.modes & mode) != 0; });
+        const bool skippable = skipped != scenario.skippedModes.end();
+        if (skippable && (skipped->platforms & platform)) {
+            AiMsgWarning("[interactive_usd_test] not running the scenario with the %s: %s", ModeName(mode),
+                skipped->reason.c_str());
+            continue;
         }
+        RunMethod(scenario, method, first && !skippable);
+        if (!skippable)
+            first = false;
     }
 
     AiEnd();
