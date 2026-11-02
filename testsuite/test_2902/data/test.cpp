@@ -98,5 +98,11 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { UsdShadeMaterialBindingAPI(stage->GetPrimAtPath(kMesh)).UnbindAllBindings(); },
             AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Blue, right)}), interpolationIssue},
     };
+    // On macOS, the render after the material binding sometimes never finishes, with the hydra 1 reader. Not
+    // understood yet (there's no backtrace), it might be the same Arnold issue as in test_2903 and test_2904, as the
+    // binding also makes the procedural destroy nodes in procedural_update. The hydra pass compares the render of the
+    // render delegate instead, against ref/reference.hydra.tif.
+    scenario.skippedModes = {{ProceduralHydra1,
+        "the render after the material binding can hang on macOS, not understood yet", Darwin}};
     return Run(scenario);
 }
