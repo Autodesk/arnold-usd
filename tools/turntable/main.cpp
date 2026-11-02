@@ -276,7 +276,7 @@ void Configure(CLI::App *app, Args &args)
         ->expected(3)->option_text("R G B");
 
     app->add_flag("--probes", args.probes,
-        "Add light probes in the bottom corners of the camera frame: a grey ball and a chrome ball "
+        "Add light probes in the top corners of the camera frame: a grey ball and a chrome ball "
         "(left), and a Macbeth chart (right)");
 
     app->add_option("--render-settings", args.renderSettings, "RenderSettings prim path to use")
@@ -1242,13 +1242,12 @@ static const int _kMacbethSRGB[24][3] = {
     {243, 243, 242}, {200, 200, 200}, {160, 160, 160}, {122, 122, 121}, { 85,  85,  85}, { 52,  52,  52},
 };
 
-// /__turntable/camera/probes  —  grey and chrome balls (bottom left) and a Macbeth chart
-// (bottom right), parented to the camera so they stay fixed in the frame while the
+// /__turntable/camera/probes  —  grey and chrome balls (top left) and a Macbeth chart
+// (top right), parented to the camera so they stay fixed in the frame while the
 // asset turns. They sit at the orbit distance, in the corners of the frame, which is
 // outside the asset's bounding sphere at the default zoom.
 static void _SetupProbes(const UsdStageRefPtr &stage, const Args &args, const AssetBounds &bounds,
-                         const SdfPath &cameraPath, int effectiveWidth, int effectiveHeight,
-                         bool hasFloor)
+                         const SdfPath &cameraPath, int effectiveWidth, int effectiveHeight)
 {
     const SdfPath probesPath = cameraPath.AppendChild(TfToken("probes"));
     UsdGeomXform probes = UsdGeomXform::Define(stage, probesPath);
@@ -1262,35 +1261,12 @@ static void _SetupProbes(const UsdStageRefPtr &stage, const Args &args, const As
 
     const double radius = unit * 0.09;
     const double cell = unit * 0.07;
-    const double probesHeight = std::max(radius * 2.0, cell * 4.0);
-
-    // With a studio set (cyclo or pedestal) the frame bottom can fall below its floor, which
-    // would bury the probes. Raise them in the frame until they clear the floor, as long as
-    // they still fit under the top edge.
-    double lift = 0.0;
-    if (hasFloor) {
-        GfVec3d eye, target, up;
-        _ComputeCameraEyeAndTarget(args, bounds, eye, target, up);
-        const GfVec3d forward = (target - eye).GetNormalized();
-        const GfVec3d right = GfCross(forward, up).GetNormalized();
-        const GfVec3d camUp = GfCross(right, forward);
-        const int upIndex = _GetUpAxisIndex(bounds.upAxis);
-        const double camUpWorld = camUp[upIndex];
-        if (camUpWorld > 1e-6) {
-            // World height of the probes' lowest edge is: eye + forward * depth + camUp * y.
-            const double bottomY = -halfH + margin;
-            const double lowestWorld = eye[upIndex] + forward[upIndex] * depth + camUpWorld * bottomY;
-            const double floorClearance = bounds.upMin + margin;
-            const double maxLift = std::max(0.0, 2.0 * (halfH - margin) - probesHeight);
-            lift = std::min(std::max(0.0, (floorClearance - lowestWorld) / camUpWorld), maxLift);
-        }
-    }
 
     // The camera looks down its local -Z.
-    UsdGeomXformable(probes.GetPrim()).AddTranslateOp().Set(GfVec3d(0.0, lift, -depth));
+    UsdGeomXformable(probes.GetPrim()).AddTranslateOp().Set(GfVec3d(0.0, 0.0, -depth));
 
     // Balls.
-    const double ballY = -halfH + margin + radius;
+    const double ballY = halfH - margin - radius;
     const struct { const char *name; UsdShadeMaterial material; double x; } balls[] = {
         {"grey_ball", _CreateProbeMaterial(stage, "probe_grey", GfVec3f(0.18f), GfVec3f(0.0f), 0.0f, 1.0f),
             -halfW + margin + radius},
@@ -1311,7 +1287,7 @@ static void _SetupProbes(const UsdStageRefPtr &stage, const Args &args, const As
     const int rows = 4;
     const double gap = cell * 0.08;
     const double left = halfW - margin - cell * columns;
-    const double bottom = -halfH + margin;
+    const double bottom = halfH - margin - cell * rows;
 
     VtVec3fArray points;
     VtIntArray faceVertexCounts;
@@ -1799,7 +1775,7 @@ int Run(const Args &args)
     }
     const SdfPath cameraPath = _SetupCamera(stage, args, bounds, mode, effectiveWidth, effectiveHeight);
     if (args.probes) {
-        _SetupProbes(stage, args, bounds, cameraPath, effectiveWidth, effectiveHeight, !studioSets.empty());
+        _SetupProbes(stage, args, bounds, cameraPath, effectiveWidth, effectiveHeight);
     }
     _SetupLights(stage, args, bounds, mode, args.frames, rigs, selectedRigName);
 
