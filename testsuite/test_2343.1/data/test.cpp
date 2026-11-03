@@ -49,8 +49,7 @@ int main(int, char**)
                     DefinePreviewMaterial(stage, SdfPath("/World/materials/cube_mat"), GfVec3f(0.05f, 0.05f, 0.8f)));
             },
             ExpectColor(Color::Blue),
-            {{ProceduralHydra, "a node created in procedural_update isn't rendered when no existing node was modified"},
-                {ProceduralLegacyReader, legacyReaderIssue}}},
+            {{ProceduralLegacyReader, legacyReaderIssue}}},
         {"prim removal", [&](const UsdStageRefPtr& stage) { stage->RemovePrim(cube); }, ExpectColor(Color::Empty),
             {{ProceduralLegacyReader, legacyReaderIssue}}},
         {"transform change, moving the sphere back",
