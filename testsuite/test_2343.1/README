@@ -1,0 +1,14 @@
+Interactive USD edits of prims and materials, with the usd procedural cache_id and with the render delegate
+
+A sphere in front of the camera has its material attribute changed, moves out of the frame and back, and a cube
+with a new material is added and then removed, the stage being re-rendered after each edit. The scenario runs with
+the "usd" procedural reading the stage through its cache_id in an interactive render session (as MtoA's usd proxy
+shapes), and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image.
+
+Some edits aren't rendered correctly yet by the procedural, they are reported as warnings (known issues in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

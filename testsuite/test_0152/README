@@ -3,3 +3,5 @@ Testing Hydra 16bit/64bit floating point single/multi - component attribute conv
 see #669
 
 author: Pal Mezei
+
+PARAMS: {'program_env': 'render_delegate'}

@@ -159,7 +159,11 @@ class Testsuite(object):
          self.environment['ARNOLD_PLUGIN_PATH'] = self.environment['TESTSUITE_ARNOLD_PLUGIN_PATH']
       else:
          self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
-      
+      # Last, a plugin named like the SDK's usd_proc that installs no node, so the usd procedural shipped in the
+      # Arnold SDK is never loaded, see testsuite/common/usd_proc_guard.cpp
+      if self.environment.get('USD_PROCEDURAL_GUARD_PATH'):
+         self.environment['ARNOLD_PLUGIN_PATH'] += os.pathsep + self.environment['USD_PROCEDURAL_GUARD_PATH']
+
       if 'TESTSUITE_PXR_PLUGINPATH_NAME' in self.environment:
          self.environment['PXR_PLUGINPATH_NAME'] = self.environment['TESTSUITE_PXR_PLUGINPATH_NAME']
       else:
@@ -342,6 +346,13 @@ class Testsuite(object):
             self.tests_ignored['build'].add(key)
          else:
             self.tests_ignored['other'].add(key)
+      missing_program_envs = {}
+      for key in self.tests_ignored['build']:
+         if self.tests[key].missing_program_env:
+            missing_program_envs.setdefault(self.tests[key].program_env, []).append(key)
+      for program_env, keys in sorted(missing_program_envs.items()):
+         print("Ignoring {} test(s) needing the '{}' program environment, which this configuration doesn't provide "
+               "(see TEST_PROGRAM_ENVS in testsuite/SConscript): {}".format(len(keys), program_env, ' '.join(sorted(keys))))
       if env is not None:
          TARGETS = [self.tests[key].scons_target for key in self.tests_prepared]
          if self.want_to_distribute:

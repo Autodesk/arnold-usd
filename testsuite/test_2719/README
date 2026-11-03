@@ -25,10 +25,11 @@ as well as our bookkeeping: a gated render keeps reporting AI_RENDER_STATUS_REND
 a render status check alone would pass whether or not the pause ever took effect. The
 scene itself is built with plain AiNode() calls rather than AiSceneLoad() of a .usda
 file: this test statically links USD directly into the executable (via render_delegate),
-and AiBegin() auto-loads every plugin under ARNOLD_PLUGIN_PATH, including usd_proc.dylib
--- which embeds its own private static copy of USD and crashes the process if loaded
-alongside it. ARNOLD_PLUGIN_PATH is cleared at the top of main() so nothing gets
-auto-loaded; the scene's AA_samples/resolution are deliberately high so the render stays
+and AiBegin() auto-loads every plugin under ARNOLD_PLUGIN_PATH and the Arnold SDK plugins
+folder, including usd_proc -- which embeds its own private static copy of USD and can crash
+the process if loaded alongside it. ARNOLD_PLUGIN_PATH is set at the top of main() to the
+testsuite's usd_proc guard only (testsuite/common/usd_proc_guard.cpp), so no usd_proc gets
+loaded; the scene's AA_samples/resolution are deliberately high so the render stays
 busy long enough for the test to reliably observe it mid-flight, and are trimmed back
 before the final convergence check (converging at that quality takes ~8s on a 10-core M1
 Max, and Restart() starts over from scratch).
@@ -44,3 +45,5 @@ something specific to this test.
 Fixes #2719
 
 author: cyril.pichard@autodesk.com
+
+PARAMS: {'program_env': 'render_delegate'}

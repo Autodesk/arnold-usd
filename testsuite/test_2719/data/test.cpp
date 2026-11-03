@@ -13,12 +13,12 @@
 // The scene is built with plain AiNode() calls rather than AiSceneLoad() of a
 // .usda file: this test statically links USD (via render_delegate) directly
 // into this executable, and AiBegin() auto-loads every plugin under
-// ARNOLD_PLUGIN_PATH -- including usd_proc.dylib, which embeds its own private
-// static copy of USD. Having two independent copies of USD's global registries
-// (TfEnvSetting, TfType, ...) in one process crashes ("Multiple definitions of
-// TfEnvSetting variable detected", then SIGSEGV). Since this test needs no USD
-// scene reading at all, ARNOLD_PLUGIN_PATH is cleared below so no plugin
-// (usd_proc.dylib or otherwise) gets loaded in the first place.
+// ARNOLD_PLUGIN_PATH and the Arnold SDK plugins folder -- including usd_proc,
+// which embeds its own private static copy of USD. Having two independent copies
+// of USD's global registries (TfEnvSetting, TfType, ...) in one process can crash
+// ("Multiple definitions of TfEnvSetting variable detected", then SIGSEGV). Since
+// this test needs no USD scene reading at all, ARNOLD_PLUGIN_PATH is set below to
+// the testsuite's usd_proc guard only, so no usd_proc gets loaded in the first place.
 #include <ai.h>
 
 #include <render_delegate.h>
@@ -162,13 +162,20 @@ void BuildScene(AtUniverse* universe)
 int main(int, char**)
 {
     // See the top-of-file comment: this test needs no Arnold plugins (no USD scene
-    // reading, no custom shaders), and loading one (usd_proc.dylib in particular)
-    // crashes since it embeds its own private static copy of USD alongside the one
-    // statically linked directly into this executable.
+    // reading, no custom shaders), and loading usd_proc is unsafe since it embeds its
+    // own private static copy of USD alongside the one statically linked directly into
+    // this executable. Clearing ARNOLD_PLUGIN_PATH isn't enough, as AiBegin also loads
+    // the usd_proc of the Arnold SDK plugins folder: ARNOLD_PLUGIN_PATH only has the
+    // usd_proc guard set by the testsuite, which installs no node and makes AiBegin
+    // skip the SDK's usd_proc (see testsuite/common/usd_proc_guard.cpp).
+    const char* guardPath = std::getenv("USD_PROCEDURAL_GUARD_PATH");
 #ifdef _WIN32
-    _putenv_s("ARNOLD_PLUGIN_PATH", "");
+    _putenv_s("ARNOLD_PLUGIN_PATH", guardPath ? guardPath : "");
 #else
-    unsetenv("ARNOLD_PLUGIN_PATH");
+    if (guardPath)
+        setenv("ARNOLD_PLUGIN_PATH", guardPath, 1);
+    else
+        unsetenv("ARNOLD_PLUGIN_PATH");
 #endif
 
     AiBegin(AI_SESSION_INTERACTIVE);

@@ -1648,7 +1648,11 @@ void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
     _renderParam->Interrupt();
     // The render pass only rewires the drivers on its next execute, but the render can be restarted before that
     // (e.g. by the Hydra render settings path), and Arnold would then write buckets into freed memory.
-    _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
+    // Once the nodes belong to Arnold (see EnableNodesDestruction) they must not be touched: the procedural's reader
+    // then destroys its render index, possibly while the universe itself is destroyed. Its drivers can't use the
+    // buffers of this render delegate anyway, as they're only created by its render pass.
+    if (_enableNodesDestruction)
+        _ForgetRenderBuffer(dynamic_cast<const HdArnoldRenderBuffer*>(bPrim));
     delete bPrim;
 }
 
