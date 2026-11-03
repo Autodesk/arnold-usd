@@ -97,6 +97,8 @@ protected:
 
     HdArnoldRenderDelegate::PathSetWithDirtyBits _materialDependencies; ///< Materials assigned to this mesh.
     SdfPathVector _lightFilterPaths;  ///< Light filters (light:filters) of the mesh light.
+    VtArray<std::string> _nodeGraphLightFilters; ///< Names of the mesh light filters coming from its node graph.
+    bool _hasLightFilters = false;    ///< Whether filters were set on the mesh light.
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtValue _vertexCountsVtValue;      ///< Vertex nsides. We need to keep it alive for left handed geometries.
