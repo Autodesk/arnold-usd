@@ -42,14 +42,6 @@
 #include <sstream>
 #include <thread>
 
-// TEMPORARY: to log the size of the test program
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#elif defined(__APPLE__)
-#include <mach-o/dyld.h>
-#endif
-
 #ifdef INTERACTIVE_USD_EMBEDDED
 // Defined by the node_loader of plugins/procedural/main.cpp, compiled in the same library
 AI_EXPORT_LIB bool NodeLoader(int i, AtNodeLib* node);
@@ -76,27 +68,6 @@ bool Check_(bool condition, const std::string& message)
         g_success = false;
     }
     return condition;
-}
-
-// TEMPORARY: to compare the size of the test programs between platforms and link flags in the CI
-void LogProgramSize()
-{
-#if defined(_WIN32)
-    wchar_t path[MAX_PATH];
-    const std::filesystem::path program(std::wstring(path, GetModuleFileNameW(nullptr, path, MAX_PATH)));
-#elif defined(__APPLE__)
-    char path[4096];
-    uint32_t pathSize = sizeof(path);
-    const std::filesystem::path program(_NSGetExecutablePath(path, &pathSize) == 0 ? path : "");
-#else
-    const std::filesystem::path program("/proc/self/exe");
-#endif
-    std::error_code error;
-    const auto size = std::filesystem::file_size(program, error);
-    if (error)
-        AiMsgWarning("[interactive_usd_test] can't get the size of the test program: %s", error.message().c_str());
-    else
-        AiMsgInfo("[interactive_usd_test] test program size: %.1f MB", size / (1024.0 * 1024.0));
 }
 
 void SetEnv(const char* name, const std::string& value)
@@ -678,7 +649,6 @@ int Run(const Scenario& scenario)
         return 1;
     AiBegin(AI_SESSION_INTERACTIVE);
     AiMsgSetConsoleFlags(nullptr, AI_LOG_INFO | AI_LOG_WARNINGS | AI_LOG_ERRORS);
-    LogProgramSize();
 
 #if defined(_WIN32)
     const Platform platform = Windows;
