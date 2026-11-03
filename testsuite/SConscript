@@ -23,6 +23,17 @@ root_path        = env.Dir('#').abspath
 testsuite_common = os.path.join(root_path, 'testsuite', 'common')
 
 test_env = env.Clone(SHLIBPREFIX='', SHLIBSUFFIX=('.dll' if sa.system.is_windows else '.so'))
+if sa.system.is_windows:
+   # The /DEBUG that every MSVC build links with makes incremental linking the default, and the .ilk it leaves next to a
+   # test program that embeds the static USD (e.g. the interactive USD tests) is about 400 MB
+   test_env.Append(LINKFLAGS = ['/INCREMENTAL:NO'])
+elif not env['ENABLE_SYMBOLS']:
+   # Without debug info, the symbol table is most of what can be removed from a test program embedding the static USD
+   if sa.system.is_linux:
+      test_env.Append(LINKFLAGS = ['-Wl,--strip-all'])
+   elif sa.system.is_darwin:
+      # The same as usd_proc, see plugins/procedural/SConscript
+      test_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x'))
 
 # Tests compiling shaders, procedurals or using the Arnold SDK will need to locate
 # the Arnold API headers/lib
