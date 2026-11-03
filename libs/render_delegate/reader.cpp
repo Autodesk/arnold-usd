@@ -204,9 +204,16 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _renderDelegate = HdRendererPluginRegistry::GetInstance().CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"), settingsMap);
     }
 
-    assert(_renderDelegate);
     //_renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
-    TF_VERIFY(_renderDelegate);
+    if (!_renderDelegate) {
+        // This happens when the plugin registry has no information about HdArnoldRendererPlugin,
+        // typically when its plugInfo.json can't be found (#2793). We leave the reader without
+        // a render index, all the functions below will skip their work.
+        AiMsgError(
+            "[usd] Could not create the HdArnoldRendererPlugin render delegate. "
+            "Make sure its plugInfo.json is in PXR_PLUGINPATH_NAME");
+        return;
+    }
     {
         std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
         _renderIndex = HdRenderIndex::New(GetArnoldRenderDelegate(), HdDriverVector());
@@ -251,7 +258,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
-    return _renderDelegate.Get() ? GetArnoldRenderDelegate()->_nodes : _nodes; }
+    return _renderDelegate.Get() ? GetArnoldRenderDelegate()->GetProceduralNodes() : _nodes; }
 
 void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath)
 {
@@ -467,7 +474,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
-        std::swap(_nodes, arnoldRenderDelegate->_nodes);
+        arnoldRenderDelegate->SwapProceduralNodes(_nodes);
         
         _renderDelegate = nullptr;
     }
@@ -490,7 +497,10 @@ void HydraArnoldReader::SetFrame(float frame) {
 }
 void HydraArnoldReader::SetMotionBlur(bool motionBlur, float motionStart , float motionEnd ) {}
 void HydraArnoldReader::SetConvertPrimitives(bool b) {}
-void HydraArnoldReader::SetMask(int m) {GetArnoldRenderDelegate()->SetMask(m); }
+void HydraArnoldReader::SetMask(int m) {
+    if (HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate())
+        arnoldRenderDelegate->SetMask(m);
+}
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
@@ -512,6 +522,8 @@ void HydraArnoldReader::Update()
     if (_renderIndex == nullptr)
         return;
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
+    if (arnoldRenderDelegate == nullptr || _renderIndex == nullptr)
+        return;
     if (_useSceneIndex) {
 #ifdef ENABLE_SCENE_INDEX
         _stageSceneIndex->ApplyPendingUpdates();

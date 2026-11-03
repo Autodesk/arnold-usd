@@ -1,0 +1,19 @@
+Geometry deduplication of non-instanced shapes (HDARNOLD_GEOM_DEDUP=2) keeps their own state
+
+In mode 2 (All), identical non-instanced meshes and curves are deduplicated: each duplicate
+renders the canonical node through a single-instance Arnold instancer, which overrides the
+duplicate's own state per instance. The scene has identical quads, deforming quads and curves
+that only differ in what is not hashed for a non-instanced shape:
+- transform, including motion-blurred transforms (2 keys, and 3 keys on a curved path), also
+  on top of a deforming geometry;
+- surface material;
+- doubleSided (usd_override_double_sided is off): a single-sided quad facing away is not
+  visible, a double-sided one is;
+- visibility (invisible prims).
+
+The image must be the same as without deduplication: the usd pass doesn't deduplicate, the
+hydra and hydra2 passes do. test_18101 checks the resulting Arnold nodes.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'environment':[('HDARNOLD_GEOM_DEDUP','2')]}

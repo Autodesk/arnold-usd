@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -84,6 +85,7 @@ struct Args {
     std::string lightRig  = "auto";
     double      lightIntensity = 1.0; // Multiplier applied to every rig's light intensity.
     bool        listLightRigs = false;
+    bool        showDome = false; // Make the dome light visible to camera rays.
     std::string upAxis;   // empty = auto-detect from stage
     double      cameraHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
     double      targetHeight = 0.5; // Relative to bbox height: 0 = bottom, 1 = top.
@@ -233,6 +235,9 @@ void Configure(CLI::App *app, Args &args)
     app->add_option("--light-intensity", args.lightIntensity,
         "Multiplier applied to the selected light rig's intensity (default: 1.0, must be >= 0)")
         ->option_text("MULT");
+
+    app->add_flag("--show-dome", args.showDome,
+        "Make the dome light visible to the camera, showing the HDRI as background (default: hidden)");
 
     app->add_flag("--list-light-rigs", args.listLightRigs,
         "List discovered light rig names and exit");
@@ -1066,6 +1071,59 @@ static bool _FindAssetRenderSettings(const std::string &assetPath,
     return true;
 }
 
+// Returns the near/far clipping range covering the asset and the active studio sets from every
+// camera position. The studio sets live under /__turntable with the camera, so their boxes are
+// taken in that space. The asset is bounded by its sphere, which stays valid when object mode
+// spins /__turntable around the asset center.
+static GfVec2f _ComputeClippingRange(const UsdStageRefPtr &stage, const AssetBounds &bounds,
+                                     const std::vector<GfVec3d> &eyes)
+{
+    std::vector<GfRange3d> studioSetRanges;
+    const UsdPrim root = stage->GetPrimAtPath(SdfPath("/__turntable"));
+    const UsdPrim studioSet = stage->GetPrimAtPath(SdfPath("/__turntable/studioSet"));
+    if (root && studioSet) {
+        UsdGeomBBoxCache bboxCache(UsdTimeCode::Default(), {UsdGeomTokens->default_, UsdGeomTokens->render});
+        // GetChildren skips the inactive studio sets.
+        for (const UsdPrim &child : studioSet.GetChildren()) {
+            const GfRange3d range = bboxCache.ComputeRelativeBound(child, root).ComputeAlignedRange();
+            if (!range.IsEmpty()) {
+                studioSetRanges.push_back(range);
+            }
+        }
+    }
+
+    double nearest = std::numeric_limits<double>::max();
+    double farthest = 0.0;
+    for (const GfVec3d &eye : eyes) {
+        const double centerDistance = (eye - bounds.center).GetLength();
+        nearest = std::min(nearest, centerDistance - bounds.radius);
+        farthest = std::max(farthest, centerDistance + bounds.radius);
+
+        for (const GfRange3d &range : studioSetRanges) {
+            GfVec3d closest;
+            GfVec3d furthest;
+            for (int axis = 0; axis < 3; ++axis) {
+                const double minValue = range.GetMin()[axis];
+                const double maxValue = range.GetMax()[axis];
+                closest[axis] = std::max(minValue, std::min(eye[axis], maxValue));
+                furthest[axis] = std::abs(eye[axis] - minValue) > std::abs(eye[axis] - maxValue) ? minValue : maxValue;
+            }
+            // The camera orbits inside the cyclo, only the sets seen from outside bring the near plane closer.
+            const double closestDistance = (closest - eye).GetLength();
+            if (closestDistance > 0.0) {
+                nearest = std::min(nearest, closestDistance);
+            }
+            farthest = std::max(farthest, (furthest - eye).GetLength());
+        }
+    }
+
+    // Keep a margin on both planes, and a near plane above zero when the camera is zoomed inside
+    // the asset bounding sphere.
+    const double farClip = farthest * 1.1;
+    const double nearClip = std::max(nearest * 0.5, farClip * 1e-5);
+    return GfVec2f(float(nearClip), float(farClip));
+}
+
 // /camera  —  camera with a time-sampled look-at matrix that orbits the asset center
 static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                             const AssetBounds &bounds, TurntableMode mode,
@@ -1073,8 +1131,6 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
 {
     const SdfPath cameraPath("/__turntable/camera");
     const double camDistance = bounds.radius * 3.0 / args.cameraZoom;
-    const double nearClip    = std::max(1.0, camDistance * 0.01);
-    const double farClip     = camDistance * 10.0;
 
     UsdGeomCamera cam = UsdGeomCamera::Define(stage, cameraPath);
 
@@ -1087,6 +1143,8 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     const double targetHeight = _Lerp01(args.targetHeight, bounds.upMin, bounds.upMax);
 
     const int sampleCount = (mode == TurntableMode::RotateCamera) ? args.frames : 1;
+    std::vector<GfVec3d> eyes;
+    eyes.reserve(sampleCount);
     for (int i = 0; i < sampleCount; ++i) {
         const double angle = (mode == TurntableMode::RotateCamera)
             ? (2.0 * _kPi * double(i) / double(args.frames))
@@ -1107,6 +1165,7 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
                           bounds.center[2] + camDistance * std::cos(angle));
             target = GfVec3d(bounds.center[0], targetHeight, bounds.center[2]);
         }
+        eyes.push_back(eye);
 
         // Look-at toward a target at relative bbox height on the up axis.
         const GfVec3d forward = (target - eye).GetNormalized();
@@ -1134,14 +1193,14 @@ static SdfPath _SetupCamera(const UsdStageRefPtr &stage, const Args &args,
     cam.GetHorizontalApertureAttr().Set(haperture);
     cam.GetVerticalApertureAttr().Set(vaperture);
     cam.GetFocalLengthAttr().Set(35.0f);
-    cam.GetClippingRangeAttr().Set(GfVec2f(float(nearClip), float(farClip)));
+    cam.GetClippingRangeAttr().Set(_ComputeClippingRange(stage, bounds, eyes));
 
     return cameraPath;
 }
 
 // /lights/dome  —  dome light, optionally driven by an HDRI texture or color
 static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPath,
-                            const std::string &hdri, float intensity = 1.0f,
+                            const std::string &hdri, float intensity, bool showDome,
                             const GfVec3f &color = GfVec3f(1.0f))
 {
     UsdLuxDomeLight dome = UsdLuxDomeLight::Define(stage, lightPath);
@@ -1150,7 +1209,7 @@ static void _SetupDomeLight(const UsdStageRefPtr &stage, const SdfPath &lightPat
     api.CreateColorAttr().Set(color);
     dome.GetPrim()
         .CreateAttribute(TfToken("primvars:arnold:camera"), SdfValueTypeNames->Float, true)
-        .Set(0.0f);
+        .Set(showDome ? 1.0f : 0.0f);
     if (!hdri.empty()) {
         dome.CreateTextureFileAttr().Set(SdfAssetPath(hdri));
         dome.CreateTextureFormatAttr().Set(UsdLuxTokens->latlong);
@@ -1266,14 +1325,8 @@ static void _SetupLights(const UsdStageRefPtr &stage, const Args &args,
         } else if (rig.isTwoQuad) {
             _SetupTwoQuadRig(stage, bounds, args);
         } else {
-            const float intensity = static_cast<float>(args.lightIntensity);
-            // Use white color for white_dome rig, otherwise no color override
-            if (rig.name == "white_dome") {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity,
-                                GfVec3f(1.0f, 1.0f, 1.0f));
-            } else {
-                _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri, intensity);
-            }
+            _SetupDomeLight(stage, SdfPath("/__turntable/lights/dome"), rig.hdri,
+                            static_cast<float>(args.lightIntensity), args.showDome);
         }
     }
 
@@ -1602,12 +1655,34 @@ int Run(const Args &args)
         deactivatedAssetLights = _DeactivateAssetLights(stage);
     }
 
+    const SdfPath settingsPath = hasAssetSettings ? assetSettingsPath : SdfPath("/Render/TurntableSettings");
     if (hasAssetSettings) {
         _OverrideAssetRenderSettings(stage, assetSettingsPath, cameraPath, args);
-        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, assetSettingsPath.GetString());
     } else {
         _SetupRenderSettings(stage, args, cameraPath);
-        stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, std::string("/Render/TurntableSettings"));
+    }
+    stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, settingsPath.GetString());
+
+    // A background shader handles the camera rays that miss geometry, so it hides
+    // the dome. It comes from --background-color or from the asset render settings.
+    const bool isDomeRig = chosenRig && !chosenRig->isNoLight && !chosenRig->isTwoQuad;
+    std::string background;
+    if (UsdPrim settingsPrim = stage->GetPrimAtPath(settingsPath)) {
+        settingsPrim.GetAttribute(TfToken("arnold:global:background")).Get(&background);
+    }
+    const bool domeVisible = args.showDome && isDomeRig && background.empty();
+    if (args.showDome && !isDomeRig) {
+        fprintf(stderr, "turntable: warning: --show-dome has no effect with the '%s' light rig\n",
+                selectedRigName.c_str());
+    } else if (args.showDome && !background.empty()) {
+        if (args.backgroundColor.size() == 3) {
+            fprintf(stderr, "turntable: warning: --background-color overrides --show-dome; "
+                    "the dome light will not be visible to the camera\n");
+        } else {
+            fprintf(stderr, "turntable: warning: render settings '%s' set background '%s', which hides "
+                    "the dome light from the camera despite --show-dome\n",
+                    settingsPath.GetText(), background.c_str());
+        }
     }
 
     stage->GetRootLayer()->Save();
@@ -1631,12 +1706,16 @@ int Run(const Args &args)
     }
     printf("  Frames    : 0..%d\n", args.frames - 1);
     printf("  RenderSettings: %s (%s)\n",
-           hasAssetSettings ? assetSettingsPath.GetText() : "/Render/TurntableSettings",
+           settingsPath.GetText(),
            hasAssetSettings ? "asset" : "generated");
     printf("  Resolution: %dx%d\n", effectiveWidth, effectiveHeight);
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());
+    if (isDomeRig) {
+        printf("  Show dome : %s\n",
+               domeVisible ? "yes" : (args.showDome ? "no (hidden by background)" : "no"));
+    }
     if (chosenRig && chosenRig->isNoLight) {
         printf("  Asset lights: kept (no_light rig)\n");
     } else {
