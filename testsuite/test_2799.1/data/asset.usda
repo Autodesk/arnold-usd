@@ -51,7 +51,7 @@ def Xform "asset" (
             def Shader "image"
             {
                 uniform token info:id = "arnold:image"
-                asset inputs:filename = @./gobo.png@
+                asset inputs:filename = @../common/gobo.png@
                 color4f outputs:rgba
             }
         }
