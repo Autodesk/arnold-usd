@@ -110,7 +110,7 @@ void HdArnoldBasisCurves::Sync(
     HdArnoldSampledPrimvarType pointsSample;
     bool dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
-                               (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+                               (*dirtyBits & (HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths));
     // We need to set the deform keys first if it is specified
     VtValue deformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
     if (deformKeysVal.IsHolding<int>()) {
