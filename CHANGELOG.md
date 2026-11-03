@@ -6,6 +6,7 @@
 ### Features
 
 - [usd#2779](https://github.com/Autodesk/arnold-usd/issues/2779) - Add turntable --show-dome option to make the dome light visible to the camera
+- [usd#2796](https://github.com/Autodesk/arnold-usd/issues/2796) - Update the usd procedural incrementally when the frame changes in interactive sessions, instead of reloading it
 
 ### Bug fixes
 
