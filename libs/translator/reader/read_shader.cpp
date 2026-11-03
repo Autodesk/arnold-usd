@@ -270,8 +270,10 @@ TfToken UsdArnoldReadLightFilter::GetShaderId(
     TfToken id = lightFilter.GetShaderId(renderContexts);
     if (id.IsEmpty())
         return id;
-    // The arnold context can omit the "arnold:" prefix that ReadShader expects
-    if (!TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()))
+    // The arnold context can omit the "arnold:" prefix that ReadShader expects. We only add it when
+    // the id is the name of an arnold node, as the default shader id could be for another renderer.
+    if (!TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()) &&
+            AiNodeEntryLookUp(AtString(id.GetText())) != nullptr)
         id = TfToken(str::t_arnold_prefix.GetString() + id.GetString());
     return id;
 }

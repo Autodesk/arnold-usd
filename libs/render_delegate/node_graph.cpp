@@ -281,7 +281,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 // Special case for light filters, we need to flush the cache to ensure
                 // they're properly updated in Arnold
                 if (_wasSyncedOnce && (terminalType == str::color || terminalType.GetString().rfind(
-                        "light_filter", 0) == 0)) {
+                        "light_filter", 0) == 0 || (_isLightFilter && terminalType == HdMaterialTerminalTokens->lightFilter))) {
                     nodeGraphChanged = true;
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND | AI_CACHE_QUAD);
                 }

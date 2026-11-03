@@ -985,6 +985,19 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
         // Here we use HdArnoldSetParameter instead of AiNodeSetArray because it will defer connecting the filters
         // to the ProcessConnection method which happens later in the process. This is how the procedural behaves.
         HdArnoldSetParameter(light, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), str::filters), VtValue(filtersNodeName), renderDelegate);
+    } else if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), str::filters) != nullptr) {
+        // No filter anymore : remove the ones that were previously set, otherwise they would stay linked to
+        // the light after being removed from light:filters. The barndoor of spot lights, set when the light
+        // is synced, has to be preserved.
+        const AtArray* currentFilters = AiNodeGetArray(light, str::filters);
+        const uint32_t numCurrentFilters = currentFilters ? AiArrayGetNumElements(currentFilters) : 0;
+        bool hasBarndoor = false;
+        for (uint32_t i = 0; i < numCurrentFilters && !hasBarndoor; ++i) {
+            const AtNode* currentFilter = static_cast<const AtNode*>(AiArrayGetPtr(currentFilters, i));
+            hasBarndoor = currentFilter && AiNodeIs(currentFilter, str::barndoor);
+        }
+        if (numCurrentFilters > 0 && !hasBarndoor)
+            AiNodeResetParameter(light, str::filters);
     }
     return lightShaderPath;
 }
