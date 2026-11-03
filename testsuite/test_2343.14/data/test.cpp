@@ -215,8 +215,13 @@ int main(int, char**)
     // the following steps have known issues that change the render, the reference image is the render
     // with the geom subset
     scenario.referenceStep = 4;
+    // On Linux, the procedural with the hydra 1 reader crashes in the render after the geom subset is removed, likely in
+    // ProceduralRemoveNode on nodes destroyed during procedural_update (CI build 121). The hydra pass compares the
+    // render of the render delegate instead, against ref/reference.hydra.tif.
     scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"},
         {ProceduralHydra2, "the hydra 2 procedural renders the geom subsets black, and AiRender fails once the subset is "
-                           "removed (missing shidxs)"}};
+                           "removed (missing shidxs)"},
+        {ProceduralHydra1, "Arnold can crash in ProceduralRemoveNode on nodes destroyed during procedural_update",
+            Linux}};
     return Run(scenario);
 }

@@ -10,7 +10,9 @@ in test.cpp). The "usd" pass has its own reference image (ref/reference.usd.tif)
 legacy reader.
 On Linux, the procedural doesn't run with the hydra 1 reader, as Arnold can crash after it destroys the arnold
 instancers in procedural_update (ProceduralRemoveNode reads the destroyed nodes). So on every platform, the "hydra"
-pass compares the last render of the render delegate instead, against ref/reference.hydra.tif.
+pass compares the last render of the render delegate instead, against ref/reference.hydra.tif. For the same reason,
+the procedural doesn't run with the hydra 2 reader on Linux, and the "hydra2" pass compares the last render of the
+render delegate, against ref/reference.hydra2.tif.
 
 author: sebastien.blaineau.ortega@autodesk.com
 

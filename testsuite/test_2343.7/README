@@ -8,6 +8,9 @@ and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, se
 testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
 compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
 in test.cpp).
+On Linux, the procedural doesn't run with the hydra 1 reader, as Arnold can crash after it destroys nodes in
+procedural_update. So on every platform, the "hydra" pass compares the render of the render delegate instead, against
+ref/reference.hydra.tif.
 
 author: sebastien.blaineau.ortega@autodesk.com
 
