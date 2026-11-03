@@ -3,7 +3,8 @@
 //
 //   0 = None       : every mesh keeps its own geometry.
 //   1 = Instances  : only point-instancer prototypes are deduplicated (the default).
-//   2 = All        : plain non-instanced duplicates are deduplicated too (as ginstances).
+//   2 = All        : plain non-instanced duplicates are deduplicated too (through a
+//                    single-instance instancer each).
 //
 // scene.usda contains:
 //   - inst_a / inst_b : two point instancers with identical cube prototypes + same material
@@ -13,11 +14,13 @@
 //
 // We count polymeshes that actually carry geometry (a deduplicated duplicate keeps an empty,
 // hidden shell node, so counting every 'polymesh' node would not distinguish the modes) and
-// ginstance nodes (the non-instanced duplicates in "All" mode):
+// instancer nodes: the point-instancer prototypes rendered through an instancer node (modes 1
+// and 2), and the instancer of each non-instanced duplicate ("All" mode). The same goes for the
+// curves. No ginstance is created, and every node keeps a name:
 //
-//   mode 0 : 5 geometry polymeshes, 0 ginstances   (inst_a, inst_b, inst_c, plainA, plainB)
-//   mode 1 : 4 geometry polymeshes, 0 ginstances   (inst_a==inst_b, inst_c, plainA, plainB)
-//   mode 2 : 3 geometry polymeshes, 1 ginstance    (inst_a==inst_b, inst_c, plainA==plainB)
+//   mode 0 : 5 geometry polymeshes, 0 instancers   (inst_a, inst_b, inst_c, plainA, plainB)
+//   mode 1 : 4 geometry polymeshes, 6 instancers   (inst_a==inst_b, inst_c, plainA, plainB)
+//   mode 2 : 3 geometry polymeshes, 8 instancers   (inst_a==inst_b, inst_c, plainA==plainB)
 //
 // This test only links against Arnold (ai). It drives the deduplication - which lives in the
 // render delegate, not the legacy translator - by expanding the usd procedural in its Hydra
@@ -87,6 +90,21 @@ int GeometryCurvesCount(AtUniverse* universe)
     return count;
 }
 
+// Number of nodes without a name. A node created with the name of a node that can't be
+// destroyed while the procedural expands is renamed to an empty string.
+int UnnamedNodeCount(AtUniverse* universe)
+{
+    int count = 0;
+    AtNodeIterator* it = AiUniverseGetNodeIterator(universe, AI_NODE_ALL);
+    while (!AiNodeIteratorFinished(it)) {
+        AtNode* node = AiNodeIteratorGetNext(it);
+        if (AiNodeGetName(node)[0] == '\0')
+            ++count;
+    }
+    AiNodeIteratorDestroy(it);
+    return count;
+}
+
 int NodeCount(AtUniverse* universe, const char* type)
 {
     int count = 0;
@@ -105,7 +123,7 @@ struct ModeCase {
     const char* name;
     int geometryPolymeshes;
     int geometryCurves;
-    int ginstances; // total ginstance nodes (mesh + curve duplicates in "All" mode)
+    int instancers; // total instancer nodes, for meshes and curves
 };
 
 } // namespace
@@ -122,12 +140,12 @@ int main(int /*argc*/, char** /*argv*/)
     UnsetEnv("PROCEDURAL_USE_HYDRA");
 
     // Meshes and curves have parallel geometry groups, so each mode collapses them the same
-    // way. "All" mode produces one mesh ginstance (plainB) and one curve ginstance
-    // (curvePlainB), hence 2 total ginstances.
+    // way. "Instances" mode renders the 3 prototypes of each kind through an instancer node, and
+    // "All" mode adds the instancer of one mesh and one curve duplicate.
     const ModeCase cases[] = {
         {"0", "None", 5, 5, 0},
-        {"1", "Instances", 4, 4, 0},
-        {"2", "All", 3, 3, 2},
+        {"1", "Instances", 4, 4, 6},
+        {"2", "All", 3, 3, 8},
     };
 
     bool success = true;
@@ -148,19 +166,21 @@ int main(int /*argc*/, char** /*argv*/)
         const int geometryCurves = GeometryCurvesCount(universe);
         const int ginstances = NodeCount(universe, "ginstance");
         const int instancers = NodeCount(universe, "instancer");
+        const int unnamed = UnnamedNodeCount(universe);
 
         printf(
-            "[test_18101] mode %s (%s): geometry polymeshes=%d curves=%d ginstances=%d instancers=%d\n", c.mode,
-            c.name, geometryPolymeshes, geometryCurves, ginstances, instancers);
+            "[test_18101] mode %s (%s): geometry polymeshes=%d curves=%d ginstances=%d instancers=%d unnamed=%d\n",
+            c.mode, c.name, geometryPolymeshes, geometryCurves, ginstances, instancers, unnamed);
 
-        if (geometryPolymeshes != c.geometryPolymeshes || geometryCurves != c.geometryCurves ||
-            ginstances != c.ginstances) {
+        if (geometryPolymeshes != c.geometryPolymeshes || geometryCurves != c.geometryCurves || ginstances != 0 ||
+            instancers != c.instancers || unnamed != 0) {
             fprintf(
                 stderr,
-                "[test_18101] FAIL mode %s (%s): expected geometry polymeshes=%d curves=%d ginstances=%d, "
-                "got geometry polymeshes=%d curves=%d ginstances=%d\n",
-                c.mode, c.name, c.geometryPolymeshes, c.geometryCurves, c.ginstances, geometryPolymeshes,
-                geometryCurves, ginstances);
+                "[test_18101] FAIL mode %s (%s): expected geometry polymeshes=%d curves=%d ginstances=0 "
+                "instancers=%d unnamed=0, got geometry polymeshes=%d curves=%d ginstances=%d instancers=%d "
+                "unnamed=%d\n",
+                c.mode, c.name, c.geometryPolymeshes, c.geometryCurves, c.instancers, geometryPolymeshes,
+                geometryCurves, ginstances, instancers, unnamed);
             success = false;
         }
 
