@@ -44,6 +44,10 @@ def obfuscate_log(log_file):
       with open(log_file, 'wb') as f:
          f.write(re.sub(str.encode(r'sig="(?P<sig>.+)"'), sig_repl, contents))
 
+def _depend_on_linked_libraries(env, program):
+   '''Libraries the linker gets through flags, which SCons doesn't scan, see TEST_PROGRAM_DEPENDS in testsuite/SConscript'''
+   env.Depends(program, env.get('TEST_PROGRAM_DEPENDS', []))
+
 class Test:
    Status = enum('OK', 'FAILED', 'CRASHED', 'TIMEDOUT', 'UNSTABLE', 'SKIPPED')
 
@@ -55,7 +59,7 @@ class Test:
          program_sources     = '',
          program_name        = 'test',
          program_env         = None,  ## name of a build environment for the program, see TEST_PROGRAM_ENVS in testsuite/SConscript
-         output_image       = 'testrender.tif',     ## can be '' if the test does not generate an image
+         output_image        = 'testrender.tif',     ## can be '' if the test does not generate an image
          reference_image     = '',
          progressive         = False,
          kick_params         = '',
@@ -95,6 +99,7 @@ class Test:
       self.force_result = force_result
 
       self.status = None
+      self.missing_program_env = False # set by prepare() when the configuration doesn't provide program_env
       self.scons_target = None
       self.run_by_scons = False
 
@@ -183,6 +188,7 @@ class Test:
       # A program needing a build environment that this configuration doesn't provide can't be built, skip the test
       if self.program_env and env is not None and self.program_env not in env.get('TEST_PROGRAM_ENVS', {}):
          self.has_to_build = True
+         self.missing_program_env = True
          return False
 
       if os.path.exists(os.path.join(source_data, 'test.py')):
@@ -318,8 +324,6 @@ class Test:
             if 'UNIVERSAL_ENVS' in env:
                program_targets = []
                for i, e in enumerate(program_env if program_env is not None else env['UNIVERSAL_ENVS']):
-                  if program_env is not None and not self.testsuite.want_to_distribute:
-                     e['PRINT_CMD_LINE_FUNC'] = env['PRINT_CMD_LINE_FUNC']
                   target_build_arch = os.path.join(target_build, e['ARCH'])
                   program_objs = []
                   for cpp in program_source:
@@ -328,13 +332,12 @@ class Test:
                      program_objs.extend(e.Object(obj, cpp))
                   program_target = os.path.join(target_build_arch, self.program_name)
                   program_targets.append(e.Program(program_target, program_objs)[0])
+                  _depend_on_linked_libraries(e, program_targets[-1])
                program_target = os.path.join(target_build, program_targets[0].name)
                program_target = env.lipo(program_target, program_targets)
             else:
                if program_env is None:
                   program_env = env
-               elif not self.testsuite.want_to_distribute:
-                  program_env['PRINT_CMD_LINE_FUNC'] = env['PRINT_CMD_LINE_FUNC']
                program_objs = []
                for cpp in program_source:
                   name = os.path.splitext(os.path.basename(cpp))[0]
@@ -342,6 +345,7 @@ class Test:
                   program_objs.extend(program_env.Object(obj, cpp))
                program_target = os.path.join(target_build, self.program_name)
                program_target = program_env.Program(program_target, program_objs)[0]
+               _depend_on_linked_libraries(program_env, program_target)
             TARGETS += env.Install(target_dist, program_target)
          if self.testsuite.want_to_distribute:
             self.scons_target = TARGETS

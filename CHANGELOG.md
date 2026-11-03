@@ -11,6 +11,7 @@
 
 - [usd#2808](https://github.com/Autodesk/arnold-usd/issues/2808) - Fix turnable clipping plane computation for small objects. 
 - [usd#2793](https://github.com/Autodesk/arnold-usd/issues/2793) - Fix a crash in the ArnoldUsdBundle procedural when HdArnoldRendererPlugin cannot be found, and register the bundle plugInfo files automatically
+- [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 
 ## [7.5.4.0] 
 

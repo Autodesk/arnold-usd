@@ -75,7 +75,9 @@ Check ExpectColor(Color color, const GfVec2f& position);
 Check AllOf(const std::vector<Check>& checks);
 
 // A check that is known to fail in some modes. It is then reported as a warning instead of failing the test, and a
-// warning also tells when it passes, so the known issue can be removed once fixed.
+// warning also tells when it passes, so the known issue can be removed once fixed. When the reference step is affected,
+// the per-pass reference image of these modes (e.g. ref/reference.usd.tif) is rendered with the issue: fixing it also
+// makes the image comparison fail, until that reference image is regenerated or removed.
 struct KnownIssue {
     unsigned modes;
     std::string description;

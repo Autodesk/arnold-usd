@@ -7,6 +7,10 @@
 //    tests fail, rather than silently testing the procedural shipped in the SDK.
 // The interactive USD tests with a static USD only use this plugin, as the procedural is compiled in the test
 // program. Not loading the SDK's usd_proc there matters, as it has its own copy of USD, see interactive_usd_test.cpp.
+// This relies on undocumented behaviors of Arnold's plugin loading (core/src/plugins.cpp), true as of Arnold 7.5:
+// plugins deduplicated by their lowercase file name, ARNOLD_PLUGIN_PATH scanned before the SDK's plugin folder, and a
+// plugin only recorded as loaded when its loader sets a valid version. An Arnold option to not load the SDK's plugins
+// would make this guard unnecessary.
 #include <ai.h>
 
 #include <cstring>

@@ -160,10 +160,14 @@ if interactive_usd_supported:
       ]
       if env.get('BUILD_SCENE_INDEX_PLUGIN'):
          whole_archives.append(('sceneIndexArnold', os.path.join('plugins', 'scene_index')))
+      archives = [os.path.join(build_base_dir, path, ('%s.lib' if sa.system.is_windows else 'lib%s.a') % name)
+         for name, path in whole_archives]
+      # They're given to the linker as flags, which SCons doesn't scan: without this, the test programs wouldn't be
+      # relinked when one of them changes, and could be linked before they're built (see tools/test/test.py)
+      framework_env['TEST_PROGRAM_DEPENDS'] = list(archives)
       if sa.system.is_windows:
          framework_env.Prepend(LIBS = ['usd_translator'] + ['-WHOLEARCHIVE:%s' % name for name, _ in whole_archives])
       else:
-         archives = [os.path.join(build_base_dir, path, 'lib%s.a' % name) for name, path in whole_archives]
          # Unlike on Windows, dependencies.render_delegate() doesn't whole-archive libusd_m here, but USD's own
          # plugins (file formats, schemas, ...) also register through static initializers
          archives.append(os.path.join(framework_env.subst(env['USD_LIB']), 'libusd_m.a'))
@@ -201,6 +205,12 @@ if interactive_usd_supported:
    interactive_usd_env.Prepend(LIBPATH = [framework_dir], LIBS = ['interactive_usd_test'])
    program_envs['interactive_usd'] = interactive_usd_env
 
+# As tools/test/test.py does for test_env when preparing the tests, silence their commands unless the testsuite is
+# distributed
+if 'TESTSUITE_PREFIX' not in test_env:
+   for envs in program_envs.values():
+      for e in (envs if isinstance(envs, list) else [envs]):
+         e['PRINT_CMD_LINE_FUNC'] = lambda s, target, src, env : None
 test_env['TEST_PROGRAM_ENVS'] = program_envs
 
 # A plugin named like the SDK's usd_proc, that installs no node, so that the tests never load the usd procedural

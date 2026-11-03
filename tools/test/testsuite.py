@@ -346,6 +346,13 @@ class Testsuite(object):
             self.tests_ignored['build'].add(key)
          else:
             self.tests_ignored['other'].add(key)
+      missing_program_envs = {}
+      for key in self.tests_ignored['build']:
+         if self.tests[key].missing_program_env:
+            missing_program_envs.setdefault(self.tests[key].program_env, []).append(key)
+      for program_env, keys in sorted(missing_program_envs.items()):
+         print("Ignoring {} test(s) needing the '{}' program environment, which this configuration doesn't provide "
+               "(see TEST_PROGRAM_ENVS in testsuite/SConscript): {}".format(len(keys), program_env, ' '.join(sorted(keys))))
       if env is not None:
          TARGETS = [self.tests[key].scons_target for key in self.tests_prepared]
          if self.want_to_distribute:

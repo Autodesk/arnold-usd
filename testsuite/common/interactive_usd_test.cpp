@@ -674,6 +674,9 @@ int Run(const Scenario& scenario)
         if (!skippable)
             first = false;
     }
+    // e.g. a scenario only run with the procedural, in a mode skipped on some platforms
+    Check_(!first, "no method wrote the render compared against the reference image: every method of the scenario "
+                   "is either not run or in skipped modes");
 
     AiEnd();
     return g_success ? 0 : 1;
