@@ -1,0 +1,15 @@
+More interactive USD edits of a point instancer, with the usd procedural cache_id and with the render delegate
+
+A point instancer of a cube has its prototype size and its instance scales edited, and its scales removed. A sphere
+prototype is added to its prototypes and the cube one removed, it's hidden and shown again, it's excluded from and
+included again in the light link collection of the light, and gets a per-instance displayColor primvar, edited and
+removed. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of step 9 is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

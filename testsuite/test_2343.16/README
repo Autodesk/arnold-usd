@@ -1,0 +1,13 @@
+Interactive USD edits of implicit shapes and of a native arnold prim, with the usd procedural and the render delegate
+
+A sphere, a cube, a cylinder, a cone, a capsule and an ArnoldSphere have their radius, size, axis or height edited,
+the stage being re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

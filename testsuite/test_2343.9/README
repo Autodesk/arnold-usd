@@ -1,0 +1,15 @@
+Interactive USD edits of lights of different types, with the usd procedural cache_id and with the render delegate
+
+A sphere light lighting a grey wall gets spot shaping, whose cone angle changes, which is then removed, and is hidden
+and shown again. It's replaced by a rect light, whose color is connected to a shader and that gets a light filter,
+which are then removed. A dome light, a mesh light and a point instancer of spot lights are then added and edited.
+The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

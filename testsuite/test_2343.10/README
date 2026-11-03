@@ -1,0 +1,14 @@
+Interactive USD edits of meshes deduplicated by the render delegate (HDARNOLD_GEOM_DEDUP=2)
+
+Two identical quad meshes, which the render delegate deduplicates in mode 2 (all identical meshes share their arnold
+geometry). One of them has its points, displayColor, topology and visibility edited, becoming different from the
+other one and identical again, and the other one is removed and added back. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
