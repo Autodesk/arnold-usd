@@ -70,6 +70,11 @@ struct DriverMainData {
     // pixel coordinates are needed for overscan
     int regionMinX = 0;
     int regionMinY = 0;
+
+    // Position of the rendered region in the host's render buffers. The buckets are written relatively to the
+    // region, then moved by this offset. It is 0 unless the host's framing places the data window elsewhere.
+    int bufferOffsetX = 0;
+    int bufferOffsetY = 0;
 };
 
 /// Installs Arnold nodes that are used by the Render Delegate.

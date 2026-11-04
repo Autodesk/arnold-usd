@@ -70,6 +70,8 @@ node_parameters
 {
     AiParameterMtx(str::projMtx, AiM4Identity());
     AiParameterMtx(str::viewMtx, AiM4Identity());
+    AiParameterInt(str::buffer_offset_x, 0);
+    AiParameterInt(str::buffer_offset_y, 0);
     AiParameterPtr(str::color_pointer, nullptr);
     AiParameterPtr(str::depth_pointer, nullptr);
     AiParameterPtr(str::id_pointer, nullptr);
@@ -95,6 +97,8 @@ node_update
     auto* data = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
     ConvertValue(data->projMtx, AiNodeGetMatrix(node, str::projMtx));
     ConvertValue(data->viewMtx, AiNodeGetMatrix(node, str::viewMtx));
+    data->bufferOffsetX = AiNodeGetInt(node, str::buffer_offset_x);
+    data->bufferOffsetY = AiNodeGetInt(node, str::buffer_offset_y);
     data->colorBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::color_pointer));
     data->depthBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::depth_pointer));
     data->idBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::id_pointer));
@@ -164,8 +168,9 @@ driver_process_bucket
     const void* depthData = nullptr;
     // Apply an offset to the pixel coordinates based on the region_min,
     // since we don't own the render buffer, which just knows the output resolution
-    const auto bucket_xo_start = bucket_xo - driverData->regionMinX;
-    const auto bucket_yo_start = bucket_yo - driverData->regionMinY;
+    // The buffer offset is non-zero when the host's framing places the data window away from the buffer origin.
+    const auto bucket_xo_start = bucket_xo - driverData->regionMinX + driverData->bufferOffsetX;
+    const auto bucket_yo_start = bucket_yo - driverData->regionMinY + driverData->bufferOffsetY;
 
     auto checkOutputName = [&outputName](const AtString& name) -> bool {
         return outputName == name;
@@ -183,7 +188,7 @@ driver_process_bucket
                 continue;
             }
             it->second->WriteBucket(
-            bucket_xo - driverData->regionMinX, bucket_yo - driverData->regionMinY, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
+            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
         } else if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
             positionData = bucketData;
         } else if (pixelType == AI_TYPE_FLOAT && checkOutputName(str::Z)) {

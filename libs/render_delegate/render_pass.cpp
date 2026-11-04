@@ -803,6 +803,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
         _acceleratedViewport = _renderDelegate->IsAcceleratedViewport();
         clearBuffers(_renderBuffers, true, width, height);
+        // The data window is rendered at its own position in the host's buffers in framing mode, at the origin
+        // otherwise.
+        AiNodeSetInt(_mainDriver, str::buffer_offset_x, useFraming ? _framing.dataWindow.GetMinX() : 0);
+        AiNodeSetInt(_mainDriver, str::buffer_offset_y, useFraming ? _framing.dataWindow.GetMinY() : 0);
         // In framing mode, Arnold's pixel (0, 0) is the display window origin, so the region is expressed
         // relatively to it. Both windows are y-down like Arnold's region.
         AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX() - displayMin[0]);
