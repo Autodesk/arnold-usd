@@ -304,17 +304,39 @@ if (HOUDINI_LOCATION)
             message(STATUS "USD libraries not shipped by this Houdini, no target defined: ${_missing_usd_libs}")
             unset(_missing_usd_libs)
         endif()
+        # No Python is linked by name, so one delegate binary serves every Python build
+        # of a Houdini version: the handful of CPython symbols the pxr headers inline
+        # (Py_DECREF, Py_None, ...) come from whichever libpython the host loaded.
         if (APPLE)
-            set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-framework Python")
+            # Binding them from the host needs dynamic_lookup; -framework Python would
+            # record Python.framework/Versions/<ver>, absent in another Python's Houdini.
+            set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-Wl,-undefined,dynamic_lookup")
+        elseif (WIN32)
+            # link.exe cannot leave them unresolved, so use the stable-ABI import library:
+            # python3.dll forwards to whichever python<NN>.dll the host loaded.
+            string(REPLACE "." "" _houdini_python_nodot "${HOUDINI_PYTHON_VERSION}")
+            set(_houdini_python3_lib "${HOUDINI_LOCATION}/python${_houdini_python_nodot}/libs/python3.lib")
+            if (NOT EXISTS "${_houdini_python3_lib}")
+                message(FATAL_ERROR "No stable-ABI Python import library at ${_houdini_python3_lib}")
+            endif()
+            set(USD_TRANSITIVE_SHARED_LIBS "${_houdini_python3_lib};Houdini::Dep::tbb")
+            unset(_houdini_python3_lib)
+            unset(_houdini_python_nodot)
         else()
-            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb)
+            # Linux leaves undefined symbols to the host by default.
+            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbb)
+        endif()
+        if (NOT APPLE)
             # H22 no longer exports a tbbmalloc target, although dsolib still ships the lib.
             if (TARGET Houdini::Dep::tbbmalloc)
                 list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::tbbmalloc)
             endif()
             if (${USD_VERSION} VERSION_LESS "0.25.05")
-                list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
+                # hboost_python is named for its Python (libhboost_python311), so it is
+                # only linked where the linker insists, Windows. Elsewhere its symbols
+                # come from the copy the host's USD libraries already loaded.
                 if (WIN32)
+                    list(APPEND USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python)
                     # Houdini's hboost headers still use Boost's auto_link.hpp on MSVC,
                     # which embeds a #pragma comment(lib, "hboost_python<ver>-vc143-mt-x64-1_82.lib")
                     # guess (toolset + boost version suffix) in every translation unit that
