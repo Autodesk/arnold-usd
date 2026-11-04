@@ -105,6 +105,8 @@ protected:
 
     AtNode * ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits);
     AtNode* _camera = nullptr; ///< Arnold camera node.
+    /// The aperture offset was converted to a screen window last time, so that it can be reset when it goes back to 0.
+    bool _hasApertureOffset = false;
     HdArnoldRenderDelegate *_delegate = nullptr;
 };
 

@@ -32,6 +32,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
  ((uv_remap, "primvars:arnold:uv_remap"))
  ((ray_origin, "primvars:arnold:ray_origin"))
  ((ray_direction, "primvars:arnold:ray_direction"))
+ ((screen_window_min, "primvars:arnold:screen_window_min"))
+ ((screen_window_max, "primvars:arnold:screen_window_max"))
 
 );
 // clang-format on
@@ -229,6 +231,16 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         verticalApertureOffset = 2.f*verticalApertureOffset/verticalAperture;
         AiNodeSetVec2(_camera, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);
         AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
+        _hasApertureOffset = true;
+    } else if (_hasApertureOffset) {
+        // The offset went back to 0, restore the default screen window, unless the user authored one with the
+        // arnold primvars. Those were applied above by SetCameraParams and keep priority.
+        _hasApertureOffset = false;
+        if (sceneDelegate->GetCameraParamValue(id, _tokens->screen_window_min).IsEmpty() &&
+            sceneDelegate->GetCameraParamValue(id, _tokens->screen_window_max).IsEmpty()) {
+            AiNodeResetParameter(_camera, str::screen_window_min);
+            AiNodeResetParameter(_camera, str::screen_window_max);
+        }
     }
 
     UpdateCameraShaders(sceneDelegate, renderParam, dirtyBits);

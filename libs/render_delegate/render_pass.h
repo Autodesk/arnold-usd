@@ -153,6 +153,8 @@ private:
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
     bool _acceleratedViewport = false;
+    bool _useFraming = false;           ///< The host framing is used to place the film and the data window.
+    bool _framingWarned = false;        ///< A framing warning has been issued, avoids flooding the log.
     bool _isConverged = false;          ///< State of the render convergence.
 };
 
