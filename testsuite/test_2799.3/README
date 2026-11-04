@@ -1,0 +1,16 @@
+Interactive edits of a mesh light whose light filter comes from its node graph (primvars:arnold:light:shaders)
+
+see #2799
+
+A grey wall is only lit by a mesh light, whose node graph has a light_decay filter cutting the light before it reaches
+the wall. The intensity of the mesh light is edited, the filter must be kept even though the light shaders primvar
+isn't synced. The light shaders are then removed and set back, the filter being removed and added again.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. The legacy reader keeps the filter when the light shaders are removed, this is
+reported as a known issue.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}
