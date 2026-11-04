@@ -642,7 +642,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
 
     // "Framing mode": the host sends a CameraUtilFraming whose display window differs from its data window
-    // (film translate, pan/zoom, overscan, render region...). Only then the display window positions the film
+    // (film translate, pan/zoom, overscan, render region...), or an offset display window. Only then the display window positions the film
     // and the data window is the part of the host's render buffers that gets filled. In every other case
     // (no framing, display window == data window, render settings resolution, dataWindowNDC) the code below
     // behaves as it always did, which keeps Houdini and husk unchanged.
@@ -651,9 +651,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const bool useFraming = hostFraming.IsValid() && delegateResolution[0] <= 0 && delegateResolution[1] <= 0 &&
         !hasWindowNDC &&
         hostFraming.displayWindow.GetSize()[0] >= 0.5 && hostFraming.displayWindow.GetSize()[1] >= 0.5 &&
-        GfRange2f(
-            GfVec2f(hostFraming.dataWindow.GetMin()),
-            GfVec2f(hostFraming.dataWindow.GetMax() + GfVec2i(1, 1))) != hostFraming.displayWindow;
+        (GfRange2f(
+             GfVec2f(hostFraming.dataWindow.GetMin()),
+             GfVec2f(hostFraming.dataWindow.GetMax() + GfVec2i(1, 1))) != hostFraming.displayWindow ||
+         // Display window == data window but away from the buffer origin (e.g. usdview cropping to the camera
+         // viewport): the region and the buffer position still have to be offset.
+         hostFraming.displayWindow.GetMin() != GfVec2f(0.0f, 0.0f));
     // The display window origin in framing mode, Arnold's pixel (0, 0) is located there.
     GfVec2i displayMin(0, 0);
 

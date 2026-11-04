@@ -78,6 +78,8 @@ int main(int, char**)
     const CameraUtilFraming overscan = Framing(GfRange2f(GfVec2f(40, 30), GfVec2f(120, 90)), fullRect);
     // Zoom: the display window is twice the size of the buffer, around its center
     const CameraUtilFraming zoom = Framing(GfRange2f(GfVec2f(-80, -60), GfVec2f(240, 180)), fullRect);
+    // usdview cropping to the camera viewport: the display window is the data window, both away from the origin
+    const CameraUtilFraming crop = Framing(GfRange2f(GfVec2f(40, 0), GfVec2f(120, 120)), GfRect2i(GfVec2i(40, 0), 80, 120));
     // Render region: only the bottom right quarter of the buffer is rendered, the sphere is centered at its corner
     const CameraUtilFraming renderRegion = Framing(fullRange, GfRect2i(GfVec2i(80, 60), 80, 60));
 
@@ -102,6 +104,7 @@ int main(int, char**)
         {"film translate", nullptr, ExpectSphere(filmTranslate), {}, filmTranslate},
         {"overscan, the film is half the size of the buffer", nullptr, ExpectSphere(overscan), {}, overscan},
         {"zoom, the film is twice the size of the buffer", nullptr, ExpectSphere(zoom), {}, zoom},
+        {"display window == data window, away from the origin", nullptr, ExpectSphere(crop), {}, crop},
         {"render region, the data window is a quarter of the buffer", nullptr, ExpectSphere(renderRegion), {},
             renderRegion},
         {"back to no framing", nullptr, ExpectSphere(noFraming), {}, noFraming},

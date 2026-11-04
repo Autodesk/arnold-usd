@@ -225,22 +225,31 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
     float verticalApertureOffset = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalApertureOffset), 0.0f);
     const float horizontalAperture = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalAperture), 0.0f);
     const float verticalAperture = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalAperture), 0.0f);
-    if ((horizontalApertureOffset != 0.f || verticalApertureOffset != 0.f) &&
-        horizontalAperture > AI_EPSILON && verticalAperture > AI_EPSILON) {
-        horizontalApertureOffset = 2.f*horizontalApertureOffset/horizontalAperture;
-        verticalApertureOffset = 2.f*verticalApertureOffset/verticalAperture;
-        AiNodeSetVec2(_camera, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);
-        AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
-        _hasApertureOffset = true;
-    } else if (_hasApertureOffset) {
-        // The offset went back to 0, restore the default screen window, unless the user authored one with the
-        // arnold primvars. Those were applied above by SetCameraParams and keep priority.
-        _hasApertureOffset = false;
-        if (sceneDelegate->GetCameraParamValue(id, _tokens->screen_window_min).IsEmpty() &&
-            sceneDelegate->GetCameraParamValue(id, _tokens->screen_window_max).IsEmpty()) {
-            AiNodeResetParameter(_camera, str::screen_window_min);
-            AiNodeResetParameter(_camera, str::screen_window_max);
+    // Like Karma, the screen window is rebuilt at every sync: the window authored with the arnold primvars if
+    // any, (-1, -1)/(1, 1) otherwise, moved by the aperture offset. Going back to a 0 offset resets it.
+    // Returns false for an authored value of another type, left as SetCameraParams applied it.
+    bool supportedWindow = true;
+    const auto getVec2 = [&](const TfToken& token, const GfVec2f& defaultValue) -> GfVec2f {
+        const VtValue value = sceneDelegate->GetCameraParamValue(id, token);
+        if (value.IsHolding<GfVec2f>()) {
+            return value.UncheckedGet<GfVec2f>();
+        } else if (value.IsHolding<GfVec2d>()) {
+            return GfVec2f(value.UncheckedGet<GfVec2d>());
         }
+        supportedWindow = supportedWindow && value.IsEmpty();
+        return defaultValue;
+    };
+    GfVec2f windowMin = getVec2(_tokens->screen_window_min, GfVec2f(-1.f, -1.f));
+    GfVec2f windowMax = getVec2(_tokens->screen_window_max, GfVec2f(1.f, 1.f));
+    if (supportedWindow) {
+        if (horizontalAperture > AI_EPSILON && verticalAperture > AI_EPSILON) {
+            const GfVec2f offset(
+                2.f * horizontalApertureOffset / horizontalAperture, 2.f * verticalApertureOffset / verticalAperture);
+            windowMin += offset;
+            windowMax += offset;
+        }
+        AiNodeSetVec2(_camera, str::screen_window_min, windowMin[0], windowMin[1]);
+        AiNodeSetVec2(_camera, str::screen_window_max, windowMax[0], windowMax[1]);
     }
 
     UpdateCameraShaders(sceneDelegate, renderParam, dirtyBits);
