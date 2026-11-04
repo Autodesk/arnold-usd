@@ -25,6 +25,10 @@ public:
                    const std::string &path) = 0;
     
     virtual const std::vector<AtNode *> &GetNodes() const = 0;
+    virtual float GetFrame() const = 0;
+    // Return true if this reader can update its arnold nodes to a new frame
+    // through SetFrame + Update, without having to regenerate them
+    virtual bool SupportsFrameUpdates() const { return false; }
 
     const std::string &GetFilename() const { return _filename; }
     const AtArray *GetOverrides() const { return _overrides; }

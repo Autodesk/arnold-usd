@@ -1,0 +1,124 @@
+#usda 1.0
+(
+    customLayerData = {
+        timecode[] timeCodeArray = [1001]
+    }
+    defaultPrim = "persp"
+    endFrame = 1001
+    framesPerSecond = 24
+    startFrame = 1001
+    timeCodesPerSecond = 24
+)
+
+def Scope "Render"
+{
+    def RenderSettings "settings"
+    {
+        custom int arnold:AA_samples = 3
+        int arnold:AA_seed = 1001
+        float arnold:frame = 1001
+        custom int arnold:GI_diffuse_depth = 1
+        custom int arnold:GI_specular_depth = 1
+        custom int arnold:GI_transmission_depth = 8
+        float arnold:meters_per_unit = 0.01
+        bool arnold:texture_automip = 0
+        bool arnold:texture_per_file_stats = 1
+        prepend rel camera = </persp/perspShape>
+        uniform float pixelAspectRatio = 1
+        string primvars:render_layer = "defaultRenderLayer" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        prepend rel products = </Render/Products/defaultArnoldDriver/driver_exr_RGBA>
+        uniform int2 resolution = (160, 120)
+    }
+
+    def Scope "Vars"
+    {
+        def RenderVar "RGBA"
+        {
+            custom string arnold:filter = "gaussian_filter"
+            string arnold:gaussian_filter:name = "defaultArnoldFilter/gaussian_filter"
+            custom float arnold:width = 2
+            uniform token dataType = "color4f"
+            uniform string sourceName = "RGBA"
+        }
+    }
+
+    def Scope "Products"
+    {
+        def "defaultArnoldDriver"
+        {
+            def RenderProduct "driver_exr_RGBA"
+            {
+                custom string arnold:driver = "driver_tiff"
+                string arnold:driver_tiff:name = "defaultArnoldDriver/driver_exr.RGBA"
+                prepend rel orderedVars = </Render/Vars/RGBA>
+                token productName = "testrender.tif"
+            }
+        }
+    }
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (-0.9999939203262329, 2.168404344971009e-19, -0.0034906514920294285, 0), (0.0034501333720982075, 0.15192246437072754, -0.9883863925933838, 0), (0.0005303083453327417, -0.9883924126625061, -0.15192154049873352, 0), (-13.933527946472168, -49.8200798034668, 5.673127174377441, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "aiSkyDomeLight1"
+{
+    def DomeLight "aiSkyDomeLightShape1"
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        float inputs:specular = 1
+        token inputs:texture:format = "latlong"
+        float primvars:arnold:camera = 0
+        bool primvars:arnold:normalize = 1
+        string primvars:dcc_name = "aiSkyDomeLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+    }
+}
+
+
+def ArnoldUsd "proc"
+{
+    string arnold:filename = "twisty-box.usd"
+    float arnold:frame = 0
+    float3[] extent = [(-10.574448, -10.721458, 0), (10.574448, 10.721458, 26.456781)]
+    string primvars:dcc_name = "aiStandInShape" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+}
+

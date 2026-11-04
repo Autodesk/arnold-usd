@@ -458,6 +458,19 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             delete _renderIndex;
             _renderIndex = nullptr;
         }
+        // The reader is now kept until the procedural is destroyed, so release everything
+        // that references the render index or the usd stage (the stage scene index holds it)
+        _tasks.clear();
+        _syncPass.reset();
+        _rootOverridesSceneIndex.Reset();
+        _lightPruningSceneIndex.Reset();
+        _materialPruningSceneIndex.Reset();
+#ifdef ENABLE_SCENE_INDEX
+        _sceneGlobalsSceneIndex.Reset();
+#endif
+        _displayStyleSceneIndex.Reset();
+        _sceneIndex.Reset();
+        _stageSceneIndex.Reset();
 
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
@@ -504,6 +517,10 @@ void HydraArnoldReader::SetRenderPass(const std::string &renderPass) {
 
 void HydraArnoldReader::Update()
 {
+    // The render index was released at the end of ReadStage (non-interactive reader),
+    // there is nothing we can update anymore
+    if (_renderIndex == nullptr)
+        return;
     HdArnoldRenderDelegate *arnoldRenderDelegate = GetArnoldRenderDelegate();
     if (arnoldRenderDelegate == nullptr || _renderIndex == nullptr)
         return;

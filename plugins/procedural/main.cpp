@@ -22,6 +22,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <atomic>
 // FIXME: include paths below
 #include "../../libs/translator/utils/utils.h"
 #include "../../libs/translator/reader/reader.h"
@@ -156,12 +157,8 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
-    const AtString procEntryName(XARNOLDUSDSTRINGIZE(USD_PROCEDURAL_NAME));
-    // in the usd procedural built with arnold, we want the frame to trigger 
-    // a reload of the procedural, as it's not possible to change the usd stage between renders.
-    if (procEntryName == str::usd) {
-        AiMetaDataSetBool(nentry, str::frame, AtString("_triggers_reload"), true);
-    }
+    // Note that the frame does *not* trigger a reload. Frame changes are handled in procedural_update,
+    // either incrementally when the usd stage was kept in memory, or by regenerating the procedural contents.
 
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
@@ -210,19 +207,51 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
     }
 }
 
-procedural_init
+// Store the reader for this procedural in the global map, deleting an eventual previous one
+static void StoreProceduralReader(AtNode *node, ProceduralReader *reader)
 {
-    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, AtString("hydra")), node);
-    *user_ptr = data;
-    bool interactive = AiNodeGetBool(node, AtString("interactive"));
-
-    // For interactive renders, we want to store the ProceduralReader in 
-    // the global map, so that we can retrieve it in procedural_update
-    if (interactive) {
+    ProceduralReader *previousReader = nullptr;
+    {
         std::lock_guard<std::mutex> lock(s_readersMutex);
-        s_readers[node] = data;
+        auto it = s_readers.find(node);
+        if (it != s_readers.end()) {
+            previousReader = it->second;
+            it->second = reader;
+        } else {
+            s_readers[node] = reader;
+        }
     }
+    // A previous reader exists when the procedural is reloaded (e.g. its filename changed).
+    // Its nodes were already destroyed by arnold, deleting the reader won't touch them
+    if (previousReader && previousReader != reader)
+        delete previousReader;
+}
 
+// Determine if the reader should keep the usd stage in memory after the procedural expansion,
+// so that it can later be updated through procedural_update
+static bool IsInteractiveReader(AtNode *node, const ProceduralReader *reader)
+{
+    // The client explicitly asked for interactive updates
+    if (AiNodeGetBool(node, str::interactive))
+        return true;
+
+    // When the usd stage is owned by the client (cache_id), we only update it if we're explicitly
+    // asked to, through the interactive attribute (MTOA-2359)
+    if (AiNodeGetInt(node, str::cache_id) != 0)
+        return false;
+
+    // For readers able to update to a new frame without regenerating their nodes (hydra),
+    // we keep the usd stage in memory during interactive sessions, so that frame changes are fast
+    if (!reader->SupportsFrameUpdates())
+        return false;
+    const AtRenderSession *renderSession = AiUniverseGetRenderSession(AiNodeGetUniverse(node));
+    return renderSession && AiGetSessionMode(renderSession) != AI_SESSION_BATCH;
+}
+
+// Configure the reader based on the procedural attributes, and read the usd data
+static void ReadProcedural(AtNode *node, ProceduralReader *data)
+{
+    const bool interactive = IsInteractiveReader(node, data);
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     data->SetFrame(AiNodeGetFlt(node, AtString("frame")));
     data->SetId(AiNodeGetUInt(node, AtString("id")));
@@ -242,11 +271,11 @@ procedural_init
     if (cache_id != 0) {
         // We have an id to load the Usd Stage in memory, using UsdStageCache
         if (data->Read(cache_id, objectPath))
-            return 1;
-        // If the reader didn't manage to load this cache id, then we read the usd data 
+            return;
+        // If the reader didn't manage to load this cache id, then we read the usd data
         // through a filename as usual
 
-    } 
+    }
     // We load a usd file, with eventual serialized overrides
     const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
 #if ARNOLD_VERSION_NUM >= 70405
@@ -256,7 +285,53 @@ procedural_init
 #endif
     applyProceduralSearchPath(filename, nullptr);
     data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
-    
+}
+
+// Regenerate the whole procedural contents, for readers that can't update their nodes
+// incrementally. This replaces the reload that arnold used to do when the frame changed.
+static void RegenerateProcedural(AtNode *node, ProceduralReader *reader)
+{
+    // Get rid of the nodes created by the previous reader. Arnold doesn't let us destroy all of them
+    // during a procedural update :
+    //   - in batch sessions, no node can be destroyed during an update
+    //   - destroying lights or cameras during a procedural update crashes
+    // In these cases we "retire" the node instead : we reset it to free its data, disable it,
+    // and rename it so that its name can be used by the new nodes. Retired nodes remain
+    // children of the procedural, and will be destroyed with it.
+    const AtRenderSession *renderSession = AiUniverseGetRenderSession(AiNodeGetUniverse(node));
+    const bool batch = renderSession == nullptr || AiGetSessionMode(renderSession) == AI_SESSION_BATCH;
+    static std::atomic<unsigned int> s_retiredCounter{0};
+
+    const std::vector<AtNode *> previousNodes = reader->GetNodes();
+    for (AtNode *previousNode : previousNodes) {
+        const int type = AiNodeEntryGetType(AiNodeGetNodeEntry(previousNode));
+        if (!batch && (type == AI_NODE_SHAPE || type == AI_NODE_SHADER)) {
+            AiNodeDestroy(previousNode);
+            continue;
+        }
+        const std::string retiredName = std::string(AiNodeGetName(previousNode)) +
+            "__retired_" + std::to_string(s_retiredCounter++);
+        AiNodeReset(previousNode);
+        AiNodeSetStr(previousNode, str::name, AtString(retiredName.c_str()));
+        AiNodeSetDisabled(previousNode, true);
+    }
+
+    // Create a new reader, it will replace (and delete) the previous one in the global map.
+    // The new nodes will be added to the procedural
+    ProceduralReader *newReader = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, str::hydra), node);
+    StoreProceduralReader(node, newReader);
+    ReadProcedural(node, newReader);
+}
+
+procedural_init
+{
+    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, AtString("hydra")), node);
+    *user_ptr = data;
+
+    // We store the ProceduralReader in the global map, so that we can retrieve it in procedural_update.
+    // It will be deleted in procedural_finish
+    StoreProceduralReader(node, data);
+    ReadProcedural(node, data);
     return 1;
 }
 
@@ -264,16 +339,9 @@ procedural_init
 
 procedural_cleanup
 {
-    ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
-
-#ifndef ENABLE_SHARED_ARRAYS
-    // For interactive procedurals, we don't want to delete the ProceduralReader 
-    // when the render finishes, as we will need it later on, during procedural_update.
-    // Also with shared arrays we should never delete the data here, as we need to hold 
-    // the VtValues during the render
-    if (data && !data->GetInteractive())
-        delete data;
-#endif
+    // The ProceduralReader is stored in the global map and will be deleted in procedural_finish,
+    // as we need it during procedural_update. Non-interactive readers already released the usd stage
+    // at the end of their translation, and with shared arrays we need to hold the VtValues during the render
     return 1;
 }
 procedural_finish
@@ -294,12 +362,7 @@ procedural_finish
 // Procedural update will be called right after procedural_init, and at every update,
 // i.e. every time an attribute of the procedural is modified
 procedural_update
-{    
-    bool interactive = AiNodeGetBool(node, AtString("interactive"));
-    // If the procedural is not set for interactive updates, we can skip this function
-    if (!interactive)
-        return;
-         
+{
     ProceduralReader* reader = nullptr;
     {
         // Retrieve the eventual procedural reader stored globally
@@ -311,10 +374,28 @@ procedural_update
     }
     if (!reader)
         return;
- 
-    reader->SetFrame(AiNodeGetFlt(node, str::frame)); 
+
+    // When the usd stage is owned by the client (cache_id), it can disable the interactive
+    // attribute to prevent us from accessing the stage from arnold threads (MTOA-2359)
+    if (reader->GetInteractive() && !AiNodeGetBool(node, str::interactive) && AiNodeGetInt(node, str::cache_id) != 0)
+        return;
+
+    const float frame = AiNodeGetFlt(node, str::frame);
+    if (reader->SupportsFrameUpdates()) {
+        // The usd stage was kept in memory, we just need to set the new frame and
+        // sync the primitives that were modified
+        reader->SetFrame(frame);
+        reader->Update();
+        return;
+    }
+    if (frame != reader->GetFrame()) {
+        // This reader can't update its nodes to the new frame, we need to regenerate them
+        RegenerateProcedural(node, reader);
+        return;
+    }
     // Update the arnold scene based on the modified USD contents
-    reader->Update();
+    if (reader->GetInteractive())
+        reader->Update();
 }
 //-*************************************************************************
 

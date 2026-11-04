@@ -72,7 +72,7 @@ public:
     void SetRenderPass(const std::string &) override {/* Not implemented */}  
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const override { return _nodes; }
-    float GetFrame() const { return _time.frame; }
+    float GetFrame() const override { return _time.frame; }
     UsdArnoldReaderRegistry *GetRegistry() { return _readerRegistry; }
     AtUniverse *GetUniverse() { return _universe; }
     const AtNode *GetProceduralParent() const { return _procParent; }

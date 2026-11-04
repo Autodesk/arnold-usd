@@ -47,6 +47,9 @@ public:
                    const std::string &path) override; // read a specific UsdStage
     
     void SetFrame(float frame) override;
+    float GetFrame() const override { return _time.frame; }
+    // Frame updates are possible as long as the render index (and therefore the usd stage) is kept alive
+    bool SupportsFrameUpdates() const override { return _renderIndex != nullptr; }
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
     void SetConvertPrimitives(bool b) override;
     void SetMask(int m) override;

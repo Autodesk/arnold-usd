@@ -1,0 +1,10 @@
+Changing the frame of a usd procedural in an interactive session updates it without regenerating it
+
+When the hydra translation is used, the usd stage is kept in memory during interactive sessions,
+so that a frame change only syncs the time-varying primitives. The arnold nodes of the 
+non-animated primitives must be preserved. In the legacy usd translation, the procedural 
+contents are regenerated.
+
+See #2422
+
+author: sebastien.ortega
