@@ -1,0 +1,59 @@
+#usda 1.0
+(
+    defaultPrim = "asset"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "asset" (
+    kind = "component"
+)
+{
+    def Mesh "floor"
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        normal3f[] normals = [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+
+    # Spot light (cone shaping) carrying a gobo. Arnold gobo filters only work on spot lights.
+    def SphereLight "spot" (
+        prepend apiSchemas = ["LightAPI", "ShapingAPI"]
+    )
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:intensity = 1
+        float inputs:exposure = 10
+        float inputs:radius = 0.05
+        float inputs:shaping:cone:angle = 40
+        float inputs:shaping:cone:softness = 0.1
+        rel light:filters = </asset/spot/gobo>
+        double3 xformOp:translate = (0, 4, 0)
+        float3 xformOp:rotateXYZ = (-90, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+
+        # Light filter nested in its light (recommended by UsdLux).
+        def LightFilter "gobo"
+        {
+            uniform token lightFilter:shaderId = "arnold:gobo"
+            uniform token arnold:lightFilter:shaderId = "gobo"
+            float inputs:density = 0.5
+            float inputs:sscale = 1
+            float inputs:tscale = 1
+            # Connected to the image shader below, which must be a direct child
+            # of the filter (LightFilter requires encapsulation).
+            color3f inputs:slidemap.connect = </asset/spot/gobo/image.outputs:rgba>
+
+            def Shader "image"
+            {
+                uniform token info:id = "arnold:image"
+                asset inputs:filename = @../common/gobo.png@
+                color4f outputs:rgba
+            }
+        }
+    }
+}

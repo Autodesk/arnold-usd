@@ -36,12 +36,15 @@
 #include <pxr/pxr.h>
 #include "api.h"
 
+#include <pxr/base/vt/array.h>
 #include <pxr/imaging/hd/light.h>
 
 #include "hdarnold.h"
 #include "render_delegate.h"
 
 #include <functional>
+#include <string>
+#include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -104,7 +107,26 @@ HdLight* CreateGeometryLight(HdArnoldRenderDelegate* renderDelegate, const SdfPa
 /// @return Pointer to the Arnold Light, can be nullptr.
 AtNode* GetLightNode(const HdLight* light);
 
-SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light);
+/// Computes the light shaders of a light, connected through a node graph (e.g. primvars:arnold:shaders).
+///
+/// The color terminal is linked to the light color. The filters terminals are returned in
+/// nodeGraphFilters if it is not null, otherwise they are set on the light filters.
+///
+/// @return Path of the node graph, can be empty.
+SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light,
+    std::vector<AtNode*> *nodeGraphFilters = nullptr);
+
+/// Returns the light filter nodes of the UsdLux light:filters relationship of a light, exposed by Hydra 2
+/// as the "filters" entry of the light. The paths of the targets are appended to filterPaths if not null.
+std::vector<AtNode*> ComputeUsdLuxLightFilters(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate,
+    const SdfPath &id, SdfPathVector *filterPaths = nullptr);
+
+/// Returns the names of the given light filter nodes.
+VtArray<std::string> GetLightFilterNames(const std::vector<AtNode*> &filters);
+
+/// Sets the light filters, given by node names. The connection is deferred to ProcessConnection,
+/// like in the procedural. Nothing is done if the list is empty.
+void SetLightFilters(AtNode *light, const VtArray<std::string> &filterNames, HdArnoldRenderDelegate *renderDelegate);
 
 } // namespace HdArnoldLight
 

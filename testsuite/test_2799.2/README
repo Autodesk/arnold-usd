@@ -1,0 +1,10 @@
+Light filter on a mesh light authored with the UsdLux light:filters relationship
+
+see #2799
+
+A light_decay filter nested under a mesh light, on an asset that is referenced under a deeper
+hierarchy. The mesh light must track its filters, as lights do.
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}

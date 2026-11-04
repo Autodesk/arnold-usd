@@ -679,7 +679,14 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         // Compute the light shaders, through primvars:arnold:shaders, that will eventually
         // connect shaders to the color, or some light filters.
-        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, _delegate, id, TfToken("primvars:arnold:shaders"), _light);
+        // The filters of the node graph and the UsdLux light filters (light:filters) are set together,
+        // the node graph ones first. The filters were reset above, so there is nothing to remove if both are empty.
+        std::vector<AtNode*> lightFilters;
+        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, _delegate, id, TfToken("primvars:arnold:shaders"), _light, &lightFilters);
+        SdfPathVector lightFilterPaths;
+        const std::vector<AtNode*> usdLuxFilters = HdArnoldLight::ComputeUsdLuxLightFilters(sceneDelegate, _delegate, id, &lightFilterPaths);
+        lightFilters.insert(lightFilters.end(), usdLuxFilters.begin(), usdLuxFilters.end());
+        HdArnoldLight::SetLightFilters(_light, HdArnoldLight::GetLightFilterNames(lightFilters), _delegate);
 
         // If a light shader was specified, we don't need to take into account the light temperature
         // nor the eventual file texture, as it will be overridden by the connection #2307
@@ -780,6 +787,9 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
         if (!lightShaderPath.IsEmpty())
             pathSet.insert({lightShaderPath, HdLight::DirtyParams});
+        // The light must be updated when one of its UsdLux light filters changes
+        for (const SdfPath &lightFilterPath : lightFilterPaths)
+            pathSet.insert({lightFilterPath, HdLight::DirtyParams});
 
         // Instanced lights are Sprims, and Hydra does not re-sync them when only their Point
         // Instancer animates - the instancer's prototype chain has no Rprim to carry the dirty
@@ -919,7 +929,8 @@ AtNode* GetLightNode(const HdLight* light)
     return static_cast<const HdArnoldGenericLight*>(light)->GetLightNode();
 }
 
-SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
+SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light,
+    std::vector<AtNode*> *nodeGraphFilters)
 {
     // Get the value of the parameter on the light
     VtValue lightParamValue = sceneDelegate->GetLightParamValue(id, attr);
@@ -952,18 +963,56 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelega
             } 
             
             lightFilters = nodeGraph->GetOrCreateTerminals(sceneDelegate, _tokens->filtersArray);
-            if (!lightFilters.empty()) {
-                VtArray<std::string> filtersNodeName;
-                for (const AtNode *node:lightFilters) {
-                    filtersNodeName.push_back(AiNodeGetName(node));
-                }
-                // Here we use HdArnoldSetParameter instead of AiNodeSetArray because it will defer connecting the filters
-                // to the ProcessConnection method which happens later in the process. This is how the procedural behaves.
-                HdArnoldSetParameter(light, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), str::filters), VtValue(filtersNodeName), renderDelegate);
-            }
         }
     }
+
+    if (nodeGraphFilters)
+        nodeGraphFilters->insert(nodeGraphFilters->end(), lightFilters.begin(), lightFilters.end());
+    else
+        SetLightFilters(light, GetLightFilterNames(lightFilters), renderDelegate);
     return lightShaderPath;
+}
+
+std::vector<AtNode*> ComputeUsdLuxLightFilters(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate,
+    const SdfPath &id, SdfPathVector *filterPaths)
+{
+    // UsdLux light filters : the light:filters relationship is exposed by Hydra 2 as the "filters"
+    // entry of the light. Each target is a LightFilter prim, translated as a node graph with a "lightFilter" terminal.
+    std::vector<AtNode*> lightFilters;
+    const VtValue filtersValue = sceneDelegate->GetLightParamValue(id, HdTokens->filters);
+    if (!filtersValue.IsHolding<SdfPathVector>())
+        return lightFilters;
+
+    for (const SdfPath &filterPath : filtersValue.UncheckedGet<SdfPathVector>()) {
+        if (filterPaths)
+            filterPaths->push_back(filterPath);
+        HdArnoldNodeGraph *filterGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), filterPath, renderDelegate);
+        if (filterGraph) {
+            AtNode *filterNode = filterGraph->GetOrCreateTerminal(sceneDelegate, HdMaterialTerminalTokens->lightFilter);
+            if (filterNode)
+                lightFilters.push_back(filterNode);
+        }
+    }
+    return lightFilters;
+}
+
+VtArray<std::string> GetLightFilterNames(const std::vector<AtNode*> &filters)
+{
+    VtArray<std::string> filterNames;
+    filterNames.reserve(filters.size());
+    for (const AtNode *node : filters) {
+        filterNames.push_back(AiNodeGetName(node));
+    }
+    return filterNames;
+}
+
+void SetLightFilters(AtNode *light, const VtArray<std::string> &filterNames, HdArnoldRenderDelegate *renderDelegate)
+{
+    if (filterNames.empty())
+        return;
+    // Here we use HdArnoldSetParameter instead of AiNodeSetArray because it will defer connecting the filters
+    // to the ProcessConnection method which happens later in the process. This is how the procedural behaves.
+    HdArnoldSetParameter(light, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), str::filters), VtValue(filterNames), renderDelegate);
 }
 
 } // namespace HdArnoldLight

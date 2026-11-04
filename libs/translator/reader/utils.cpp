@@ -24,6 +24,7 @@
 #include <pxr/usd/usdGeom/imageable.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdGeom/pointInstancer.h>
+#include <pxr/usd/usdLux/lightFilter.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
 
@@ -651,7 +652,8 @@ static void _PopulateNodeGraphNameMap(UsdArnoldReader *reader)
 
 bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &attr,
                                     const std::string &attrName, UsdArnoldReaderContext &context,
-                                    UsdArnoldReaderContext::ConnectionType cType) {
+                                    UsdArnoldReaderContext::ConnectionType cType,
+                                    int *numElements = nullptr) {
 
 
     bool success = false;
@@ -723,6 +725,8 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
             // the output attribute must have the same name as the input one in the RenderSettings
             UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
             if (outputAttr) {
+                if (numElements)
+                    *numElements = arrayIndex;
                 SdfPathVector sourcePaths;
                 // Check which shader is connected to this output
                 if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
@@ -745,13 +749,28 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
 
 
 void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, AtNode *node, UsdArnoldReaderContext &context)
-{    
-    if (!shadersAttr || !shadersAttr.HasAuthoredValue()) {
-        return;
+{
+    // Number of filters already connected through the ArnoldNodeGraph, new ones are appended after them
+    int numFilters = 0;
+    if (shadersAttr && shadersAttr.HasAuthoredValue()) {
+        ReadNodeGraphAttr(prim, node, shadersAttr, "color", context, ArnoldAPIAdapter::CONNECTION_LINK);
+        ReadNodeGraphAttr(prim, node, shadersAttr, "filters", context, ArnoldAPIAdapter::CONNECTION_ARRAY, &numFilters);
     }
-    
-    ReadNodeGraphAttr(prim, node, shadersAttr, "color", context, ArnoldAPIAdapter::CONNECTION_LINK);
-    ReadNodeGraphAttr(prim, node, shadersAttr, "filters", context, ArnoldAPIAdapter::CONNECTION_ARRAY);
+
+    // UsdLux light filters : the light:filters relationship targets LightFilter prims.
+    // USD composition remaps the targets when the light is referenced, so they can be used as is.
+    static const TfToken lightFiltersToken("light:filters");
+    UsdRelationship filtersRel = prim.GetRelationship(lightFiltersToken);
+    SdfPathVector filterPaths;
+    if (!filtersRel || !filtersRel.GetForwardedTargets(&filterPaths))
+        return;
+    for (const SdfPath &filterPath : filterPaths) {
+        UsdPrim filterPrim = context.GetReader()->GetStage()->GetPrimAtPath(filterPath);
+        if (!filterPrim || !UsdLuxLightFilter(filterPrim))
+            continue;
+        const std::string connAttrName = std::string("filters[") + std::to_string(++numFilters) + std::string("]");
+        context.AddConnection(node, connAttrName, filterPath.GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
+    }
 }
 
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)

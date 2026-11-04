@@ -73,6 +73,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     // USD Shaders (builtin, or custom ones, including arnold)
     UsdArnoldPrimReader *shaderReader = new UsdArnoldReadShader();
     RegisterReader("Shader", shaderReader);
+    RegisterReader("LightFilter", new UsdArnoldReadLightFilter());
 
 #ifdef ARNOLD_USD_MATERIAL_READER
     RegisterReader("NodeGraph", new UsdArnoldReadNodeGraph(*shaderReader));

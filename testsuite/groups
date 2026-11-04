@@ -69,6 +69,10 @@ not_implemented: test_2608
 # coordinate space.
 pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2
 
+# UsdLux light:filters (test_2799) needs the 'filters' light entry published by the scene index.
+# The legacy hydra1 pass doesn't expose that relationship, so it is skipped there.
+pass_hydra: test_2799 test_2799.1 test_2799.2
+
 ############################
 # USER-DEFINED TEST GROUPS #
 ############################

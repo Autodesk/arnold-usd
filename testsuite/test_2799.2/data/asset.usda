@@ -1,0 +1,55 @@
+#usda 1.0
+(
+    defaultPrim = "asset"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "asset" (
+    kind = "component"
+)
+{
+    def Mesh "floor"
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-5, 0, 5), (5, 0, 5), (5, 0, -5), (-5, 0, -5)]
+        normal3f[] normals = [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+
+    # Mesh light with a light filter authored through UsdLux light:filters.
+    def Mesh "lamp" (
+        prepend apiSchemas = ["MeshLightAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.5, 3, -0.5), (0.5, 3, -0.5), (0.5, 3, 0.5), (-0.5, 3, 0.5)]
+        normal3f[] normals = [(0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:intensity = 1
+        float inputs:exposure = 9
+        token light:materialSyncMode = "independent"
+        rel light:filters = </asset/lamp/decay>
+
+        # Strong falloff so a working filter is obvious in the render.
+        def LightFilter "decay"
+        {
+            uniform token lightFilter:shaderId = "arnold:light_decay"
+            uniform token arnold:lightFilter:shaderId = "light_decay"
+            float inputs:near_start = 1
+            float inputs:near_end = 2
+            bool inputs:use_near_atten = 1
+            float inputs:far_start = 2
+            float inputs:far_end = 4
+            bool inputs:use_far_atten = 1
+        }
+    }
+}

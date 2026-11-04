@@ -155,8 +155,8 @@ private:
     HydraArnoldAPI& _context;
 };
 
-HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-    : HdMaterial(id), _renderDelegate(renderDelegate)
+HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, bool isLightFilter)
+    : HdMaterial(id), _renderDelegate(renderDelegate), _isLightFilter(isLightFilter)
 {
 }
 
@@ -188,6 +188,10 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         return;
 
     const auto id = GetId();
+
+    // Light filters are sprims of type lightFilter, so Hydra gives us the HdLight dirty bits
+    if (_isLightFilter && (*dirtyBits & (HdLight::DirtyParams | HdLight::DirtyResource | HdLight::DirtyCollection)))
+        *dirtyBits |= HdMaterial::DirtyResource;
 
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
@@ -277,7 +281,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 // Special case for light filters, we need to flush the cache to ensure
                 // they're properly updated in Arnold
                 if (_wasSyncedOnce && (terminalType == str::color || terminalType.GetString().rfind(
-                        "light_filter", 0) == 0)) {
+                        "light_filter", 0) == 0 || (_isLightFilter && terminalType == HdMaterialTerminalTokens->lightFilter))) {
                     nodeGraphChanged = true;
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND | AI_CACHE_QUAD);
                 }
@@ -427,7 +431,10 @@ void HdArnoldNodeGraph::RemapCoordSysSpaces(
     }
 }
 
-HdDirtyBits HdArnoldNodeGraph::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
+HdDirtyBits HdArnoldNodeGraph::GetInitialDirtyBitsMask() const
+{
+    return _isLightFilter ? (HdLight::AllDirty | HdMaterial::DirtyResource) : HdMaterial::DirtyResource;
+}
 
 AtNode* HdArnoldNodeGraph::GetCachedSurfaceShader() const
 {
@@ -1108,7 +1115,15 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         // If the shader is not already prefixed with its material path, 
         // we add the prefix to the shader name #1940
         std::string arnoldNodeName = GetArnoldShaderName(nodePath, id);
-        AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+        // A light filter shader id authored for the arnold render context is the name of the arnold node
+        // (e.g. "gobo"), without the "arnold:" prefix expected by ReadShader.
+        TfToken shaderIdentifier = node.identifier;
+        if (terminalType == HdMaterialTerminalTokens->lightFilter && node.path == terminalPath &&
+                !TfStringStartsWith(shaderIdentifier.GetString(), str::t_arnold_prefix.GetString()) &&
+                AiNodeEntryLookUp(AtString(shaderIdentifier.GetText())) != nullptr) {
+            shaderIdentifier = TfToken(str::t_arnold_prefix.GetString() + shaderIdentifier.GetString());
+        }
+        AtNode* arnoldNode = ReadShader(arnoldNodeName, shaderIdentifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath) {
             terminalNode = arnoldNode;
@@ -1125,7 +1140,9 @@ HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex &renderIndex, c
     // Since and HdArnoldNodeGraph is used for Material and ArnoldNodeGraph, we need to query both.
     HdArnoldNodeGraph *material = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
     HdArnoldNodeGraph *arnoldNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(str::t_ArnoldNodeGraph, id));
-    HdArnoldNodeGraph *nodeGraph = arnoldNodeGraph ? arnoldNodeGraph : material;
+    // UsdLux light filters are also translated by a node graph, with a lightFilter terminal.
+    HdArnoldNodeGraph *lightFilter = reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->lightFilter, id));
+    HdArnoldNodeGraph *nodeGraph = arnoldNodeGraph ? arnoldNodeGraph : (material ? material : lightFilter);
 
     if (nodeGraph || renderDelegate == nullptr || id.IsEmpty())
         return nodeGraph;

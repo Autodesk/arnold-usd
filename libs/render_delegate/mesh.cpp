@@ -452,7 +452,8 @@ void HdArnoldMesh::Sync(
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
         // Keep track of the materials assigned to this mesh
-        GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
+        _materialDependencies = std::move(nodeGraphs);
+        _TrackDependencies(id);
 
         // The displacement belongs to the geometry, shared by a duplicate.
         if (_IsDuplicate()) {
@@ -477,6 +478,10 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
+        if (meshLight == nullptr) {
+            _nodeGraphLightFilters.clear();
+            _hasLightFilters = false;
+        }
         const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
@@ -517,8 +522,13 @@ void HdArnoldMesh::Sync(
                     }
                     if (shouldSetOnLight) {
                         if (primvarStr == "arnold:shaders") {
+                            // The filters of the node graph are kept, to be set below together with the
+                            // UsdLux light filters. This primvar isn't visited in the syncs where it doesn't change.
+                            std::vector<AtNode*> nodeGraphFilters;
                             HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id,
-                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight);
+                                TfToken(("primvars:" + std::string(primvar.first.GetText())).c_str()), meshLight,
+                                &nodeGraphFilters);
+                            _nodeGraphLightFilters = HdArnoldLight::GetLightFilterNames(nodeGraphFilters);
                         } else {
                             HdArnoldSetConstantPrimvar(
                                 _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value,
@@ -647,6 +657,30 @@ void HdArnoldMesh::Sync(
             }
         }
 
+        // Set the filters of the mesh light : the ones of its node graph (primvars:arnold:light:shaders), stored
+        // when that primvar was last updated, followed by the UsdLux light filters (light:filters).
+        SdfPathVector lightFilterPaths;
+        if (meshLight) {
+            VtArray<std::string> filterNames = _nodeGraphLightFilters;
+            for (const std::string &filterName : HdArnoldLight::GetLightFilterNames(
+                    HdArnoldLight::ComputeUsdLuxLightFilters(sceneDelegate, _renderDelegate, id, &lightFilterPaths))) {
+                filterNames.push_back(filterName);
+            }
+            if (!filterNames.empty()) {
+                HdArnoldLight::SetLightFilters(meshLight, filterNames, _renderDelegate);
+                _hasLightFilters = true;
+            } else if (_hasLightFilters) {
+                // All the filters were removed, they must not stay linked to the light
+                AiNodeResetParameter(meshLight, str::filters);
+                _hasLightFilters = false;
+            }
+        }
+        // Make sure the mesh is updated when one of its light filters changes
+        if (lightFilterPaths != _lightFilterPaths) {
+            _lightFilterPaths = std::move(lightFilterPaths);
+            _TrackDependencies(id);
+        }
+
         UpdateVisibilityAndSidedness();
         const auto autobumpVisibility = _autobumpVisibilityFlags.Compose();
         AiNodeSetByte(node, str::autobump_visibility, autobumpVisibility);
@@ -684,6 +718,15 @@ void HdArnoldMesh::Sync(
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
     
     *dirtyBits = HdChangeTracker::Clean;
+}
+
+void HdArnoldMesh::_TrackDependencies(const SdfPath& id)
+{
+    HdArnoldRenderDelegate::PathSetWithDirtyBits dependencies = _materialDependencies;
+    for (const SdfPath& filterPath : _lightFilterPaths) {
+        dependencies.insert({filterPath, HdChangeTracker::DirtyPrimvar});
+    }
+    GetRenderDelegate()->TrackDependencies(id, dependencies);
 }
 
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const

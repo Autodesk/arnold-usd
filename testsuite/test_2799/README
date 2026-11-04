@@ -1,0 +1,11 @@
+Light filters authored with the UsdLux light:filters relationship on a referenced asset
+
+see #2799
+
+The asset is referenced under a deeper hierarchy than its own root, so the relationship
+targets (and the gobo's slidemap connection) must be remapped by USD composition.
+A decay filter and a gobo filter (with an image shader as slidemap) are tested.
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}
