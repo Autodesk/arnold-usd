@@ -115,9 +115,6 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { UsdGeomImageable(stage->GetPrimAtPath(kLeft)).MakeVisible(); },
             AllOf({ExpectColor(Color::Red, leftEdge), ExpectColor(Color::Empty, rightEdge)})},
     };
-    scenario.skippedModes = {{ProceduralLegacyReader, "the legacy reader doesn't deduplicate geometry"},
-        {ProceduralHydra,
-        "Arnold crashes when the procedural destroys nodes in procedural_update (likely the ProceduralRemoveNode "
-        "dangling node issue), at the first points change"}};
+    scenario.skippedModes = {{ProceduralLegacyReader, "the legacy reader doesn't deduplicate geometry"}};
     return Run(scenario);
 }

@@ -125,12 +125,7 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { stage->RemovePrim(kLaterMaterial); },
             ExpectColor(Color::Green)},
     };
-    // On Linux, the procedural with the hydra 1 reader crashes in the render after the primvar reader is connected,
-    // likely in ProceduralRemoveNode on nodes destroyed during procedural_update (CI build 121). The hydra pass compares
-    // the render of the render delegate instead, against ref/reference.hydra.tif.
     scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths, the legacy reader fails "
-                                                      "most of its edits"},
-        {ProceduralHydra1, "Arnold can crash in ProceduralRemoveNode on nodes destroyed during procedural_update",
-            Linux}};
+                                                      "most of its edits"}};
     return Run(scenario);
 }

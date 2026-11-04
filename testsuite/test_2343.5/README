@@ -8,9 +8,6 @@ testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and
 compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
 in test.cpp). The "usd" pass has its own reference image (ref/reference.usd.tif), showing the known issues of the
 legacy reader.
-On Linux, the procedural doesn't run with the hydra 1 reader, as Arnold can crash after it destroys nodes in
-procedural_update (ProceduralRemoveNode reads the destroyed nodes). So on every platform, the "hydra" pass compares
-the render of step 5 of the render delegate instead, against ref/reference.hydra.tif.
 
 author: sebastien.blaineau.ortega@autodesk.com
 

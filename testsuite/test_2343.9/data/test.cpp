@@ -72,9 +72,14 @@ int main(int, char**)
     const std::vector<KnownIssue> filterRemovalIssue = {
         {DelegateHydra1, "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"},
         {DelegateHydra2, "with hydra 2, the light filter removed from the light shaders node graph stays applied"}};
-    const std::vector<KnownIssue> shadersRemovalIssue = {{DelegateHydra2,
-        "with hydra 2, the light color stays connected after primvars:arnold:shaders is removed"}};
-    const std::vector<KnownIssue> meshLightIssue = {{AnyDelegate,
+    // With hydra 1, the render delegate only applies primvars:arnold:shaders when the hydra 1 procedural rendered first
+    // in the same process (hydra pass). It then fails the color change and the primvar removal instead.
+    const std::vector<KnownIssue> shaderColorIssue = {
+        {DelegateHydra1, "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"},
+        {ProceduralHydra1, "with hydra 1, the color change of the shader connected to the light isn't applied"}};
+    const std::vector<KnownIssue> shadersRemovalIssue = {{DelegateHydra1 | ProceduralHydra2 | DelegateHydra2,
+        "the light color stays connected after primvars:arnold:shaders is removed"}};
+    const std::vector<KnownIssue> meshLightIssue = {{ProceduralHydra | AnyDelegate,
         "the mesh light API applied to a new mesh doesn't light the scene"}};
 
     // The wall covers the whole frame, being in the z = 0 plane
@@ -143,7 +148,7 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) {
                 UsdShadeShader::Get(stage, kFlat).GetInput(TfToken("color")).Set(GfVec3f(0.f, 0.f, 1.f));
             },
-            AllOf({ExpectColor(Color::Blue, center), ExpectColor(Color::Blue, right)}), lightShadersIssue},
+            AllOf({ExpectColor(Color::Blue, center), ExpectColor(Color::Blue, right)}), shaderColorIssue},
         {"light_decay filter added, attenuating the light before it reaches the wall",
             [](const UsdStageRefPtr& stage) {
                 UsdShadeShader decay = DefineShader(stage, kDecay, "arnold:light_decay");
@@ -214,9 +219,6 @@ int main(int, char**)
             AllOf({ExpectColor(Color::Black, left), ExpectColor(Color::Grey, right)})},
     };
     scenario.skippedModes = {{ProceduralLegacyReader,
-        "this test covers the hydra code paths, the legacy reader hangs when the sphere light is replaced by a rect light"},
-        {ProceduralHydra,
-        "Arnold crashes when the procedural destroys nodes in procedural_update (likely the ProceduralRemoveNode "
-        "dangling node issue), at the spot shaping addition, replacing the arnold light"}};
+        "this test covers the hydra code paths, the legacy reader hangs when the sphere light is replaced by a rect light"}};
     return Run(scenario);
 }

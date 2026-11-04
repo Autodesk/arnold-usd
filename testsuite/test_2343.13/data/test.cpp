@@ -36,15 +36,15 @@ UsdGeomPrimvar InstanceColors(const UsdStageRefPtr& stage)
 
 int main(int, char**)
 {
-    const std::vector<KnownIssue> scalesRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
+    const std::vector<KnownIssue> scalesRemovalIssue = {{ProceduralHydra | AnyDelegate,
         "the instances keep the scales of the removed scales attribute"}};
-    const std::vector<KnownIssue> scalesKeptIssue = {{DelegateHydra2,
+    const std::vector<KnownIssue> scalesKeptIssue = {{ProceduralHydra2 | DelegateHydra2,
         "with hydra 2, the instances keep the removed scales until the end"}};
     const std::vector<KnownIssue> newPrototypeIssue = {{ProceduralHydra1 | DelegateHydra1,
         "with hydra 1, a prototype added to the point instancer prototypes isn't rendered"}};
-    const std::vector<KnownIssue> lightLinkIssue = {{ProceduralHydra1 | AnyDelegate,
+    const std::vector<KnownIssue> lightLinkIssue = {{ProceduralHydra | AnyDelegate,
         "excluding the point instancer from a light link collection doesn't unlink its instances"}};
-    const std::vector<KnownIssue> primvarRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
+    const std::vector<KnownIssue> primvarRemovalIssue = {{ProceduralHydra | AnyDelegate,
         "the instances keep the values of a removed per-instance primvar"}};
 
     const GfVec2f left = ScreenPosition(GfVec3d(-1.5, 0, 0));
@@ -136,9 +136,6 @@ int main(int, char**)
     // the last steps have known issues in every mode, the reference image is the render after the light
     // linking edits
     scenario.referenceStep = 9;
-    scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"},
-        {ProceduralHydra2,
-        "Arnold crashes when the procedural destroys nodes in procedural_update (likely the ProceduralRemoveNode "
-        "dangling node issue), at the cube prototype removal"}};
+    scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"}};
     return Run(scenario);
 }
