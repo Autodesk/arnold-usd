@@ -1,0 +1,12 @@
+Interactive USD edits of the camera parameters, with the render delegate
+
+A grey sphere is rendered by a camera whose focal length, apertures, clipping range, projection and depth of field
+are edited, the stage being re-rendered after each edit. The scenario only runs with the HdArnoldRendererPlugin
+render delegate driven like a Hydra host, see testsuite/common/interactive_usd_test.h: the procedural renders the
+stage through an arnold camera made by the framework, that only follows the stage camera transform and field of view.
+Each render is checked in test.cpp, and the last render is compared against the reference image. Edits that aren't
+rendered correctly yet are reported as warnings (known issues in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

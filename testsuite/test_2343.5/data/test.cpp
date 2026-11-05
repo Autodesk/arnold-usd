@@ -103,10 +103,5 @@ int main(int, char**)
     // From the prototype edit, the legacy reader renders the stage differently from one run to the other, see
     // prototypeIssue
     scenario.referenceStep = 5;
-    // Arnold crashes in ProceduralRemoveNode after the procedural destroys nodes in procedural_update: it reads the
-    // destroyed nodes. Seen on Linux only, with the hydra 1 reader, when the instance is made not instanceable. The
-    // hydra pass compares the render of the render delegate instead, against ref/reference.hydra.tif.
-    scenario.skippedModes = {{ProceduralHydra1,
-        "Arnold can crash in ProceduralRemoveNode on nodes destroyed during procedural_update", Linux}};
     return Run(scenario);
 }

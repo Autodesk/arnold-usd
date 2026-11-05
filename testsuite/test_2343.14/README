@@ -1,0 +1,15 @@
+More interactive USD edits of meshes, with the usd procedural cache_id and with the render delegate
+
+A cube mesh has its subdivision scheme and corner sharpness edited. Two quads get a geom subset bound to another
+material, whose indices change before it's removed, have their orientation, doubleSided and
+primvars:arnold:visibility:camera edited, are bound to a material reading a primvar that's added, edited and removed,
+and have authored normals added, edited and removed. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of step 4 is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
