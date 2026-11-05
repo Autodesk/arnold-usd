@@ -76,7 +76,7 @@ void SetNormals(const UsdStageRefPtr& stage, const GfVec3f& normal)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> subdivisionIssue = {{ProceduralHydra1 | AnyDelegate,
         "a subdivision scheme change isn't applied"}};

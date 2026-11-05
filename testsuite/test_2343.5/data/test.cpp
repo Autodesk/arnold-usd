@@ -23,7 +23,7 @@ void SetDisplayColor(const UsdStageRefPtr& stage, const SdfPath& path, const GfV
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> transformIssue = {
         {ProceduralLegacyReader, "the legacy reader doesn't update the matrix when a transform changes"}};

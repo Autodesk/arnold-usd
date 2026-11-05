@@ -7,8 +7,12 @@
 // The testsuite pass selects the procedural reader (PROCEDURAL_USE_HYDRA) and Hydra 1 or 2
 // (USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX), see Mode.
 //
-// A test using it only needs a test.cpp calling Run(), and PARAMS: {'program_env': 'interactive_usd'} in its README,
-// see TEST_PROGRAM_ENVS in testsuite/SConscript. The test program, the procedural and the render delegate must share
+// A test using it only needs a test.cpp whose INTERACTIVE_USD_TEST_MAIN() calls Run(), and
+// PARAMS: {'program_env': 'interactive_usd'} in its README, see TEST_PROGRAM_ENVS in testsuite/SConscript. When a single
+// test runs, its test.cpp is linked in its own program. When several run, their test.cpp are linked in a single
+// program shared by them, which runs the test named by its first argument (see TEST_PROGRAM_COMBINED_ENVS in
+// testsuite/SConscript): this avoids linking the static USD in every test program.
+// The test program, the procedural and the render delegate must share
 // the same USD, for the stage created by the test to be visible to them:
 //  - with a static USD, usd_proc embeds its own private copy of USD, so the usd procedural, the arnold hydra plugins
 //    and USD are statically linked in the test program instead
@@ -29,6 +33,14 @@
 #include <functional>
 #include <string>
 #include <vector>
+
+// The entry point of a test. In a program shared by several tests, TEST_PROGRAM_ENTRY is defined when compiling each
+// test.cpp, to a function name unique to the test that the shared program's main() calls (see tools/test/testsuite.py)
+#ifdef TEST_PROGRAM_ENTRY
+#define INTERACTIVE_USD_TEST_MAIN() int TEST_PROGRAM_ENTRY(int, char**)
+#else
+#define INTERACTIVE_USD_TEST_MAIN() int main(int, char**)
+#endif
 
 namespace interactive_usd_test {
 
