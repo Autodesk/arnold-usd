@@ -1,0 +1,12 @@
+Changes of the host framing from one render to the next, see test_2819 and #2819
+
+A sphere is rendered while the host moves the display window (pan, with a fractional origin), shrinks and moves the
+data window (render region), sends a display window equal to the data window away from the origin, combines an
+overscan with a render region and goes back to no framing.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last one is compared against the
+reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

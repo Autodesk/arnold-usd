@@ -214,6 +214,8 @@ public:
     virtual bool Render(const std::string& filename, Image& image) = 0;
     // The framing sent by the host, only used by the render delegate
     virtual void SetFraming(const CameraUtilFraming&) {}
+    virtual void SetBufferSize(int, int) {}
+    virtual void SetRenderSetting(const std::string&, const VtValue&) {}
 };
 
 // The "usd" procedural compiled in this program, reading the stage through its cache_id
@@ -403,6 +405,21 @@ public:
             _renderPassState->SetFraming(framing);
     }
 
+    void SetBufferSize(int width, int height) override
+    {
+        if (!_colorBuffer)
+            return;
+        _bufferWidth = width;
+        _bufferHeight = height;
+        _colorBuffer->Allocate(GfVec3i(width, height, 1), HdFormatFloat32Vec4, false);
+    }
+
+    void SetRenderSetting(const std::string& name, const VtValue& value) override
+    {
+        if (_renderDelegate)
+            _renderDelegate->SetRenderSetting(TfToken(name), value);
+    }
+
     ~DelegateRenderer() override
     {
         // Tear down in the reverse order: tasks and render pass, scene delegates, render index, render delegate
@@ -559,6 +576,10 @@ void RunMethod(const Scenario& scenario, Method method, bool writeTestRender)
         const Step& step = scenario.steps[i];
         if (step.edit)
             step.edit(stage);
+        for (const auto& setting : step.renderSettings)
+            renderer->SetRenderSetting(setting.first, setting.second);
+        if (step.bufferSize)
+            renderer->SetBufferSize((*step.bufferSize)[0], (*step.bufferSize)[1]);
         if (step.framing)
             renderer->SetFraming(*step.framing);
         const std::string filename = writeTestRender && i == referenceStep

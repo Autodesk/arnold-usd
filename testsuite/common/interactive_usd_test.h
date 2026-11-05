@@ -19,6 +19,8 @@
 #pragma once
 
 #include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/vec2i.h>
+#include <pxr/base/vt/value.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
@@ -30,6 +32,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace interactive_usd_test {
@@ -111,6 +114,12 @@ struct Step {
     // Changes the framing the host sends to the render delegate before this step's render, it is kept by the next
     // steps. Ignored by the procedural.
     std::optional<CameraUtilFraming> framing;
+    // Reallocates the host's render buffer to this size before this step's render (kept by the next steps). It is
+    // the size of the images checked. Ignored by the procedural.
+    std::optional<GfVec2i> bufferSize;
+    // Render settings of the render delegate set before this step's render, e.g. {"resolution", GfVec2i(160, 120)}.
+    // Ignored by the procedural.
+    std::vector<std::pair<std::string, VtValue>> renderSettings;
 };
 
 struct Scenario {
