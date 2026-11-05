@@ -624,6 +624,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
 
         if (useOwnedCamera) {
+            // TODO: in framing mode _projMtx is framed (it maps the data window), while Arnold applies the display
+            // window itself, so this fov is only right when both windows have the same size (see #2819).
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
             AtMatrix invViewMtx;
@@ -744,17 +746,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
             // Nothing is going to be rendered, don't keep the host waiting for convergence.
             _isConverged = true;
+            for (const auto& binding : aovBindings) {
+                if (auto* renderBuffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer)) {
+                    renderBuffer->SetConverged(true);
+                }
+            }
             return;
         }
         // TODO: the accelerated viewport readback copies Arnold's whole render region into a buffer of the
         // same size, it can't write a sub-rect of the host's buffer yet. It skips the readback in that case.
-        if (!regionMatchesBuffer && _renderDelegate->IsAcceleratedViewport() && !_framingWarned) {
-            _framingWarned = true;
+        if (!regionMatchesBuffer && _renderDelegate->IsAcceleratedViewport() && !_acceleratedFramingWarned) {
+            _acceleratedFramingWarned = true;
             TF_WARN("The accelerated viewport doesn't support a framing data window smaller than the render "
                     "buffers yet, the image won't be updated.");
         }
     } else {
         _framingWarned = false;
+        _acceleratedFramingWarned = false;
     }
 
     const bool renderBuffersChanged = _RenderBuffersChanged(aovBindings);
