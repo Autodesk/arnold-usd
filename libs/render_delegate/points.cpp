@@ -80,7 +80,10 @@ void HdArnoldPoints::Sync(
 
     auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+        // Remove the values of the primvars that don't exist anymore
+        TfTokenVector removedPrimvars;
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
+        HdArnoldRemovePrimvars(node, removedPrimvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();

@@ -119,10 +119,12 @@ void HdArnoldBasisCurves::Sync(
         SetDeformKeys(-1);
     }
     bool dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
+    // The primvars that don't exist anymore, whose values must be removed from the curves
+    TfTokenVector removedPrimvars;
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
         // the velocity primvar might not be present in our list #1994
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
     }
 
     HdBasisCurvesTopology topology;
@@ -252,6 +254,7 @@ void HdArnoldBasisCurves::Sync(
 
         // For pinned curves, we might have to remap primvars differently #1240
         bool isPinned = (AiNodeGetStr(node, str::wrap_mode) == str::pinned);
+        HdArnoldRemovePrimvars(node, removedPrimvars);
 
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;

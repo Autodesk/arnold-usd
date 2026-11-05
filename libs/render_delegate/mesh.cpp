@@ -55,6 +55,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (st)
     (uv)
     (catmark)
+    ((arnoldSubdivIterations, "arnold:subdiv_iterations"))
+    ((arnoldSubdivType, "arnold:subdiv_type"))
 );
 // clang-format on
 
@@ -164,23 +166,6 @@ void _RemapNormalKeys(size_t requiredCount, HdArnoldSampledPrimvarType &sample)
     sample.count = requiredCount;
 }
 
-// Returns true if the scene delegate still provides a normals primvar for this mesh, authored or computed
-bool _HasNormalsPrimvar(HdSceneDelegate* sceneDelegate, const SdfPath& id)
-{
-    for (const auto interpolation : {HdInterpolationConstant, HdInterpolationUniform, HdInterpolationVarying,
-                                     HdInterpolationVertex, HdInterpolationFaceVarying, HdInterpolationInstance}) {
-        for (const auto& desc : sceneDelegate->GetPrimvarDescriptors(id, interpolation)) {
-            if (desc.name == HdTokens->normals)
-                return true;
-        }
-        for (const auto& desc : sceneDelegate->GetExtComputationPrimvarDescriptors(id, interpolation)) {
-            if (desc.name == HdTokens->normals)
-                return true;
-        }
-    }
-    return false;
-}
-
 } // namespace
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
@@ -255,18 +240,12 @@ void HdArnoldMesh::Sync(
     
     bool positionsChanged = false;
 
-    bool normalsRemoved = false;
+    // The primvars that don't exist anymore, whose values must be removed from the polymesh
+    TfTokenVector removedPrimvars;
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
         // the velocity primvar might not be present in our list #1994
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
-        // HdArnoldGetPrimvars only returns the primvars that exist, so normals that were removed
-        // would stay in _primvars, and in the arnold node
-        const auto normalsIt = _primvars.find(HdTokens->normals);
-        if (normalsIt != _primvars.end() && !_HasNormalsPrimvar(sceneDelegate, id)) {
-            _primvars.erase(normalsIt);
-            normalsRemoved = true;
-        }
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
     }
 
     // Fetched at most once per Sync, for both the deduplication and the topology translation.
@@ -508,9 +487,29 @@ void HdArnoldMesh::Sync(
             _hasLightFilters = false;
         }
         const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
-        if (normalsRemoved) {
-            AiNodeResetParameter(node, str::nlist);
-            AiNodeResetParameter(node, str::nidxs);
+        for (const auto& removedPrimvar : removedPrimvars) {
+            // These primvars set builtin parameters of the polymesh (see below)
+            if (removedPrimvar == HdTokens->normals) {
+                AiNodeResetParameter(node, str::nlist);
+                AiNodeResetParameter(node, str::nidxs);
+            } else if (removedPrimvar == _tokens->st || removedPrimvar == _tokens->uv) {
+                AiNodeResetParameter(node, str::uvlist);
+                AiNodeResetParameter(node, str::uvidxs);
+            }
+        }
+        HdArnoldRemovePrimvars(node, removedPrimvars);
+        for (const auto& removedPrimvar : removedPrimvars) {
+            // Without these primvars, the subdivision comes back from the display style and the scheme
+            if (removedPrimvar == _tokens->arnoldSubdivIterations) {
+                const int refineLevel = GetDisplayStyle(sceneDelegate).refineLevel;
+                AiNodeSetByte(node, str::subdiv_iterations,
+                    static_cast<uint8_t>(refineLevel <= 0 ? 0 : int(std::log2(float(refineLevel)))));
+            } else if (removedPrimvar == _tokens->arnoldSubdivType) {
+                const TfToken scheme = getMeshTopology().GetScheme();
+                AiNodeSetStr(node, str::subdiv_type,
+                    (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) ? str::catclark
+                                                                                              : str::none);
+            }
         }
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;

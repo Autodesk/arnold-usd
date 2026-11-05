@@ -16,6 +16,7 @@
 - [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 - [usd#2813](https://github.com/Autodesk/arnold-usd/issues/2813) - Fix curve widths not updating in the render delegate when only the widths change
 - [usd#2825](https://github.com/Autodesk/arnold-usd/issues/2825) - Fix removed normals staying applied to meshes in interactive renders
+- [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 
 ## [7.5.4.0] 
 

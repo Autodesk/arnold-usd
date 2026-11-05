@@ -606,10 +606,23 @@ bool HdArnoldGetComputedPrimvars(
 /// @param multiplePositionKeys If the points primvar has multiple position keys.
 /// @param primvars Output variable to store the primvars.
 /// @param interpolations Optional variable to specify which interpolations to query.
+/// @param removedPrimvars Optional output: when given, the primvars of @p primvars that the scene delegate doesn't
+///  provide anymore (neither as primvars nor as computed primvars, for the queried interpolations) are erased from
+///  @p primvars, and their names are returned here.
 HDARNOLD_API
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
-    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr);
+    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr,
+    TfTokenVector* removedPrimvars = nullptr);
+
+/// Removes from an arnold shape what was set by primvars that don't exist anymore: the user parameters declared
+/// for them (and their indices), and the builtin parameters set by primvars:arnold:xyz primvars. The ray flags
+/// (primvars:arnold:visibility:xyz, etc.) are recomposed by the shapes and are not handled here.
+///
+/// @param node The arnold shape.
+/// @param removedPrimvars The names of the removed primvars, as returned by HdArnoldGetPrimvars.
+HDARNOLD_API
+void HdArnoldRemovePrimvars(AtNode* node, const TfTokenVector& removedPrimvars);
 
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.
 ///
