@@ -146,7 +146,28 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
     }
 
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
-        for (const auto& primvar : GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance)) {
+        const auto primvarDescs = GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance);
+        // The descriptors only list the primvars that exist: the ones that were removed must not keep their
+        // previous values (the arnold instancers are rebuilt from these values).
+        auto hasPrimvar = [&](const TfToken& name) {
+            return std::any_of(primvarDescs.begin(), primvarDescs.end(),
+                [&](const HdPrimvarDescriptor& desc) { return desc.name == name; });
+        };
+        if (!hasPrimvar(GetInstanceTransformsToken()))
+            _transforms.Resize(0);
+        if (!hasPrimvar(GetRotateToken()))
+            _rotates.Resize(0);
+        if (!hasPrimvar(GetScaleToken()))
+            _scales.Resize(0);
+        if (!hasPrimvar(GetTranslateToken()))
+            _translates.Resize(0);
+        for (auto it = _primvars.begin(); it != _primvars.end();) {
+            if (hasPrimvar(it->first))
+                ++it;
+            else
+                it = _primvars.erase(it);
+        }
+        for (const auto& primvar : primvarDescs) {
             if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
                 continue;
             }

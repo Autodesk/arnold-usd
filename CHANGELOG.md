@@ -15,6 +15,7 @@
 - [usd#2793](https://github.com/Autodesk/arnold-usd/issues/2793) - Fix a crash in the ArnoldUsdBundle procedural when HdArnoldRendererPlugin cannot be found, and register the bundle plugInfo files automatically
 - [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 - [usd#2813](https://github.com/Autodesk/arnold-usd/issues/2813) - Fix curve widths not updating in the render delegate when only the widths change
+- [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 
 ## [7.5.4.0] 
 
