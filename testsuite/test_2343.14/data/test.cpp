@@ -83,7 +83,7 @@ void SetNormals(const UsdStageRefPtr& stage, const GfVec3f& normal)
 int main(int, char**)
 {
     // Reproduced with the arnold API alone: in an interactive session, creases set on a subdivided polymesh after its
-    // first render aren't applied, even when its topology is set again
+    // first render aren't applied, even when its topology is set again (ARNOLD-18970)
     const std::vector<KnownIssue> creasesIssue = {{ProceduralHydra1 | AnyDelegate,
         "arnold doesn't apply the creases set on a subdivided polymesh that was already rendered"}};
     const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
