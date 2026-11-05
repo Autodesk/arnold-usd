@@ -615,6 +615,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_mainDriver, str::viewMtx, viewMtx);
         }
 
+        // TODO: in framing mode, the ortho screen window should come from the unframed camera projection, as
+        // Arnold maps it onto the display window and not onto the data window (see #2819).
         if (currentCamera && isOrtho) {  // TODO do it once, if proj or size has changed
             GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
             AiNodeSetVec2(currentCamera, str::screen_window_min, screen[0], screen[1]);
@@ -642,10 +644,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
 
     // "Framing mode": the host sends a CameraUtilFraming whose display window differs from its data window
-    // (film translate, pan/zoom, overscan, render region...), or an offset display window. Only then the display window positions the film
-    // and the data window is the part of the host's render buffers that gets filled. In every other case
-    // (no framing, display window == data window, render settings resolution, dataWindowNDC) the code below
-    // behaves as it always did, which keeps Houdini and husk unchanged.
+    // (film translate, pan/zoom, overscan, render region...), or whose display window is offset from the buffer
+    // origin. Only then the display window positions the film and the data window is the part of the host's
+    // render buffers that gets filled. In every other case (no framing, display window == data window at the
+    // origin, render settings resolution, dataWindowNDC) the code below behaves as it always did, which keeps
+    // Houdini and husk unchanged.
     // A host framing combined with a render settings dataWindowNDC is not supported, the windowNDC path wins.
     const CameraUtilFraming& hostFraming = renderPassState->GetFraming();
     const bool useFraming = hostFraming.IsValid() && delegateResolution[0] <= 0 && delegateResolution[1] <= 0 &&
@@ -739,6 +742,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 _framingWarned = true;
                 TF_WARN("The framing's data window is larger than the render buffers, skipping the render.");
             }
+            // Nothing is going to be rendered, don't keep the host waiting for convergence.
+            _isConverged = true;
             return;
         }
         // TODO: the accelerated viewport readback copies Arnold's whole render region into a buffer of the
