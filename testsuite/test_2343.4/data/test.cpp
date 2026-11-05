@@ -82,12 +82,5 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { SetTranslate(stage, kInstancer, GfVec3d(0, 0, 0)); },
             AllOf({ExpectColor(Color::Empty, left), ExpectColor(Color::Green, center), ExpectColor(Color::Blue, right)})},
     };
-    // Arnold crashes in ProceduralRemoveNode after the procedural destroys nodes in procedural_update (the arnold
-    // instancers, rebuilt when the instancer changes): it reads the destroyed nodes. Seen with the hydra 1 reader at
-    // the instancer transform change, crashing on Linux and hanging on macOS (CI build 114). The hydra pass compares
-    // the render of the render delegate instead, against ref/reference.hydra.tif.
-    scenario.skippedModes = {{ProceduralHydra1,
-        "Arnold can crash or hang in ProceduralRemoveNode on nodes destroyed during procedural_update",
-        Linux | Darwin}};
     return Run(scenario);
 }

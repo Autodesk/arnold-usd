@@ -1,0 +1,14 @@
+Interactive USD edits of a material network, with the usd procedural cache_id and with the render delegate
+
+A sphere's material has its diffuseColor connected to a new primvar reader and disconnected, gets an arnold surface
+terminal, which is then moved to a shader already in the network and removed. The sphere is then bound to a material
+that doesn't exist yet, which is defined and removed. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

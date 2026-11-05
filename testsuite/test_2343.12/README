@@ -1,0 +1,14 @@
+Interactive USD edits rebuilding prims, with the usd procedural cache_id and with the render delegate
+
+An asset has its variant selection switched between a sphere and a cube, and is deactivated and reactivated. A
+sphere has its type changed to a cube, a group is removed with its children, a prim is added and removed before the
+render, and a prim is renamed and moved. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
