@@ -80,8 +80,6 @@ int main(int, char**)
 {
     const std::vector<KnownIssue> subdivisionIssue = {{ProceduralHydra1 | AnyDelegate,
         "a subdivision scheme change isn't applied"}};
-    const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
-        "removed authored normals stay applied"}};
     const std::vector<KnownIssue> subsetRemovalIssue = {{DelegateHydra2,
         "with hydra 2, the faces keep the material of a removed geom subset, Arnold reporting missing shidxs"}};
     const std::vector<KnownIssue> orientationIssue = {{ProceduralHydra1 | AnyDelegate,
@@ -210,7 +208,7 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { SetNormals(stage, GfVec3f(0, 1, 0)); }, bothQuads(Color::Black)},
         {"authored normals removed",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kNormals); },
-            bothQuads(Color::Red), normalsRemovalIssue},
+            bothQuads(Color::Red)},
     };
     // the following steps have known issues that change the render, the reference image is the render
     // with the geom subset
