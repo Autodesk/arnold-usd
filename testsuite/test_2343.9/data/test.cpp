@@ -71,13 +71,14 @@ int main(int, char**)
         "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"}};
     const std::vector<KnownIssue> filterRemovalIssue = {
         {DelegateHydra1, "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"},
-        {DelegateHydra2, "with hydra 2, the light filter removed from the light shaders node graph stays applied"}};
+        {ProceduralHydra2 | DelegateHydra2,
+            "with hydra 2, the light filter removed from the light shaders node graph stays applied"}};
     // With hydra 1, the render delegate only applies primvars:arnold:shaders when the hydra 1 procedural rendered first
     // in the same process (hydra pass). It then fails the color change and the primvar removal instead.
     const std::vector<KnownIssue> shaderColorIssue = {
         {DelegateHydra1, "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"},
         {ProceduralHydra1, "with hydra 1, the color change of the shader connected to the light isn't applied"}};
-    const std::vector<KnownIssue> shadersRemovalIssue = {{DelegateHydra1 | ProceduralHydra2 | DelegateHydra2,
+    const std::vector<KnownIssue> shadersRemovalIssue = {{ProceduralHydra | AnyDelegate,
         "the light color stays connected after primvars:arnold:shaders is removed"}};
     const std::vector<KnownIssue> meshLightIssue = {{ProceduralHydra | AnyDelegate,
         "the mesh light API applied to a new mesh doesn't light the scene"}};

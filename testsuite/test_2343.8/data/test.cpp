@@ -70,27 +70,24 @@ int main(int, char**)
         return stage;
     };
 
-    const std::vector<KnownIssue> procLinkIssue = {{ProceduralHydra,
-        "the hydra procedural applies the light link collection edits one update late"}};
-
     scenario.steps = {
         {"initial render", nullptr, AllOf({ExpectColor(Color::Red, left), ExpectColor(Color::Green, right)})},
         {"light link excludes change, the red light lighting none of the spheres",
             [](const UsdStageRefPtr& stage) { SetLinks(stage, kRedLight, {kLeft, kRight}, false); },
-            AllOf({ExpectColor(Color::Black, left), ExpectColor(Color::Green, right)}), procLinkIssue},
+            AllOf({ExpectColor(Color::Black, left), ExpectColor(Color::Green, right)})},
         {"light link includes, swapping the spheres lit by each light",
             [](const UsdStageRefPtr& stage) {
                 SetLinks(stage, kRedLight, {kRight}, true);
                 SetLinks(stage, kGreenLight, {kLeft}, true);
             },
-            AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)}), procLinkIssue},
+            AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)})},
         {"new blue light only lighting the left sphere, and the green light turned off",
             [](const UsdStageRefPtr& stage) {
                 DefineColoredLight(stage, kBlueLight, GfVec3f(0.f, 0.f, 1.f));
                 SetLinks(stage, kBlueLight, {kLeft}, true);
                 UsdLuxDistantLight::Get(stage, kGreenLight).GetIntensityAttr().Set(0.f);
             },
-            AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Red, right)}), procLinkIssue},
+            AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Red, right)})},
         {"the red light, only lighting the right sphere, is removed",
             [](const UsdStageRefPtr& stage) { stage->RemovePrim(kRedLight); },
             AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Black, right)})},
@@ -108,13 +105,7 @@ int main(int, char**)
             },
             AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Blue, center), ExpectColor(Color::Blue, right)})},
     };
-    // The hydra procedural applies the light links one update late (HydraArnoldReader::Update doesn't sync again after
-    // the light linking changes), so after the red light removal the shapes still have it in their light_group, and
-    // Arnold renders with the destroyed light node: it crashes, or with the deferred node release of ARNOLD-18832,
-    // fails the AtNode::light() assert of a dev build.
     scenario.skippedModes = {{ProceduralLegacyReader,
-        "this test covers the hydra code paths, the legacy reader hangs when the red light is removed"},
-        {ProceduralHydra, "the hydra procedural keeps the removed red light in the light_group of the shapes, and "
-                          "Arnold crashes when it renders with that destroyed light"}};
+        "this test covers the hydra code paths, the legacy reader hangs when the red light is removed"}};
     return Run(scenario);
 }

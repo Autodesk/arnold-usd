@@ -537,6 +537,13 @@ void HydraArnoldReader::Update()
     // Connections may have been made as part of the sync pass, so we need to process them
     // again to make sure that the nodes are up to date. (#2269)
     arnoldRenderDelegate->ProcessConnections();
+    // As in ReadStage, the sync may have changed light links or mesh lights, which are only applied
+    // to the shapes by HasPendingChanges and another sync. Without this, these changes would only
+    // be applied at the next update, and the shapes could still reference destroyed lights.
+    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
+        _renderIndex->SyncAll(&_tasks, &_taskContext);
+        arnoldRenderDelegate->ProcessConnections();
+    }
 }
 
 void HydraArnoldReader::WriteDebugScene() const
