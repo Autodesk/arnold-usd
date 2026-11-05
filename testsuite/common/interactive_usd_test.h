@@ -118,6 +118,9 @@ struct Scenario {
     int width = 160;
     int height = 120;
     int aaSamples = 3;
+    // The usd_override_double_sided option, true by default in Arnold, renders every mesh double-sided whatever its
+    // doubleSided attribute. Set it to false to check the sidedness and orientation of meshes.
+    bool usdOverrideDoubleSided = true;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;

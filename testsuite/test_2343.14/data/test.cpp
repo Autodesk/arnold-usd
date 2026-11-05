@@ -27,7 +27,8 @@ const TfToken kCameraVisibility("primvars:arnold:visibility:camera");
 
 UsdGeomMesh Mesh(const UsdStageRefPtr& stage, const SdfPath& path) { return UsdGeomMesh(stage->GetPrimAtPath(path)); }
 
-// A cube of size 1.6, with a red displayColor
+// A cube of size 1.6, with a red displayColor. Without primvars:arnold:subdiv_iterations (or a display style refine
+// level), arnold doesn't subdivide a mesh, whatever its subdivision scheme.
 void DefineCube(const UsdStageRefPtr& stage)
 {
     UsdGeomMesh mesh = UsdGeomMesh::Define(stage, kCube);
@@ -40,6 +41,9 @@ void DefineCube(const UsdStageRefPtr& stage)
     mesh.CreateFaceVertexIndicesAttr().Set(
         VtIntArray{0, 2, 3, 1, 4, 5, 7, 6, 0, 1, 5, 4, 2, 6, 7, 3, 0, 4, 6, 2, 1, 3, 7, 5});
     mesh.CreateDisplayColorPrimvar().Set(VtVec3fArray{GfVec3f(0.8f, 0.05f, 0.05f)});
+    UsdGeomPrimvarsAPI(mesh.GetPrim())
+        .CreatePrimvar(TfToken("arnold:subdiv_iterations"), SdfValueTypeNames->UChar, UsdGeomTokens->constant)
+        .Set(static_cast<unsigned char>(2));
 }
 
 // Two quads side by side, facing the camera, from x = -1 to 1
@@ -78,14 +82,14 @@ void SetNormals(const UsdStageRefPtr& stage, const GfVec3f& normal)
 
 int main(int, char**)
 {
-    const std::vector<KnownIssue> subdivisionIssue = {{ProceduralHydra1 | AnyDelegate,
-        "a subdivision scheme change isn't applied"}};
+    // Reproduced with the arnold API alone: in an interactive session, creases set on a subdivided polymesh after its
+    // first render aren't applied, even when its topology is set again
+    const std::vector<KnownIssue> creasesIssue = {{ProceduralHydra1 | AnyDelegate,
+        "arnold doesn't apply the creases set on a subdivided polymesh that was already rendered"}};
     const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
         "removed authored normals stay applied"}};
     const std::vector<KnownIssue> subsetRemovalIssue = {{DelegateHydra2,
         "with hydra 2, the faces keep the material of a removed geom subset, Arnold reporting missing shidxs"}};
-    const std::vector<KnownIssue> orientationIssue = {{ProceduralHydra1 | AnyDelegate,
-        "an orientation change isn't applied"}};
     const std::vector<KnownIssue> primvarRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
         "the material keeps reading the value of a removed primvar"}};
 
@@ -121,13 +125,13 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) {
                 Mesh(stage, kCube).GetSubdivisionSchemeAttr().Set(UsdGeomTokens->catmullClark);
             },
-            AllOf({ExpectColor(Color::Red, cubeCenter), ExpectColor(Color::Empty, cubeCorner)}), subdivisionIssue},
+            AllOf({ExpectColor(Color::Red, cubeCenter), ExpectColor(Color::Empty, cubeCorner)})},
         {"sharp corners, the cube corners getting back to their positions",
             [](const UsdStageRefPtr& stage) {
                 Mesh(stage, kCube).CreateCornerIndicesAttr().Set(VtIntArray{0, 1, 2, 3, 4, 5, 6, 7});
                 Mesh(stage, kCube).CreateCornerSharpnessesAttr().Set(VtFloatArray(8, 10.f));
             },
-            AllOf({ExpectColor(Color::Red, cubeCenter), ExpectColor(Color::Red, cubeCorner)})},
+            AllOf({ExpectColor(Color::Red, cubeCenter), ExpectColor(Color::Red, cubeCorner)}), creasesIssue},
         {"subdivision scheme change back to none, corners removed",
             [](const UsdStageRefPtr& stage) {
                 Mesh(stage, kCube).GetSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
@@ -153,7 +157,7 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) {
                 Mesh(stage, kQuads).CreateOrientationAttr().Set(UsdGeomTokens->leftHanded);
             },
-            bothQuads(Color::Empty), orientationIssue},
+            bothQuads(Color::Empty)},
         {"doubleSided change to true",
             [](const UsdStageRefPtr& stage) { Mesh(stage, kQuads).CreateDoubleSidedAttr().Set(true); },
             bothQuadsOpaque},
@@ -215,6 +219,8 @@ int main(int, char**)
     // the following steps have known issues that change the render, the reference image is the render
     // with the geom subset
     scenario.referenceStep = 4;
+    // Otherwise arnold renders the quads double-sided, whatever their doubleSided and orientation
+    scenario.usdOverrideDoubleSided = false;
     scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"},
         {ProceduralHydra2, "the hydra 2 procedural renders the geom subsets black, and AiRender fails once the subset is "
                            "removed (missing shidxs)"}};
