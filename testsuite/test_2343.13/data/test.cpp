@@ -1,6 +1,5 @@
 // More interactive edits of a point instancer: prototype geometry, instance scales, prototypes added and removed from
-// the prototypes relationship, the instancer visibility, light linking to the instancer, and per-instance primvars. The
-// per-instance primvar, that might not be removed, comes last, not to change the results of the other steps.
+// the prototypes relationship, the instancer visibility, light linking to the instancer, and per-instance primvars.
 // See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
@@ -126,8 +125,8 @@ int main(int, char**)
             },
             AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Grey, right)})},
     };
-    // the last steps have known issues in every mode, the reference image is the render after the light
-    // linking edits
+    // the reference image is the render after the light linking edits (rendered the same in every mode, unlike the
+    // light linking steps), before the instances get their per-instance colors
     scenario.referenceStep = 9;
     scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"}};
     return Run(scenario);
