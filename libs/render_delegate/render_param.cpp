@@ -82,7 +82,7 @@ AtRenderStatus HdArnoldRenderParam::_UpdateCallback(
 {
     switch (updateType) {
 #if ARNOLD_VERSION_NUM >= 70503
-        case AI_RENDER_UPDATE_VIEWPORT:
+        case AI_RENDER_UPDATE_DIRECT_OUTPUTS:
             // The one update we are here for: a viewport frame has been rendered, so AiGetRenderOutput() can be
             // called from now on. Arnold ignores the status returned for this update type.
             if (privateData != nullptr) {

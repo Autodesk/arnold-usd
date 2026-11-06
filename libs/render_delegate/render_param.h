@@ -122,10 +122,10 @@ public:
     ///
     /// This only matters for accelerated rendering (options.direct_outputs), where the render result is pulled
     /// with AiGetRenderOutput() instead of being pushed to us through a driver: that call is only valid once
-    /// Arnold has actually rendered something, and an AI_RENDER_UPDATE_VIEWPORT update is what tells us it has.
+    /// Arnold has actually rendered something, and an AI_RENDER_UPDATE_DIRECT_OUTPUTS update is what tells us it has.
     /// Set from Arnold's render thread and cleared right before AiRenderBegin().
     ///
-    /// @return True if an AI_RENDER_UPDATE_VIEWPORT update has been received for the current render.
+    /// @return True if an AI_RENDER_UPDATE_DIRECT_OUTPUTS update has been received for the current render.
     bool HasViewportUpdate() const { return _viewportUpdated.load(std::memory_order_acquire); }
     /// Forgets any viewport update received so far, so AiGetRenderOutput() is not called again until Arnold
     /// delivers a new one.
