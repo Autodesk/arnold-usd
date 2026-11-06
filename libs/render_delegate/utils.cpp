@@ -61,6 +61,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldMotionEnd, "arnold:motion_end"))
     ((arnoldMotionStart, "arnold:motion_start"))
+    ((arnoldMatrix, "arnold:matrix"))
+    ((arnoldName, "arnold:name"))
     ((arnoldVisibility, "arnold:visibility"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
@@ -708,6 +710,7 @@ void HdArnoldGetPrimvars(
     for (auto it = primvars.begin(); it != primvars.end();) {
         const bool queried = std::find(queriedInterpolations.begin(), queriedInterpolations.end(),
                                  it->second.interpolation) != queriedInterpolations.end();
+        // The points are set by the shapes through their own dirty bit
         if (!queried || it->first == HdTokens->points || existingPrimvars.count(it->first) != 0) {
             ++it;
             continue;
@@ -717,12 +720,23 @@ void HdArnoldGetPrimvars(
     }
 }
 
-void HdArnoldRemovePrimvars(AtNode* node, const TfTokenVector& removedPrimvars)
+void HdArnoldRemovePrimvars(
+    AtNode* node, const TfTokenVector& removedPrimvars, const HdArnoldBuiltinPrimvars& builtinPrimvars)
 {
     if (node == nullptr)
         return;
     const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
     for (const auto& name : removedPrimvars) {
+        // The delegate sets these parameters itself: the motion range from the shutter (see
+        // ConvertPrimvarToBuiltinParameter), the matrix from the transform, and the node name
+        if (name == _tokens->arnoldMotionStart || name == _tokens->arnoldMotionEnd || name == _tokens->arnoldMatrix ||
+            name == _tokens->arnoldName)
+            continue;
+        // The builtin parameters that the shape sets from this primvar
+        for (const auto& builtinPrimvar : builtinPrimvars) {
+            if (builtinPrimvar.first == name)
+                AiNodeResetParameter(node, builtinPrimvar.second);
+        }
         // primvars:arnold:xyz set the builtin parameter xyz (see ConvertPrimvarToBuiltinParameter)
         if (_TokenStartsWithToken(name, str::t_arnold_prefix)) {
             const AtString paramName(name.GetText() + str::t_arnold_prefix.size());

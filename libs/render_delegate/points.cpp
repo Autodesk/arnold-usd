@@ -83,10 +83,10 @@ void HdArnoldPoints::Sync(
         // Remove the values of the primvars that don't exist anymore
         TfTokenVector removedPrimvars;
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
-        HdArnoldRemovePrimvars(node, removedPrimvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
+        HdArnoldRemovePrimvars(node, removedPrimvars);
 
         // Detect Houdini Gaussian Splats: presence of primvars:GS_Alpha marks the
         // prim as a gaussian splat exported from Houdini.

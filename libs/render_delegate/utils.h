@@ -608,7 +608,7 @@ bool HdArnoldGetComputedPrimvars(
 /// @param interpolations Optional variable to specify which interpolations to query.
 /// @param removedPrimvars Optional output: when given, the primvars of @p primvars that the scene delegate doesn't
 ///  provide anymore (neither as primvars nor as computed primvars, for the queried interpolations) are erased from
-///  @p primvars, and their names are returned here.
+///  @p primvars, and their names are returned here. The points are never reported as removed.
 HDARNOLD_API
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
@@ -617,12 +617,17 @@ void HdArnoldGetPrimvars(
 
 /// Removes from an arnold shape what was set by primvars that don't exist anymore: the user parameters declared
 /// for them (and their indices), and the builtin parameters set by primvars:arnold:xyz primvars. The ray flags
-/// (primvars:arnold:visibility:xyz, etc.) are recomposed by the shapes and are not handled here.
+/// (primvars:arnold:visibility:xyz, etc.) are recomposed by the shapes and are not handled here. The render must be
+/// interrupted before calling this function.
 ///
 /// @param node The arnold shape.
 /// @param removedPrimvars The names of the removed primvars, as returned by HdArnoldGetPrimvars.
+/// @param builtinPrimvars The primvars that the shape converts to builtin parameters, with these parameters, which
+///  are reset when the primvars are removed.
+using HdArnoldBuiltinPrimvars = std::vector<std::pair<TfToken, AtString>>;
 HDARNOLD_API
-void HdArnoldRemovePrimvars(AtNode* node, const TfTokenVector& removedPrimvars);
+void HdArnoldRemovePrimvars(
+    AtNode* node, const TfTokenVector& removedPrimvars, const HdArnoldBuiltinPrimvars& builtinPrimvars = {});
 
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.
 ///

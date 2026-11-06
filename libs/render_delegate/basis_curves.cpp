@@ -254,7 +254,12 @@ void HdArnoldBasisCurves::Sync(
 
         // For pinned curves, we might have to remap primvars differently #1240
         bool isPinned = (AiNodeGetStr(node, str::wrap_mode) == str::pinned);
-        HdArnoldRemovePrimvars(node, removedPrimvars);
+        // These primvars set builtin parameters of the curves (see below)
+        static const HdArnoldBuiltinPrimvars builtinPrimvars = {
+            {str::t_uv, str::uvs}, {str::t_st, str::uvs}, {HdTokens->normals, str::orientations}};
+        HdArnoldRemovePrimvars(node, removedPrimvars, builtinPrimvars);
+        if (std::find(removedPrimvars.begin(), removedPrimvars.end(), HdTokens->widths) != removedPrimvars.end())
+            HdArnoldSetRadiusFromPrimvar(node, id, sceneDelegate); // Sets the default radius
 
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;

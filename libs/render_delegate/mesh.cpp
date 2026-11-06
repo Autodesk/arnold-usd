@@ -487,17 +487,12 @@ void HdArnoldMesh::Sync(
             _hasLightFilters = false;
         }
         const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
-        for (const auto& removedPrimvar : removedPrimvars) {
-            // These primvars set builtin parameters of the polymesh (see below)
-            if (removedPrimvar == HdTokens->normals) {
-                AiNodeResetParameter(node, str::nlist);
-                AiNodeResetParameter(node, str::nidxs);
-            } else if (removedPrimvar == _tokens->st || removedPrimvar == _tokens->uv) {
-                AiNodeResetParameter(node, str::uvlist);
-                AiNodeResetParameter(node, str::uvidxs);
-            }
-        }
-        HdArnoldRemovePrimvars(node, removedPrimvars);
+        // These primvars set builtin parameters of the polymesh (see below)
+        static const HdArnoldBuiltinPrimvars builtinPrimvars = {
+            {HdTokens->normals, str::nlist}, {HdTokens->normals, str::nidxs},
+            {_tokens->st, str::uvlist}, {_tokens->st, str::uvidxs},
+            {_tokens->uv, str::uvlist}, {_tokens->uv, str::uvidxs}};
+        HdArnoldRemovePrimvars(node, removedPrimvars, builtinPrimvars);
         for (const auto& removedPrimvar : removedPrimvars) {
             // Without these primvars, the subdivision comes back from the display style and the scheme
             if (removedPrimvar == _tokens->arnoldSubdivIterations) {
