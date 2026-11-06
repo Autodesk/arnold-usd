@@ -38,6 +38,7 @@
 - [usd#2769](https://github.com/Autodesk/arnold-usd/issues/2769) - Add turnable option to select a particular render settings
 - [usd#2775](https://github.com/Autodesk/arnold-usd/issues/2777) - Add Houdini logger support
 - [usd#2786](https://github.com/Autodesk/arnold-usd/issues/2786) - Support user data on render settings primitives
+- [usd#2780](https://github.com/Autodesk/arnold-usd/issues/2780) - Add a turntable `--probes` option adding grey and chrome balls and a Macbeth chart in the top corners of the camera frame
 
 ### Bug fixes
 
