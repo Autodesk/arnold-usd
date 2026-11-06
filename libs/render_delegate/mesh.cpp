@@ -254,14 +254,14 @@ void HdArnoldMesh::Sync(
     }
     
     bool positionsChanged = false;
-
     bool normalsRemoved = false;
+
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
-        // HdArnoldGetPrimvars only returns the primvars that exist, so normals that were removed
-        // would stay in _primvars, and in the arnold node
+        // HdArnoldGetPrimvars never erases entries from _primvars, so removed normals would stay applied
+        // to the arnold node
         const auto normalsIt = _primvars.find(HdTokens->normals);
         if (normalsIt != _primvars.end() && !_HasNormalsPrimvar(sceneDelegate, id)) {
             _primvars.erase(normalsIt);
