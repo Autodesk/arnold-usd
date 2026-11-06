@@ -244,7 +244,7 @@ private:
     /// Render update callback handed to AiRenderBegin().
     ///
     /// Arnold invokes this from its render thread every time the render changes state. The only update we act on
-    /// is AI_RENDER_UPDATE_VIEWPORT, which flags that a viewport frame is available (see HasViewportUpdate()).
+    /// is AI_RENDER_UPDATE_DIRECT_OUTPUTS, which flags that a viewport frame is available (see HasViewportUpdate()).
     /// Every other update type is answered with the status Arnold expects for it -- the
     /// render_update_type_to_status table in ai_render.h -- which is a no-op for the render's state machine, so
     /// registering this callback leaves behaviour and interactivity exactly as they are without one.
@@ -284,7 +284,7 @@ private:
     /// from _paused: a stop discards progress (it is a real interrupt) and, unlike Arnold's own PAUSED status, it
     /// must survive across UpdateRender() calls so the render is not silently picked up again on the next tick.
     std::atomic<bool> _stopped{false};
-    /// Indicate whether Arnold has sent at least one AI_RENDER_UPDATE_VIEWPORT update for this render. Set by
+    /// Indicate whether Arnold has sent at least one AI_RENDER_UPDATE_DIRECT_OUTPUTS update for this render. Set by
     /// _UpdateCallback() on the render thread, cleared just before AiRenderBegin(). Deliberately *not* cleared on
     /// AiRenderRestart(): once Arnold has produced a viewport frame the outputs stay valid to fetch, and clearing
     /// it would blank the viewport on every scene edit, which is the opposite of what accelerated rendering is for.
