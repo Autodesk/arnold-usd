@@ -1,6 +1,7 @@
 // More interactive edits of meshes: subdivision scheme and corner sharpness, geom subsets with their own material,
-// orientation and doubleSided, an arnold visibility primvar, a primvar read by the material, and authored normals. The
-// edits of primvars that might not be removed come last, not to change the results of the other steps.
+// orientation and doubleSided, an arnold visibility primvar, a primvar read by the material, and authored normals
+// (vertex, indexed faceVarying, and the normals attribute). The edits of primvars that might not be removed come last,
+// not to change the results of the other steps.
 // See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
@@ -80,8 +81,6 @@ int main(int, char**)
 {
     const std::vector<KnownIssue> subdivisionIssue = {{ProceduralHydra1 | AnyDelegate,
         "a subdivision scheme change isn't applied"}};
-    const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
-        "removed authored normals stay applied"}};
     const std::vector<KnownIssue> subsetRemovalIssue = {{DelegateHydra2,
         "with hydra 2, the faces keep the material of a removed geom subset, Arnold reporting missing shidxs"}};
     const std::vector<KnownIssue> orientationIssue = {{ProceduralHydra1 | AnyDelegate,
@@ -210,7 +209,34 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { SetNormals(stage, GfVec3f(0, 1, 0)); }, bothQuads(Color::Black)},
         {"authored normals removed",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kNormals); },
-            bothQuads(Color::Red), normalsRemovalIssue},
+            bothQuads(Color::Red)},
+        {"indexed faceVarying normals, all indices pointing to +Y, unlit",
+            [](const UsdStageRefPtr& stage) {
+                UsdGeomPrimvar normals = UsdGeomPrimvarsAPI(stage->GetPrimAtPath(kQuads))
+                    .CreatePrimvar(TfToken("normals"), SdfValueTypeNames->Normal3fArray, UsdGeomTokens->faceVarying);
+                normals.Set(VtVec3fArray{GfVec3f(1, 0, 0), GfVec3f(0, 1, 0)});
+                normals.SetIndices(VtIntArray(8, 1));
+            },
+            bothQuads(Color::Black)},
+        {"indexed faceVarying normals removed",
+            [](const UsdStageRefPtr& stage) {
+                stage->GetPrimAtPath(kQuads).RemoveProperty(kNormals);
+                stage->GetPrimAtPath(kQuads).RemoveProperty(TfToken("primvars:normals:indices"));
+            },
+            bothQuads(Color::Red)},
+        {"normals attribute pointing to +Y, unlit",
+            [](const UsdStageRefPtr& stage) {
+                Mesh(stage, kQuads).CreateNormalsAttr().Set(VtVec3fArray(6, GfVec3f(0, 1, 0)));
+            },
+            bothQuads(Color::Black)},
+        {"primvars:normals pointing to +X added, overriding the normals attribute",
+            [](const UsdStageRefPtr& stage) { SetNormals(stage, GfVec3f(1, 0, 0)); }, bothQuads(Color::Red)},
+        {"primvars:normals removed, falling back to the normals attribute",
+            [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kNormals); },
+            bothQuads(Color::Black)},
+        {"normals attribute removed",
+            [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(UsdGeomTokens->normals); },
+            bothQuads(Color::Red)},
     };
     // the following steps have known issues that change the render, the reference image is the render
     // with the geom subset
