@@ -212,6 +212,8 @@ protected:
     void _SyncSharedGeometryInstancer(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
         const SdfPath& id, int32_t primId, const SdfPath& cryptoObject);
+    /// Resets the instance primvars declared on the shape node that aren't in instancePrimvars, and keeps these.
+    void _UpdateInstancePrimvars(std::vector<TfToken>&& instancePrimvars);
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
     std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
@@ -227,6 +229,8 @@ protected:
     HiddenBy _hiddenBy = HiddenBy::None;
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
     bool _forceInstancerNode = false;        ///< Force the instancer-node path (see SetForceInstancerNode).
+    /// Instance primvars declared on _shape by the instance_matrix instancing (see _UpdateInstancePrimvars).
+    std::vector<TfToken> _instancePrimvars;
     /// Light-link categories of the instances (see HdArnoldInstancer::ComputeInstanceCategories).
     std::vector<VtArray<TfToken>> _instanceCategories;
     /// True when the instances have different light-link categories, set per instance on the leaf instancer.

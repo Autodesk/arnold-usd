@@ -1,6 +1,5 @@
 // More interactive edits of a point instancer: prototype geometry, instance scales, prototypes added and removed from
-// the prototypes relationship, the instancer visibility, light linking to the instancer, and per-instance primvars. The
-// per-instance primvar, that might not be removed, comes last, not to change the results of the other steps.
+// the prototypes relationship, the instancer visibility, light linking to the instancer, and per-instance primvars.
 // See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
@@ -36,16 +35,10 @@ UsdGeomPrimvar InstanceColors(const UsdStageRefPtr& stage)
 
 int main(int, char**)
 {
-    const std::vector<KnownIssue> scalesRemovalIssue = {{ProceduralHydra | AnyDelegate,
-        "the instances keep the scales of the removed scales attribute"}};
-    const std::vector<KnownIssue> scalesKeptIssue = {{ProceduralHydra2 | DelegateHydra2,
-        "with hydra 2, the instances keep the removed scales until the end"}};
     const std::vector<KnownIssue> newPrototypeIssue = {{ProceduralHydra1 | DelegateHydra1,
         "with hydra 1, a prototype added to the point instancer prototypes isn't rendered"}};
     const std::vector<KnownIssue> lightLinkIssue = {{ProceduralHydra | AnyDelegate,
         "excluding the point instancer from a light link collection doesn't unlink its instances"}};
-    const std::vector<KnownIssue> primvarRemovalIssue = {{ProceduralHydra | AnyDelegate,
-        "the instances keep the values of a removed per-instance primvar"}};
 
     const GfVec2f left = ScreenPosition(GfVec3d(-1.5, 0, 0));
     const GfVec2f right = ScreenPosition(GfVec3d(1.5, 0, 0));
@@ -88,7 +81,7 @@ int main(int, char**)
             AllOf({ExpectColor(Color::Empty, leftEdge), ExpectColor(Color::Grey, rightEdge)})},
         {"scales removed",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kInstancer).RemoveProperty(UsdGeomTokens->scales); },
-            AllOf({ExpectColor(Color::Grey, right), ExpectColor(Color::Empty, rightEdge)}), scalesRemovalIssue},
+            AllOf({ExpectColor(Color::Grey, right), ExpectColor(Color::Empty, rightEdge)})},
         {"sphere prototype added to the prototypes, and instanced on the right",
             [](const UsdStageRefPtr& stage) {
                 Instancer(stage).GetPrototypesRel().SetTargets({kCube, kSphere});
@@ -119,8 +112,7 @@ int main(int, char**)
                 UsdLuxLightAPI(stage->GetPrimAtPath(kLight)).GetLightLinkCollectionAPI().GetExcludesRel().ClearTargets(
                     true);
             },
-            AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Grey, right), ExpectColor(Color::Empty, rightFar)}),
-            scalesKeptIssue},
+            AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Grey, right), ExpectColor(Color::Empty, rightFar)})},
         {"per-instance displayColor primvar added",
             [=](const UsdStageRefPtr& stage) { InstanceColors(stage).Set(greenAndBlue); },
             AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Blue, right)})},
@@ -131,10 +123,10 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) {
                 stage->GetPrimAtPath(kInstancer).RemoveProperty(UsdGeomTokens->primvarsDisplayColor);
             },
-            AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Grey, right)}), primvarRemovalIssue},
+            AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Grey, right)})},
     };
-    // the last steps have known issues in every mode, the reference image is the render after the light
-    // linking edits
+    // the reference image is the render after the light linking edits (rendered the same in every mode, unlike the
+    // light linking steps), before the instances get their per-instance colors
     scenario.referenceStep = 9;
     scenario.skippedModes = {{ProceduralLegacyReader, "this test covers the hydra code paths"}};
     return Run(scenario);

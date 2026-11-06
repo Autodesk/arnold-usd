@@ -146,7 +146,34 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
     }
 
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
-        for (const auto& primvar : GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance)) {
+        const auto primvarDescs = GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance);
+        // The descriptors only list the primvars that exist: the ones that were removed must not keep their
+        // previous values (the arnold instancers are rebuilt from these values).
+        TfToken::HashSet primvarNames;
+        for (const auto& primvar : primvarDescs) {
+            primvarNames.insert(primvar.name);
+        }
+        auto hasPrimvar = [&](const TfToken& name) { return primvarNames.count(name) > 0; };
+        if (!hasPrimvar(GetInstanceTransformsToken())) {
+            _transforms.Resize(0);
+        }
+        if (!hasPrimvar(GetRotateToken())) {
+            _rotates.Resize(0);
+        }
+        if (!hasPrimvar(GetScaleToken())) {
+            _scales.Resize(0);
+        }
+        if (!hasPrimvar(GetTranslateToken())) {
+            _translates.Resize(0);
+        }
+        for (auto it = _primvars.begin(); it != _primvars.end();) {
+            if (hasPrimvar(it->first)) {
+                ++it;
+            } else {
+                it = _primvars.erase(it);
+            }
+        }
+        for (const auto& primvar : primvarDescs) {
             if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
                 continue;
             }
@@ -159,9 +186,13 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
             } else if (primvar.name == GetTranslateToken()) {
                 SamplePrimvarChecked(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _translates);
             } else {
-                HdArnoldInsertPrimvar(
-                    _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
-                    {});
+                VtValue value = GetDelegate()->Get(id, primvar.name);
+                // A primvar without value (e.g. blocked) is removed as well.
+                if (value.IsEmpty()) {
+                    _primvars.erase(primvar.name);
+                } else {
+                    HdArnoldInsertPrimvar(_primvars, primvar.name, primvar.role, primvar.interpolation, value, {});
+                }
             }
         }
     }
@@ -201,8 +232,10 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
 // Should that be SyncPrototypeTransforms
 // This method use the instance_matrix feature to create instances
 bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
-    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode,
+    std::vector<TfToken>& instancePrimvars)
 {
+    instancePrimvars.clear();
     const SdfPath& instancerId = GetId();
     if (!prototypeNode)
         return false;
@@ -287,7 +320,7 @@ bool HdArnoldInstancer::ComputeShapeInstancesTransforms(
             }
         }
         // Ask this instancer to add its primvars to the prototype node as an "instance" user data
-        entry.instancer->AddInstancePrimvarsWithIndices(renderDelegate, prototypeNode, expandedIndices);
+        entry.instancer->AddInstancePrimvarsWithIndices(renderDelegate, prototypeNode, expandedIndices, instancePrimvars);
         parentInstancesMult *= entry.instanceIndices.size();
     }
     return true;
@@ -413,7 +446,7 @@ void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
 }
 
 void HdArnoldInstancer::AddInstancePrimvarsWithIndices(HdArnoldRenderDelegate* renderDelegate, AtNode* prototypeNode,
-    const VtIntArray& expandedIndices)
+    const VtIntArray& expandedIndices, std::vector<TfToken>& instancePrimvars)
 {
     if (!prototypeNode || expandedIndices.empty())
         return;
@@ -426,9 +459,10 @@ void HdArnoldInstancer::AddInstancePrimvarsWithIndices(HdArnoldRenderDelegate* r
         if (!FlattenIndexedValue(desc.value, expandedIndices, instanceValue))
             instanceValue = desc.value;
 
-        DeclareAndAssignParameter(prototypeNode, TfToken{paramName},
-            str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(),
-            desc.role == HdPrimvarRoleTokens->color);
+        if (DeclareAndAssignParameter(prototypeNode, TfToken{paramName},
+                str::t_instance, instanceValue, renderDelegate->GetAPIAdapter(),
+                desc.role == HdPrimvarRoleTokens->color) > 0)
+            instancePrimvars.push_back(primvar.first);
     }
 }
 

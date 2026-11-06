@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "shape.h"
+#include <algorithm>
 #include <pxr/base/trace/trace.h>
 
 #ifdef ENABLE_SCENE_INDEX // Hydra2
@@ -344,6 +345,8 @@ void HdArnoldShape::_SyncInstances(
         UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
         DestroyInstancers();
+        // The instance primvars are set on the instancers, drop the ones of the instance_matrix instancing.
+        _UpdateInstancePrimvars({});
 
         // We need to hide the source mesh.
         AiNodeSetByte(_shape, str::visibility, 0);
@@ -412,13 +415,28 @@ void HdArnoldShape::_SyncInstances(
         auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
         if (instancer == nullptr)
             return;
-        if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape)) {
+        std::vector<TfToken> instancePrimvars;
+        if (instancer->ComputeShapeInstancesTransforms(_renderDelegate, id, _shape, instancePrimvars)) {
             instancer->ApplyInstancerVisibilityToArnoldNode(_shape);
         } else {
             // hide the source mesh if it doesn't have any instance #2557
             AiNodeSetByte(_shape, str::visibility, 0);
         }
+        // The shape node is kept between the syncs: the instance primvars that were removed must not stay on it.
+        _UpdateInstancePrimvars(std::move(instancePrimvars));
     }
+}
+
+void HdArnoldShape::_UpdateInstancePrimvars(std::vector<TfToken>&& instancePrimvars)
+{
+    for (const TfToken& name : _instancePrimvars) {
+        if (std::find(instancePrimvars.begin(), instancePrimvars.end(), name) != instancePrimvars.end())
+            continue;
+        const AtString nameStr(name.GetText());
+        if (AiNodeLookUpUserParameter(_shape, nameStr) != nullptr)
+            AiNodeResetParameter(_shape, nameStr);
+    }
+    _instancePrimvars = std::move(instancePrimvars);
 }
 
 void HdArnoldShape::_SyncSharedGeometryInstancer(
