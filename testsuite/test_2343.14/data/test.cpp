@@ -28,7 +28,8 @@ const TfToken kCameraVisibility("primvars:arnold:visibility:camera");
 UsdGeomMesh Mesh(const UsdStageRefPtr& stage, const SdfPath& path) { return UsdGeomMesh(stage->GetPrimAtPath(path)); }
 
 // A cube of size 1.6, with a red displayColor. Without primvars:arnold:subdiv_iterations (or a display style refine
-// level), arnold doesn't subdivide a mesh, whatever its subdivision scheme.
+// level), arnold doesn't subdivide a mesh, whatever its subdivision scheme (the render delegate sets subdiv_type to
+// none when subdiv_iterations is 0, see #679 and #931).
 void DefineCube(const UsdStageRefPtr& stage)
 {
     UsdGeomMesh mesh = UsdGeomMesh::Define(stage, kCube);
@@ -82,8 +83,8 @@ void SetNormals(const UsdStageRefPtr& stage, const GfVec3f& normal)
 
 int main(int, char**)
 {
-    // Reproduced with the arnold API alone: in an interactive session, creases set on a subdivided polymesh after its
-    // first render aren't applied, even when its topology is set again (ARNOLD-18970)
+    // Reproduced with the arnold API alone on Arnold 7.5.5.0: in an interactive session, creases set on a subdivided
+    // polymesh after its first render aren't applied (ARNOLD-18970). It wasn't seen on Arnold 7.5.2.0.
     const std::vector<KnownIssue> creasesIssue = {{ProceduralHydra1 | AnyDelegate,
         "arnold doesn't apply the creases set on a subdivided polymesh that was already rendered"}};
     const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
