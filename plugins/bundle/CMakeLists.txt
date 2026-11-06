@@ -32,6 +32,8 @@ if (ENABLE_PROCEDURAL_IN_BUNDLE)
 	target_compile_definitions(${BUNDLE_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
 	# main.cpp registers the plugInfo files installed next to the bundle (#2793)
 	target_compile_definitions(${BUNDLE_NAME} PRIVATE ARNOLD_USD_BUNDLE)
+	# translator doesn't forward plug, which RegisterBundlePlugins() calls
+	target_link_libraries(${BUNDLE_NAME} PRIVATE plug)
 	if (${BUILD_PROC_SCENE_FORMAT})
 		target_compile_definitions(${BUNDLE_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
 	endif()
