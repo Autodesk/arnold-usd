@@ -19,15 +19,20 @@
 #pragma once
 
 #include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/vec2i.h>
+#include <pxr/base/vt/value.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
+#include <pxr/imaging/cameraUtil/framing.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdShade/material.h>
 
 #include <functional>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace interactive_usd_test {
@@ -106,6 +111,15 @@ struct Step {
     std::function<void(const UsdStageRefPtr&)> edit;
     Check check;
     std::vector<KnownIssue> knownIssues;
+    // Changes the framing the host sends to the render delegate before this step's render, it is kept by the next
+    // steps. Ignored by the procedural.
+    std::optional<CameraUtilFraming> framing;
+    // Reallocates the host's render buffer to this size before this step's render (kept by the next steps). It is
+    // the size of the images checked. Ignored by the procedural.
+    std::optional<GfVec2i> bufferSize;
+    // Render settings of the render delegate set before this step's render, e.g. {"resolution", GfVec2i(160, 120)}.
+    // Ignored by the procedural.
+    std::vector<std::pair<std::string, VtValue>> renderSettings;
 };
 
 struct Scenario {
@@ -118,6 +132,13 @@ struct Scenario {
     int width = 160;
     int height = 120;
     int aaSamples = 3;
+    // The size of the render buffer the host gives to the render delegate, width x height if 0. The images checked
+    // and saved have this size. Ignored by the procedural.
+    int bufferWidth = 0;
+    int bufferHeight = 0;
+    // The framing the host initially sends to the render delegate, the buffer's full rect if unset. Ignored by the
+    // procedural, a scenario using a framing should only run with the RenderDelegate method.
+    std::optional<CameraUtilFraming> framing;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
@@ -133,6 +154,12 @@ void DefineCamera(const UsdStageRefPtr& stage, const SdfPath& path, const GfVec3
 // Normalized image position of a world position, as seen by a camera made by DefineCamera at cameraPosition, with
 // the default 160x120 resolution
 GfVec2f ScreenPosition(const GfVec3d& point, const GfVec3d& cameraPosition = GfVec3d(0, 0, 6));
+// Normalized position, in a bufferWidth x bufferHeight render buffer, of a world position as seen by a camera made by
+// DefineCamera at cameraPosition, when the host sends this framing: the display window gives the film its position
+// and size in the buffer (CameraUtilDontConform), like CameraUtilFraming::ApplyToProjectionMatrix does. It can be
+// outside of [0, 1].
+GfVec2f FramedScreenPosition(const GfVec3d& point, const CameraUtilFraming& framing, int bufferWidth, int bufferHeight,
+    const GfVec3d& cameraPosition = GfVec3d(0, 0, 6));
 // A normalized distant light, pointing down -Z and tilted by 40 degrees around X and Y
 void DefineDistantLight(const UsdStageRefPtr& stage, const SdfPath& path, float intensity = 3.f);
 // A UsdPreviewSurface material, whose shader is <path>/surface
