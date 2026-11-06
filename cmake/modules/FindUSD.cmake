@@ -320,6 +320,10 @@ if (HOUDINI_LOCATION)
                 message(FATAL_ERROR "No stable-ABI Python import library at ${_houdini_python3_lib}")
             endif()
             set(USD_TRANSITIVE_SHARED_LIBS "${_houdini_python3_lib};Houdini::Dep::tbb")
+            # Houdini's pyconfig.h still carries '#pragma comment(lib,"python<NN>.lib")',
+            # pulled in by the pxr headers on some versions (H20.5), so link.exe wants that
+            # library by name too. Give it a search path to this Houdini's own copy.
+            link_directories("${HOUDINI_LOCATION}/python${_houdini_python_nodot}/libs")
             unset(_houdini_python3_lib)
             unset(_houdini_python_nodot)
         else()
