@@ -48,7 +48,7 @@ void DefineSphere(const UsdStageRefPtr& stage, const SdfPath& path, const GfVec3
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfVec2f left = ScreenPosition(GfVec3d(-1.8, 0, 0));
     const GfVec2f right = ScreenPosition(GfVec3d(1.8, 0, 0));

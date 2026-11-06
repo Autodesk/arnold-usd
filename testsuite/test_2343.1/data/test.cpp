@@ -9,7 +9,7 @@
 
 using namespace interactive_usd_test;
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const SdfPath sphere("/World/sphere");
     const SdfPath cube("/World/cube");

@@ -65,7 +65,7 @@ UsdShadeOutput LightShadersOutput(const UsdStageRefPtr& stage, const char* name)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> lightShadersIssue = {{DelegateHydra1,
         "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"}};

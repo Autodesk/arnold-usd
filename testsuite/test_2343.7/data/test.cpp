@@ -37,7 +37,7 @@ UsdShadeOutput ArnoldSurfaceOutput(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> disconnectIssue = {{ProceduralHydra2 | DelegateHydra2,
         "with hydra 2, a disconnected input doesn't get its authored value back"}};
