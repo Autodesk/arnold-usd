@@ -80,14 +80,10 @@ int main(int, char**)
 {
     const std::vector<KnownIssue> subdivisionIssue = {{ProceduralHydra1 | AnyDelegate,
         "a subdivision scheme change isn't applied"}};
-    const std::vector<KnownIssue> normalsRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
-        "removed authored normals stay applied"}};
     const std::vector<KnownIssue> subsetRemovalIssue = {{DelegateHydra2,
         "with hydra 2, the faces keep the material of a removed geom subset, Arnold reporting missing shidxs"}};
     const std::vector<KnownIssue> orientationIssue = {{ProceduralHydra1 | AnyDelegate,
         "an orientation change isn't applied"}};
-    const std::vector<KnownIssue> primvarRemovalIssue = {{ProceduralHydra1 | AnyDelegate,
-        "the material keeps reading the value of a removed primvar"}};
 
     // The cube is on the left. With the distant light of DefineDistantLight, a normal pointing to +X is lit, and one
     // pointing to +Y isn't.
@@ -197,7 +193,7 @@ int main(int, char**)
             bothQuads(Color::Blue)},
         {"myColor primvar removed, back to the fallback",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kMyColor); },
-            bothQuads(Color::Red), primvarRemovalIssue},
+            bothQuads(Color::Red)},
         {"authored normals pointing to +X, lit, with the red material bound again and the orientation back to "
          "rightHanded",
             [](const UsdStageRefPtr& stage) {
@@ -210,7 +206,7 @@ int main(int, char**)
             [](const UsdStageRefPtr& stage) { SetNormals(stage, GfVec3f(0, 1, 0)); }, bothQuads(Color::Black)},
         {"authored normals removed",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kNormals); },
-            bothQuads(Color::Red), normalsRemovalIssue},
+            bothQuads(Color::Red)},
     };
     // the following steps have known issues that change the render, the reference image is the render
     // with the geom subset
