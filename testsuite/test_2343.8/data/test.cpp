@@ -105,6 +105,8 @@ int main(int, char**)
             },
             AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Blue, center), ExpectColor(Color::Blue, right)})},
     };
+    // The hydra procedural modes destroy the red light during procedural_update: they need an Arnold build with the
+    // deferred node release of ARNOLD-18832 (core PR 4708), or they may crash on these node destructions.
     scenario.skippedModes = {{ProceduralLegacyReader,
         "this test covers the hydra code paths, the legacy reader hangs when the red light is removed"}};
     return Run(scenario);

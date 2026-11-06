@@ -69,6 +69,8 @@ int main(int, char**)
 {
     const std::vector<KnownIssue> lightShadersIssue = {{DelegateHydra1,
         "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"}};
+    // The procedural modes of the filter and primvar removal issues showed since #2822: before, the procedural applied
+    // the light edits one update late, which hid the failures that the render delegate already had.
     const std::vector<KnownIssue> filterRemovalIssue = {
         {DelegateHydra1, "with hydra 1, primvars:arnold:shaders added to an existing light isn't applied"},
         {ProceduralHydra2 | DelegateHydra2,
