@@ -152,7 +152,6 @@ struct Scenario {
     int width = 160;
     int height = 120;
     int aaSamples = 3;
-<<<<<<< HEAD
     // The size of the render buffer the host gives to the render delegate, width x height if 0. The images checked
     // and saved have this size. Ignored by the procedural.
     int bufferWidth = 0;
@@ -160,11 +159,9 @@ struct Scenario {
     // The framing the host initially sends to the render delegate, the buffer's full rect if unset. Ignored by the
     // procedural, a scenario using a framing should only run with the RenderDelegate method.
     std::optional<CameraUtilFraming> framing;
-=======
     // The usd_override_double_sided option, true by default since Arnold 7.5, renders every mesh double-sided whatever its
     // doubleSided attribute. Set it to false to check the sidedness and orientation of meshes.
     bool usdOverrideDoubleSided = true;
->>>>>>> upstream/master
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
