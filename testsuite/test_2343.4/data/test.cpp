@@ -21,7 +21,7 @@ UsdGeomPointInstancer Instancer(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfVec2f center = ScreenPosition(GfVec3d(0, 0, 0));
     const GfVec2f left = ScreenPosition(GfVec3d(-1.5, 0, 0));

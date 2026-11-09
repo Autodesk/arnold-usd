@@ -44,7 +44,7 @@ void SetDisplayColor(const UsdStageRefPtr& stage, const VtVec3fArray& colors, co
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> interpolationIssue = {{ProceduralLegacyReader,
         "the legacy reader can't update displayColor once its interpolation changed (could not set ARRAY parameter)"}};
