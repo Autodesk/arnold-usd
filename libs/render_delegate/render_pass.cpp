@@ -34,6 +34,7 @@
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/staticTokens.h>
 
+#include <pxr/base/gf/range2f.h>
 #include <pxr/base/gf/rect2i.h>
 
 #include <pxr/imaging/hd/renderPassState.h>
@@ -614,6 +615,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_mainDriver, str::viewMtx, viewMtx);
         }
 
+        // TODO: in framing mode, the ortho screen window should come from the unframed camera projection, as
+        // Arnold maps it onto the display window and not onto the data window (see #2819).
         if (currentCamera && isOrtho) {  // TODO do it once, if proj or size has changed
             GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
             AiNodeSetVec2(currentCamera, str::screen_window_min, screen[0], screen[1]);
@@ -621,6 +624,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
 
         if (useOwnedCamera) {
+            // TODO: in framing mode _projMtx is framed (it maps the data window), while Arnold applies the display
+            // window itself, so this fov is only right when both windows have the same size (see #2819).
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
             AtMatrix invViewMtx;
@@ -631,9 +636,72 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     CameraUtilFraming newFraming = _GetFraming(renderPassState);
     GfVec2i delegateResolution = _renderDelegate->GetResolution();
+
+    GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
+    float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
+    // check if we have a non-default window
+    bool hasWindowNDC = (!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
+
+    // "Framing mode": the host sends a CameraUtilFraming whose display window differs from its data window
+    // (film translate, pan/zoom, overscan, render region...), or whose display window is offset from the buffer
+    // origin. Only then the display window positions the film and the data window is the part of the host's
+    // render buffers that gets filled. In every other case (no framing, display window == data window at the
+    // origin, render settings resolution, dataWindowNDC) the code below behaves as it always did, which keeps
+    // Houdini and husk unchanged.
+    // A host framing combined with a render settings dataWindowNDC is not supported, the windowNDC path wins.
+    const CameraUtilFraming& hostFraming = renderPassState->GetFraming();
+    const bool useFraming = hostFraming.IsValid() && delegateResolution[0] <= 0 && delegateResolution[1] <= 0 &&
+        !hasWindowNDC &&
+        hostFraming.displayWindow.GetSize()[0] >= 0.5 && hostFraming.displayWindow.GetSize()[1] >= 0.5 &&
+        (GfRange2f(
+             GfVec2f(hostFraming.dataWindow.GetMin()),
+             GfVec2f(hostFraming.dataWindow.GetMax() + GfVec2i(1, 1))) != hostFraming.displayWindow ||
+         // Display window == data window but away from the buffer origin (e.g. usdview cropping to the camera
+         // viewport): the region and the buffer position still have to be offset.
+         hostFraming.displayWindow.GetMin() != GfVec2f(0.0f, 0.0f));
+    // The display window origin in framing mode, Arnold's pixel (0, 0) is located there.
+    GfVec2i displayMin(0, 0);
+
     int width = static_cast<int>(newFraming.displayWindow.GetSize()[0]);
     int height = static_cast<int>(newFraming.displayWindow.GetSize()[1]);
-    
+    if (useFraming) {
+        // Same rounding for the origin and the size, the display window can have a fractional origin.
+        displayMin = GfVec2i(
+            static_cast<int>(std::round(newFraming.displayWindow.GetMin()[0])),
+            static_cast<int>(std::round(newFraming.displayWindow.GetMin()[1])));
+        width = static_cast<int>(std::round(newFraming.displayWindow.GetSize()[0]));
+        height = static_cast<int>(std::round(newFraming.displayWindow.GetSize()[1]));
+        // The host framing's pixel aspect ratio multiplies the render settings one.
+        pixelAspectRatio *= newFraming.pixelAspectRatio;
+    }
+
+    // Like Storm, conform the scene camera to the display window with the render pass window policy whenever the
+    // host sends a framing, also when the display window is the data window (usdview without "crop to camera
+    // viewport"). Houdini never sends a framing and uses its own conform policy, a render settings resolution
+    // or dataWindowNDC keep today's behavior, the camera matching its horizontal aperture across xres (#2819).
+    // The pixel aspect ratio only counts in framing mode, as it's only given to Arnold there.
+    const bool conformToHost = hostFraming.IsValid() && delegateResolution[0] <= 0 && delegateResolution[1] <= 0 &&
+        !hasWindowNDC && newFraming.displayWindow.GetSize()[0] > 0.f && newFraming.displayWindow.GetSize()[1] > 0.f;
+    auto* hostCamera = const_cast<HdArnoldCamera*>(camera);
+    if (_conformedCameraId != cameraId && !_conformedCameraId.IsEmpty()) {
+        // The previous camera may still be used without a framing, give it its own screen window back.
+        if (auto* previousCamera = dynamic_cast<HdArnoldCamera*>(
+                GetRenderIndex()->GetSprim(HdPrimTypeTokens->camera, _conformedCameraId))) {
+            previousCamera->SetHostConform(false, CameraUtilFit, 1.0, renderParam);
+        }
+    }
+    if (hostCamera != nullptr) {
+        const double displayAspect = conformToHost ? (useFraming ? newFraming.pixelAspectRatio : 1.0) *
+                                                         newFraming.displayWindow.GetSize()[0] /
+                                                         newFraming.displayWindow.GetSize()[1]
+                                                   : 1.0;
+        hostCamera->SetHostConform(conformToHost, renderPassState->GetWindowPolicy(), displayAspect, renderParam);
+    }
+    _conformedCameraId = (hostCamera != nullptr && conformToHost) ? cameraId : SdfPath();
+
     int framingWidth = width;
     int framingHeight = height;
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 
@@ -675,6 +743,52 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
 
+    if (useFraming) {
+        // Like hdEmbree, the data window has to be contained in the host's buffers, we never resize them.
+        bool dataWindowFits = true;
+        bool regionMatchesBuffer = true;
+        const GfRect2i& dataWindow = newFraming.dataWindow;
+        for (const auto& binding : aovBindings) {
+            if (binding.renderBuffer == nullptr || binding.renderBuffer->GetWidth() == 0 ||
+                binding.renderBuffer->GetHeight() == 0) {
+                continue;
+            }
+            const int bufferWidth = static_cast<int>(binding.renderBuffer->GetWidth());
+            const int bufferHeight = static_cast<int>(binding.renderBuffer->GetHeight());
+            if (dataWindow.GetMinX() < 0 || dataWindow.GetMinY() < 0 || dataWindow.GetMaxX() >= bufferWidth ||
+                dataWindow.GetMaxY() >= bufferHeight) {
+                dataWindowFits = false;
+            }
+            if (dataWindow.GetWidth() != bufferWidth || dataWindow.GetHeight() != bufferHeight) {
+                regionMatchesBuffer = false;
+            }
+        }
+        if (!dataWindowFits) {
+            if (!_framingWarned) {
+                _framingWarned = true;
+                TF_WARN("The framing's data window is larger than the render buffers, skipping the render.");
+            }
+            // Nothing is going to be rendered, don't keep the host waiting for convergence.
+            _isConverged = true;
+            for (const auto& binding : aovBindings) {
+                if (auto* renderBuffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer)) {
+                    renderBuffer->SetConverged(true);
+                }
+            }
+            return;
+        }
+        // TODO: the accelerated viewport readback copies Arnold's whole render region into a buffer of the
+        // same size, it can't write a sub-rect of the host's buffer yet. It skips the readback in that case.
+        if (!regionMatchesBuffer && _renderDelegate->IsAcceleratedViewport() && !_acceleratedFramingWarned) {
+            _acceleratedFramingWarned = true;
+            TF_WARN("The accelerated viewport doesn't support a framing data window smaller than the render "
+                    "buffers yet, the image won't be updated.");
+        }
+    } else {
+        _framingWarned = false;
+        _acceleratedFramingWarned = false;
+    }
+
     const bool renderBuffersChanged = _RenderBuffersChanged(aovBindings);
     if (renderBuffersChanged) {
         // The Arnold side is rebuilt further down, but the pointers we are holding may already
@@ -684,16 +798,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
-    const bool framingChanged = newFraming != _framing;
+    const bool framingChanged = newFraming != _framing || useFraming != _useFraming;
     const bool acceleratedViewportChanged = _acceleratedViewport != _renderDelegate->IsAcceleratedViewport();
 
-    GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
-    float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
-    // check if we have a non-default window
-    bool hasWindowNDC = (!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
-                        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
-                        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
-                        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
     // check if the window has changed since the last _Execute
     bool windowChanged = (!GfIsClose(windowNDC[0], _windowNDC[0], AI_EPSILON)) || 
                         (!GfIsClose(windowNDC[1], _windowNDC[1], AI_EPSILON)) || 
@@ -705,11 +812,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // A static vector would be shared across all HdArnoldRenderPass instances
         // in the process, which makes the resize() call a data race when multiple
         // render passes drive their own viewports.
-        _zeroData.resize(static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
+        if (!useFraming) {
+            _zeroData.resize(static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
+        }
         for (auto& buffer : storage) {
             HdArnoldRenderBuffer *renderBuffer = buffer.second.buffer;
             if (renderBuffer != nullptr && !renderBuffer->IsEmpty()) {
-                if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
+                if (useFraming) {
+                    // The buffers belong to the host, never resize them, clear them at their own size.
+                    w = static_cast<int>(renderBuffer->GetWidth());
+                    h = static_cast<int>(renderBuffer->GetHeight());
+                    _zeroData.resize(static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
+                } else if (allocate && (renderBuffer->GetWidth() != w || renderBuffer->GetHeight() != h))
                     renderBuffer->Allocate(GfVec3i(w, h, 0), renderBuffer->GetFormat(), renderBuffer->IsMultiSampled());
                 renderBuffer->WriteBucket(0, 0, w, h, HdFormatUNorm8Vec4, _zeroData.data());
             }
@@ -722,16 +836,23 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // Arnold's direct output buffers keep the old size until the next frame starts.
         renderParam->ResetViewportUpdate();
         _framing = newFraming;
+        _useFraming = useFraming;
         auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, width);
         AiNodeSetInt(options, str::yres, height);
 
         _acceleratedViewport = _renderDelegate->IsAcceleratedViewport();
         clearBuffers(_renderBuffers, true, width, height);
-        AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX());
-        AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX());
-        AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY());
-        AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY());
+        // The data window is rendered at its own position in the host's buffers in framing mode, at the origin
+        // otherwise.
+        AiNodeSetInt(_mainDriver, str::buffer_offset_x, useFraming ? _framing.dataWindow.GetMinX() : 0);
+        AiNodeSetInt(_mainDriver, str::buffer_offset_y, useFraming ? _framing.dataWindow.GetMinY() : 0);
+        // In framing mode, Arnold's pixel (0, 0) is the display window origin, so the region is expressed
+        // relatively to it. Both windows are y-down like Arnold's region.
+        AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX() - displayMin[0]);
+        AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX() - displayMin[0]);
+        AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY() - displayMin[1]);
+        AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY() - displayMin[1]);
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
         // Toggling the accelerated viewport on lands here too, so the region is current whenever it is read back.
         if (_acceleratedViewport) {
@@ -912,6 +1033,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeResetParameter(options, str::region_max_y);
             AiNodeSetInt(options, str::xres, width);
             AiNodeSetInt(options, str::yres, height);
+            if (useFraming) {
+                // The region comes from the host framing, restore it.
+                AiNodeSetInt(options, str::region_min_x, _framing.dataWindow.GetMinX() - displayMin[0]);
+                AiNodeSetInt(options, str::region_max_x, _framing.dataWindow.GetMaxX() - displayMin[0]);
+                AiNodeSetInt(options, str::region_min_y, _framing.dataWindow.GetMinY() - displayMin[1]);
+                AiNodeSetInt(options, str::region_max_y, _framing.dataWindow.GetMaxY() - displayMin[1]);
+            }
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }

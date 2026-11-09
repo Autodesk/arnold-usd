@@ -212,6 +212,11 @@ class Renderer {
 public:
     virtual ~Renderer() = default;
     virtual bool Render(const std::string& filename, Image& image) = 0;
+    // The framing sent by the host, only used by the render delegate
+    virtual void SetFraming(const CameraUtilFraming&) {}
+    virtual void SetBufferSize(int, int) {}
+    virtual void SetRenderSetting(const std::string&, const VtValue&) {}
+    virtual void SetWindowPolicy(CameraUtilConformWindowPolicy) {}
 };
 
 // The "usd" procedural compiled in this program, reading the stage through its cache_id
@@ -383,7 +388,9 @@ public:
         const SdfPath bufferPath("/interactive_usd_test/color");
         _colorBuffer =
             static_cast<HdRenderBuffer*>(_renderDelegate->CreateBprim(HdPrimTypeTokens->renderBuffer, bufferPath));
-        _colorBuffer->Allocate(GfVec3i(scenario.width, scenario.height, 1), HdFormatFloat32Vec4, false);
+        _bufferWidth = scenario.bufferWidth > 0 ? scenario.bufferWidth : scenario.width;
+        _bufferHeight = scenario.bufferHeight > 0 ? scenario.bufferHeight : scenario.height;
+        _colorBuffer->Allocate(GfVec3i(_bufferWidth, _bufferHeight, 1), HdFormatFloat32Vec4, false);
 
         HdRenderPassAovBinding binding;
         binding.aovName = HdAovTokens->color;
@@ -393,17 +400,50 @@ public:
 
         _renderPass = _renderDelegate->CreateRenderPass(
             _renderIndex, HdRprimCollection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull)));
-        HdRenderPassStateSharedPtr renderPassState = _renderDelegate->CreateRenderPassState();
-        renderPassState->SetAovBindings({binding});
-        renderPassState->SetFraming(
-            CameraUtilFraming(GfRect2i(GfVec2i(0, 0), scenario.width, scenario.height)));
-        _tasks = {std::make_shared<RenderTask>(_renderPass, renderPassState, scenario.camera)};
+        _renderPassState = _renderDelegate->CreateRenderPassState();
+        _renderPassState->SetAovBindings({binding});
+        SetFraming(scenario.framing.value_or(
+            CameraUtilFraming(GfRect2i(GfVec2i(0, 0), _bufferWidth, _bufferHeight))));
+        _tasks = {std::make_shared<RenderTask>(_renderPass, _renderPassState, scenario.camera)};
+    }
+
+    void SetFraming(const CameraUtilFraming& framing) override
+    {
+        if (_renderPassState)
+            _renderPassState->SetFraming(framing);
+    }
+
+    void SetWindowPolicy(CameraUtilConformWindowPolicy policy) override
+    {
+        if (!_renderPassState)
+            return;
+#if PXR_VERSION >= 2408
+        _renderPassState->SetOverrideWindowPolicy(policy);
+#else
+        _renderPassState->SetOverrideWindowPolicy({true, policy});
+#endif
+    }
+
+    void SetBufferSize(int width, int height) override
+    {
+        if (!_colorBuffer)
+            return;
+        _bufferWidth = width;
+        _bufferHeight = height;
+        _colorBuffer->Allocate(GfVec3i(width, height, 1), HdFormatFloat32Vec4, false);
+    }
+
+    void SetRenderSetting(const std::string& name, const VtValue& value) override
+    {
+        if (_renderDelegate)
+            _renderDelegate->SetRenderSetting(TfToken(name), value);
     }
 
     ~DelegateRenderer() override
     {
         // Tear down in the reverse order: tasks and render pass, scene delegates, render index, render delegate
         _tasks.clear();
+        _renderPassState.reset();
         _renderPass.reset();
         if (_colorBuffer)
             _renderDelegate->DestroyBprim(_colorBuffer);
@@ -438,9 +478,17 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
 
+        // The buffer belongs to the host, the render delegate must not resize it, whatever the framing
+        if (!Check_(_colorBuffer->GetWidth() == static_cast<unsigned>(_bufferWidth) &&
+                        _colorBuffer->GetHeight() == static_cast<unsigned>(_bufferHeight),
+                "The render delegate resized the render buffer to " + std::to_string(_colorBuffer->GetWidth()) + "x" +
+                    std::to_string(_colorBuffer->GetHeight()) + ", it is " + std::to_string(_bufferWidth) + "x" +
+                    std::to_string(_bufferHeight)))
+            return false;
+
         // Hydra render buffers are stored bottom-up
-        image.width = _scenario.width;
-        image.height = _scenario.height;
+        image.width = _bufferWidth;
+        image.height = _bufferHeight;
         const size_t rowSize = static_cast<size_t>(image.width) * 4;
         image.rgba.resize(rowSize * image.height);
         const float* data = static_cast<const float*>(_colorBuffer->Map());
@@ -469,7 +517,10 @@ private:
     HdSceneIndexBaseRefPtr _sceneIndex;
 #endif
     HdRenderBuffer* _colorBuffer = nullptr;
+    int _bufferWidth = 0;
+    int _bufferHeight = 0;
     HdRenderPassSharedPtr _renderPass;
+    HdRenderPassStateSharedPtr _renderPassState;
     HdEngine _engine;
     HdTaskSharedPtrVector _tasks;
 };
@@ -544,6 +595,14 @@ void RunMethod(const Scenario& scenario, Method method, bool writeTestRender)
         const Step& step = scenario.steps[i];
         if (step.edit)
             step.edit(stage);
+        for (const auto& setting : step.renderSettings)
+            renderer->SetRenderSetting(setting.first, setting.second);
+        if (step.bufferSize)
+            renderer->SetBufferSize((*step.bufferSize)[0], (*step.bufferSize)[1]);
+        if (step.framing)
+            renderer->SetFraming(*step.framing);
+        if (step.windowPolicy)
+            renderer->SetWindowPolicy(*step.windowPolicy);
         const std::string filename = writeTestRender && i == referenceStep
             ? std::string("testrender.tif")
             : std::string(methodName) + "_step" + std::to_string(i) + ".tif";
@@ -707,6 +766,22 @@ GfVec2f ScreenPosition(const GfVec3d& point, const GfVec3d& cameraPosition)
     const double halfHeight = halfWidth * 120.0 / 160.0;
     return GfVec2f(static_cast<float>(0.5 + 0.5 * (point[0] - cameraPosition[0]) / halfWidth),
         static_cast<float>(0.5 - 0.5 * (point[1] - cameraPosition[1]) / halfHeight));
+}
+
+GfVec2f FramedScreenPosition(const GfVec3d& point, const CameraUtilFraming& framing, int bufferWidth,
+    int bufferHeight, const GfVec3d& cameraPosition)
+{
+    // The film of the camera made by DefineCamera is 36x27 and its half width at this distance is the same as in
+    // ScreenPosition. The display window gives it its position and size in the buffer.
+    const double distance = cameraPosition[2] - point[2];
+    const double halfWidth = distance * 18.0 / 35.0;
+    const double halfHeight = halfWidth * 27.0 / 36.0;
+    const double ndcX = (point[0] - cameraPosition[0]) / halfWidth;
+    const double ndcY = (point[1] - cameraPosition[1]) / halfHeight;
+    const GfRange2f& display = framing.displayWindow;
+    const GfVec2f size = display.GetSize();
+    return GfVec2f(static_cast<float>((display.GetMin()[0] + size[0] * (0.5 + 0.5 * ndcX)) / bufferWidth),
+        static_cast<float>((display.GetMin()[1] + size[1] * (0.5 - 0.5 * ndcY)) / bufferHeight));
 }
 
 void DefineDistantLight(const UsdStageRefPtr& stage, const SdfPath& path, float intensity)

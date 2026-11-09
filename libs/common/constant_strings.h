@@ -244,6 +244,8 @@ ASTR(box_filter);
 ASTR(bucket_scanning);
 ASTR(bucket_size);
 ASTR(buffer_names);
+ASTR(buffer_offset_x);
+ASTR(buffer_offset_y);
 ASTR(buffer_pointers);
 ASTR(cache_id);
 ASTR(camera);

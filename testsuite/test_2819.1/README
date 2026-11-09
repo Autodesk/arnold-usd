@@ -1,0 +1,13 @@
+Edits of the camera aperture offset and of a user screen window, see test_2819 and #2819
+
+A sphere is rendered through a camera without a host framing. The horizontal and vertical aperture offsets and the
+primvars:arnold:screen_window_min/max of the camera are edited: the offset moves the screen window and resets when it
+goes back to 0, a user screen window is kept when the offset changes, and removing it restores the default window.
+Each image is checked against the display window the screen window is equivalent to.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last one is compared against the
+reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}
