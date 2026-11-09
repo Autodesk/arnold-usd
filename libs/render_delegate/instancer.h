@@ -66,8 +66,12 @@ public:
         const SdfPath& prototypeId, std::vector<AtNode *> &instancers);
 
 
+    /// Instances the prototype node with its instance_matrix, and declares the instance primvars on it.
+    ///
+    /// @param instancePrimvars Output names of the instance primvars declared on the prototype node.
     HDARNOLD_API
-    bool ComputeShapeInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+    bool ComputeShapeInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId,
+        AtNode *prototypeNode, std::vector<TfToken>& instancePrimvars);
 
     HDARNOLD_API
     void ApplyInstancerVisibilityToArnoldNode(AtNode *node);
@@ -118,7 +122,7 @@ protected:
     void ResampleInstancePrimvars();
 
     void AddInstancePrimvarsWithIndices(HdArnoldRenderDelegate* renderDelegate, AtNode* prototypeNode,
-        const VtIntArray& expandedIndices);
+        const VtIntArray& expandedIndices, std::vector<TfToken>& instancePrimvars);
 
     HdArnoldRenderDelegate* _delegate = nullptr;
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.

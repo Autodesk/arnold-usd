@@ -1,0 +1,13 @@
+Interactive USD edits of the per-instance primvars of a point instancer without geometry deduplication
+
+With HDARNOLD_GEOM_DEDUP=0, the prototype of a point instancer is instanced through the instance_matrix of its own
+shape node rather than an arnold instancer node. The point instancer gets a per-instance displayColor primvar, edited,
+blocked, set again and removed. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last render of the procedural is
+compared against the reference image.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
