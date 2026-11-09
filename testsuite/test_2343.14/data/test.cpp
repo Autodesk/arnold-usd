@@ -201,7 +201,7 @@ INTERACTIVE_USD_TEST_MAIN()
             bothQuads(Color::Blue)},
         {"myColor primvar removed, back to the fallback",
             [](const UsdStageRefPtr& stage) { stage->GetPrimAtPath(kQuads).RemoveProperty(kMyColor); },
-            bothQuads(Color::Red), primvarRemovalIssue},
+            bothQuads(Color::Red)},
         {"authored normals pointing to +X, lit, with the red material bound again and the orientation back to "
          "rightHanded",
             [](const UsdStageRefPtr& stage) {
