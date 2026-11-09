@@ -4,6 +4,7 @@
 
 #ifdef ENABLE_SCENE_INDEX // Hydra 2
 #include <pxr/base/tf/envSetting.h>
+#include <pxr/imaging/hd/cameraSchema.h>
 #include <pxr/imaging/hd/containerDataSourceEditor.h>
 #include <pxr/imaging/hd/filteringSceneIndex.h>
 #include <pxr/imaging/hd/lazyContainerDataSource.h>
@@ -14,6 +15,8 @@
 #include <pxr/imaging/hd/tokens.h>
 #include <pxr/usdImaging/usdImaging/usdPrimInfoSchema.h>
 #include "constant_strings.h"
+
+#include <unordered_set>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -71,7 +74,14 @@ protected:
         if (!_IsObserved()) {
             return;
         }
-        // Check if prims added are light and have dependencies, keep the dependencies
+        // Keep track of the cameras, see _PrimsDirtied. A prim can be added again with another type.
+        for (const auto &entry : entries) {
+            if (entry.primType == HdPrimTypeTokens->camera) {
+                _cameras.insert(entry.primPath);
+            } else {
+                _cameras.erase(entry.primPath);
+            }
+        }
         _SendPrimsAdded(entries);
     }
 
@@ -79,6 +89,13 @@ protected:
     {
         if (!_IsObserved()) {
             return;
+        }
+        if (!_cameras.empty()) {
+            for (const auto &entry : entries) {
+                for (auto it = _cameras.begin(); it != _cameras.end();) {
+                    it = it->HasPrefix(entry.primPath) ? _cameras.erase(it) : std::next(it);
+                }
+            }
         }
         _SendPrimsRemoved(entries);
     }
@@ -94,9 +111,17 @@ protected:
 
         // First check if any of the entry locator starts is "arnold::attribute". 
         // We could also check the prim type belongs to Arnold if this too slow, or keep a cache of our custom prims in the scene (using _PrimsAdded/_PrimsRemoved)
+        // Cameras have the same problem with their primvars, e.g. primvars:arnold:screen_window_min: UsdImaging
+        // dirties the primvars locator, which HdDirtyBitsTranslator doesn't map to any camera dirty bit, so the camera
+        // isn't synced. HdArnoldCamera reads them as camera params, so we also dirty the camera schema (DirtyParams).
         static HdDataSourceLocator arnoldAttributesLocator(str::t_arnold__attributes);
-        if (std::any_of(entries.cbegin(), entries.cend(), [](const auto &entry) {
-                return std::count(entry.dirtyLocators.begin(), entry.dirtyLocators.end(), arnoldAttributesLocator);
+        const auto isDirtyCameraPrimvar = [this](const HdSceneIndexObserver::DirtiedPrimEntry &entry) {
+            return !_cameras.empty() && entry.dirtyLocators.Intersects(HdPrimvarsSchema::GetDefaultLocator()) &&
+                   _cameras.count(entry.primPath) != 0;
+        };
+        if (std::any_of(entries.cbegin(), entries.cend(), [&](const auto &entry) {
+                return std::count(entry.dirtyLocators.begin(), entry.dirtyLocators.end(), arnoldAttributesLocator) ||
+                       isDirtyCameraPrimvar(entry);
             })) {
             HdSceneIndexObserver::DirtiedPrimEntries _entries;
             for (const auto &entry : entries) {
@@ -109,6 +134,9 @@ protected:
                         locators.insert(locator);
                     }
                 }
+                if (isDirtyCameraPrimvar(entry)) {
+                    locators.insert(HdCameraSchema::GetDefaultLocator());
+                }
                 _entries.emplace_back(entry.primPath, locators);
             }
             _SendPrimsDirtied(_entries);
@@ -116,6 +144,9 @@ protected:
             _SendPrimsDirtied(entries);
         }
     }
+
+private:
+    std::unordered_set<SdfPath, SdfPath::Hash> _cameras; ///< The camera prims of the input scene index.
 };
 
 } // namespace

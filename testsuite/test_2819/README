@@ -1,0 +1,16 @@
+Render delegate with a host CameraUtilFraming whose display window differs from its data window
+
+see #2819
+
+A red sphere is rendered by the HdArnoldRendererPlugin render delegate, driven like a Hydra host (e.g. maya-hydra) in a
+160x120 render buffer. The host sends a framing whose display window positions the film in the buffer and whose data
+window is the part of the buffer to fill: film translate, overscan, zoom and a render region. The host's buffer must
+not be resized, and the sphere must be where CameraUtilFraming::ApplyToProjectionMatrix puts it, the pixels outside of
+the data window being left cleared. A host without a framing (display window equal to the data window) must render as
+before, also after the framing was used. The camera aperture offset is then set and reset, the image must come back.
+The scenario only runs with the render delegate, see testsuite/common/interactive_usd_test.h. Each render is checked
+in test.cpp, and the last one is compared against the reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

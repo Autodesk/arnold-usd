@@ -24,6 +24,7 @@
 #include "api.h"
 
 #include <pxr/imaging/hd/camera.h>
+#include <pxr/imaging/cameraUtil/conformWindow.h>
 
 #include "render_delegate.h"
 
@@ -72,6 +73,21 @@ public:
     /// @return {scr_min_x, scr_min_y, scr_max_x, scr_max_y}
     static GfVec4f GetScreenWindowFromOrthoProjection(const GfMatrix4d &projMatrix);
 
+    /// @brief Conforms the screen window of a perspective camera to the host's display window
+    ///
+    /// Arnold always matches the horizontal aperture across xres. When the host sends a CameraUtilFraming, Hydra
+    /// conforms the camera window to the display window aspect with the render pass window policy instead
+    /// (CameraUtilFraming::ApplyToProjectionMatrix), this does the same through the screen window (#2819).
+    /// The state is kept, so the following syncs of the camera keep the conformed window.
+    /// @param enabled False goes back to the camera's own screen window
+    /// @param windowPolicy The render pass window policy
+    /// @param displayAspect The display window aspect ratio, pixel aspect ratio included
+    /// @param renderParam Used to interrupt the render when the screen window changes
+    HDARNOLD_API
+    void SetHostConform(
+        bool enabled, CameraUtilConformWindowPolicy windowPolicy, double displayAspect,
+        HdArnoldRenderParam* renderParam);
+
 protected:
     /// Set the Arnold camera node
     ///
@@ -104,8 +120,21 @@ protected:
 
 
     AtNode * ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits);
+
+    /// @brief Writes the screen window of a perspective camera, conformed to the host if SetHostConform enabled it
+    void WriteScreenWindow();
+
     AtNode* _camera = nullptr; ///< Arnold camera node.
     HdArnoldRenderDelegate *_delegate = nullptr;
+
+    GfMatrix4d _projMatrix{1.0};             ///< Camera projection, not framed by the host.
+    GfVec2f _screenWindowMin{-1.f, -1.f};    ///< Screen window authored with the arnold primvars, or the default.
+    GfVec2f _screenWindowMax{1.f, 1.f};
+    GfVec2f _apertureOffsetWindow{0.f, 0.f}; ///< The aperture offset in screen window units.
+    bool _writeScreenWindow = true;          ///< False when the authored screen window has an unsupported type.
+    bool _hostConform = false;               ///< See SetHostConform.
+    CameraUtilConformWindowPolicy _hostWindowPolicy = CameraUtilFit;
+    double _hostDisplayAspect = 1.0;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

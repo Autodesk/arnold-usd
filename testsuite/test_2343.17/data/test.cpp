@@ -24,7 +24,7 @@ UsdGeomPrimvar InstanceColors(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // Read when the render delegate is created
     TfSetenv("HDARNOLD_GEOM_DEDUP", "0");

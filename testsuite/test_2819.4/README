@@ -1,0 +1,12 @@
+Changes of the size of the host's render buffer with a host framing, see test_2819 and #2819
+
+A sphere is rendered with a film translate framing, then the host reallocates its render buffer to other sizes with
+framings of the new sizes, and finally goes back to the initial size without framing. The render delegate must follow
+the buffer of the host, and never resize it.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last one is compared against the
+reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

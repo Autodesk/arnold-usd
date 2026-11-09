@@ -1,0 +1,15 @@
+Window policy of the host with a 16:9 camera, see test_2819 and #2819
+
+A sphere is rendered through a 16:9 camera (36x20.25 mm aperture) in a 160x120 render buffer, so the camera is wider
+than the display window. The render pass window policy is the camera's (fit), then crop, match vertically, match
+horizontally and don't conform, then fit with an overscan framing and crop with a film translate framing. Each image
+must match CameraUtilFraming::ApplyToProjectionMatrix with that window policy, what Storm draws. A render settings
+resolution ignores the host framing and its window policy, the camera matching its horizontal aperture as before (husk
+relies on it), and clearing it brings the window policy back.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the crop render (step 1) is compared
+against the reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

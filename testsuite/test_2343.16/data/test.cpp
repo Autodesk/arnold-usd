@@ -35,7 +35,7 @@ GfVec2f Offset(const GfVec3d& position, double x, double y)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     Scenario scenario;
     scenario.createStage = [&]() {

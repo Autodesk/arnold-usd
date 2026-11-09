@@ -148,11 +148,15 @@ private:
     std::vector<uint8_t> _zeroData;
 
     CameraUtilFraming _framing;
+    SdfPath _conformedCameraId; ///< The scene camera conformed to the host framing, see HdArnoldCamera::SetHostConform.
 
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);
 
     bool _acceleratedViewport = false;
+    bool _useFraming = false;           ///< The host framing is used to place the film and the data window.
+    bool _framingWarned = false;        ///< The data window warning has been issued, avoids flooding the log.
+    bool _acceleratedFramingWarned = false; ///< Same for the accelerated viewport warning.
     bool _isConverged = false;          ///< State of the render convergence.
 };
 

@@ -55,6 +55,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (st)
     (uv)
     (catmark)
+    ((arnoldSubdivIterations, "arnold:subdiv_iterations"))
+    ((arnoldSubdivType, "arnold:subdiv_type"))
 );
 // clang-format on
 
@@ -238,10 +240,12 @@ void HdArnoldMesh::Sync(
     
     bool positionsChanged = false;
 
+    // The primvars that don't exist anymore, whose values must be removed from the polymesh
+    TfTokenVector removedPrimvars;
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
         // the velocity primvar might not be present in our list #1994
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
     }
 
     // Fetched at most once per Sync, for both the deduplication and the topology translation.
@@ -483,6 +487,25 @@ void HdArnoldMesh::Sync(
             _hasLightFilters = false;
         }
         const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
+        // These primvars set builtin parameters of the polymesh (see below)
+        static const HdArnoldBuiltinPrimvars builtinPrimvars = {
+            {HdTokens->normals, str::nlist}, {HdTokens->normals, str::nidxs},
+            {_tokens->st, str::uvlist}, {_tokens->st, str::uvidxs},
+            {_tokens->uv, str::uvlist}, {_tokens->uv, str::uvidxs}};
+        HdArnoldRemovePrimvars(node, removedPrimvars, builtinPrimvars);
+        for (const auto& removedPrimvar : removedPrimvars) {
+            // Without these primvars, the subdivision comes back from the display style and the scheme
+            if (removedPrimvar == _tokens->arnoldSubdivIterations) {
+                const int refineLevel = GetDisplayStyle(sceneDelegate).refineLevel;
+                AiNodeSetByte(node, str::subdiv_iterations,
+                    static_cast<uint8_t>(refineLevel <= 0 ? 0 : int(std::log2(float(refineLevel)))));
+            } else if (removedPrimvar == _tokens->arnoldSubdivType) {
+                const TfToken scheme = getMeshTopology().GetScheme();
+                AiNodeSetStr(node, str::subdiv_type,
+                    (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) ? str::catclark
+                                                                                              : str::none);
+            }
+        }
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated

@@ -33,7 +33,7 @@ UsdGeomPrimvar InstanceColors(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> newPrototypeIssue = {{ProceduralHydra1 | DelegateHydra1,
         "with hydra 1, a prototype added to the point instancer prototypes isn't rendered"}};

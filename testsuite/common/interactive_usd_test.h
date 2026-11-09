@@ -7,9 +7,17 @@
 // The testsuite pass selects the procedural reader (PROCEDURAL_USE_HYDRA) and Hydra 1 or 2
 // (USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX), see Mode.
 //
-// A test using it only needs a test.cpp calling Run(), and PARAMS: {'program_env': 'interactive_usd'} in its README,
-// see TEST_PROGRAM_ENVS in testsuite/SConscript. The test program, the procedural and the render delegate must share
-// the same USD, for the stage created by the test to be visible to them:
+// A test using it only needs a test.cpp whose INTERACTIVE_USD_TEST_MAIN() calls Run(), and
+// PARAMS: {'program_env': 'interactive_usd'} in its README, see TEST_PROGRAM_ENVS in testsuite/SConscript. When a single
+// test runs, its test.cpp is linked in its own program. When several run, their test.cpp are linked in a single
+// program shared by them, which runs the test named by its first argument (see TEST_PROGRAM_COMBINED_ENVS in
+// testsuite/SConscript): this avoids linking the static USD in every test program. As a consequence:
+//  - the entry point must be INTERACTIVE_USD_TEST_MAIN(), not main(), and the README must not set a 'script'
+//  - helpers and globals must be in an anonymous namespace, not to clash with those of the other tests
+//  - globals are constructed in the process of every test, before Run() sets up the environment: only use trivial
+//    values (SdfPath, TfToken, GfVec3f...), nothing using USD plugins or Arnold, and build stages in createStage
+// The test program, the procedural and the render delegate must share the same USD, for the stage created by the test
+// to be visible to them:
 //  - with a static USD, usd_proc embeds its own private copy of USD, so the usd procedural, the arnold hydra plugins
 //    and USD are statically linked in the test program instead
 //  - with a monolithic or shared USD, the test program loads the usd_proc and hdArnold built in this repository
@@ -19,16 +27,30 @@
 #pragma once
 
 #include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/vec2i.h>
+#include <pxr/base/vt/value.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
+#include <pxr/imaging/cameraUtil/conformWindow.h>
+#include <pxr/imaging/cameraUtil/framing.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdShade/material.h>
 
 #include <functional>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
+
+// The entry point of a test. In a program shared by several tests, TEST_PROGRAM_ENTRY is defined when compiling each
+// test.cpp, to a function name unique to the test that the shared program's main() calls (see tools/test/testsuite.py)
+#ifdef TEST_PROGRAM_ENTRY
+#define INTERACTIVE_USD_TEST_MAIN() int TEST_PROGRAM_ENTRY(int, char**)
+#else
+#define INTERACTIVE_USD_TEST_MAIN() int main(int, char**)
+#endif
 
 namespace interactive_usd_test {
 
@@ -106,6 +128,18 @@ struct Step {
     std::function<void(const UsdStageRefPtr&)> edit;
     Check check;
     std::vector<KnownIssue> knownIssues;
+    // Changes the framing the host sends to the render delegate before this step's render, it is kept by the next
+    // steps. Ignored by the procedural.
+    std::optional<CameraUtilFraming> framing;
+    // Reallocates the host's render buffer to this size before this step's render (kept by the next steps). It is
+    // the size of the images checked. Ignored by the procedural.
+    std::optional<GfVec2i> bufferSize;
+    // Render settings of the render delegate set before this step's render, e.g. {"resolution", GfVec2i(160, 120)}.
+    // Ignored by the procedural.
+    std::vector<std::pair<std::string, VtValue>> renderSettings;
+    // Overrides the window policy of the render pass before this step's render (kept by the next steps), the
+    // camera's window policy (CameraUtilFit by default) is used until then. Ignored by the procedural.
+    std::optional<CameraUtilConformWindowPolicy> windowPolicy;
 };
 
 struct Scenario {
@@ -118,6 +152,16 @@ struct Scenario {
     int width = 160;
     int height = 120;
     int aaSamples = 3;
+    // The size of the render buffer the host gives to the render delegate, width x height if 0. The images checked
+    // and saved have this size. Ignored by the procedural.
+    int bufferWidth = 0;
+    int bufferHeight = 0;
+    // The framing the host initially sends to the render delegate, the buffer's full rect if unset. Ignored by the
+    // procedural, a scenario using a framing should only run with the RenderDelegate method.
+    std::optional<CameraUtilFraming> framing;
+    // The usd_override_double_sided option, true by default since Arnold 7.5, renders every mesh double-sided whatever its
+    // doubleSided attribute. Set it to false to check the sidedness and orientation of meshes.
+    bool usdOverrideDoubleSided = true;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
@@ -133,6 +177,12 @@ void DefineCamera(const UsdStageRefPtr& stage, const SdfPath& path, const GfVec3
 // Normalized image position of a world position, as seen by a camera made by DefineCamera at cameraPosition, with
 // the default 160x120 resolution
 GfVec2f ScreenPosition(const GfVec3d& point, const GfVec3d& cameraPosition = GfVec3d(0, 0, 6));
+// Normalized position, in a bufferWidth x bufferHeight render buffer, of a world position as seen by a camera made by
+// DefineCamera at cameraPosition, when the host sends this framing: the display window gives the film its position
+// and size in the buffer (CameraUtilDontConform), like CameraUtilFraming::ApplyToProjectionMatrix does. It can be
+// outside of [0, 1].
+GfVec2f FramedScreenPosition(const GfVec3d& point, const CameraUtilFraming& framing, int bufferWidth, int bufferHeight,
+    const GfVec3d& cameraPosition = GfVec3d(0, 0, 6));
 // A normalized distant light, pointing down -Z and tilted by 40 degrees around X and Y
 void DefineDistantLight(const UsdStageRefPtr& stage, const SdfPath& path, float intensity = 3.f);
 // A UsdPreviewSurface material, whose shader is <path>/surface

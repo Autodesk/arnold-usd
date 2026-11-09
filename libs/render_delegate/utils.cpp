@@ -48,7 +48,9 @@
 
 #include "render_delegate.h"
 
+#include <algorithm>
 #include <type_traits>
+#include <unordered_set>
 #include <parameters_utils.h>
 #include <shape_utils.h>
 #include <iostream>
@@ -59,6 +61,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldMotionEnd, "arnold:motion_end"))
     ((arnoldMotionStart, "arnold:motion_start"))
+    ((arnoldMatrix, "arnold:matrix"))
+    ((arnoldName, "arnold:name"))
     ((arnoldVisibility, "arnold:visibility"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
@@ -674,10 +678,20 @@ bool HdArnoldGetComputedPrimvars(
 
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
-    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations)
+    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations,
+    TfTokenVector* removedPrimvars)
 {
-    for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
+    const auto& queriedInterpolations = interpolations == nullptr ? primvarInterpolations : *interpolations;
+    // The names of the primvars that still exist, to find the removed ones
+    std::unordered_set<TfToken, TfToken::HashFunctor> existingPrimvars;
+    for (auto interpolation : queriedInterpolations) {
         const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
+        if (removedPrimvars) {
+            for (const auto& primvarDesc : primvarDescs)
+                existingPrimvars.insert(primvarDesc.name);
+            for (const auto& computedDesc : delegate->GetExtComputationPrimvarDescriptors(id, interpolation))
+                existingPrimvars.insert(computedDesc.name);
+        }
         for (const auto& primvarDesc : primvarDescs) {
             // Point positions either come from computed primvars using a different function or have a dedicated
             // dirty bit.
@@ -690,6 +704,55 @@ void HdArnoldGetPrimvars(
             HdArnoldInsertPrimvar(
                 primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
         }
+    }
+    if (removedPrimvars == nullptr)
+        return;
+    for (auto it = primvars.begin(); it != primvars.end();) {
+        const bool queried = std::find(queriedInterpolations.begin(), queriedInterpolations.end(),
+                                 it->second.interpolation) != queriedInterpolations.end();
+        // The points are set by the shapes through their own dirty bit
+        if (!queried || it->first == HdTokens->points || existingPrimvars.count(it->first) != 0) {
+            ++it;
+            continue;
+        }
+        removedPrimvars->push_back(it->first);
+        it = primvars.erase(it);
+    }
+}
+
+void HdArnoldRemovePrimvars(
+    AtNode* node, const TfTokenVector& removedPrimvars, const HdArnoldBuiltinPrimvars& builtinPrimvars)
+{
+    if (node == nullptr)
+        return;
+    const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
+    for (const auto& name : removedPrimvars) {
+        // The delegate sets these parameters itself: the motion range from the shutter (see
+        // ConvertPrimvarToBuiltinParameter), the matrix from the transform, and the node name
+        if (name == _tokens->arnoldMotionStart || name == _tokens->arnoldMotionEnd || name == _tokens->arnoldMatrix ||
+            name == _tokens->arnoldName)
+            continue;
+        // The builtin parameters that the shape sets from this primvar
+        for (const auto& builtinPrimvar : builtinPrimvars) {
+            if (builtinPrimvar.first == name)
+                AiNodeResetParameter(node, builtinPrimvar.second);
+        }
+        // primvars:arnold:xyz set the builtin parameter xyz (see ConvertPrimvarToBuiltinParameter)
+        if (_TokenStartsWithToken(name, str::t_arnold_prefix)) {
+            const AtString paramName(name.GetText() + str::t_arnold_prefix.size());
+            if (AiNodeEntryLookUpParameter(nodeEntry, paramName) != nullptr) {
+                AiNodeResetParameter(node, paramName);
+                continue;
+            }
+        }
+        // Otherwise, they were declared as user data, with indices for the indexed ones. Resetting a user
+        // parameter removes it.
+        const AtString userParamName(name.GetText());
+        if (AiNodeLookUpUserParameter(node, userParamName) != nullptr)
+            AiNodeResetParameter(node, userParamName);
+        const AtString indicesName(TfStringPrintf("%sidxs", name.GetText()).c_str());
+        if (AiNodeLookUpUserParameter(node, indicesName) != nullptr)
+            AiNodeResetParameter(node, indicesName);
     }
 }
 

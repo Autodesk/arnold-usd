@@ -15,7 +15,11 @@
 - [usd#2793](https://github.com/Autodesk/arnold-usd/issues/2793) - Fix a crash in the ArnoldUsdBundle procedural when HdArnoldRendererPlugin cannot be found, and register the bundle plugInfo files automatically
 - [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 - [usd#2813](https://github.com/Autodesk/arnold-usd/issues/2813) - Fix curve widths not updating in the render delegate when only the widths change
+- [usd#2819](https://github.com/Autodesk/arnold-usd/issues/2819) - Fix the camera framing in the hydra render delegate when the host sends a display window that differs from its data window (film translate, pan/zoom, overscan, render region): the render buffers are no longer resized, and the camera aperture offset is reset when it goes back to 0. A screen window authored with `primvars:arnold:screen_window_min/max` is now moved by the aperture offset instead of being replaced by it. When the host sends a framing without a render settings resolution, scene cameras follow the host window policy (fit, crop...) like Storm, instead of always matching their horizontal aperture. With Hydra 2, editing only a `primvars:arnold:*` attribute of a camera now updates it
+- [usd#2822](https://github.com/Autodesk/arnold-usd/issues/2822) - Fix light link and mesh light edits applied one update late by the usd procedural with the Hydra reader, which could crash when a linked light is removed
+- [usd#2825](https://github.com/Autodesk/arnold-usd/issues/2825) - Fix removed normals staying applied to meshes in interactive renders
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
+- [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 
 ## [7.5.4.0] 
 

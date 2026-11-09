@@ -1,0 +1,11 @@
+Edits of the camera focal length and aperture with a host framing, see test_2819 and #2819
+
+A sphere is rendered with a film translate framing sent by the host. The focal length, then the film aperture of the
+camera are edited and restored: the film must scale around the center of the display window, the framing being kept.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last one is compared against the
+reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

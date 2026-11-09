@@ -1,0 +1,12 @@
+Precedence of the render settings resolution over the host framing, see test_2819 and #2819
+
+A sphere is rendered with a zoom framing, then a film translate framing, while the host sets and clears the render
+settings resolution. With a resolution, the host framing is ignored as before the support of the framing (this is what
+husk relies on), and clearing the resolution makes the framing apply again.
+The scenario only runs with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last one is compared against the
+reference image.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}
