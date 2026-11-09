@@ -148,6 +148,7 @@ private:
     std::vector<uint8_t> _zeroData;
 
     CameraUtilFraming _framing;
+    SdfPath _conformedCameraId; ///< The scene camera conformed to the host framing, see HdArnoldCamera::SetHostConform.
 
     // Window NDC region, that can be used for overscan, or to adjust the frustum
     GfVec4f _windowNDC =  GfVec4f(0.f, 0.f, 1.f, 1.f);

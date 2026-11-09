@@ -678,6 +678,30 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         pixelAspectRatio *= newFraming.pixelAspectRatio;
     }
 
+    // Like Storm, conform the scene camera to the display window with the render pass window policy whenever the
+    // host sends a framing, also when the display window is the data window (usdview without "crop to camera
+    // viewport"). Houdini never sends a framing and uses its own conform policy, a render settings resolution
+    // or dataWindowNDC keep today's behavior, the camera matching its horizontal aperture across xres (#2819).
+    // The pixel aspect ratio only counts in framing mode, as it's only given to Arnold there.
+    const bool conformToHost = hostFraming.IsValid() && delegateResolution[0] <= 0 && delegateResolution[1] <= 0 &&
+        !hasWindowNDC && newFraming.displayWindow.GetSize()[0] > 0.f && newFraming.displayWindow.GetSize()[1] > 0.f;
+    auto* hostCamera = const_cast<HdArnoldCamera*>(camera);
+    if (_conformedCameraId != cameraId && !_conformedCameraId.IsEmpty()) {
+        // The previous camera may still be used without a framing, give it its own screen window back.
+        if (auto* previousCamera = dynamic_cast<HdArnoldCamera*>(
+                GetRenderIndex()->GetSprim(HdPrimTypeTokens->camera, _conformedCameraId))) {
+            previousCamera->SetHostConform(false, CameraUtilFit, 1.0, renderParam);
+        }
+    }
+    if (hostCamera != nullptr) {
+        const double displayAspect = conformToHost ? (useFraming ? newFraming.pixelAspectRatio : 1.0) *
+                                                         newFraming.displayWindow.GetSize()[0] /
+                                                         newFraming.displayWindow.GetSize()[1]
+                                                   : 1.0;
+        hostCamera->SetHostConform(conformToHost, renderPassState->GetWindowPolicy(), displayAspect, renderParam);
+    }
+    _conformedCameraId = (hostCamera != nullptr && conformToHost) ? cameraId : SdfPath();
+
     int framingWidth = width;
     int framingHeight = height;
     if (delegateResolution[0] > 0 && delegateResolution[1] > 0 && 

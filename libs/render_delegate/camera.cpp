@@ -239,20 +239,66 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         supportedWindow = supportedWindow && value.IsEmpty();
         return defaultValue;
     };
-    GfVec2f windowMin = getVec2(_tokens->screen_window_min, GfVec2f(-1.f, -1.f));
-    GfVec2f windowMax = getVec2(_tokens->screen_window_max, GfVec2f(1.f, 1.f));
-    if (supportedWindow) {
-        if (horizontalAperture > AI_EPSILON && verticalAperture > AI_EPSILON) {
-            const GfVec2f offset(
-                2.f * horizontalApertureOffset / horizontalAperture, 2.f * verticalApertureOffset / verticalAperture);
-            windowMin += offset;
-            windowMax += offset;
-        }
-        AiNodeSetVec2(_camera, str::screen_window_min, windowMin[0], windowMin[1]);
-        AiNodeSetVec2(_camera, str::screen_window_max, windowMax[0], windowMax[1]);
+    // The window is written by Sync once the projection is known, see WriteScreenWindow.
+    _screenWindowMin = getVec2(_tokens->screen_window_min, GfVec2f(-1.f, -1.f));
+    _screenWindowMax = getVec2(_tokens->screen_window_max, GfVec2f(1.f, 1.f));
+    _writeScreenWindow = supportedWindow;
+    _apertureOffsetWindow = GfVec2f(0.f, 0.f);
+    if (horizontalAperture > AI_EPSILON && verticalAperture > AI_EPSILON) {
+        _apertureOffsetWindow = GfVec2f(
+            2.f * horizontalApertureOffset / horizontalAperture, 2.f * verticalApertureOffset / verticalAperture);
     }
 
     UpdateCameraShaders(sceneDelegate, renderParam, dirtyBits);
+}
+
+void HdArnoldCamera::WriteScreenWindow()
+{
+    if (!_writeScreenWindow || !AiNodeIs(_camera, str::persp_camera)) {
+        return;
+    }
+    GfVec2f windowMin = _screenWindowMin + _apertureOffsetWindow;
+    GfVec2f windowMax = _screenWindowMax + _apertureOffsetWindow;
+    if (_hostConform) {
+        // Same conform as CameraUtilFraming::ApplyToProjectionMatrix, it scales the window and its offset terms.
+        const GfMatrix4d conformed = CameraUtilConformedWindow(_projMatrix, _hostWindowPolicy, _hostDisplayAspect);
+        // At a depth of 1, the conformed window spans x = (ndc + P[2][0]) / P[0][0] for ndc in -1..1, same for y.
+        // The arnold fov comes from the unconformed P[0][0], and its screen window y unit is the x unit divided by
+        // the image aspect, which converts the conformed window to the screen window. This also takes the vertical
+        // aperture offset relative to the image, instead of the vertical aperture.
+        if (conformed[0][0] != 0.0 && conformed[1][1] != 0.0 && _hostDisplayAspect > 0.0) {
+            const double scaleX = _projMatrix[0][0] / conformed[0][0];
+            const double scaleY = _hostDisplayAspect * _projMatrix[0][0] / conformed[1][1];
+            const auto toScreen = [&](const GfVec2f& window) -> GfVec2f {
+                return GfVec2f(
+                    static_cast<float>((window[0] + conformed[2][0]) * scaleX),
+                    static_cast<float>((window[1] + conformed[2][1]) * scaleY));
+            };
+            windowMin = toScreen(_screenWindowMin);
+            windowMax = toScreen(_screenWindowMax);
+        }
+    }
+    AiNodeSetVec2(_camera, str::screen_window_min, windowMin[0], windowMin[1]);
+    AiNodeSetVec2(_camera, str::screen_window_max, windowMax[0], windowMax[1]);
+}
+
+void HdArnoldCamera::SetHostConform(
+    bool enabled, CameraUtilConformWindowPolicy windowPolicy, double displayAspect, HdArnoldRenderParam* renderParam)
+{
+    if (enabled == _hostConform &&
+        (!enabled || (windowPolicy == _hostWindowPolicy && GfIsClose(displayAspect, _hostDisplayAspect, 1e-6)))) {
+        return;
+    }
+    _hostConform = enabled;
+    _hostWindowPolicy = windowPolicy;
+    _hostDisplayAspect = displayAspect;
+    if (!_writeScreenWindow || !AiNodeIs(_camera, str::persp_camera)) {
+        return;
+    }
+    if (renderParam != nullptr) {
+        renderParam->Interrupt(true, false);
+    }
+    WriteScreenWindow();
 }
 
 void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
@@ -303,6 +349,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         _camera = newCamera;
     }
 
+    // The screen window depends on the projection and on the params, it's written once both are synced.
+    bool screenWindowDirty = false;
     // We can change between perspective and orthographic camera.
 #if PXR_VERSION >= 2203
     if (*dirtyBits & HdCamera::AllDirty) {
@@ -313,6 +361,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         param->Interrupt();
         const auto& projMatrix = GetProjectionMatrix();
 #endif
+        _projMatrix = projMatrix;
+        screenWindowDirty = true;
         if (cameraType == str::persp_camera) {
             // TODO cyril: pixel aspect ratio is incorrect here, we should set the matrix instead of the fov ?
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
@@ -345,6 +395,10 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         } else {
             UpdateGenericParams(sceneDelegate, renderParam, dirtyBits);
         }
+        screenWindowDirty = true;
+    }
+    if (screenWindowDirty) {
+        WriteScreenWindow();
     }
     // The camera can be used as a projection camera in which case it needs to dirty its dependencies
     _delegate->DirtyDependency(GetId());

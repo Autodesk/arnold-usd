@@ -216,6 +216,7 @@ public:
     virtual void SetFraming(const CameraUtilFraming&) {}
     virtual void SetBufferSize(int, int) {}
     virtual void SetRenderSetting(const std::string&, const VtValue&) {}
+    virtual void SetWindowPolicy(CameraUtilConformWindowPolicy) {}
 };
 
 // The "usd" procedural compiled in this program, reading the stage through its cache_id
@@ -405,6 +406,17 @@ public:
             _renderPassState->SetFraming(framing);
     }
 
+    void SetWindowPolicy(CameraUtilConformWindowPolicy policy) override
+    {
+        if (!_renderPassState)
+            return;
+#if PXR_VERSION >= 2408
+        _renderPassState->SetOverrideWindowPolicy(policy);
+#else
+        _renderPassState->SetOverrideWindowPolicy({true, policy});
+#endif
+    }
+
     void SetBufferSize(int width, int height) override
     {
         if (!_colorBuffer)
@@ -582,6 +594,8 @@ void RunMethod(const Scenario& scenario, Method method, bool writeTestRender)
             renderer->SetBufferSize((*step.bufferSize)[0], (*step.bufferSize)[1]);
         if (step.framing)
             renderer->SetFraming(*step.framing);
+        if (step.windowPolicy)
+            renderer->SetWindowPolicy(*step.windowPolicy);
         const std::string filename = writeTestRender && i == referenceStep
             ? std::string("testrender.tif")
             : std::string(methodName) + "_step" + std::to_string(i) + ".tif";

@@ -24,6 +24,7 @@
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec4f.h>
+#include <pxr/imaging/cameraUtil/conformWindow.h>
 #include <pxr/imaging/cameraUtil/framing.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
@@ -120,6 +121,9 @@ struct Step {
     // Render settings of the render delegate set before this step's render, e.g. {"resolution", GfVec2i(160, 120)}.
     // Ignored by the procedural.
     std::vector<std::pair<std::string, VtValue>> renderSettings;
+    // Overrides the window policy of the render pass before this step's render (kept by the next steps), the
+    // camera's window policy (CameraUtilFit by default) is used until then. Ignored by the procedural.
+    std::optional<CameraUtilConformWindowPolicy> windowPolicy;
 };
 
 struct Scenario {
