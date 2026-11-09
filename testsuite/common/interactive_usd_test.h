@@ -7,9 +7,17 @@
 // The testsuite pass selects the procedural reader (PROCEDURAL_USE_HYDRA) and Hydra 1 or 2
 // (USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX), see Mode.
 //
-// A test using it only needs a test.cpp calling Run(), and PARAMS: {'program_env': 'interactive_usd'} in its README,
-// see TEST_PROGRAM_ENVS in testsuite/SConscript. The test program, the procedural and the render delegate must share
-// the same USD, for the stage created by the test to be visible to them:
+// A test using it only needs a test.cpp whose INTERACTIVE_USD_TEST_MAIN() calls Run(), and
+// PARAMS: {'program_env': 'interactive_usd'} in its README, see TEST_PROGRAM_ENVS in testsuite/SConscript. When a single
+// test runs, its test.cpp is linked in its own program. When several run, their test.cpp are linked in a single
+// program shared by them, which runs the test named by its first argument (see TEST_PROGRAM_COMBINED_ENVS in
+// testsuite/SConscript): this avoids linking the static USD in every test program. As a consequence:
+//  - the entry point must be INTERACTIVE_USD_TEST_MAIN(), not main(), and the README must not set a 'script'
+//  - helpers and globals must be in an anonymous namespace, not to clash with those of the other tests
+//  - globals are constructed in the process of every test, before Run() sets up the environment: only use trivial
+//    values (SdfPath, TfToken, GfVec3f...), nothing using USD plugins or Arnold, and build stages in createStage
+// The test program, the procedural and the render delegate must share the same USD, for the stage created by the test
+// to be visible to them:
 //  - with a static USD, usd_proc embeds its own private copy of USD, so the usd procedural, the arnold hydra plugins
 //    and USD are statically linked in the test program instead
 //  - with a monolithic or shared USD, the test program loads the usd_proc and hdArnold built in this repository
@@ -29,6 +37,14 @@
 #include <functional>
 #include <string>
 #include <vector>
+
+// The entry point of a test. In a program shared by several tests, TEST_PROGRAM_ENTRY is defined when compiling each
+// test.cpp, to a function name unique to the test that the shared program's main() calls (see tools/test/testsuite.py)
+#ifdef TEST_PROGRAM_ENTRY
+#define INTERACTIVE_USD_TEST_MAIN() int TEST_PROGRAM_ENTRY(int, char**)
+#else
+#define INTERACTIVE_USD_TEST_MAIN() int main(int, char**)
+#endif
 
 namespace interactive_usd_test {
 
@@ -118,6 +134,9 @@ struct Scenario {
     int width = 160;
     int height = 120;
     int aaSamples = 3;
+    // The usd_override_double_sided option, true by default since Arnold 7.5, renders every mesh double-sided whatever its
+    // doubleSided attribute. Set it to false to check the sidedness and orientation of meshes.
+    bool usdOverrideDoubleSided = true;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;

@@ -38,7 +38,7 @@ void SetSize(const UsdStageRefPtr& stage, const SdfPath& instancer, double size)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // The default, set in case the environment of the test has another one. Read when the render delegate is created.
     TfSetenv("HDARNOLD_GEOM_DEDUP", "1");

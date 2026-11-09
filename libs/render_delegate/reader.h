@@ -65,6 +65,10 @@ public:
     void SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath);
 
 private:
+    /// Syncs again until the render delegate has no pending changes (light links, mesh lights,
+    /// dependencies, etc. changed by the previous sync), with a cap on the number of syncs.
+    void _SyncPendingChanges(HdArnoldRenderDelegate *arnoldRenderDelegate);
+
     std::string _renderSettings;
     unsigned int _id;
     HdArnoldRenderDelegate* GetArnoldRenderDelegate()const {return static_cast<HdArnoldRenderDelegate*>(_renderDelegate.Get());}

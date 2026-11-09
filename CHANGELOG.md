@@ -15,6 +15,7 @@
 - [usd#2793](https://github.com/Autodesk/arnold-usd/issues/2793) - Fix a crash in the ArnoldUsdBundle procedural when HdArnoldRendererPlugin cannot be found, and register the bundle plugInfo files automatically
 - [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 - [usd#2813](https://github.com/Autodesk/arnold-usd/issues/2813) - Fix curve widths not updating in the render delegate when only the widths change
+- [usd#2822](https://github.com/Autodesk/arnold-usd/issues/2822) - Fix light link and mesh light edits applied one update late by the usd procedural with the Hydra reader, which could crash when a linked light is removed
 - [usd#2825](https://github.com/Autodesk/arnold-usd/issues/2825) - Fix removed normals staying applied to meshes in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 
