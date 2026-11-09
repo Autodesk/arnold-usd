@@ -430,14 +430,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     }
         
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
-    // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    {
-        TRACE_SCOPE("PendingChanges");
-        while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
-            _renderIndex->SyncAll(&_tasks, &_taskContext);
-            arnoldRenderDelegate->ProcessConnections();
-        }
-    }
+    _SyncPendingChanges(arnoldRenderDelegate);
 
 #ifndef ENABLE_SHARED_ARRAYS
     // If we're not doing an interactive render, we want to destroy the render delegate in order to release
@@ -532,11 +525,36 @@ void HydraArnoldReader::Update()
     else
         _imagingDelegate->ApplyPendingUpdates();        
 
+    // Dirty the prims that depend on changes made outside of a sync (e.g. instancers dirtied by a frame change),
+    // so that the sync below translates them. Its result doesn't matter, the sync always runs.
     arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
     // Connections may have been made as part of the sync pass, so we need to process them
     // again to make sure that the nodes are up to date. (#2269)
     arnoldRenderDelegate->ProcessConnections();
+    // As in ReadStage, the sync may have changed light links or mesh lights, which are only applied
+    // to the shapes by HasPendingChanges and another sync. Without this, these changes would only
+    // be applied at the next update, and the shapes could still reference destroyed lights (#2822).
+    _SyncPendingChanges(arnoldRenderDelegate);
+}
+
+void HydraArnoldReader::_SyncPendingChanges(HdArnoldRenderDelegate *arnoldRenderDelegate)
+{
+    TRACE_SCOPE("PendingChanges");
+    // HasPendingChanges updates the dirty bits for a resync, as in our hydra render pass. The changes usually settle
+    // after one or two more syncs; the cap avoids hanging the host on changes that never settle, since Update runs
+    // at every procedural_update.
+    constexpr int maxSyncs = 8;
+    int numSyncs = 0;
+    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _renderCameraPath, _shutter)) {
+        if (numSyncs++ == maxSyncs) {
+            AiMsgWarning("[usd] The hydra scene still has pending changes after %d syncs, some changes might not "
+                         "be applied", maxSyncs);
+            break;
+        }
+        _renderIndex->SyncAll(&_tasks, &_taskContext);
+        arnoldRenderDelegate->ProcessConnections();
+    }
 }
 
 void HydraArnoldReader::WriteDebugScene() const

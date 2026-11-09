@@ -29,7 +29,7 @@ Check ExpectPartialCoverage(float u, float v)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // Outside the sphere with the initial camera, inside once zoomed in
     const GfVec2f probe = ScreenPosition(GfVec3d(1.3, 0, 0));

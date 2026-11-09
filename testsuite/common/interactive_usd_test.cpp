@@ -234,6 +234,9 @@ public:
         AiNodeSetInt(options, AtString("AA_samples"), scenario.aaSamples);
         AiNodeSetInt(options, AtString("GI_diffuse_depth"), 0);
         AiNodeSetInt(options, AtString("GI_specular_depth"), 0);
+#if ARNOLD_VERSION_NUM >= 70500
+        AiNodeSetBool(options, AtString("usd_override_double_sided"), scenario.usdOverrideDoubleSided);
+#endif
 
         _camera = AiNode(_universe, AtString("persp_camera"), AtString("interactive_usd_test_camera"));
         AiNodeSetPtr(options, AtString("camera"), _camera);
@@ -361,6 +364,10 @@ public:
         // The render delegate sets its own log flags
         AiMsgSetConsoleFlags(nullptr, AI_LOG_INFO | AI_LOG_WARNINGS | AI_LOG_ERRORS);
         _renderDelegate->SetRenderSetting(TfToken("arnold:global:AA_samples"), VtValue(scenario.aaSamples));
+#if ARNOLD_VERSION_NUM >= 70500
+        _renderDelegate->SetRenderSetting(
+            TfToken("arnold:global:usd_override_double_sided"), VtValue(scenario.usdOverrideDoubleSided));
+#endif
         _renderIndex = HdRenderIndex::New(_renderDelegate.Get(), HdDriverVector());
 
 #ifdef ENABLE_SCENE_INDEX

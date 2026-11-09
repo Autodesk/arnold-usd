@@ -56,7 +56,7 @@ void SetDisplayColor(const UsdStageRefPtr& stage, const SdfPath& path, const VtV
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // Read when the render delegate is created
     TfSetenv("HDARNOLD_GEOM_DEDUP", "2");

@@ -44,7 +44,7 @@ void SetDisplayColor(const UsdStageRefPtr& stage, const VtVec3fArray& colors, co
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> interpolationIssue = {{ProceduralLegacyReader,
         "the legacy reader can't update displayColor once its interpolation changed (could not set ARRAY parameter)"}};
@@ -102,7 +102,10 @@ int main(int, char**)
     // understood yet (there's no backtrace), it might be the same Arnold issue as in test_2343.4 and test_2343.5, as the
     // binding also makes the procedural destroy nodes in procedural_update. The hydra pass compares the render of the
     // render delegate instead, against ref/reference.hydra.tif.
+    // The legacy reader crashes (SIGSEGV on Linux, SIGABRT on macOS) at the material binding step, randomly. It's
+    // going to be removed, so it isn't worth investigating.
     scenario.skippedModes = {{ProceduralHydra1,
-        "the render after the material binding can hang on macOS, not understood yet", Darwin}};
+        "the render after the material binding can hang on macOS, not understood yet", Darwin},
+        {ProceduralLegacyReader, "the legacy reader randomly crashes at the material binding, and it's going to be removed"}};
     return Run(scenario);
 }

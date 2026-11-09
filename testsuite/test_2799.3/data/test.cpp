@@ -48,7 +48,7 @@ void SetLampIntensity(const UsdStageRefPtr& stage, float intensity)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfVec2f left = ScreenPosition(GfVec3d(-1.5, 0, 0));
     const GfVec2f right = ScreenPosition(GfVec3d(1.5, 0, 0));

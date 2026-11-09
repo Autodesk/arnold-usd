@@ -42,7 +42,7 @@ UsdVariantSet ShapeVariantSet(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> variantIssue = {{ProceduralHydra2,
         "the hydra 2 procedural renders the sphere much darker after switching the variant back to it"}};

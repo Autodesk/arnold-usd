@@ -34,7 +34,7 @@ UsdGeomPrimvar InstanceColors(const UsdStageRefPtr& stage)
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const std::vector<KnownIssue> scalesRemovalIssue = {{ProceduralHydra | AnyDelegate,
         "the instances keep the scales of the removed scales attribute"}};

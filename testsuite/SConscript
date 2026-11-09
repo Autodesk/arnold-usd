@@ -205,6 +205,13 @@ if interactive_usd_supported:
    interactive_usd_env.Prepend(LIBPATH = [framework_dir], LIBS = ['interactive_usd_test'])
    program_envs['interactive_usd'] = interactive_usd_env
 
+# Build environments whose test programs are linked together when several of their tests run (e.g. "abuild testsuite"
+# or a group): each test.cpp is still compiled on its own, but a single program shared by these tests is linked, which
+# runs the test named by its first argument. With a static USD, this avoids a link of the whole USD per test. A test
+# running alone (e.g. "abuild test_2343.1") keeps its own program. Their test.cpp must define their entry point with
+# INTERACTIVE_USD_TEST_MAIN(), see interactive_usd_test.h and tools/test/testsuite.py
+test_env['TEST_PROGRAM_COMBINED_ENVS'] = set(['interactive_usd']) if interactive_usd_supported else set()
+
 # As tools/test/test.py does for test_env when preparing the tests, silence their commands unless the testsuite is
 # distributed
 if 'TESTSUITE_PREFIX' not in test_env:

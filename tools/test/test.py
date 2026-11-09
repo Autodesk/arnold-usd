@@ -100,6 +100,8 @@ class Test:
 
       self.status = None
       self.missing_program_env = False # set by prepare() when the configuration doesn't provide program_env
+      self.program_objects = []        # set by prepare() when the program is shared with other tests
+      self.pending_targets = None      # idem, the targets to run the test once the shared program is declared
       self.scons_target = None
       self.run_by_scons = False
 
@@ -316,12 +318,26 @@ class Test:
                shader_target = env.SharedLibrary(shader_target, shader_obj)[0]
             TARGETS += env.Install(target_dist, shader_target)
          # Configure SCons builder for compiling a program
+         # Only tests run by their program without a script of their own share it, see can_share_program()
+         combined_program = self.testsuite.combined_programs.get(self.program_env) \
+            if self.program_env and self.script_type == 'cpp' else None
          if self.program_sources:
             program_source = [os.path.join(source_data, f) for f in self.program_sources.split()]
             # Some tests need their own build environment, e.g. to link USD or the render delegate in the test
             # program (see TEST_PROGRAM_ENVS in testsuite/SConscript)
             program_env = env['TEST_PROGRAM_ENVS'][self.program_env] if self.program_env else None
-            if 'UNIVERSAL_ENVS' in env:
+            if combined_program:
+               # The program is shared with the other tests of this environment that are run, and linked by
+               # Testsuite.prepare() (see TEST_PROGRAM_COMBINED_ENVS in testsuite/SConscript). The objects are named
+               # differently than those of a program of its own, to not recompile them when switching between both.
+               cppdefines = list(program_env.get('CPPDEFINES', [])) + [('TEST_PROGRAM_ENTRY', self.program_entry())]
+               self.program_objects = []
+               for cpp in program_source:
+                  name = os.path.splitext(os.path.basename(cpp))[0]
+                  obj = os.path.join(target_build, '{}.combined.{}'.format(name, obj_st_ext))
+                  self.program_objects.extend(program_env.Object(obj, cpp, CPPDEFINES = cppdefines))
+               self.script = '{} {}'.format(combined_program, self.name)
+            elif 'UNIVERSAL_ENVS' in env:
                program_targets = []
                for i, e in enumerate(program_env if program_env is not None else env['UNIVERSAL_ENVS']):
                   target_build_arch = os.path.join(target_build, e['ARCH'])
@@ -346,22 +362,53 @@ class Test:
                program_target = os.path.join(target_build, self.program_name)
                program_target = program_env.Program(program_target, program_objs)[0]
                _depend_on_linked_libraries(program_env, program_target)
-            TARGETS += env.Install(target_dist, program_target)
-         if self.testsuite.want_to_distribute:
-            self.scons_target = TARGETS
+            if not combined_program:
+               TARGETS += env.Install(target_dist, program_target)
+         if combined_program:
+            # Testsuite.prepare() declares the run target once the shared program is declared
+            self.pending_targets = TARGETS
          else:
-            # SCons builder that will run the test and produce the JSON data
-            self.scons_target = env.run_test(
-               os.path.join(self.target, self.name + '.json'), TARGETS,
-               TEST_OBJECT = self,
-               PRINT_CMD_LINE_FUNC = lambda a, b, c, d : None # silence the builder
-            )
-            self.run_by_scons = True
-            # Force SCons to always build the JSON file, and give it an alias
-            env.AlwaysBuild(self.scons_target)
-         env.Alias(self.name, self.scons_target)
+            self.declare_run_target(env, TARGETS)
 
       return True
+
+   def can_share_program(self, combined_envs):
+      '''Whether the program of this test can be shared with the other tests of its build environment, see
+      TEST_PROGRAM_COMBINED_ENVS in testsuite/SConscript. Called before prepare(), so self.script is still the one of
+      the README: a test running its program with a script of its own keeps its own program.'''
+      if self.program_env not in combined_envs or self.script:
+         return False
+      cpp = os.path.join(self.source, 'data', 'test.cpp')
+      if not os.path.exists(cpp):
+         return False
+      # The shared program calls the entry function defined by this macro, a test defining main() instead would only
+      # fail to link in the shared program, so fail early for every run, naming the test
+      with open(cpp, 'r') as f:
+         if 'INTERACTIVE_USD_TEST_MAIN' not in f.read():
+            import SCons.Errors
+            raise SCons.Errors.StopError('{}: data/test.cpp must define its entry point with '
+               'INTERACTIVE_USD_TEST_MAIN() instead of main(), as tests using the \'{}\' program_env can share a '
+               'program'.format(self.name, self.program_env))
+      return True
+
+   def program_entry(self):
+      '''Name of the function running the test in a program shared by several tests, see TEST_PROGRAM_ENTRY'''
+      return 'test_entry_' + re.sub(r'\W', '_', self.name)
+
+   def declare_run_target(self, env, sources):
+      if self.testsuite.want_to_distribute:
+         self.scons_target = sources
+      else:
+         # SCons builder that will run the test and produce the JSON data
+         self.scons_target = env.run_test(
+            os.path.join(self.target, self.name + '.json'), sources,
+            TEST_OBJECT = self,
+            PRINT_CMD_LINE_FUNC = lambda a, b, c, d : None # silence the builder
+         )
+         self.run_by_scons = True
+         # Force SCons to always build the JSON file, and give it an alias
+         env.AlwaysBuild(self.scons_target)
+      env.Alias(self.name, self.scons_target)
 
    @staticmethod
    def status(process):
