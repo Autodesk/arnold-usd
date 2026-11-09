@@ -16,6 +16,7 @@
 - [usd#2343](https://github.com/Autodesk/arnold-usd/issues/2343) - Fix a crash in the usd procedural with the Hydra reader when its render buffers are destroyed with the Arnold universe
 - [usd#2813](https://github.com/Autodesk/arnold-usd/issues/2813) - Fix curve widths not updating in the render delegate when only the widths change
 - [usd#2822](https://github.com/Autodesk/arnold-usd/issues/2822) - Fix light link and mesh light edits applied one update late by the usd procedural with the Hydra reader, which could crash when a linked light is removed
+- [usd#2825](https://github.com/Autodesk/arnold-usd/issues/2825) - Fix removed normals staying applied to meshes in the render delegate
 
 ## [7.5.4.0] 
 
