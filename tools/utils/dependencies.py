@@ -110,8 +110,8 @@ def render_delegate(env, sources):
     if env['USD_VERSION_INT'] >= 2505:
         usd_libs += ['hdsi','ts',]
 
-    # needed for fast viewport code path
-    if env['USD_BUILD_MODE'] != 'static':
+    # needed for fast viewport code path, unless it reads into CPU buffers
+    if env['USD_BUILD_MODE'] != 'static' and not env['DIRECT_OUTPUTS_CPU_BUFFER']:
         usd_libs += ['hgi', 'hgiGL', 'garch']
 
     source_files, usd_deps = add_plugin_deps(env, sources, usd_libs, True)

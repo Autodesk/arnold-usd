@@ -133,7 +133,7 @@ public:
     HDARNOLD_API
     void SetHgi(Hgi* hgi);
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
     /// Ensures the GPU textures have been created with a valid GL id, and destroys the textures queued on the
     /// render delegate. Only call this with the GL context current (GetResource() does): Hgi textures must be
     /// created and destroyed on the main thread.
@@ -157,6 +157,12 @@ public:
     }
 
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    /// Marks the buffer as read back from Arnold's direct outputs by Map(), rather than written by the driver.
+    ///
+    /// @param directOutput Whether the accelerated viewport reads this buffer.
+    HDARNOLD_API
+    void SetDirectOutput(bool directOutput);
+
     /// Provide the size of the render region Arnold renders, which is what AiGetRenderOutput copies.
     ///
     /// Call this after HdArnoldRenderParam::ResetViewportUpdate(), so a readback never pairs the new size with a
@@ -195,7 +201,7 @@ private:
     void _ReadDirectOutput();
 #endif
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
     /// Blit from _aovTexture into _texture with a Y flip (Arnold top-origin -> OpenGL).
     /// @return True if _texture was updated, false to use _aovTexture as-is.
     bool _FlipAovToDisplayTexture() const;
@@ -213,6 +219,7 @@ private:
     unsigned int _width = 0;                         ///< Buffer width.
     unsigned int _height = 0;                        ///< Buffer height.
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    bool _directOutput = false;                      ///< Read back from Arnold's direct outputs by Map().
     unsigned int _regionWidth = 0;                   ///< Width of the render region Arnold renders.
     unsigned int _regionHeight = 0;                  ///< Height of the render region Arnold renders.
 #endif

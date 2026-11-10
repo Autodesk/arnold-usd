@@ -26,6 +26,7 @@
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/materialBindingAPI.h>
+#include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <cstdio>
@@ -1304,6 +1305,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (!matTargets.empty()) {
         mat = UsdShadeMaterial(writer.GetUsdStage()->GetPrimAtPath(matTargets[0]));
     }
+    const bool reusedMaterial = static_cast<bool>(mat);
     if (mat) {
         materialName = mat.GetPath().GetString();
     } else {
@@ -1366,7 +1368,44 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     std::string materialPath = TfGetPathName(shaderName);
     if (materialPath != "/")
         writer.SetStripHierarchy(materialPath);
-    
+
+    // A material authored by another exporter (e.g. the MaterialX or UsdPreviewSurface shaders
+    // written by MayaUSD) can already hold shader prims with the same names as the arnold ones,
+    // since both are named after the DCC nodes. Writing on top of them would mix both render
+    // contexts in a single prim, overriding its info:id and appending connections. So if the
+    // material has any child that isn't an arnold shader, we author the whole arnold shading
+    // tree in a dedicated "arnold" node graph under the material. Materials created by the
+    // writer on a previous frame only hold arnold shaders and keep their layout.
+    UsdShadeNodeGraph arnoldNodeGraph;
+    if (reusedMaterial) {
+        const SdfPath arnoldScopePath(materialName + "/arnold");
+        bool useArnoldScope = static_cast<bool>(writer.GetUsdStage()->GetPrimAtPath(arnoldScopePath));
+        for (const UsdPrim& child : mat.GetPrim().GetChildren()) {
+            if (useArnoldScope)
+                break;
+            TfToken shaderId;
+            useArnoldScope = !child.IsA<UsdShadeShader>() || !UsdShadeShader(child).GetShaderId(&shaderId) ||
+                             !TfStringStartsWith(shaderId.GetString(), "arnold:");
+        }
+        if (useArnoldScope) {
+            arnoldNodeGraph = UsdShadeNodeGraph::Define(writer.GetUsdStage(), arnoldScopePath);
+            writer.SetScope(arnoldScopePath.GetString());
+        }
+    }
+    // Connect a material terminal to the "out" output of an arnold shader. When the shading tree
+    // is in the "arnold" node graph, USD encapsulation rules require the material output to point
+    // at an output of its immediate child, so we route the connection through a node graph output.
+    auto connectTerminal = [&](UsdShadeOutput& matOutput, const std::string& shaderPrimName, const TfToken& ngOutputName) {
+        SdfPath shaderOutputPath(shaderPrimName + std::string(".outputs:out"));
+        if (arnoldNodeGraph) {
+            UsdShadeOutput ngOutput = arnoldNodeGraph.CreateOutput(ngOutputName, SdfValueTypeNames->Token);
+            ngOutput.ConnectToSource(shaderOutputPath);
+            matOutput.ConnectToSource(ngOutput);
+        } else {
+            matOutput.ConnectToSource(shaderOutputPath);
+        }
+    };
+
     const TfToken arnoldContext("arnold");
     if (shader) {
         // Write the surface shader under the material's scope.
@@ -1380,8 +1419,8 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
             // Connect the surface shader output to the material
-            std::string shaderTargetName = shaderName + std::string(".outputs:out");
-            shaderOutput.ConnectToSource(SdfPath(shaderTargetName));
+            static const TfToken surfaceToken("surface"), volumeToken("volume");
+            connectTerminal(shaderOutput, shaderName, isVolume ? volumeToken : surfaceToken);
         }
     }
     if (displacement) {
@@ -1392,8 +1431,8 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         dispName = UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
             // Connect the displacement shader output to the material
-            std::string dispTargetName = dispName + std::string(".outputs:out");
-            dispOutput.ConnectToSource(SdfPath(dispTargetName));
+            static const TfToken displacementToken("displacement");
+            connectTerminal(dispOutput, dispName, displacementToken);
         }
     }
     // Restore the previous scope

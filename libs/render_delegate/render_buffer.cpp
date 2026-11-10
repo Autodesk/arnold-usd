@@ -20,7 +20,7 @@
 #include "utils.h"
 #include <pxr/base/tf/diagnostic.h>
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
 #include <pxr/imaging/hgiGL/texture.h>
 #endif
 #include <pxr/base/gf/half.h>
@@ -34,7 +34,7 @@
 #include <string>
 
 #include <iostream>
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
 #include <pxr/imaging/garch/glApi.h>
 #endif
 
@@ -217,7 +217,7 @@ HdArnoldRenderBuffer::HdArnoldRenderBuffer(HdArnoldRenderDelegate* renderDelegat
 
 namespace {
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
 
 /// Maps a buffer format onto the format of the texture AiGetRenderOutput copies into.
 ///
@@ -447,7 +447,7 @@ void main(void)
 
 _GpuFlipBlit _gpuFlipBlit;
 
-#endif // SUPPORT_ACCELERATED_VIEWPORT
+#endif // ACCELERATED_VIEWPORT_GL_TEXTURES
 
 } // namespace
 
@@ -490,7 +490,7 @@ void HdArnoldRenderBuffer::_QueueTexturesForDestruction()
     _renderDelegate->QueueTextureDestruction(_texture);
 }
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
 void HdArnoldRenderBuffer::EnsureGpuTexture()
 {
     if (_renderDelegate != nullptr) {
@@ -524,7 +524,7 @@ void HdArnoldRenderBuffer::EnsureGpuTexture()
 }
 #endif
 
-#ifdef SUPPORT_ACCELERATED_VIEWPORT
+#ifdef ACCELERATED_VIEWPORT_GL_TEXTURES
 bool HdArnoldRenderBuffer::_FlipAovToDisplayTexture() const
 {
     const uint32_t srcId = _GetGlTextureId(_aovTexture);
@@ -608,6 +608,12 @@ void HdArnoldRenderBuffer::SetHgi(Hgi* hgi)
 }
 
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+void HdArnoldRenderBuffer::SetDirectOutput(bool directOutput)
+{
+    std::lock_guard<std::mutex> guard(_mutex);
+    _directOutput = directOutput;
+}
+
 void HdArnoldRenderBuffer::SetRegionSize(unsigned int width, unsigned int height)
 {
     std::lock_guard<std::mutex> guard(_mutex);
@@ -636,8 +642,8 @@ void* HdArnoldRenderBuffer::Map()
         return nullptr;
     }
 #if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
-    // Only the buffers the accelerated viewport reads back are given an Hgi, see HdArnoldRenderPass::_Execute.
-    if (_hgi != nullptr) {
+    // Only set on the buffers the accelerated viewport reads back, see HdArnoldRenderPass::_Execute.
+    if (_directOutput) {
         _ReadDirectOutput();
     }
 #endif
@@ -731,6 +737,11 @@ void HdArnoldRenderBuffer::WriteBucket(
     // When backed by a GPU texture, bucket data is delivered via AiGetRenderOutput, not the driver path.
     if (_hgi != nullptr)
         return;
+#if defined(SUPPORT_ACCELERATED_VIEWPORT) && defined(DIRECT_OUTPUTS_CPU_BUFFER)
+    // Same for direct outputs, which Map() reads.
+    if (_directOutput)
+        return;
+#endif
     
     if (!_SupportedComponentFormat(format)) {
         return;

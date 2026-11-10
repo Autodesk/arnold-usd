@@ -21,7 +21,15 @@
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 
-## [7.5.4.0] 
+## [7.5.4.1] (Unreleased)
+
+### Bug fixes
+
+- [usd#2800](https://github.com/Autodesk/arnold-usd/issues/2800) - Remove HGI dependency for accelerated viewport CPU buffers
+- [usd#2807](https://github.com/Autodesk/arnold-usd/issues/2807) - Deduplicated point-instancer prototypes ignore their visibility primvars
+- [usd#2803](https://github.com/Autodesk/arnold-usd/issues/2803) - Don't overwrite a foreign shader prim when the bound material already exists
+
+## [7.5.4.0] 2026-10-22
 
 ### Features
 

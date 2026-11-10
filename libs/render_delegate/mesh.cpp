@@ -721,6 +721,8 @@ void HdArnoldMesh::Sync(
 
     if (dirtyPrimvars && _IsNonInstancedDuplicate()) {
         _SyncDuplicateConstantPrimvars(_primvars, param, [](const TfToken&) { return false; });
+    } else if (dirtyPrimvars && _IsDuplicate()) {
+        _SyncInstancedDuplicateVisibility(_primvars, param);
     }
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
