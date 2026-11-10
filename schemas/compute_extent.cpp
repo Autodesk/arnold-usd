@@ -32,6 +32,7 @@
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/ar/timestamp.h>
 #include <pxr/usd/sdf/assetPath.h>
+#include <pxr/usd/sdf/layer.h>
 #include <pxr/usd/sdf/layerUtils.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/attribute.h>
@@ -133,9 +134,14 @@ std::string _GetProceduralFilename(const UsdPrim &prim, const UsdTimeCode &time)
     // so we anchor them to the strongest layer authoring the attribute.
     const SdfPropertySpecHandleVector specs = attr.GetPropertyStack(time);
     if (!specs.empty()) {
-        const std::string resolved = SdfResolveAssetPathRelativeToLayer(specs.front()->GetLayer(), filename);
-        if (!resolved.empty())
-            return resolved;
+        // What SdfResolveAssetPathRelativeToLayer does, which is missing in USD 25.05 and earlier (Houdini 21.0)
+        const SdfLayerHandle layer = specs.front()->GetLayer();
+        if (layer && !layer->IsAnonymous()) {
+            const std::string resolved =
+                ArGetResolver().Resolve(SdfComputeAssetPathRelativeToLayer(layer, filename)).GetPathString();
+            if (!resolved.empty())
+                return resolved;
+        }
     }
     return filename;
 }
