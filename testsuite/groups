@@ -69,11 +69,16 @@ not_implemented: test_2608
 # coordinate space. test_18101.2 checks the geometry deduplication, which only
 # exists in the render delegate (the 'usd' pass also ignores the visibility
 # primvars of point-instancer prototypes).
-pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2
+pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2 interactive_engine
 
 # UsdLux light:filters (test_2799) needs the 'filters' light entry published by the scene index.
 # The legacy hydra1 pass doesn't expose that relationship, so it is skipped there.
 pass_hydra: test_2799 test_2799.1 test_2799.2
+
+# The python interactive render delegate tests (testsuite/common/interactive_engine_test.py), skipped when the
+# configuration can't run them, see testsuite/SConscript. They only test the render delegate, whose Hydra 1 and 2 are the
+# 'hydra' and 'hydra2' passes, so they're also skipped in the 'usd' pass (pass_usd).
+interactive_engine: test_19028
 
 ############################
 # USER-DEFINED TEST GROUPS #
