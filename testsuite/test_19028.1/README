@@ -1,0 +1,11 @@
+Interactive render delegate edits of prims and materials through a UsdImagingGL.Engine, from python
+
+The scenario of test_2343.1, with the HdArnoldRendererPlugin render delegate driven by a headless UsdImagingGL.Engine
+as a viewport does, see testsuite/common/interactive_engine_test.py. A sphere in front of the camera has its material
+attribute changed, moves out of the frame and back, and a cube with a new material is added and then removed, the
+stage being re-rendered after each edit. Each render is checked in test.py, and the last one is compared against the
+reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}
