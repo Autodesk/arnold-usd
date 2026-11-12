@@ -1,0 +1,11 @@
+Interactive render delegate render buffer and framing changes through a UsdImagingGL.Engine, from python
+
+A sphere is rendered while the host framing changes (film translate, overscan, zoom, render region), the render buffer
+is reallocated to another size, and the window policy is overridden for a 16:9 camera, like test_2819 to test_2819.6
+do in C++. The render delegate is driven by a headless UsdImagingGL.Engine as a viewport does, see
+testsuite/common/interactive_engine_test.py. Each render is checked in test.py, and the last one is compared against
+the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

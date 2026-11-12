@@ -419,13 +419,14 @@ class _EngineRenderer(object):
             time.sleep(0.001)
 
     def Converge(self):
-        """Calls Render() until the render converges"""
+        """Calls Render() until the render converges, returning the time it took"""
         start = time.time()
         while not self.RenderOnce():
             if time.time() - start > self._Timeout():
                 raise _TestError('The render did not converge in {:.0f}s'.format(self._Timeout()))
             time.sleep(0.005)
         self._first_render = False
+        return time.time() - start
 
     def ReadImage(self):
         width, height, format, data = self._readback.ReadAov(self.engine, self.aov)
@@ -501,7 +502,7 @@ def _RenderStep(renderer, stage, step, prefix):
         else:
             _Warning('{}: the render converged before the edit, it was not tested during the render'.format(prefix))
         step.during_render(stage)
-    renderer.Converge()
+    _Info('{}: converged in {:.2f}s'.format(prefix, renderer.Converge()))
     return renderer.ReadImage()
 
 

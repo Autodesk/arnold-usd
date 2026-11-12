@@ -78,7 +78,7 @@ pass_hydra: test_2799 test_2799.1 test_2799.2
 # The python interactive render delegate tests (testsuite/common/interactive_engine_test.py), skipped when the
 # configuration can't run them, see testsuite/SConscript. They only test the render delegate, whose Hydra 1 and 2 are the
 # 'hydra' and 'hydra2' passes, so they're also skipped in the 'usd' pass (pass_usd).
-interactive_engine: test_19028 test_19028.1 test_19028.2
+interactive_engine: test_19028 test_19028.1 test_19028.2 test_19028.3 test_19028.4 test_19028.5 test_19028.6 test_19028.7 test_19028.8 test_19028.9
 
 ############################
 # USER-DEFINED TEST GROUPS #

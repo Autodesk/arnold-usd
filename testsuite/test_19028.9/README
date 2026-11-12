@@ -1,0 +1,10 @@
+Interactive render delegate layer edits through a UsdImagingGL.Engine, from python
+
+A sublayer defining a sphere is added, muted and unmuted, a payload is loaded and unloaded, and the variant of a
+sphere is switched, then edited through a variant edit target. The render delegate is driven by a headless
+UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Each render is checked in
+test.py, and the last one is compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}
