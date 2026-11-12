@@ -125,8 +125,8 @@ bp::tuple ReadAov(UsdImagingGLEngine& engine, const std::string& aovName)
     }
     buffer->Unmap();
 
-    PyObject* bytes =
-        PyBytes_FromStringAndSize(reinterpret_cast<const char*>(rgba.data()), rgba.size() * sizeof(float));
+    PyObject* bytes = PyBytes_FromStringAndSize(
+        reinterpret_cast<const char*>(rgba.data()), static_cast<Py_ssize_t>(rgba.size() * sizeof(float)));
     if (!bytes) {
         bp::throw_error_already_set();
     }
