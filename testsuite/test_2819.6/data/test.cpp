@@ -4,7 +4,7 @@
 
 using namespace interactive_usd_test;
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // 36x20.25 mm, the reference image is the crop, the window policy that differs from Arnold's own horizontal fit
     return RunWindowPolicyScenario(36.f, 20.25f, 1);

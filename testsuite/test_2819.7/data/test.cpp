@@ -4,7 +4,7 @@
 
 using namespace interactive_usd_test;
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     // 24x36 mm, the reference image is the last render, fit without a framing
     return RunWindowPolicyScenario(24.f, 36.f);

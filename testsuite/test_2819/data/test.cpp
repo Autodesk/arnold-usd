@@ -15,7 +15,7 @@ void SetApertureOffset(const UsdStageRefPtr& stage, const SdfPath& camera, float
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfRect2i fullRect(GfVec2i(0, 0), kFramingWidth, kFramingHeight);
     const GfRange2f fullRange(GfVec2f(0, 0), GfVec2f(kFramingWidth, kFramingHeight));

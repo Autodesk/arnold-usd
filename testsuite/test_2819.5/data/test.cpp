@@ -3,7 +3,7 @@
 
 using namespace interactive_usd_test;
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfRect2i full(GfVec2i(0, 0), kFramingWidth, kFramingHeight);
     const CameraUtilFraming none = FullFraming();
