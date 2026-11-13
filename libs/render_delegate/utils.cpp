@@ -49,6 +49,9 @@
 #include "render_delegate.h"
 
 #include <algorithm>
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
 #include <type_traits>
 #include <unordered_set>
 #include <parameters_utils.h>
@@ -479,6 +482,27 @@ void HdArnoldSetInstancePrimvar(
 
 }
 
+namespace {
+/// Returns true if the prim was tagged with the "houdini:hairdeform" data (HD_HairDeform scene index).
+bool HdArnoldHasHairDeform(HdSceneDelegate* sceneDelegate, const SdfPath& id)
+{
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex();
+    if (sceneIndex) {
+        HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+        if (prim.dataSource && prim.dataSource->Get(TfToken("houdini:hairdeform"))) {
+            return true;
+        }
+    }
+#else
+    TF_UNUSED(sceneDelegate);
+    TF_UNUSED(id);
+#endif
+    return false;
+}
+} // namespace
+
+
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars, HdArnoldSampledPrimvarType *pointsSample)
@@ -499,7 +523,10 @@ size_t HdArnoldSetPositionFromPrimvar(
         return 0;
     }
     // Check if we can/should extrapolate positions based on velocities/accelerations.
-    const auto extrapolatedCount = ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+    // Hair deformed by the HD_HairDeform scene index has its motion encoded in the animated points, any
+    // velocities left on the source prim are stale (zeros), so we need to ignore them to match other renderers.
+    const auto extrapolatedCount = ExtrapolatePositions(
+        node, paramName, xf, param, deformKeys, primvars, HdArnoldHasHairDeform(sceneDelegate, id));
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
@@ -787,7 +814,7 @@ AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldS
 
 size_t ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
-    int deformKeys, const HdArnoldPrimvarMap* primvars)
+    int deformKeys, const HdArnoldPrimvarMap* primvars, bool ignoreZeroVelocities)
 {
     // If velocity or acceleration primvars are present, we want to use them to extrapolate 
     // the positions for motion blur, instead of relying on positions at different time samples. 
@@ -849,9 +876,17 @@ size_t ExtrapolatePositions(
     
     const auto& positions = xf.values[timeIndex];
     const auto numPositions = positions.size();
-    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
-    const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
-    
+    // When requested, all-zero velocities / accelerations carry no motion information. Ignore them so we can
+    // fall back to the animated position samples, if any (e.g. deformed hair that still has stale zero velocities).
+    const auto isUsable = [ignoreZeroVelocities](const VtVec3fArray& values) {
+        return ignoreZeroVelocities
+                   ? std::any_of(values.begin(), values.end(), [](const GfVec3f& v) { return v != GfVec3f(0.0f); })
+                   : true;
+    };
+    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size() && isUsable(velocities);
+    const auto hasAcceleration =
+        !accelerations.empty() && numPositions == accelerations.size() && isUsable(accelerations);
+
     if (!hasVelocity && !hasAcceleration) {
         // No velocity or acceleration, or incorrect sizes for both.
         return 0;

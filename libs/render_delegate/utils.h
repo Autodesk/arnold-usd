@@ -648,8 +648,9 @@ bool HdArnoldIsSceneIndexEnabled();
 
 /// Use the velocities and accelerations primvars to extrapolate the positions.
 ///
-///
-size_t ExtrapolatePositions(AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars);
+/// If ignoreZeroVelocities is true, velocities/accelerations that are all zero are ignored, which lets the
+/// caller fall back to the position time samples.
+size_t ExtrapolatePositions(AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars, bool ignoreZeroVelocities = false);
 
 
 // Find the index of the reference time (time == 0) or above
