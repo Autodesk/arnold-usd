@@ -142,6 +142,7 @@ vars.AddVariables(
     BoolVariable('HYDRA_NORMALIZE_DEPTH', 'If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth', True),
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
+    StringVariable('TESTSUITE_PYTHON', 'Python interpreter of the USD being tested, running the python interactive render delegate tests (<USD_PATH>/bin/python3 by default)', os.getenv('TESTSUITE_PYTHON', '')),
     StringVariable('JUNIT_TESTSUITE_NAME', 'Optional name for the JUnit report', None),
     StringVariable('JUNIT_TESTSUITE_URL', 'Optional URL for the JUnit report', None),
     BoolVariable('REPORT_ONLY_FAILED_TESTS', 'Only failed test will be kept', False),
