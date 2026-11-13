@@ -170,6 +170,14 @@ if (pxr_FOUND)
         set(USD_MONOLITHIC_BUILD ON)
     endif()
 
+    # A shared monolithic USD built with the stock cmake exports its library as the usd_m target, only its file is
+    # named usd_ms. Our targets link usd_ms for a shared USD, which would otherwise be passed to the linker as a bare
+    # library name, without its folder.
+    if (NOT BUILD_WITH_USD_STATIC AND TARGET usd_m AND NOT TARGET usd_ms)
+        add_library(usd_ms INTERFACE IMPORTED)
+        set_target_properties(usd_ms PROPERTIES INTERFACE_LINK_LIBRARIES usd_m)
+    endif()
+
     # Check we have usd_m, as the standard pxrConfig doesn't define it
     if (BUILD_WITH_USD_STATIC AND NOT TARGET usd_m)
         message(STATUS "usd_m static lib not defined in pxrConfig.cmake, attempting to find it")
