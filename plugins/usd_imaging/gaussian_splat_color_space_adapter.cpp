@@ -21,6 +21,7 @@
 #include <pxr/base/tf/staticTokens.h>
 #include <pxr/imaging/hd/primvarsSchema.h>
 #include <pxr/imaging/hd/retainedDataSource.h>
+#include <pxr/usd/usd/colorSpaceAPI.h>
 #include <pxr/usd/usd/prim.h>
 
 #include <constant_strings.h>
@@ -63,10 +64,10 @@ bool _IsGaussianSplat(const UsdPrim& prim)
     return typeName == _tokens->Points && prim.HasAttribute(_tokens->gsAlpha);
 }
 
-/// Resolves the color space of the splat colors only when it's queried.
-class _GaussianSplatColorSpaceDataSource : public HdTypedSampledDataSource<TfToken> {
+/// Resolves the color space of an attribute only when it's queried.
+class _ColorSpaceDataSource : public HdTypedSampledDataSource<TfToken> {
 public:
-    HD_DECLARE_DATASOURCE(_GaussianSplatColorSpaceDataSource);
+    HD_DECLARE_DATASOURCE(_ColorSpaceDataSource);
 
     VtValue GetValue(HdSampledDataSource::Time shutterOffset) override
     {
@@ -75,7 +76,7 @@ public:
 
     TfToken GetTypedValue(HdSampledDataSource::Time) override
     {
-        return ArnoldUsdComputeGaussianSplatColorSpace(_prim);
+        return UsdColorSpaceAPI::ComputeColorSpaceName(_attr);
     }
 
     bool GetContributingSampleTimesForInterval(
@@ -85,10 +86,15 @@ public:
     }
 
 private:
-    _GaussianSplatColorSpaceDataSource(const UsdPrim& prim) : _prim(prim) {}
+    _ColorSpaceDataSource(const UsdAttribute& attr) : _attr(attr) {}
 
-    UsdPrim _prim;
+    UsdAttribute _attr;
 };
+
+HdDataSourceLocator _ColorSpaceLocator(const TfToken& primvarName)
+{
+    return HdPrimvarsSchema::GetDefaultLocator().Append(primvarName).Append(str::t_colorSpace);
+}
 
 } // namespace
 
@@ -98,8 +104,20 @@ HdContainerDataSourceHandle ArnoldGaussianSplatColorSpaceAdapter::GetImagingSubp
 {
     if (!subprim.IsEmpty() || !appliedInstanceName.IsEmpty() || !_IsGaussianSplat(prim))
         return nullptr;
+    // The overlay of the adapters' containers merges this colorSpace with the primvar's value, interpolation
+    // and role. It's only added to an authored primvar, otherwise Hydra would see a primvar without a value.
+    const UsdAttribute attr = ArnoldUsdGetGaussianSplatColorAttribute(prim);
+    if (!attr || !attr.HasAuthoredValue())
+        return nullptr;
+    // UsdImaging already sets the color space of displayColor since USD 26.03, as it has the color role, but
+    // not of the coefficients, which have no role. The float and half coefficients are both provided as the
+    // radiance:sphericalHarmonicsCoefficients primvar.
+    const TfToken& primvarName =
+        attr.GetName() == _tokens->displayColor ? _tokens->displayColorPrimvar : _tokens->shCoeffs;
     return HdRetainedContainerDataSource::New(
-        str::t_arnoldGaussianSplatColorSpace, _GaussianSplatColorSpaceDataSource::New(prim));
+        HdPrimvarsSchema::GetSchemaToken(),
+        HdRetainedContainerDataSource::New(
+            primvarName, HdRetainedContainerDataSource::New(str::t_colorSpace, _ColorSpaceDataSource::New(attr))));
 }
 
 HdDataSourceLocatorSet ArnoldGaussianSplatColorSpaceAdapter::InvalidateImagingSubprim(
@@ -110,14 +128,12 @@ HdDataSourceLocatorSet ArnoldGaussianSplatColorSpaceAdapter::InvalidateImagingSu
     if (!subprim.IsEmpty() || !appliedInstanceName.IsEmpty() || !_IsGaussianSplat(prim))
         return result;
     for (const TfToken& property : properties) {
-        // The colorSpace metadata of the color attributes also changes their color space
+        // UsdImaging doesn't invalidate the primvars when colorSpace:name changes. The colorSpace metadata of
+        // the color attributes also changes their color space, and which attribute holds the colors.
         if (property == _tokens->colorSpaceName || property == _tokens->shCoeffs ||
             property == _tokens->shCoeffsh || property == _tokens->displayColor) {
-            result.insert(HdDataSourceLocator(str::t_arnoldGaussianSplatColorSpace));
-            // The render delegate only syncs the color space with the primvars, and no rprim dirty bit
-            // matches a custom locator
-            result.insert(HdPrimvarsSchema::GetDefaultLocator().Append(_tokens->shCoeffs));
-            result.insert(HdPrimvarsSchema::GetDefaultLocator().Append(_tokens->displayColorPrimvar));
+            result.insert(_ColorSpaceLocator(_tokens->shCoeffs));
+            result.insert(_ColorSpaceLocator(_tokens->displayColorPrimvar));
             break;
         }
     }

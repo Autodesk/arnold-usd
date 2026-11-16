@@ -465,8 +465,10 @@ UsdAttribute ArnoldUsdGetGaussianSplatColorAttribute(const UsdPrim& prim)
 TfToken ArnoldUsdComputeGaussianSplatColorSpace(const UsdPrim& prim)
 {
 #if PXR_VERSION >= 2505
+    // The attribute's color space resolves up to the colorSpace:name of the prim and its ancestors
     if (UsdAttribute attr = ArnoldUsdGetGaussianSplatColorAttribute(prim))
         return UsdColorSpaceAPI::ComputeColorSpaceName(attr);
+    // Only for a prim without any color attribute
     return UsdColorSpaceAPI::ComputeColorSpaceName(prim);
 #else
     TF_UNUSED(prim);
@@ -478,6 +480,8 @@ void ArnoldUsdSetGaussianSplatColorSpace(AtNode* node, const TfToken& colorSpace
 {
     AtString arnoldColorSpace;
     if (colorSpace.IsEmpty() || colorSpace == _tokens->unknown) {
+        // When no color space is authored, the UsdColorSpaceAPI rules default to linear Rec.709, but we keep Arnold's
+        // sRGB default: the spherical harmonics of splats are usually sRGB, and existing scenes keep rendering the same
         const AtParamEntry* paramEntry =
             AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::gs_input_color_space);
         if (paramEntry == nullptr)

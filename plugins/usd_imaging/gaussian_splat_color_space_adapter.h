@@ -27,11 +27,18 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// UsdImaging only provides the color space of the primvars having a color role, which excludes the
-/// spherical harmonics coefficients of the gaussian splats, and doesn't invalidate the primvars when the
-/// prim's colorSpace:name changes. This keyless adapter adds the resolved color space of the splat colors
-/// to the gaussian splat prims (ParticleField3DGaussianSplat and Houdini's splat points), as the
-/// "arnoldGaussianSplatColorSpace" token data source, and dirties it with the primvars when it changes.
+/// The gaussian splat schema has no color space attribute of its own: the color space of the splat colors follows the
+/// UsdColorSpaceAPI rules (OpenUSD#3716 rejected a dedicated attribute as redundant with ColorSpaceAPI). UsdImaging
+/// doesn't give it to Hydra:
+///  - it only sets the colorSpace of the primvars having the color role, which excludes the spherical harmonics
+///    coefficients (float3[] / half3[] without a role), even when ColorSpaceAPI is applied to the prim
+///  - it has no ColorSpaceAPI adapter, and doesn't invalidate the primvars when colorSpace:name changes
+/// This keyless adapter sets the colorSpace of the color primvar of the gaussian splat prims
+/// (ParticleField3DGaussianSplat and Houdini's splat points): primvars/radiance:sphericalHarmonicsCoefficients/colorSpace, or
+/// primvars/displayColor/colorSpace when the coefficients aren't authored. It's the field UsdImaging uses for the
+/// color primvars, so this adapter can go if UsdImaging fills it for the coefficients. It also invalidates these
+/// colorSpace locators when colorSpace:name or the color attributes change, which syncs the rprim primvars.
+/// Changes of colorSpace:name on an ancestor don't update the splats inheriting it.
 class ArnoldGaussianSplatColorSpaceAdapter : public UsdImagingAPISchemaAdapter {
 public:
     using BaseAdapter = UsdImagingAPISchemaAdapter;

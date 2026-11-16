@@ -629,8 +629,8 @@ HDARNOLD_API
 void HdArnoldRemovePrimvars(
     AtNode* node, const TfTokenVector& removedPrimvars, const HdArnoldBuiltinPrimvars& builtinPrimvars = {});
 
-/// Sets the gs_input_color_space of gaussian splats from the USD color space of their colors, which the
-/// usdImagingArnold plugin provides through the scene index (Hydra 2 only). The parameter is left alone when
+/// Sets the gs_input_color_space of gaussian splats from the USD color space of their colors, read from the colorSpace
+/// of their color primvar in the scene index (Hydra 2 only), which the usdImagingArnold plugin sets. The parameter is left alone when
 /// primvars:arnold:gs_input_color_space overrides it, and reset when no color space is authored.
 ///
 /// @param node Arnold points node in gaussian mode.

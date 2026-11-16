@@ -224,7 +224,8 @@ ARCH_HIDDEN
 TfToken ArnoldUsdComputeGaussianSplatColorSpace(const UsdPrim& prim);
 
 /// Sets the points' gs_input_color_space from a USD color space, or to Arnold's default when no color space
-/// applies. The color spaces without a transform (raw, identity, data) are set as "linear".
+/// applies (sRGB, rather than the linear default of the UsdColorSpaceAPI rules). The color spaces without a transform
+/// (raw, identity, data) are set as "linear".
 ///
 /// @param node Arnold points node in gaussian mode.
 /// @param colorSpace USD color space name, empty or "unknown" when none is authored.

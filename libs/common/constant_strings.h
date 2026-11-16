@@ -213,7 +213,6 @@ ASTR(aov_write_vector);
 ASTR(aperture_size);
 ASTR(append);
 ASTR(arnold);
-ASTR(arnoldGaussianSplatColorSpace);
 ASTR(asset_searchpath);
 ASTR(assignment);
 ASTR(atmosphere);

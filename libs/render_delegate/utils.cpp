@@ -47,6 +47,7 @@
 #include "pxr/imaging/hd/extComputationUtils.h"
 #ifdef ENABLE_SCENE_INDEX
 #include <pxr/imaging/hd/dataSourceTypeDefs.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
 #include <pxr/imaging/hd/sceneIndex.h>
 #endif
 
@@ -768,13 +769,16 @@ void HdArnoldSetGaussianSplatColorSpace(
         return;
     TfToken colorSpace;
 #ifdef ENABLE_SCENE_INDEX
+    // The color space of the primvar holding the splat colors, the coefficients when they're authored. The
+    // usdImagingArnold plugin sets it on the coefficients, which UsdImaging leaves without a color space as they
+    // have no color role.
+    static const TfToken shCoeffs("radiance:sphericalHarmonicsCoefficients");
+    const TfToken& colorPrimvar = primvars.count(shCoeffs) != 0 ? shCoeffs : HdTokens->displayColor;
     if (HdSceneIndexBaseRefPtr sceneIndex = delegate->GetRenderIndex().GetTerminalSceneIndex()) {
         const HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
-        if (prim.dataSource) {
-            if (HdTokenDataSourceHandle colorSpaceDs =
-                    HdTokenDataSource::Cast(prim.dataSource->Get(str::t_arnoldGaussianSplatColorSpace)))
-                colorSpace = colorSpaceDs->GetTypedValue(0.0f);
-        }
+        if (HdTokenDataSourceHandle colorSpaceDs = HdTokenDataSource::Cast(HdContainerDataSource::Get(
+                prim.dataSource, HdPrimvarsSchema::GetDefaultLocator().Append(colorPrimvar).Append(str::t_colorSpace))))
+            colorSpace = colorSpaceDs->GetTypedValue(0.0f);
     }
 #else
     TF_UNUSED(delegate);
