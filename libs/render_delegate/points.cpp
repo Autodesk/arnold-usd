@@ -189,6 +189,10 @@ void HdArnoldPoints::Sync(
             }
         }
 
+        // The USD color space of displayColor, unless primvars:arnold:gs_input_color_space overrides it
+        if (isHoudiniGS)
+            HdArnoldSetGaussianSplatColorSpace(node, sceneDelegate, id, _primvars);
+
         UpdateVisibilityAndSidedness();
     }
 

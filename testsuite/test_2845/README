@@ -1,0 +1,17 @@
+Interactive USD edits of the color space of a ParticleField3DGaussianSplat, with the usd procedural cache_id and with the render delegate
+
+see #2845
+
+A ParticleField3DGaussianSplat gets a colorSpace:name (UsdColorSpaceAPI), then primvars:arnold:gs_input_color_space
+overriding it, which is removed, then a colorSpace metadata on its spherical harmonics coefficients, stronger than the
+colorSpace:name. The splat is mid grey, which is about 0.21 when decoded as sRGB (Arnold's default) and 0.5 in a linear
+color space. See test_2845.1 for Houdini's splats.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. UsdImaging only gives the USD color space to Hydra 2, so the Hydra 1 renders
+report it as a known issue.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

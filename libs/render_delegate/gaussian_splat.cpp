@@ -141,10 +141,13 @@ void HdArnoldGaussianSplat::Sync(
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+        // Remove the values of the primvars that don't exist anymore
+        TfTokenVector removedPrimvars;
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
+        HdArnoldRemovePrimvars(node, removedPrimvars);
 
         bool shCoeffsUpdated = false;
         // Fallback for Houdini's ParticleField3DGaussianSplat export, which
@@ -302,6 +305,9 @@ void HdArnoldGaussianSplat::Sync(
                 AiArrayConvert(displayColorFallback.size(), 1, AI_TYPE_RGB,
                     displayColorFallback.cdata()));
         }
+
+        // The USD color space of the splat colors, unless primvars:arnold:gs_input_color_space overrides it
+        HdArnoldSetGaussianSplatColorSpace(node, sceneDelegate, id, _primvars);
 
         UpdateVisibilityAndSidedness();
     }

@@ -862,6 +862,9 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             gsShader = AiNode(universe, str::gaussian_splat_shader, str::gaussian_splat_shader);
         AiNodeSetPtr(node, str::shader, gsShader);
 
+        // USD color space of displayColor, primvars:arnold:gs_input_color_space overrides it below
+        ArnoldUsdSetGaussianSplatColorSpace(node, ArnoldUsdComputeGaussianSplatColorSpace(prim));
+
         _ReadGenericShape(prim, context, node, time, "primvars:arnold");
         return node;
     }
@@ -1093,6 +1096,9 @@ AtNode* UsdArnoldReadGaussianSplat::Read(const UsdPrim &prim, UsdArnoldReaderCon
             gsShader = AiNode(universe, str::gaussian_splat_shader, str::gaussian_splat_shader);
         AiNodeSetPtr(node, str::shader, gsShader);
     }
+
+    // USD color space of the splat colors, primvars:arnold:gs_input_color_space overrides it below
+    ArnoldUsdSetGaussianSplatColorSpace(node, ArnoldUsdComputeGaussianSplatColorSpace(prim));
 
     _ReadGenericShape(prim, context, node, time, "primvars:arnold", nullptr, false);
     ReadMaterialBinding(prim, node, context, false);

@@ -1,6 +1,7 @@
 
 set(SRC
     arnold_options_adapter.cpp
+    gaussian_splat_color_space_adapter.cpp
     material_param_utils.cpp
     node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
@@ -11,6 +12,7 @@ set(SRC
 set(HDR
     api.h
     arnold_options_adapter.h
+    gaussian_splat_color_space_adapter.h
     material_param_utils.h
     node_graph_adapter.h
     usd_lux_light_filter_adapter.h
