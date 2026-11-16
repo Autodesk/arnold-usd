@@ -93,6 +93,11 @@ if (MTOA_BUILD AND BUILD_BUNDLE)
     set(ENABLE_SCENE_INDEX_IN_BUNDLE ON CACHE BOOL "Add the scene index filters in the bundle" FORCE)
 endif()
 
+option(HOUDINI_BUILD "Build Houdini-specific plugins (e.g. scene index filters). Enabled automatically when HOUDINI_LOCATION is set" OFF)
+if (HOUDINI_LOCATION)
+    set(HOUDINI_BUILD ON CACHE BOOL "Build Houdini-specific plugins" FORCE)
+endif()
+
 option(DIRECT_OUTPUTS_CPU_BUFFER "If true, the accelerated viewport is read back into CPU buffers through Map() instead of GL textures through GetResource(), for hosts that no longer display the latter" OFF)
 
 option(HYDRA_NORMALIZE_DEPTH "If true, return a normalized depth by using the P AOV. Otherwise, simply return the Z AOV for the depth" OFF)
