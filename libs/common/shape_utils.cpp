@@ -31,6 +31,11 @@
 #include <pxr/base/gf/matrix4d.h>
 
 #include <pxr/base/tf/staticTokens.h>
+#include <pxr/usd/usd/attribute.h>
+#include <pxr/usd/usd/prim.h>
+#if PXR_VERSION >= 2505
+#include <pxr/usd/usd/colorSpaceAPI.h>
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -42,6 +47,13 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((name, "arnold:name"))
     ((shader, "arnold:shader"))
     ((id, "arnold:id"))
+    ((shCoeffs, "radiance:sphericalHarmonicsCoefficients"))
+    ((shCoeffsh, "radiance:sphericalHarmonicsCoefficientsh"))
+    ((displayColor, "primvars:displayColor"))
+    (raw)
+    (identity)
+    (data)
+    (unknown)
 );
 // clang-format on
 
@@ -434,6 +446,53 @@ bool MeshHoleFilter::FilterFaceVaryingValue(VtValue& value) const
            _TryFilterFaceVarying<GfVec3d>(*this, value) ||
            _TryFilterFaceVarying<TfToken>(*this, value) ||
            _TryFilterFaceVarying<std::string>(*this, value);
+}
+
+UsdAttribute ArnoldUsdGetGaussianSplatColorAttribute(const UsdPrim& prim)
+{
+    // Same precedence as the readers: the float coefficients, the half ones, then displayColor
+    for (const TfToken& name : {_tokens->shCoeffs, _tokens->shCoeffsh}) {
+        UsdAttribute attr = prim.GetAttribute(name);
+        if (attr && attr.HasAuthoredValue())
+            return attr;
+    }
+    if (UsdAttribute attr = prim.GetAttribute(_tokens->displayColor))
+        return attr;
+    // No color is authored, the splats use the schema's fallback coefficients
+    return prim.GetAttribute(_tokens->shCoeffs);
+}
+
+TfToken ArnoldUsdComputeGaussianSplatColorSpace(const UsdPrim& prim)
+{
+#if PXR_VERSION >= 2505
+    if (UsdAttribute attr = ArnoldUsdGetGaussianSplatColorAttribute(prim))
+        return UsdColorSpaceAPI::ComputeColorSpaceName(attr);
+    return UsdColorSpaceAPI::ComputeColorSpaceName(prim);
+#else
+    TF_UNUSED(prim);
+    return {};
+#endif
+}
+
+void ArnoldUsdSetGaussianSplatColorSpace(AtNode* node, const TfToken& colorSpace)
+{
+    AtString arnoldColorSpace;
+    if (colorSpace.IsEmpty() || colorSpace == _tokens->unknown) {
+        const AtParamEntry* paramEntry =
+            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::gs_input_color_space);
+        if (paramEntry == nullptr)
+            return;
+        arnoldColorSpace = AiParamGetDefault(paramEntry)->STR();
+    } else if (colorSpace == _tokens->raw || colorSpace == _tokens->identity || colorSpace == _tokens->data) {
+        // Arnold's color manager can't transform from these spaces, "linear" leaves the colors untouched
+        arnoldColorSpace = str::linear;
+    } else {
+        // Arnold's default OCIO config knows the USD color space names (lin_rec709_scene, srgb_rec709_scene...)
+        arnoldColorSpace = AtString(colorSpace.GetText());
+    }
+    // Changing this parameter reinitializes the points, don't set it again on unrelated updates
+    if (AiNodeGetStr(node, str::gs_input_color_space) != arnoldColorSpace)
+        AiNodeSetStr(node, str::gs_input_color_space, arnoldColorSpace);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

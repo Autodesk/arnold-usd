@@ -27,6 +27,12 @@
               "UsdImagingPrimAdapter"
             ],
             "primTypeName": "ArnoldOptions"
+          },
+          "ArnoldGaussianSplatColorSpaceAdapter": {
+            "bases": [
+              "UsdImagingAPISchemaAdapter"
+            ],
+            "apiSchemaName": ""
           }
         }
       },

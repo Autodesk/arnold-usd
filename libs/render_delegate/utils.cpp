@@ -45,6 +45,10 @@
 #include <pxr/usd/sdf/assetPath.h>
 
 #include "pxr/imaging/hd/extComputationUtils.h"
+#ifdef ENABLE_SCENE_INDEX
+#include <pxr/imaging/hd/dataSourceTypeDefs.h>
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
 
 #include "render_delegate.h"
 
@@ -754,6 +758,29 @@ void HdArnoldRemovePrimvars(
         if (AiNodeLookUpUserParameter(node, indicesName) != nullptr)
             AiNodeResetParameter(node, indicesName);
     }
+}
+
+void HdArnoldSetGaussianSplatColorSpace(
+    AtNode* node, HdSceneDelegate* delegate, const SdfPath& id, const HdArnoldPrimvarMap& primvars)
+{
+    // The arnold primvar is set as any primvars:arnold:xyz and takes precedence over the USD color space
+    if (primvars.count(str::t_arnold_gs_input_color_space) != 0)
+        return;
+    TfToken colorSpace;
+#ifdef ENABLE_SCENE_INDEX
+    if (HdSceneIndexBaseRefPtr sceneIndex = delegate->GetRenderIndex().GetTerminalSceneIndex()) {
+        const HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+        if (prim.dataSource) {
+            if (HdTokenDataSourceHandle colorSpaceDs =
+                    HdTokenDataSource::Cast(prim.dataSource->Get(str::t_arnoldGaussianSplatColorSpace)))
+                colorSpace = colorSpaceDs->GetTypedValue(0.0f);
+        }
+    }
+#else
+    TF_UNUSED(delegate);
+    TF_UNUSED(id);
+#endif
+    ArnoldUsdSetGaussianSplatColorSpace(node, colorSpace);
 }
 
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets)

@@ -1,0 +1,17 @@
+Interactive USD edits of the color space of a Houdini gaussian splat, with the usd procedural cache_id and with the render delegate
+
+see #2845
+
+A Houdini splat (points with a GS_Alpha primvar) inherits the colorSpace:name (UsdColorSpaceAPI) of its parent, which
+is edited, then gets a colorSpace metadata on its displayColor, then primvars:arnold:gs_input_color_space overriding
+it, which is removed. The splat is mid grey, which is about 0.21 when decoded as sRGB (Arnold's default) and 0.5 in a
+linear color space.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. UsdImaging only gives the USD color space to Hydra 2, so the Hydra 1 renders
+report it as a known issue, and Hydra 2 doesn't update the color space inherited from an edited parent.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

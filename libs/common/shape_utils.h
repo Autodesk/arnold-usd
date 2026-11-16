@@ -203,6 +203,34 @@ bool ArnoldUsdIgnoreUsdParameter(const TfToken& name);
 ARCH_HIDDEN
 bool ArnoldUsdIgnoreParameter(const AtString& name);
 
+class UsdAttribute;
+class UsdPrim;
+
+/// Returns the attribute holding the colors of a gaussian splat prim, whose color space applies to its
+/// spherical harmonics: the radiance coefficients of a ParticleField3DGaussianSplat when they're authored,
+/// primvars:displayColor otherwise (also used by Houdini's splats).
+///
+/// @param prim Gaussian splat prim (ParticleField3DGaussianSplat, or Houdini's splat points).
+/// @return The color attribute, invalid if the prim has none.
+ARCH_HIDDEN
+UsdAttribute ArnoldUsdGetGaussianSplatColorAttribute(const UsdPrim& prim);
+
+/// Resolves the USD color space of a gaussian splat prim's colors, following the UsdColorSpaceAPI rules:
+/// the colorSpace metadata of the color attribute, then the colorSpace:name of the prim and its ancestors.
+///
+/// @param prim Gaussian splat prim (ParticleField3DGaussianSplat, or Houdini's splat points).
+/// @return The color space name, empty if none is authored or the USD version doesn't support color spaces.
+ARCH_HIDDEN
+TfToken ArnoldUsdComputeGaussianSplatColorSpace(const UsdPrim& prim);
+
+/// Sets the points' gs_input_color_space from a USD color space, or to Arnold's default when no color space
+/// applies. The color spaces without a transform (raw, identity, data) are set as "linear".
+///
+/// @param node Arnold points node in gaussian mode.
+/// @param colorSpace USD color space name, empty or "unknown" when none is authored.
+ARCH_HIDDEN
+void ArnoldUsdSetGaussianSplatColorSpace(AtNode* node, const TfToken& colorSpace);
+
 
 /// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
 /// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match

@@ -61,7 +61,7 @@ scene_index_to_fix: test_1524
 hydra2_only: test_2549
 
 # Test disable as not implemented in arnold yet
-not_implemented: test_2608
+not_implemented: test_2608 test_2845 test_2845.1
 
 # Tests skipped for a specific pass (consumed as the 'pass_<name>' skip list).
 # CoordSys support (test_13221, test_2731) is implemented in the render
