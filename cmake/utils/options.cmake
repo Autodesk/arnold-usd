@@ -57,6 +57,9 @@ option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" OFF)
 set(SCHEMA_GEN_TIMEOUT "300" CACHE STRING
     "Timeout in seconds for each schema-generation hython/python subprocess (a Houdini/Arnold license-server problem hangs rather than fails).")
 option(BUILD_TURNTABLE "Build the turntable tool" OFF)
+# The python module the interactive render delegate tests read the AOVs back with (libs/test_support). Needs a
+# shared USD with python support, and is installed under PREFIX_TESTSUITE_PYTHON.
+option(BUILD_TESTSUITE_READBACK "Build the readback python module of the interactive render delegate tests" OFF)
 
 # Configurations:
 option(ENABLE_HYDRA_IN_USD_PROCEDURAL "Enable hydra in the procedural" ON)
@@ -108,6 +111,8 @@ set(PREFIX_HEADERS "include" CACHE STRING "Directory to install the headers unde
 set(PREFIX_SCHEMA "schema" CACHE STRING "Directory to install the schemas under.")
 set(PREFIX_BIN "bin" CACHE STRING "Directory to install the binaries under.")
 set(PREFIX_DOCS "docs" CACHE STRING "Directory to install the documentation under.")
+set(PREFIX_TESTSUITE_PYTHON "testsuite/python" CACHE STRING "Directory to install the python modules of the tests under.")
+set(TESTSUITE_PATTERNS "testsuite" CACHE STRING "Tests run by the testsuite target, as abuild targets: test names, patterns or groups (e.g. testsuite:interactive_engine), separated by semicolons.")
 
 set(TEST_DIFF_HARDFAIL "0.0157" CACHE STRING "Hard failure of an image comparison test.")
 set(TEST_DIFF_FAIL "0.00001" CACHE STRING "Failure of an image comparison test.")

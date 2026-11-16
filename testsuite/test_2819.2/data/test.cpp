@@ -21,7 +21,7 @@ void SetAperture(const UsdStageRefPtr& stage, const SdfPath& camera, float horiz
 
 } // namespace
 
-int main(int, char**)
+INTERACTIVE_USD_TEST_MAIN()
 {
     const GfRect2i full(GfVec2i(0, 0), kFramingWidth, kFramingHeight);
     // Film translate: the center of the film is at (100, 70)

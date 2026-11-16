@@ -83,7 +83,7 @@ def _run_test(test, timeout, reruns, update_passes=[]):
       test_target_fileobj.close()
 
 class Testsuite(object):
-   def __init__(self, path, tools, passes):
+   def __init__(self, path, tools, passes, skip_groups=None):
       self.source  = os.path.abspath(path)
       self.groups  = Groups(os.path.join(self.source, 'groups'))
       self.common  = os.path.join(self.source, 'common')
@@ -131,6 +131,10 @@ class Testsuite(object):
       self.skipped_tests['os'] = set()
       for system_os in (_ for _ in system.allowed.os if _ != system.os):
          self.skipped_tests['os'] |= (self.groups.get_tests(system_os) - self.groups.get_tests(system.os))
+      # Groups of tests this configuration can't run, with the reason, e.g. the python interactive render delegate tests
+      # without a shared USD with python (see testsuite/SConscript). Unlike the 'ignore' group, they're also skipped
+      # when they're run alone.
+      self.skip_groups = dict(skip_groups or {})
       
       # Configure the environment variables for all the tests
       self.environment = dict(os.environ)
@@ -181,11 +185,11 @@ class Testsuite(object):
       self.environment['ARNOLD_ADP_DISABLE'] = '1'
 
    @classmethod
-   def load(cls, path, tools, passes):
+   def load(cls, path, tools, passes, skip_groups=None):
       path = os.path.abspath(path)
       if not os.path.exists(path):
          return None
-      return cls(path, tools, passes)
+      return cls(path, tools, passes, skip_groups)
 
    def tests_by_node(self, node):
       tests = set()
@@ -325,6 +329,14 @@ class Testsuite(object):
       if len(self.tests_filtered) > 1:
          self.tests_ignored['ignore'] = self.tests_filtered & self.skipped_tests['ignore']
          self.tests_filtered -= self.skipped_tests['ignore']
+      self.tests_ignored['config'] = set()
+      for group, reason in sorted(self.skip_groups.items()):
+         skipped = self.tests_filtered & self.groups.get_tests(group)
+         if skipped:
+            print("Ignoring {} test(s) of the '{}' group, which this configuration can't run ({}): {}".format(
+               len(skipped), group, reason, ' '.join(sorted(skipped))))
+         self.tests_ignored['config'] |= skipped
+         self.tests_filtered -= skipped
       
       self.tests_ignored['load']  = set()
       self.tests_ignored['build'] = set()
@@ -488,7 +500,7 @@ class Testsuite(object):
       result['crashed']  = len([test for test in tests if test.status == Test.Status.CRASHED ])
       result['timedout'] = len([test for test in tests if test.status == Test.Status.TIMEDOUT])
       result['unstable'] = len([test for test in tests if test.status == Test.Status.UNSTABLE])
-      skipped_keys = ('os', 'ignore', 'load', 'build', 'other')
+      skipped_keys = ('os', 'ignore', 'config', 'load', 'build', 'other')
       skipped = {'skipped_' + key : len(self.tests_ignored[key])  for key in skipped_keys}
       result['skipped']  = sum(skipped.values())
       result.update(skipped)

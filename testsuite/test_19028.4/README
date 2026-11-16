@@ -1,0 +1,10 @@
+Interactive render delegate edits while the render is paused or stopped, through a UsdImagingGL.Engine, from python
+
+A sphere has its material color changed and is moved while the render is paused, then resumed, or stopped, then
+restarted, with PauseRenderer/ResumeRenderer and StopRenderer/RestartRenderer of the engine. The render delegate is
+driven by a headless UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Each
+render is checked in test.py, and the last one is compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

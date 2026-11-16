@@ -1,0 +1,11 @@
+Interactive render delegate edits through a UsdImagingGL.Engine, from python
+
+A sphere in front of the camera is rendered by the HdArnoldRendererPlugin render delegate, driven by a headless
+UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Its material color is
+changed twice, it moves out of the frame while Arnold is still rendering the second change and comes back, and the
+depth AOV is rendered before switching back to the color. Each render is checked in test.py, and the last one is
+compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}
