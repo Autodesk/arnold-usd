@@ -80,7 +80,7 @@
                         "loadWithRenderer": "Arnold",
                         "priority": 0,
                         "displayName": "Arnold: coordinate systems"
-                    }${MTOA_ENTRY}
+                    }${MTOA_ENTRY}${HOUDINI_ENTRY}
                 }
             },
             "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",

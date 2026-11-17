@@ -58,6 +58,10 @@ if (MTOA_BUILD)
 	target_compile_definitions(${BUNDLE_NAME} PUBLIC MTOA_BUILD=1)
 endif()
 
+if (HOUDINI_BUILD)
+	target_compile_definitions(${BUNDLE_NAME} PUBLIC HOUDINI_BUILD=1)
+endif()
+
 target_link_libraries(${BUNDLE_NAME} PRIVATE translator common usdImaging ndrObjects usdImagingArnoldObjects sdr hd hf trace cameraUtil pxOsd)
 # Whether ndr still exists is per-distribution, not per-USD-version: H21 ships it on USD 0.25.5,
 # MayaUSD does not (see FindUSD.cmake). Unguarded, CMake would pass the bare name to the linker.

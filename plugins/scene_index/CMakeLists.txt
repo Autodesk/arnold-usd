@@ -32,6 +32,11 @@ if (MTOA_BUILD)
     list(APPEND HDR mtoaSIP.h)
 endif()
 
+if (HOUDINI_BUILD)
+    list(APPEND SRC fixHairDeformVelocitySIP.cpp)
+    list(APPEND HDR fixHairDeformVelocitySIP.h)
+endif()
+
 # Add objects for the hydra procedural
 add_library(sceneIndexArnoldObjects OBJECT ${SRC})
 target_compile_definitions(sceneIndexArnoldObjects PRIVATE "HDSCENEINDEX_EXPORTS=1")
@@ -42,6 +47,9 @@ endif()
 if (MTOA_BUILD)
     target_compile_definitions(sceneIndexArnoldObjects PUBLIC MTOA_BUILD=1)
 endif()
+if (HOUDINI_BUILD)
+    target_compile_definitions(sceneIndexArnoldObjects PUBLIC HOUDINI_BUILD=1)
+endif()
 
 # If we want a sceneIndexArnold shared plugin
 if (BUILD_SCENE_INDEX_PLUGIN)
@@ -49,6 +57,9 @@ if (BUILD_SCENE_INDEX_PLUGIN)
         add_library(sceneIndexArnold SHARED ${SRC})
         if (MTOA_BUILD)
             target_compile_definitions(sceneIndexArnold PRIVATE MTOA_BUILD=1)
+        endif()
+        if (HOUDINI_BUILD)
+            target_compile_definitions(sceneIndexArnold PRIVATE HOUDINI_BUILD=1)
         endif()
         target_compile_definitions(sceneIndexArnold PUBLIC ENABLE_SCENE_INDEX=1)
 
