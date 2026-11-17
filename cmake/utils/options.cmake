@@ -113,6 +113,12 @@ set(PREFIX_BIN "bin" CACHE STRING "Directory to install the binaries under.")
 set(PREFIX_DOCS "docs" CACHE STRING "Directory to install the documentation under.")
 set(PREFIX_TESTSUITE_PYTHON "testsuite/python" CACHE STRING "Directory to install the python modules of the tests under.")
 set(TESTSUITE_PATTERNS "testsuite" CACHE STRING "Tests run by the testsuite target, as abuild targets: test names, patterns or groups (e.g. testsuite:interactive_engine), separated by semicolons.")
+# Reports and limits of the testsuite target, given to abuild only when set (the SCons variables TESTSUITE_OUTPUT,
+# JUNIT_TESTSUITE_NAME, REPORT_ONLY_FAILED_TESTS and TIMELIMIT), e.g. for a CI writing a JUnit report.
+set(TESTSUITE_OUTPUT "" CACHE PATH "Folder the testsuite target writes the test results and reports to (abuild's default when empty).")
+set(TESTSUITE_JUNIT_NAME "" CACHE STRING "Name of the JUnit report of the testsuite target (no JUnit name when empty).")
+option(TESTSUITE_REPORT_ONLY_FAILED "Keep only the results of the failed tests in the reports of the testsuite target" OFF)
+set(TESTSUITE_TIMELIMIT "" CACHE STRING "Time limit of each test of the testsuite target, in seconds (abuild's default when empty).")
 
 set(TEST_DIFF_HARDFAIL "0.0157" CACHE STRING "Hard failure of an image comparison test.")
 set(TEST_DIFF_FAIL "0.00001" CACHE STRING "Failure of an image comparison test.")
