@@ -42,6 +42,18 @@ if (APPLE)
     endif ()
     list(APPEND TESTSUITE_ABUILD_ARGS MACOS_ARCH=${_macos_arch})
 endif ()
+if (TESTSUITE_OUTPUT)
+    list(APPEND TESTSUITE_ABUILD_ARGS "TESTSUITE_OUTPUT=$<SHELL_PATH:${TESTSUITE_OUTPUT}>")
+endif ()
+if (TESTSUITE_JUNIT_NAME)
+    list(APPEND TESTSUITE_ABUILD_ARGS "JUNIT_TESTSUITE_NAME=${TESTSUITE_JUNIT_NAME}")
+endif ()
+if (TESTSUITE_REPORT_ONLY_FAILED)
+    list(APPEND TESTSUITE_ABUILD_ARGS REPORT_ONLY_FAILED_TESTS=1)
+endif ()
+if (TESTSUITE_TIMELIMIT)
+    list(APPEND TESTSUITE_ABUILD_ARGS TIMELIMIT=${TESTSUITE_TIMELIMIT})
+endif ()
 
 # The python interactive render delegate tests (testsuite/common/interactive_engine_test.py) run with the interpreter
 # of USD, and read the AOVs back with the module of libs/test_support
