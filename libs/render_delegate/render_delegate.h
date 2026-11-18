@@ -968,7 +968,13 @@ private:
 
     void _ParseDelegateRenderProducts(const VtValue& value);
 
-    void _ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
+    /// Apply the UsdLux light linking of the categories to the shape.
+    ///
+    /// @param keepLightGroup The light group of the shape is authored by its arnold:use_light_group
+    ///  primvar, which takes precedence over the UsdLux light linking (#2835).
+    /// @param keepShadowGroup Same for the shadow group and arnold:use_shadow_group.
+    void _ApplyLightLinking(
+        AtNode* shape, const VtArray<TfToken>& categories, bool keepLightGroup = false, bool keepShadowGroup = false);
 
     void _SetHasCryptomatte(bool b);
 

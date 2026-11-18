@@ -1,0 +1,100 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+# Arnold light groups authored with arnold primvars (as C4DtoA does) mixed with UsdLux light link
+# collections, with a mesh light in the scene. The collections link the blue dome to the center sphere
+# only and the red dome to the right sphere only. The arnold light groups of the left and right spheres
+# take precedence over them: the left sphere is lit by the blue dome and the mesh light, the right one
+# by the red dome and the mesh light. The center sphere, without arnold light group, is lit by the blue
+# dome and the mesh light, which has no collection.
+def Xform "World"
+{
+    def Sphere "left"
+    {
+        double radius = 1
+        matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 0, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+        bool primvars:arnold:use_light_group = 1
+        string[] primvars:arnold:light_group = ["/World/lights/blue", "/World/meshLight_light"]
+        bool primvars:arnold:use_shadow_group = 1
+        string[] primvars:arnold:shadow_group = ["/World/lights/blue", "/World/meshLight_light"]
+    }
+
+    def Sphere "center"
+    {
+        double radius = 1
+    }
+
+    def Sphere "right"
+    {
+        double radius = 1
+        matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+        bool primvars:arnold:use_light_group = 1
+        string[] primvars:arnold:light_group = ["/World/lights/red", "/World/meshLight_light"]
+        bool primvars:arnold:use_shadow_group = 1
+        string[] primvars:arnold:shadow_group = ["/World/lights/red", "/World/meshLight_light"]
+    }
+
+    # A quad above the spheres, facing down, converted to a green mesh light renamed with
+    # primvars:arnold:light:name.
+    def Mesh "meshLight"
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-2, 2.5, -1), (2, 2.5, -1), (2, 2.5, 1), (-2, 2.5, 1)]
+        float3[] extent = [(-2, 2.5, -1), (2, 2.5, 1)]
+        uniform bool doubleSided = 1
+        uniform token subdivisionScheme = "none"
+        bool primvars:arnold:light = 1
+        string primvars:arnold:light:name = "/World/meshLight_light"
+        color3f primvars:arnold:light:color = (0.1, 1, 0.1)
+        float primvars:arnold:light:intensity = 30
+        uchar primvars:arnold:visibility = 0
+    }
+
+    def Xform "lights"
+    {
+        def DomeLight "blue" (
+            prepend apiSchemas = ["CollectionAPI:lightLink"]
+        )
+        {
+            uniform bool collection:lightLink:includeRoot = 0
+            prepend rel collection:lightLink:includes = </World/center>
+            color3f inputs:color = (0.1, 0.2, 1)
+            float inputs:intensity = 1
+        }
+
+        def DomeLight "red" (
+            prepend apiSchemas = ["CollectionAPI:lightLink"]
+        )
+        {
+            uniform bool collection:lightLink:includeRoot = 0
+            prepend rel collection:lightLink:includes = </World/right>
+            color3f inputs:color = (1, 0.1, 0.05)
+            float inputs:intensity = 1
+        }
+    }
+
+    def Camera "camera"
+    {
+        float2 clippingRange = (0.1, 1000)
+        float focalLength = 35
+        matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.3, 11, 1))
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "settings"
+    {
+        rel camera = </World/camera>
+        int2 resolution = (320, 240)
+        custom int arnold:global:AA_samples = 3
+    }
+}

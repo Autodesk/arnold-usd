@@ -414,11 +414,6 @@ void HdArnoldMesh::Sync(
             node, subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
             subdivTags.GetCreaseIndices(), subdivTags.GetCreaseLengths(), subdivTags.GetCreaseWeights());
     }
-    if (*dirtyBits & (HdChangeTracker::DirtyCategories)) {
-        param.Interrupt();
-        _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
-    }
-
     auto materialsAssigned = false;
     auto assignMaterials = [&]() {
         // Materials have already been assigned.
@@ -723,6 +718,13 @@ void HdArnoldMesh::Sync(
         _SyncDuplicateConstantPrimvars(_primvars, param, [](const TfToken&) { return false; });
     } else if (dirtyPrimvars && _IsDuplicate()) {
         _SyncInstancedDuplicateVisibility(_primvars, param);
+    }
+
+    // The light linking is applied after the primvars: the arnold light group primvars take precedence over the
+    // UsdLux light linking, which applies again when they are removed (#2835).
+    if ((*dirtyBits & HdChangeTracker::DirtyCategories) || dirtyPrimvars) {
+        param.Interrupt();
+        _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets,
