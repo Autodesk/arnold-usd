@@ -23,8 +23,10 @@ TF_REGISTRY_FUNCTION(TfType) { HdSceneIndexPluginRegistry::Define<HdArnoldFixHai
 
 TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
 {
-    // Must run after HD_HairDeform has tagged the prims, so insert at the end of
-    // the phase rather than at the start like the other filters.
+    // Must run after HD_HairDeform has tagged the prims. HD_HairDeform registers for all renderers
+    // at phase 0 with InsertionOrderAtStart, so inserting at the end of phase 0 puts this filter
+    // after it. If HD_HairDeform is moved to a later phase, this filter will silently stop doing
+    // anything and the phase here must be raised accordingly.
     const HdSceneIndexPluginRegistry::InsertionPhase insertionPhase = 0;
 
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
@@ -93,9 +95,31 @@ protected:
 
     void _PrimsDirtied(const HdSceneIndexBase&, const HdSceneIndexObserver::DirtiedPrimEntries& entries) override
     {
-        if (_IsObserved()) {
-            _SendPrimsDirtied(entries);
+        if (!_IsObserved()) {
+            return;
         }
+        // The tag can be added or removed in a live session, which changes whether the velocities
+        // are blocked, so dirty them along with it.
+        const HdDataSourceLocator hairDeform(_tokens->hairDeform);
+        const HdDataSourceLocator primvars = HdPrimvarsSchema::GetDefaultLocator();
+        HdSceneIndexObserver::DirtiedPrimEntries newEntries;
+        bool modified = false;
+        for (size_t i = 0; i < entries.size(); ++i) {
+            if (!entries[i].dirtyLocators.Intersects(hairDeform)) {
+                if (modified) {
+                    newEntries.push_back(entries[i]);
+                }
+                continue;
+            }
+            if (!modified) {
+                newEntries.assign(entries.begin(), entries.begin() + i);
+                modified = true;
+            }
+            newEntries.push_back(entries[i]);
+            newEntries.back().dirtyLocators.insert(primvars.Append(HdTokens->velocities));
+            newEntries.back().dirtyLocators.insert(primvars.Append(HdTokens->accelerations));
+        }
+        _SendPrimsDirtied(modified ? newEntries : entries);
     }
 };
 
