@@ -22,6 +22,7 @@
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
+- [usd#2835](https://github.com/Autodesk/arnold-usd/issues/2835) - Fix the arnold light groups (`primvars:arnold:light_group`) of shapes being reset in the hydra render delegate when the scene has a mesh light. They now take precedence over the UsdLux light link collections in the render delegate and the usd procedural, and follow interactive edits
 
 ## [7.5.4.1] (Unreleased)
 

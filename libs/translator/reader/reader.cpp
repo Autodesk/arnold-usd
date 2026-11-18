@@ -890,11 +890,30 @@ void UsdArnoldReader::ReadLightLinks()
         }
     };
 
+    // The light (or shadow) group of a shape can be authored with its arnold primvars, e.g.
+    // primvars:arnold:use_light_group and primvars:arnold:light_group holding arnold node names, as C4DtoA
+    // does. It then takes precedence over the UsdLux light linking (#2835).
+    auto hasArnoldGroupPrimvar = [this](AtNode *shape, const TfToken &useGroup) {
+        const char *shapeName = AiNodeGetName(shape);
+        if (!SdfPath::IsValidPathString(shapeName))
+            return false;
+        UsdPrim prim = _stage->GetPrimAtPath(SdfPath(shapeName));
+        if (!prim)
+            return false;
+        UsdGeomPrimvar primvar = UsdGeomPrimvarsAPI(prim).FindPrimvarWithInheritance(useGroup);
+        VtValue value;
+        return primvar && primvar.Get(&value, _time.frame) && VtValueGetBool(value);
+    };
+    static const TfToken s_arnoldUseLightGroup("arnold:use_light_group");
+    static const TfToken s_arnoldUseShadowGroup("arnold:use_shadow_group");
+
     // Light-links
     if (!_lightLinksMap.empty())
     {        
         for (auto shape : shapeList) {
-            
+            if (hasArnoldGroupPrimvar(shape, s_arnoldUseLightGroup))
+                continue;
+
             GetLinksMap(_lightLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
             // We checked all lights in the scene, and found which ones were visible for the 
             // current shape. If the list size is smaller than the full lights list, then
@@ -912,6 +931,8 @@ void UsdArnoldReader::ReadLightLinks()
     if (!_shadowLinksMap.empty())
     {
         for (auto shape : shapeList) {
+            if (hasArnoldGroupPrimvar(shape, s_arnoldUseShadowGroup))
+                continue;
 
             GetLinksMap(_shadowLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
             if (shapeLightGroups.size() < lightsList.size()) {

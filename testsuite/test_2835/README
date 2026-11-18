@@ -1,0 +1,13 @@
+Arnold light groups authored with arnold primvars, with a mesh light in the scene
+
+see #2835
+
+Two spheres are linked with primvars:arnold:use_light_group / primvars:arnold:light_group (and the
+shadow equivalents) to a blue and a red dome light respectively, plus a green mesh light, authored
+with primvars:arnold:light on a mesh and renamed with primvars:arnold:light:name, as C4DtoA does.
+The registration of the mesh light re-applies the light linking of the shapes, which must not reset
+the light groups set by their primvars: the left sphere is blue and green, the right one red and green.
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}

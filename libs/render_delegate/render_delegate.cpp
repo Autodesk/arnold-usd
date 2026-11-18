@@ -96,6 +96,10 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldNamespace, "arnold:"))
     ((colorManagerNamespace, "color_manager:"))
     ((primvarsNamespace, "primvars:"))
+    ((arnoldUseLightGroup, "arnold:use_light_group"))
+    ((arnoldUseShadowGroup, "arnold:use_shadow_group"))
+    ((arnoldLightGroup, "arnold:light_group"))
+    ((arnoldShadowGroup, "arnold:shadow_group"))
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
@@ -1864,18 +1868,22 @@ std::vector<AtNode*> HdArnoldRenderDelegate::_GetLinkedLights(
     return lights;
 }
 
-void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
+void HdArnoldRenderDelegate::_ApplyLightLinking(
+    AtNode* shape, const VtArray<TfToken>& categories, bool keepLightGroup, bool keepShadowGroup)
 {
     std::lock_guard<std::mutex> guard(_lightLinkingMutex);
     // We need to reset the parameter if either there are no light links, or the only light link is the default
-    // group.
-    const auto lightEmpty = _lightLinks.empty() || (_lightLinks.size() == 1 && _lightLinks.count(TfToken{}) == 1);
-    const auto shadowEmpty = _shadowLinks.empty() || (_shadowLinks.size() == 1 && _shadowLinks.count(TfToken{}) == 1);
-    if (lightEmpty) {
+    // group. The groups authored by the arnold primvars of the shape take precedence over the UsdLux light
+    // linking, they are left untouched (#2835).
+    const auto lightEmpty = keepLightGroup || _lightLinks.empty() ||
+                            (_lightLinks.size() == 1 && _lightLinks.count(TfToken{}) == 1);
+    const auto shadowEmpty = keepShadowGroup || _shadowLinks.empty() ||
+                             (_shadowLinks.size() == 1 && _shadowLinks.count(TfToken{}) == 1);
+    if (lightEmpty && !keepLightGroup) {
         AiNodeResetParameter(shape, str::use_light_group);
         AiNodeResetParameter(shape, str::light_group);
     }
-    if (shadowEmpty) {
+    if (shadowEmpty && !keepShadowGroup) {
         AiNodeResetParameter(shape, str::use_shadow_group);
         AiNodeResetParameter(shape, str::shadow_group);
     }
@@ -1933,12 +1941,41 @@ VtArray<TfToken> HdArnoldRenderDelegate::_GetRprimCategories(
     return categories;
 }
 
+namespace {
+// The light (or shadow) group of a shape can be authored with its arnold primvars, e.g.
+// primvars:arnold:use_light_group and primvars:arnold:light_group holding arnold node names, as C4DtoA
+// does. It then takes precedence over the UsdLux light linking (#2835). Returns true if the rprim enables it,
+// in which case its group is set again, to resolve the node names against the current lights.
+bool _ApplyArnoldGroupPrimvar(
+    HdSceneDelegate* sceneDelegate, const SdfPath& id, AtNode* node, const TfToken& useGroup, const TfToken& group,
+    const AtString& useGroupParam, const AtString& groupParam, HdArnoldRenderDelegate* renderDelegate)
+{
+    const VtValue useValue = sceneDelegate->Get(id, useGroup);
+    if (useValue.IsEmpty() || !VtValueGetBool(useValue))
+        return false;
+    AiNodeSetBool(node, useGroupParam, true);
+    const VtValue groupValue = sceneDelegate->Get(id, group);
+    if (groupValue.IsEmpty())
+        AiNodeResetParameter(node, groupParam);
+    else
+        HdArnoldSetConstantPrimvar(node, group, TfToken(), groupValue, nullptr, nullptr, nullptr, renderDelegate);
+    return true;
+}
+} // namespace
+
 void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
     // The light linking of instanced shapes depends on their instances, it is applied by
     // HdArnoldShape::_SyncInstances.
     if (!sceneDelegate->GetInstancerId(id).IsEmpty())
         return;
-    _ApplyLightLinking(node, sceneDelegate->GetCategories(id));
+    _ApplyLightLinking(
+        node, sceneDelegate->GetCategories(id),
+        _ApplyArnoldGroupPrimvar(
+            sceneDelegate, id, node, _tokens->arnoldUseLightGroup, _tokens->arnoldLightGroup, str::use_light_group,
+            str::light_group, this),
+        _ApplyArnoldGroupPrimvar(
+            sceneDelegate, id, node, _tokens->arnoldUseShadowGroup, _tokens->arnoldShadowGroup, str::use_shadow_group,
+            str::shadow_group, this));
 }
 
 void HdArnoldRenderDelegate::ApplyLightLinking(
@@ -1952,7 +1989,14 @@ void HdArnoldRenderDelegate::ApplyLightLinking(
         for (const auto& instanceCategory : instanceCategories.front())
             categories.push_back(instanceCategory);
     }
-    _ApplyLightLinking(node, categories);
+    _ApplyLightLinking(
+        node, categories,
+        _ApplyArnoldGroupPrimvar(
+            sceneDelegate, id, node, _tokens->arnoldUseLightGroup, _tokens->arnoldLightGroup, str::use_light_group,
+            str::light_group, this),
+        _ApplyArnoldGroupPrimvar(
+            sceneDelegate, id, node, _tokens->arnoldUseShadowGroup, _tokens->arnoldShadowGroup, str::use_shadow_group,
+            str::shadow_group, this));
 }
 
 void HdArnoldRenderDelegate::ApplyInstanceLightLinking(

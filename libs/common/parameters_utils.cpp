@@ -62,6 +62,12 @@ bool _ReadArrayAttribute(const InputAttribute& attr, AtNode* node, const char* a
 
                 serializedArray += nodeName;
             }
+            // An empty array of node names clears the array, which an array connection without targets wouldn't
+            // do, e.g. when all the lights are removed from an arnold light group (#2835)
+            if (serializedArray.empty()) {
+                AiNodeResetParameter(node, AtString(attrName));
+                return true;
+            }
             context.AddConnection(node, attrName, serializedArray, ArnoldAPIAdapter::CONNECTION_ARRAY);
             return true;
         } else if (attr.value.IsHolding<std::string>()) {
