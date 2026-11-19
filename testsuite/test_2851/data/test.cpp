@@ -1,7 +1,7 @@
-// Regression test for ARNOLD-19000: the render delegate ignored the arnold:filter of a RenderVar for the color, depth
-// and primId outputs of the RenderProducts husk gives it (the delegateRenderProducts render setting), and used the
-// RenderProduct filter or the defaults instead (box_filter for color, closest_filter for depth and primId). Only the
-// other AOVs honored it.
+// Regression test for #2851 (ARNOLD-19000): the render delegate ignored the arnold:filter of a RenderVar for the
+// color, depth and primId outputs of the RenderProducts husk gives it (the delegateRenderProducts render setting), and
+// used the RenderProduct filter or the defaults instead (box_filter for color, closest_filter for depth and primId).
+// Only the other AOVs honored it.
 //
 // husk is the only host setting delegateRenderProducts, and its layout (a VtArray of HdAovSettingsMap, see
 // https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHuskDRP) isn't wrapped in python, so this test
@@ -45,7 +45,7 @@ bool g_success = true;
 bool Check(bool condition, const std::string& message)
 {
     if (!condition) {
-        AiMsgError("[test_19000] %s", message.c_str());
+        AiMsgError("[test_2851] %s", message.c_str());
         g_success = false;
     }
     return condition;
@@ -200,7 +200,7 @@ int main(int, char**)
                 Check(filter != nullptr, "No filter node " + tokens[2] + " for the output \"" + output + "\"");
                 const std::string driverFilename = AiNodeGetStr(driver, AtString("filename")).c_str();
                 filterTypes[driverFilename] = filter ? AiNodeEntryGetName(AiNodeGetNodeEntry(filter)) : "";
-                AiMsgInfo("[test_19000] %s: \"%s\" (%s)", driverFilename.c_str(), output.c_str(),
+                AiMsgInfo("[test_2851] %s: \"%s\" (%s)", driverFilename.c_str(), output.c_str(),
                     filterTypes[driverFilename].c_str());
             }
 

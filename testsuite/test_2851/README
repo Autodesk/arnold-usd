@@ -9,7 +9,7 @@ in C++ and constructs HdArnoldRenderDelegate directly, like test_2719. It runs o
 checks the filter type of the output of every product, for the precedence:
 RenderVar arnold:filter > RenderProduct arnold:filter > default.
 
-See ARNOLD-19000
+See #2851 (ARNOLD-19000)
 
 author: cyril.pichard
 
