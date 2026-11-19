@@ -22,6 +22,7 @@
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
+- [usd#2851](https://github.com/Autodesk/arnold-usd/pull/2851) - Fix the `arnold:filter` of a RenderVar being ignored by the render delegate for the color, depth and primId outputs of the RenderProducts rendered by husk
 
 ## [7.5.4.1] (Unreleased)
 
