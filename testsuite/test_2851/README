@@ -1,0 +1,16 @@
+The arnold:filter of a RenderVar must be used for the color, depth and primId outputs of the RenderProducts given by husk
+
+The render delegate ignored the arnold:filter authored on a RenderVar for the color, depth and primId outputs of the
+delegate RenderProducts (the delegateRenderProducts render setting that husk sets), and used the RenderProduct filter
+or the defaults instead: box_filter for color, closest_filter for depth and primId. The other AOVs already honored it.
+
+husk is the only host setting delegateRenderProducts, and its layout isn't wrapped in python, so this test builds it
+in C++ and constructs HdArnoldRenderDelegate directly, like test_2719. It runs one Execute() of a render pass and
+checks the filter type of the output of every product, for the precedence:
+RenderVar arnold:filter > RenderProduct arnold:filter > default.
+
+See #2851 (ARNOLD-19000)
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'render_delegate'}

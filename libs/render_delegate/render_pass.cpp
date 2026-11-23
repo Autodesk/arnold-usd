@@ -221,7 +221,14 @@ void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSetting
     }
 };
 
-AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSettingsMap& aovSettings, int filterIndex)
+// The filters of the AOV bindings are recreated on every rebuild of the outputs, while the filters of the delegate
+// render products and of their RenderVars are only recreated when the products change. They use distinct name
+// prefixes so a binding filter can never be given the name of a product filter that is still alive:
+// FindOrCreateArnoldNode would return the product filter, and _ClearRenderBuffers would then destroy it while the
+// product still references it.
+AtNode* _CreateFilter(
+    HdArnoldRenderDelegate* renderDelegate, const HdAovSettingsMap& aovSettings, int filterIndex,
+    const char* namePrefix = "HdArnoldRenderPass_filter")
 {
     // We need to make sure that it's holding a string, then try to create it to make sure
     // it's a node type supported by Arnold.
@@ -230,7 +237,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
         return nullptr;
     }
     const auto filterNameStr =
-        renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("HdArnoldRenderPass_filter_%d", filterIndex).c_str()});
+        renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("%s_%d", namePrefix, filterIndex).c_str()});
 
     AtNode* filter = renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), filterNameStr);
     if (filter == nullptr) {
@@ -1350,6 +1357,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
             _customProducts.clear();
             _customProducts.reserve(delegateRenderProducts.size());
+            // The product and RenderVar filters have their own name prefix and counter, see _CreateFilter. The
+            // previous ones were destroyed above, so their names can be reused.
+            const char* productFilterPrefix = "HdArnoldRenderPass_product_filter";
+            int productFilterIndex = 0;
             // Get an eventual output override string. We only want to use it if no outputs 
             // were added above with hydra drives, since they will render to the same filename
             // and we don't want several drivers writing to the same image
@@ -1403,7 +1414,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
                 }
                 // One filter per custom driver.
-                customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
+                customProduct.filter =
+                    _CreateFilter(_renderDelegate, product.settings, ++productFilterIndex, productFilterPrefix);
                 const auto* filterName =
                     customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
                 // For geometric AOVs (depth, primId) we want a closest filter rather than
@@ -1479,17 +1491,33 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         }
                     }
 
+                    // A filter authored on the RenderVar (arnold:filter) takes precedence over the
+                    // RenderProduct one and over the defaults, for every kind of output: color,
+                    // depth and primId included (ARNOLD-19000). Track it on the CustomRenderVar so
+                    // it is destroyed when the render pass rebuilds or shuts down.
+                    const auto arnoldAovFilterName =
+                        _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
+                    AtNode* aovFilterNode = arnoldAovFilterName.empty()
+                                                ? nullptr
+                                                : _CreateFilter(
+                                                      _renderDelegate, renderVar.settings, ++productFilterIndex,
+                                                      productFilterPrefix);
+                    customRenderVar.filter = aovFilterNode;
+                    const auto* renderVarFilterName = aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName;
+                    const auto* renderVarFilterGeoName =
+                        aovFilterNode ? AiNodeGetName(aovFilterNode) : filterGeoName;
+
                     const auto isRaw = renderVar.sourceType == _tokens->raw;
                     if (isRaw && renderVar.sourceName == HdAovTokens->color) {
-                        customRenderVar.output =
-                            AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, customDriverName.c_str()).c_str()};
+                        customRenderVar.output = AtString{
+                            TfStringPrintf("RGBA RGBA %s %s", renderVarFilterName, customDriverName.c_str()).c_str()};
                     } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
                         // Use _depthOutputValue so HYDRA_NORMALIZE_DEPTH builds correctly emit
                         // "P VECTOR" instead of "Z FLOAT" — previously the custom-product path
                         // hardcoded "Z FLOAT" and silently ignored the macro that the
                         // AOV-bindings path honors. Also use the geometric (closest) filter.
                         customRenderVar.output =
-                            AtString{TfStringPrintf("%s %s %s", _depthOutputValue, filterGeoName, customDriverName.c_str()).c_str()};
+                            AtString{TfStringPrintf("%s %s %s", _depthOutputValue, renderVarFilterGeoName, customDriverName.c_str()).c_str()};
                     } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
                         if (!primIdWriterPushed) {
                             aovShaders.push_back(_primIdWriter);
@@ -1500,7 +1528,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         // code was using.
                         customRenderVar.output = AtString{
                             TfStringPrintf(
-                                "%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, customDriverName.c_str())
+                                "%s INT %s %s", str::hydraPrimId.c_str(), renderVarFilterGeoName, customDriverName.c_str())
                                 .c_str()};
                     } else {
                         // Querying the data format from USD, with a default value of color3f.
@@ -1546,16 +1574,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             _renderDelegate->RegisterCryptomatteDriver(customDriverName);
                         }
                         
-                        // Check if the AOV has a specific filter
-                        const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
-                        AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
-                        // Track the per-RenderVar filter on the CustomRenderVar so it can be
-                        // destroyed when the render pass rebuilds or shuts down. Without this,
-                        // each interactive product update leaked one Arnold filter per RenderVar.
-                        customRenderVar.filter = aovFilterNode;
                         std::string output = TfStringPrintf(
-                                         "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
-                                         customDriverName.c_str());
+                            "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, renderVarFilterName,
+                            customDriverName.c_str());
                         if (!renderVar.name.empty() && renderVar.name != renderVar.sourceName) {
                             output += TfStringPrintf(" %s", renderVar.name.c_str());
                         }
