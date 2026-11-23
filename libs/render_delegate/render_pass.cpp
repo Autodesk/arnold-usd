@@ -221,7 +221,14 @@ void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSetting
     }
 };
 
-AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSettingsMap& aovSettings, int filterIndex)
+// The filters of the AOV bindings are recreated on every rebuild of the outputs, while the filters of the delegate
+// render products and of their RenderVars are only recreated when the products change. They use distinct name
+// prefixes so a binding filter can never be given the name of a product filter that is still alive:
+// FindOrCreateArnoldNode would return the product filter, and _ClearRenderBuffers would then destroy it while the
+// product still references it.
+AtNode* _CreateFilter(
+    HdArnoldRenderDelegate* renderDelegate, const HdAovSettingsMap& aovSettings, int filterIndex,
+    const char* namePrefix = "HdArnoldRenderPass_filter")
 {
     // We need to make sure that it's holding a string, then try to create it to make sure
     // it's a node type supported by Arnold.
@@ -230,7 +237,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
         return nullptr;
     }
     const auto filterNameStr =
-        renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("HdArnoldRenderPass_filter_%d", filterIndex).c_str()});
+        renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("%s_%d", namePrefix, filterIndex).c_str()});
 
     AtNode* filter = renderDelegate->FindOrCreateArnoldNode(AtString(filterType.c_str()), filterNameStr);
     if (filter == nullptr) {
@@ -1350,6 +1357,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
             _customProducts.clear();
             _customProducts.reserve(delegateRenderProducts.size());
+            // The product and RenderVar filters have their own name prefix and counter, see _CreateFilter. The
+            // previous ones were destroyed above, so their names can be reused.
+            const char* productFilterPrefix = "HdArnoldRenderPass_product_filter";
+            int productFilterIndex = 0;
             // Get an eventual output override string. We only want to use it if no outputs 
             // were added above with hydra drives, since they will render to the same filename
             // and we don't want several drivers writing to the same image
@@ -1403,7 +1414,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
                 }
                 // One filter per custom driver.
-                customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
+                customProduct.filter =
+                    _CreateFilter(_renderDelegate, product.settings, ++productFilterIndex, productFilterPrefix);
                 const auto* filterName =
                     customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
                 // For geometric AOVs (depth, primId) we want a closest filter rather than
@@ -1487,7 +1499,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                     AtNode* aovFilterNode = arnoldAovFilterName.empty()
                                                 ? nullptr
-                                                : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
+                                                : _CreateFilter(
+                                                      _renderDelegate, renderVar.settings, ++productFilterIndex,
+                                                      productFilterPrefix);
                     customRenderVar.filter = aovFilterNode;
                     const auto* renderVarFilterName = aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName;
                     const auto* renderVarFilterGeoName =
