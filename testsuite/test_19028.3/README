@@ -1,0 +1,11 @@
+Interactive render delegate edits done while Arnold is rendering, through a UsdImagingGL.Engine, from python
+
+A sphere has its material color changed, is moved, and a cube is added and then removed, each of these edits being
+done after the render has started and before it converges (0 < percentDone < 100). The scene renders with more AA
+samples, for the renders to last long enough. The render delegate is driven by a headless UsdImagingGL.Engine as a
+viewport does, see testsuite/common/interactive_engine_test.py. Each render is checked in test.py, and the last one is
+compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

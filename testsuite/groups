@@ -43,7 +43,7 @@ darwin:
 
 # Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
 
-ignore:  unit_render_delegate unit_ndr_plugin unit_translator scene_index_to_fix hydra2_only  test_2439.13 not_implemented test_18604
+ignore:  unit_render_delegate unit_ndr_plugin unit_translator scene_index_to_fix hydra2_only  test_2439.13 test_18604
 
 # Tests that require the render delegate library, its dependencies and google test
 unit_render_delegate: test_0039 test_0134 test_0136 test_0146 test_0147 test_0152 test_0153 test_0154 test_0155 test_0156
@@ -60,20 +60,22 @@ scene_index_to_fix: test_1524
 # Test disabled as they work only with hydra2
 hydra2_only: test_2549
 
-# Test disable as not implemented in arnold yet
-not_implemented: test_2608
-
 # Tests skipped for a specific pass (consumed as the 'pass_<name>' skip list).
 # CoordSys support (test_13221, test_2731) is implemented in the render
 # delegate only, so the procedural 'usd' pass would abort on the unresolved
 # coordinate space. test_18101.2 checks the geometry deduplication, which only
 # exists in the render delegate (the 'usd' pass also ignores the visibility
 # primvars of point-instancer prototypes).
-pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2
+pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2 interactive_engine
 
 # UsdLux light:filters (test_2799) needs the 'filters' light entry published by the scene index.
 # The legacy hydra1 pass doesn't expose that relationship, so it is skipped there.
 pass_hydra: test_2799 test_2799.1 test_2799.2
+
+# The python interactive render delegate tests (testsuite/common/interactive_engine_test.py), skipped when the
+# configuration can't run them, see testsuite/SConscript. They only test the render delegate, whose Hydra 1 and 2 are the
+# 'hydra' and 'hydra2' passes, so they're also skipped in the 'usd' pass (pass_usd).
+interactive_engine: test_19028 test_19028.1 test_19028.2 test_19028.3 test_19028.4 test_19028.5 test_19028.6 test_19028.7 test_19028.8 test_19028.9
 
 ############################
 # USER-DEFINED TEST GROUPS #

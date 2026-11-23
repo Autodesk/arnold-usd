@@ -1,0 +1,12 @@
+Interactive render delegate AOV switches through a UsdImagingGL.Engine, from python
+
+A sphere and a quad with an st primvar are rendered with the color AOV, then the depth, primId and primvars:st AOVs,
+and the color again, the renderer AOV of the engine being switched between the renders. The render delegate is driven
+by a headless UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Each render is
+checked in test.py, and the last one is compared against the reference image.
+
+The primvars:st AOV renders nothing yet, it is reported as a warning (known issue in test.py).
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

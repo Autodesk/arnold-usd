@@ -45,6 +45,11 @@
 #include <pxr/usd/sdf/assetPath.h>
 
 #include "pxr/imaging/hd/extComputationUtils.h"
+#ifdef ENABLE_SCENE_INDEX
+#include <pxr/imaging/hd/dataSourceTypeDefs.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
 
 #include "render_delegate.h"
 
@@ -754,6 +759,32 @@ void HdArnoldRemovePrimvars(
         if (AiNodeLookUpUserParameter(node, indicesName) != nullptr)
             AiNodeResetParameter(node, indicesName);
     }
+}
+
+void HdArnoldSetGaussianSplatColorSpace(
+    AtNode* node, HdSceneDelegate* delegate, const SdfPath& id, const HdArnoldPrimvarMap& primvars)
+{
+    // The arnold primvar is set as any primvars:arnold:xyz and takes precedence over the USD color space
+    if (primvars.count(str::t_arnold_gs_input_color_space) != 0)
+        return;
+    TfToken colorSpace;
+#ifdef ENABLE_SCENE_INDEX
+    // The color space of the primvar holding the splat colors, the coefficients when they're authored. The
+    // usdImagingArnold plugin sets it on the coefficients, which UsdImaging leaves without a color space as they
+    // have no color role.
+    static const TfToken shCoeffs("radiance:sphericalHarmonicsCoefficients");
+    const TfToken& colorPrimvar = primvars.count(shCoeffs) != 0 ? shCoeffs : HdTokens->displayColor;
+    if (HdSceneIndexBaseRefPtr sceneIndex = delegate->GetRenderIndex().GetTerminalSceneIndex()) {
+        const HdSceneIndexPrim prim = sceneIndex->GetPrim(id);
+        if (HdTokenDataSourceHandle colorSpaceDs = HdTokenDataSource::Cast(HdContainerDataSource::Get(
+                prim.dataSource, HdPrimvarsSchema::GetDefaultLocator().Append(colorPrimvar).Append(str::t_colorSpace))))
+            colorSpace = colorSpaceDs->GetTypedValue(0.0f);
+    }
+#else
+    TF_UNUSED(delegate);
+    TF_UNUSED(id);
+#endif
+    ArnoldUsdSetGaussianSplatColorSpace(node, colorSpace);
 }
 
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets)

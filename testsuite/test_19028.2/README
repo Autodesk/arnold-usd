@@ -1,0 +1,12 @@
+Interactive render delegate edits of light linking through a UsdImagingGL.Engine, from python
+
+The scenario of test_2343.8, with the HdArnoldRendererPlugin render delegate driven by a headless UsdImagingGL.Engine
+as a viewport does, see testsuite/common/interactive_engine_test.py. Two grey spheres are lit by a red and a green
+distant light, each light being linked to one sphere. The light link collections are edited, a linked blue light is
+added and the red one removed, a new sphere is added and then included in the blue light collection, and the blue
+light linking is removed. The stage is re-rendered after each edit. Each render is checked in test.py, and the last
+one is compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

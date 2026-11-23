@@ -68,8 +68,9 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
-# We are only testing the procedural
-if (BUILD_TESTSUITE AND BUILD_PROCEDURAL)
+# The testsuite tests the procedural, or the bundle (whose render delegate the interactive_engine tests drive, even
+# without the procedural in it)
+if (BUILD_TESTSUITE AND (BUILD_PROCEDURAL OR BUILD_BUNDLE))
     enable_testing()
     add_subdirectory(testsuite)
 endif ()

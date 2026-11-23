@@ -1,0 +1,10 @@
+Interactive render delegate purpose changes through a UsdImagingGL.Engine, from python
+
+A proxy cube, a render sphere and a guide sphere are rendered while the purposes shown by the engine change, through
+the showProxy, showRender and showGuides render params. The render delegate is driven by a headless
+UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Each render is checked in
+test.py, and the last one is compared against the reference image.
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}

@@ -629,6 +629,18 @@ HDARNOLD_API
 void HdArnoldRemovePrimvars(
     AtNode* node, const TfTokenVector& removedPrimvars, const HdArnoldBuiltinPrimvars& builtinPrimvars = {});
 
+/// Sets the gs_input_color_space of gaussian splats from the USD color space of their colors, read from the colorSpace
+/// of their color primvar in the scene index (Hydra 2 only), which the usdImagingArnold plugin sets. The parameter is left alone when
+/// primvars:arnold:gs_input_color_space overrides it, and reset when no color space is authored.
+///
+/// @param node Arnold points node in gaussian mode.
+/// @param delegate Pointer to the Scene Delegate.
+/// @param id Path to the primitive.
+/// @param primvars The primvars of the shape, without the removed ones.
+HDARNOLD_API
+void HdArnoldSetGaussianSplatColorSpace(
+    AtNode* node, HdSceneDelegate* delegate, const SdfPath& id, const HdArnoldPrimvarMap& primvars);
+
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.
 ///
 /// @param subsets Const reference to HdGeomSubsets of the shape.

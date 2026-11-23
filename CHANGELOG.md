@@ -5,6 +5,7 @@
 
 ### Features
 
+- [usd#2839](https://github.com/Autodesk/arnold-usd/pull/2839) - Add turntable `--denoise`/`--no-denoise` option (on by default) adding an OIDN denoiser imager to the render settings
 - [usd#2779](https://github.com/Autodesk/arnold-usd/issues/2779) - Add turntable --show-dome option to make the dome light visible to the camera
 - [usd#2796](https://github.com/Autodesk/arnold-usd/issues/2796) - Update the usd procedural incrementally when the frame changes in interactive sessions, instead of reloading it
 - [usd#2799](https://github.com/Autodesk/arnold-usd/issues/2799) - Support UsdLux `light:filters` on lights and mesh lights in the hydra render delegate and the usd procedural
@@ -21,6 +22,7 @@
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 - [usd#2840](https://github.com/Autodesk/arnold-usd/issues/2840) - Fix broken motion blur on prims deformed by HD_HairDeform
+- [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
 
 ## [7.5.4.1] (Unreleased)
 

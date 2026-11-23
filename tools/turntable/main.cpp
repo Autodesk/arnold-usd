@@ -97,6 +97,7 @@ struct Args {
     std::vector<float> backgroundColor; // empty = no background; otherwise {R, G, B}
     std::string renderSettings = ""; // RenderSettings path to use.
     bool        probes = false; // Add grey/chrome balls and a Macbeth chart in the camera frame.
+    bool        denoise = true; // Add an OIDN denoiser imager to the render settings.
 };
 
 struct LightRig {
@@ -281,6 +282,10 @@ void Configure(CLI::App *app, Args &args)
 
     app->add_option("--render-settings", args.renderSettings, "RenderSettings prim path to use")
         ->option_text("PATH");
+
+    app->add_flag("--denoise,!--no-denoise", args.denoise,
+        "Add an OIDN denoiser imager to the render settings (default: on). "
+        "Ignored if the render settings already author arnold:global:imager");
 
     app->add_option("input", args.input, "USD asset file to turntable")
         ->option_text("FILE");
@@ -1601,6 +1606,40 @@ static void _SetupRenderSettings(const UsdStageRefPtr &stage, const Args &args,
     }
 }
 
+// /Render/TurntableDenoiser  —  ArnoldNodeGraph wrapping an OIDN denoiser imager,
+// referenced from the render settings via arnold:global:imager. The delegate
+// resolves the graph's bare "input" output as the imager (a lone shader prim
+// would be silently ignored). Returns false if the settings already author an
+// imager, in which case it is left untouched.
+static bool _SetupDenoiser(const UsdStageRefPtr &stage, const SdfPath &settingsPath)
+{
+    UsdPrim settingsPrim = stage->GetPrimAtPath(settingsPath);
+    if (!settingsPrim) {
+        return false;
+    }
+    const TfToken imagerAttrName("arnold:global:imager");
+    std::string existingImager;
+    if (settingsPrim.GetAttribute(imagerAttrName).Get(&existingImager) && !existingImager.empty()) {
+        return false;
+    }
+
+    const SdfPath graphPath("/Render/TurntableDenoiser");
+    UsdPrim graphPrim = stage->DefinePrim(graphPath, TfToken("ArnoldNodeGraph"));
+    graphPrim.CreateAttribute(TfToken("primvars:arnold:name"), SdfValueTypeNames->String, false)
+        .Set(graphPath.GetString());
+
+    UsdShadeShader oidn = UsdShadeShader::Define(stage, graphPath.AppendChild(TfToken("oidn")));
+    oidn.CreateIdAttr(VtValue(TfToken("arnold:imager_denoiser_oidn")));
+    UsdShadeOutput oidnOut = oidn.CreateOutput(TfToken("out"), SdfValueTypeNames->Token);
+
+    UsdShadeNodeGraph graph(graphPrim);
+    graph.CreateOutput(TfToken("input"), SdfValueTypeNames->Token).ConnectToSource(oidnOut);
+
+    settingsPrim.CreateAttribute(imagerAttrName, SdfValueTypeNames->String, /*custom=*/true)
+        .Set(graphPath.GetString());
+    return true;
+}
+
 int Run(const Args &args)
 {
     if (args.input.empty() && !args.listLightRigs && !args.listStudioSets) {
@@ -1795,6 +1834,15 @@ int Run(const Args &args)
     }
     stage->SetMetadata(UsdRenderTokens->renderSettingsPrimPath, settingsPath.GetString());
 
+    bool denoiserAdded = false;
+    if (args.denoise) {
+        denoiserAdded = _SetupDenoiser(stage, settingsPath);
+        if (!denoiserAdded) {
+            fprintf(stderr, "turntable: warning: render settings '%s' already set arnold:global:imager; "
+                    "not adding the default denoiser\n", settingsPath.GetText());
+        }
+    }
+
     // A background shader handles the camera rays that miss geometry, so it hides
     // the dome. It comes from --background-color or from the asset render settings.
     const bool isDomeRig = chosenRig && !chosenRig->isNoLight && !chosenRig->isTwoQuad;
@@ -1841,6 +1889,7 @@ int Run(const Args &args)
            settingsPath.GetText(),
            hasAssetSettings ? "asset" : "generated");
     printf("  Resolution: %dx%d\n", effectiveWidth, effectiveHeight);
+    printf("  Denoiser  : %s\n", denoiserAdded ? "oidn" : (args.denoise ? "no (asset imager kept)" : "no"));
     printf("  Light rig : %s\n", selectedRigName.c_str());
     printf("  Light mult: %.3g\n", args.lightIntensity);
     printf("  Light rigs: %zu available\n", rigs.size());

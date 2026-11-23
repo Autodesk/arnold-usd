@@ -1,6 +1,6 @@
 # vim: filetype=python
 
-import sys, os, glob, shutil, time
+import sys, os, glob, shutil, subprocess, time
 
 ## load third-party python modules
 from utils.contrib.bottle import SimpleTemplate
@@ -240,6 +240,82 @@ else:
    guard_obj = guard_env.SharedObject(os.path.join(usd_proc_guard_dir, 'usd_proc_guard'), usd_proc_guard_source)
    USD_PROC_GUARD = guard_env.SharedLibrary(os.path.join(usd_proc_guard_dir, 'usd_proc'), guard_obj)
 
+# The python interactive render delegate tests, in the 'interactive_engine' group of testsuite/groups. Their data/test.py
+# drives the render delegate through a headless UsdImagingGL.Engine, see testsuite/common/interactive_engine_test.py.
+# Their README runs it with the python interpreter of the USD being tested (TESTSUITE_PYTHON), given as the usd_python
+# symbol: PARAMS: {'script': '"{}" test.py'.format(usd_python)}. They need:
+#  - a shared or monolithic USD with python support, whose interpreter imports UsdImagingGL
+#  - the render delegate, built here or given by TESTSUITE_PXR_PLUGINPATH_NAME (e.g. by the cmake testsuite target)
+#  - the interactive_engine_readback python module (libs/test_support), built here with the render delegate, or given
+#    by INTERACTIVE_ENGINE_READBACK_PATH (e.g. installed by the cmake build with BUILD_TESTSUITE_READBACK)
+# Otherwise the tests of the group are skipped, and the reason is printed. macOS universal builds aren't supported.
+def _default_usd_python():
+   usd_path = env.subst(env['USD_PATH']) if env.get('USD_PATH') else ''
+   candidates = [os.path.join(usd_path, 'python.exe'), os.path.join(usd_path, 'bin', 'python.exe')] if sa.system.is_windows \
+      else [os.path.join(usd_path, 'bin', 'python3')]
+   return next((c for c in candidates if usd_path and os.path.isfile(c)), '')
+
+usd_python = env.subst(env.get('TESTSUITE_PYTHON', '')) or _default_usd_python()
+interactive_engine_readback_path = os.environ.get('INTERACTIVE_ENGINE_READBACK_PATH', '')
+build_interactive_engine_readback = not interactive_engine_readback_path and bool(env.get('BUILD_RENDER_DELEGATE'))
+
+def _interactive_engine_unsupported_reason():
+   if env['USD_BUILD_MODE'] == 'static':
+      return 'USD is static'
+   if not env.get('USD_HAS_PYTHON_SUPPORT'):
+      return 'USD has no python support'
+   if 'UNIVERSAL_ENVS' in test_env:
+      return 'macOS universal builds are not supported'
+   if not env.get('BUILD_RENDER_DELEGATE') and not os.environ.get('TESTSUITE_PXR_PLUGINPATH_NAME'):
+      return 'no render delegate, BUILD_RENDER_DELEGATE is off and TESTSUITE_PXR_PLUGINPATH_NAME is not set'
+   if not interactive_engine_readback_path and not build_interactive_engine_readback:
+      return 'no interactive_engine_readback module, INTERACTIVE_ENGINE_READBACK_PATH is not set'
+   if not usd_python:
+      return 'no python interpreter for USD, set TESTSUITE_PYTHON'
+   try:
+      completed = subprocess.run([usd_python, '-c', 'from pxr import UsdImagingGL'], env=os.environ.copy(),
+         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, timeout=120)
+   except (OSError, subprocess.SubprocessError) as error:
+      return 'TESTSUITE_PYTHON={} can\'t be run: {}'.format(usd_python, error)
+   if completed.returncode != 0:
+      lines = completed.stdout.strip().splitlines()
+      return 'TESTSUITE_PYTHON={} can\'t import UsdImagingGL: {}'.format(usd_python, lines[-1] if lines else 'error')
+   return ''
+
+# Only when tests are run, not to start the interpreter at every build
+running_tests = any(str(t).startswith('test') for t in BUILD_TARGETS)
+interactive_engine_unsupported = _interactive_engine_unsupported_reason() if running_tests else 'no test is run'
+INTERACTIVE_ENGINE_READBACK = []
+if not interactive_engine_unsupported and build_interactive_engine_readback:
+   # The same module as libs/test_support/CMakeLists.txt builds: a python extension module, linking only USD. It
+   # doesn't link libpython on macOS and Linux, the symbols being resolved by the interpreter importing it.
+   readback_env = env.Clone()
+   python_include = subprocess.check_output([usd_python, '-c', 'import sysconfig; print(sysconfig.get_paths()["include"])'],
+      universal_newlines=True).strip()
+   readback_env.Prepend(CPPPATH = [python_include])
+   readback_env.Append(LIBPATH = [os.path.abspath(env['USD_LIB'])])
+   if env['USD_BUILD_MODE'] == 'monolithic':
+      readback_libs = [env['USD_MONOLITHIC_LIBRARY']]
+   else:
+      readback_libs, readback_lib_sources = link_usd_libraries(readback_env, ['usdImagingGL', 'hd', 'gf', 'tf', 'vt', 'arch'])
+      readback_libs += readback_lib_sources
+   readback_libs.append(dependencies.get_tbb_lib(env))
+   if env.get('USD_VERSION_INT', 0) and env['USD_VERSION_INT'] < 2411:
+      readback_libs.append(dependencies.get_boost_lib(env, 'python'))
+   if sa.system.is_windows:
+      readback_libs.append(env['PYTHON_LIBRARY'])
+   elif sa.system.is_darwin:
+      readback_env.Append(LINKFLAGS = Split('-undefined dynamic_lookup'))
+   readback_env.Append(LIBS = readback_libs)
+   readback_dir = os.path.join(os.path.abspath(env['BUILD_BASE_DIR']), 'testsuite', 'interactive_engine_readback')
+   readback_obj = readback_env.SharedObject(os.path.join(readback_dir, 'interactive_engine_readback'),
+      os.path.join(root_path, 'libs', 'test_support', 'interactive_engine_readback.cpp'))
+   INTERACTIVE_ENGINE_READBACK = readback_env.LoadableModule(os.path.join(readback_dir, 'interactive_engine_readback'),
+      readback_obj, LDMODULEPREFIX = '', LDMODULESUFFIX = '.pyd' if sa.system.is_windows else '.so')
+   interactive_engine_readback_path = readback_dir
+if interactive_engine_readback_path:
+   os.environ['INTERACTIVE_ENGINE_READBACK_PATH'] = interactive_engine_readback_path
+
 os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
 os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']
 os.environ['USD_PROCEDURAL_GUARD_PATH'] = usd_proc_guard_dir
@@ -282,8 +358,10 @@ else:
 
 args_load = dict(
    path   = testsuite_source_path,
-   tools  = {'arnold': env['ARNOLD_PATH']},
-   passes = testsuite_passes
+   # usd_python is a symbol of the READMEs, it must always be defined, see 'interactive_engine' above
+   tools  = {'arnold': env['ARNOLD_PATH'], 'usd_python': usd_python or sys.executable},
+   passes = testsuite_passes,
+   skip_groups = {'interactive_engine': interactive_engine_unsupported} if interactive_engine_unsupported else None
 )
 
 args_prepare = dict(
@@ -483,6 +561,8 @@ TESTSUITE = None
 if len(testsuite_targets) > 0:
    TESTSUITE_TESTS.extend(test.scons_target for test in (testsuite.tests[_] for _ in testsuite.tests_prepared))
    test_env.Depends(TESTSUITE_TESTS, USD_PROC_GUARD)
+   if INTERACTIVE_ENGINE_READBACK:
+      test_env.Depends(TESTSUITE_TESTS, INTERACTIVE_ENGINE_READBACK)
    TESTSUITE_REPORT = TESTSUITE_TARGET
    for target in TESTSUITE_TARGET:
       BUILD_TARGETS.append(target if is_string(target) else target.path)
