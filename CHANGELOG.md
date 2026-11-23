@@ -23,6 +23,7 @@
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
 - [usd#2840](https://github.com/Autodesk/arnold-usd/issues/2840) - Fix broken motion blur on prims deformed by HD_HairDeform
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
+- [usd#2851](https://github.com/Autodesk/arnold-usd/pull/2851) - Fix the `arnold:filter` of a RenderVar being ignored by the render delegate for the color, depth and primId outputs of the RenderProducts rendered by husk. A filter authored on a `depth` or `primId` RenderVar is now used, so it must support the type of the output: `closest_filter` keeps the previous behavior, and most filters don't support the INT primId output (`farthest_filter` does)
 
 ## [7.5.4.1] (Unreleased)
 
