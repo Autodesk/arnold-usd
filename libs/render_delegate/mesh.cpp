@@ -44,6 +44,7 @@
 #include "instancer.h"
 #include "node_graph.h"
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -57,6 +58,10 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (catmark)
     ((arnoldSubdivIterations, "arnold:subdiv_iterations"))
     ((arnoldSubdivType, "arnold:subdiv_type"))
+    ((arnoldUseLightGroup, "arnold:use_light_group"))
+    ((arnoldLightGroup, "arnold:light_group"))
+    ((arnoldUseShadowGroup, "arnold:use_shadow_group"))
+    ((arnoldShadowGroup, "arnold:shadow_group"))
 );
 // clang-format on
 
@@ -246,6 +251,19 @@ void HdArnoldMesh::Sync(
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
         // the velocity primvar might not be present in our list #1994
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &removedPrimvars);
+    }
+    // The arnold light group primvars change the light linking, which is applied again after the primvars (#2835).
+    // Only check them on DirtyPrimvar, so that deforming meshes don't apply the light linking on every frame.
+    bool dirtyLightGroups = false;
+    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        for (const auto& groupPrimvar : {_tokens->arnoldUseLightGroup, _tokens->arnoldLightGroup,
+                                         _tokens->arnoldUseShadowGroup, _tokens->arnoldShadowGroup}) {
+            if (_primvars.count(groupPrimvar) != 0 ||
+                std::find(removedPrimvars.begin(), removedPrimvars.end(), groupPrimvar) != removedPrimvars.end()) {
+                dirtyLightGroups = true;
+                break;
+            }
+        }
     }
 
     // Fetched at most once per Sync, for both the deduplication and the topology translation.
@@ -722,7 +740,7 @@ void HdArnoldMesh::Sync(
 
     // The light linking is applied after the primvars: the arnold light group primvars take precedence over the
     // UsdLux light linking, which applies again when they are removed (#2835).
-    if ((*dirtyBits & HdChangeTracker::DirtyCategories) || dirtyPrimvars) {
+    if ((*dirtyBits & HdChangeTracker::DirtyCategories) || dirtyLightGroups) {
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
     }

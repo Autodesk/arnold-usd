@@ -892,26 +892,14 @@ void UsdArnoldReader::ReadLightLinks()
 
     // The light (or shadow) group of a shape can be authored with its arnold primvars, e.g.
     // primvars:arnold:use_light_group and primvars:arnold:light_group holding arnold node names, as C4DtoA
-    // does. It then takes precedence over the UsdLux light linking (#2835).
-    auto hasArnoldGroupPrimvar = [this](AtNode *shape, const TfToken &useGroup) {
-        const char *shapeName = AiNodeGetName(shape);
-        if (!SdfPath::IsValidPathString(shapeName))
-            return false;
-        UsdPrim prim = _stage->GetPrimAtPath(SdfPath(shapeName));
-        if (!prim)
-            return false;
-        UsdGeomPrimvar primvar = UsdGeomPrimvarsAPI(prim).FindPrimvarWithInheritance(useGroup);
-        VtValue value;
-        return primvar && primvar.Get(&value, _time.frame) && VtValueGetBool(value);
-    };
-    static const TfToken s_arnoldUseLightGroup("arnold:use_light_group");
-    static const TfToken s_arnoldUseShadowGroup("arnold:use_shadow_group");
+    // does. It then takes precedence over the UsdLux light linking (#2835). The shapes were read with their
+    // primvars and arnold attributes before the light links, so their use_light_group and use_shadow_group are set.
 
     // Light-links
     if (!_lightLinksMap.empty())
     {        
         for (auto shape : shapeList) {
-            if (hasArnoldGroupPrimvar(shape, s_arnoldUseLightGroup))
+            if (AiNodeGetBool(shape, str::use_light_group))
                 continue;
 
             GetLinksMap(_lightLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
@@ -931,7 +919,7 @@ void UsdArnoldReader::ReadLightLinks()
     if (!_shadowLinksMap.empty())
     {
         for (auto shape : shapeList) {
-            if (hasArnoldGroupPrimvar(shape, s_arnoldUseShadowGroup))
+            if (AiNodeGetBool(shape, str::use_shadow_group))
                 continue;
 
             GetLinksMap(_shadowLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
