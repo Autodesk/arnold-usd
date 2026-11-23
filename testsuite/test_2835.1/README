@@ -1,0 +1,20 @@
+Interactive USD edits of arnold light groups mixed with UsdLux light linking, with the usd procedural cache_id and with the render delegate
+
+see #2835
+
+Three grey spheres are lit by a red, a green and a blue distant light, linked with UsdLux light link collections,
+while the left sphere has an arnold light group (primvars:arnold:use_light_group / primvars:arnold:light_group,
+holding arnold node names) that takes precedence over them. A mesh light authored with primvars:arnold:light is in
+the scene, as C4DtoA authors them. Lights are added to and removed from the arnold light groups, an arnold light
+group is added to the center sphere and removed, the collections are edited, and the lights in the arnold light
+group, the mesh light and the spheres are deleted. A light added to an arnold light group that still names a
+deleted light is applied: the names that don't resolve are skipped. The stage is re-rendered after each edit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of step 6
+(the edited collections) is compared against the reference image. The legacy reader isn't run, it hangs when a light
+is removed (as in test_2343.8), test_2835.2 covers it.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

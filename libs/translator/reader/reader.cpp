@@ -890,11 +890,18 @@ void UsdArnoldReader::ReadLightLinks()
         }
     };
 
+    // The light (or shadow) group of a shape can be authored with its arnold primvars, e.g.
+    // primvars:arnold:use_light_group and primvars:arnold:light_group holding arnold node names, as C4DtoA
+    // does. It then takes precedence over the UsdLux light linking (#2835). The shapes were read with their
+    // primvars and arnold attributes before the light links, so their use_light_group and use_shadow_group are set.
+
     // Light-links
     if (!_lightLinksMap.empty())
     {        
         for (auto shape : shapeList) {
-            
+            if (AiNodeGetBool(shape, str::use_light_group))
+                continue;
+
             GetLinksMap(_lightLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
             // We checked all lights in the scene, and found which ones were visible for the 
             // current shape. If the list size is smaller than the full lights list, then
@@ -912,6 +919,8 @@ void UsdArnoldReader::ReadLightLinks()
     if (!_shadowLinksMap.empty())
     {
         for (auto shape : shapeList) {
+            if (AiNodeGetBool(shape, str::use_shadow_group))
+                continue;
 
             GetLinksMap(_shadowLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
             if (shapeLightGroups.size() < lightsList.size()) {
