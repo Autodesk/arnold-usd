@@ -138,6 +138,14 @@ INTERACTIVE_USD_TEST_MAIN()
         {"the green light, in the arnold light group of the left sphere, is deleted",
             [](const UsdStageRefPtr& stage) { stage->RemovePrim(kGreenLight); },
             AllOf({ExpectColor(Color::Black, left), ExpectColor(Color::Black, center), ExpectColor(Color::Red, right)})},
+        // The deleted green light doesn't resolve anymore: it is skipped and the blue light is still applied, where
+        // the whole group used to be ignored, keeping the previous array of the left sphere.
+        {"the blue light added to the arnold light group of the left sphere, which still names the deleted green light",
+            [&](const UsdStageRefPtr& stage) { SetArnoldLightGroup(stage, kLeft, {green, blue, kMeshLightName}); },
+            AllOf({ExpectColor(Color::Blue, left), ExpectColor(Color::Black, center), ExpectColor(Color::Red, right)})},
+        {"the blue light removed from the arnold light group of the left sphere",
+            [&](const UsdStageRefPtr& stage) { SetArnoldLightGroup(stage, kLeft, {green, kMeshLightName}); },
+            AllOf({ExpectColor(Color::Black, left), ExpectColor(Color::Black, center), ExpectColor(Color::Red, right)})},
         {"the green light is created again, its UsdLux collection only including the left sphere",
             [](const UsdStageRefPtr& stage) {
                 DefineColoredLight(stage, kGreenLight, GfVec3f(0.f, 1.f, 0.f));

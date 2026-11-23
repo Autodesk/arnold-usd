@@ -7,7 +7,8 @@ while the left sphere has an arnold light group (primvars:arnold:use_light_group
 holding arnold node names) that takes precedence over them. A mesh light authored with primvars:arnold:light is in
 the scene, as C4DtoA authors them. Lights are added to and removed from the arnold light groups, an arnold light
 group is added to the center sphere and removed, the collections are edited, and the lights in the arnold light
-group, the mesh light and the spheres are deleted. The stage is re-rendered after each edit.
+group, the mesh light and the spheres are deleted. A light added to an arnold light group that still names a
+deleted light is applied: the names that don't resolve are skipped. The stage is re-rendered after each edit.
 The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
 and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
 testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of step 6

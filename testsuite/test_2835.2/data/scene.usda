@@ -10,7 +10,8 @@
 # only and the red dome to the right sphere only. The arnold light groups of the left and right spheres
 # take precedence over them: the left sphere is lit by the blue dome and the mesh light, the right one
 # by the red dome and the mesh light. The center sphere, without arnold light group, is lit by the blue
-# dome and the mesh light, which has no collection.
+# dome and the mesh light, which has no collection. The arnold light groups of the right sphere also name
+# a light that doesn't exist, which is skipped: the other lights of the groups still apply.
 def Xform "World"
 {
     def Sphere "left"
@@ -35,9 +36,9 @@ def Xform "World"
         matrix4d xformOp:transform = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0, 1))
         uniform token[] xformOpOrder = ["xformOp:transform"]
         bool primvars:arnold:use_light_group = 1
-        string[] primvars:arnold:light_group = ["/World/lights/red", "/World/meshLight_light"]
+        string[] primvars:arnold:light_group = ["/World/lights/red", "/World/lights/missing", "/World/meshLight_light"]
         bool primvars:arnold:use_shadow_group = 1
-        string[] primvars:arnold:shadow_group = ["/World/lights/red", "/World/meshLight_light"]
+        string[] primvars:arnold:shadow_group = ["/World/lights/red", "/World/lights/missing", "/World/meshLight_light"]
     }
 
     # A quad above the spheres, facing down, converted to a green mesh light renamed with

@@ -78,20 +78,36 @@ public:
     virtual bool ProcessConnection(const Connection& connection)
     {
         if (connection.type == ArnoldAPIAdapter::CONNECTION_ARRAY) {
+            const AtString sourceAttr(connection.sourceAttr.c_str());
+            // The lights of an arnold light or shadow group that don't resolve, e.g. deleted lights, are skipped
+            // and the array is still set with the other ones. Ignoring the whole connection would keep the
+            // previous array of the shape, which can still name the deleted lights (#2835)
+            const bool skipMissingTargets = sourceAttr == str::light_group || sourceAttr == str::shadow_group;
+            bool missingTarget = false;
             std::vector<AtNode *> vecNodes;
             std::stringstream ss(connection.target);
             std::string token;
             while (std::getline(ss, token, ' ')) {
                 AtNode *target = LookupTargetNode(token.c_str(), connection.sourceNode, connection.type);
-                if (target == nullptr)
-                    return false; // node is missing, we don't process the connection
+                if (target == nullptr) {
+                    if (!skipMissingTargets)
+                        return false; // node is missing, we don't process the connection
+                    missingTarget = true;
+                    continue;
+                }
                 vecNodes.push_back(target);
             }
-            if (vecNodes.empty())
-                return false;
-            AiNodeSetArray(
-                connection.sourceNode, AtString(connection.sourceAttr.c_str()),
-                AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
+            if (vecNodes.empty()) {
+                if (!skipMissingTargets)
+                    return false;
+                AiNodeResetParameter(connection.sourceNode, sourceAttr);
+            } else {
+                AiNodeSetArray(
+                    connection.sourceNode, sourceAttr, AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
+            }
+            // Still report the missing lights, so that the procedural reader tries to read them with its
+            // dangling connections and sets the array again
+            return !missingTarget;
         } else {
             AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, connection.type);
             if (target == nullptr)
