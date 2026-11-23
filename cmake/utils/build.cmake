@@ -153,6 +153,11 @@ function(install_sceneindex_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
     else()
         set(MTOA_ENTRY "")
     endif()
+    if (HOUDINI_BUILD)
+        set(HOUDINI_ENTRY ",\n                    \"HdArnoldFixHairDeformVelocitySceneIndexPlugin\" : {\n                        \"bases\": [\"HdSceneIndexPlugin\"],\n                        \"loadWithRenderer\": \"Arnold\",\n                        \"priority\": 0,\n                        \"displayName\": \"Arnold: fix HD_HairDeform velocity\"\n                    }")
+    else()
+        set(HOUDINI_ENTRY "")
+    endif()
     configure_file(
         "${SCENEINDEXARNOLD_PLUGINFO_SRC}"
         "${PLUGINFO}"

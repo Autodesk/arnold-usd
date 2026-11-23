@@ -120,6 +120,7 @@ vars.AddVariables(
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_SCENE_INDEX_PLUGIN', 'Whether or not to build the scene index plugin.', False),
     BoolVariable('MTOA_BUILD', 'Build MtoA-specific scene index plugin.', False),
+    BoolVariable('HOUDINI_BUILD', 'Build Houdini-specific scene index plugins (e.g. the HD_HairDeform velocity fix).', False),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),

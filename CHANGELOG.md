@@ -21,6 +21,7 @@
 - [usd#2825](https://github.com/Autodesk/arnold-usd/issues/2825) - Fix removed normals staying applied to meshes in interactive renders
 - [usd#2827](https://github.com/Autodesk/arnold-usd/issues/2827) - Fix removed per-instance primvars and scales of a point instancer staying applied in interactive renders
 - [usd#2829](https://github.com/Autodesk/arnold-usd/issues/2829) - Fix removed primvars of meshes, curves and points staying applied in interactive renders
+- [usd#2840](https://github.com/Autodesk/arnold-usd/issues/2840) - Fix broken motion blur on prims deformed by HD_HairDeform
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
 
 ## [7.5.4.1] (Unreleased)
