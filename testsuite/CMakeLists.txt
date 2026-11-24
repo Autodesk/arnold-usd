@@ -84,6 +84,21 @@ if (BUILD_PROCEDURAL)
         ${CMAKE_COMMAND} -E copy_directory "${CMAKE_INSTALL_PREFIX}/schema/usdArnold" "${CMAKE_INSTALL_PREFIX}/procedural/usd")
 endif ()
 
+# The library and executable paths of the tests are our folders, then the ones of the environment. Only our folders go
+# through SHELL_PATH: it fails on a relative entry, and the environment can have some, e.g. an unexpanded %NVM_HOME% in
+# a Windows PATH
+if (WIN32)
+    set(_testsuite_path_separator ";")
+else ()
+    set(_testsuite_path_separator ":")
+endif ()
+foreach (_var PATH LD_LIBRARY_PATH DYLD_LIBRARY_PATH)
+    set(_testsuite_inherited_${_var} "")
+    if (NOT "$ENV{${_var}}" STREQUAL "")
+        set(_testsuite_inherited_${_var} "${_testsuite_path_separator}$ENV{${_var}}")
+    endif ()
+endforeach ()
+
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite"
     # First we install our cmake build as we want to test the install. We use the scons build folder as it should be there.
     COMMAND 
@@ -96,10 +111,10 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite"
             "USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX=1"
             "TESTSUITE_ARNOLD_PLUGIN_PATH=$<SHELL_PATH:${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER}>"
             "TESTSUITE_PXR_PLUGINPATH_NAME=$<SHELL_PATH:${CMAKE_INSTALL_PREFIX}/schema;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER}>"
-            "DYLD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER};$ENV{DYLD_LIBRARY_PATH}>"
+            "DYLD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER}>${_testsuite_inherited_DYLD_LIBRARY_PATH}"
             "PYTHONPATH=$<SHELL_PATH:${ARNOLD_PYTHON_DIR};${USD_LOCATION}/lib/python>"
-            "LD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER};$ENV{LD_LIBRARY_PATH}>"
-            "PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER};$ENV{PATH}>"
+            "LD_LIBRARY_PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER}>${_testsuite_inherited_LD_LIBRARY_PATH}"
+            "PATH=$<SHELL_PATH:${USD_LOCATION}/lib;${USD_LOCATION}/bin;${ARNOLD_LOCATION}/bin;${CMAKE_INSTALL_PREFIX}/${PROC_TEST_FOLDER}>${_testsuite_inherited_PATH}"
             ${TESTSUITE_ENV}
             $<IF:$<PLATFORM_ID:Windows>,abuild.bat,./abuild> USD_PATH="$<SHELL_PATH:${USD_LOCATION}>" BOOST_INCLUDE="$<SHELL_PATH:${USD_LOCATION}/include>" ARNOLD_PATH="$<SHELL_PATH:${ARNOLD_LOCATION}>" ${TESTSUITE_ABUILD_ARGS} BUILD_NDR_PLUGIN=0 BUILD_USD_IMAGING_PLUGIN=0 BUILD_RENDER_DELEGATE=0 BUILD_SCENE_INDEX_PLUGIN=1 BUILD_USD_WRITER=0 BUILD_PROCEDURAL=0 BUILD_SCHEMAS=0 BUILD_DOCS=0 BUILD_TESTSUITE=1 ${TESTSUITE_PATTERNS}
 
