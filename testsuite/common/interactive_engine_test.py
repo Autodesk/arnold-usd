@@ -21,6 +21,7 @@ one by default), saved as testrender.tif to be compared against the reference im
 """
 import array
 import ctypes
+import faulthandler
 import os
 import sys
 import time
@@ -542,6 +543,8 @@ def Run(scenario):
     """Runs the scenario in the current mode, returning the program exit code"""
     global _success
     _success = True
+    # A crash (e.g. an access violation in the render delegate) prints the python stack of every thread in the test log
+    faulthandler.enable()
     dll_directories = _SetupDllDirectories()  # noqa: F841, kept until the end
     # libai must be loaded before the bundle, which has no rpath to it
     import arnold
