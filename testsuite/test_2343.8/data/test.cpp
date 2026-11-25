@@ -42,15 +42,23 @@ void DefineColoredLight(const UsdStageRefPtr& stage, const SdfPath& path, const 
     UsdLuxDistantLight::Get(stage, path).CreateColorAttr().Set(color);
 }
 
-// The color at a position has the given channels, i.e. each of them is lit
-Check ExpectChannels(const GfVec2f& position, const std::vector<int>& channels)
+// The color at a position has the given lit and dark channels
+Check ExpectChannels(const GfVec2f& position, const std::vector<int>& lit, const std::vector<int>& dark)
 {
     return [=](const Image& image) {
         const GfVec4f c = image.Average(position[0], position[1]);
-        for (int channel : channels) {
+        for (int channel : lit) {
             if (c[channel] <= 0.05f) {
-                return TfStringPrintf("expected the channel %d to be lit at (%.2f, %.2f), got (%.4f, %.4f, %.4f, %.4f)",
-                    channel, position[0], position[1], c[0], c[1], c[2], c[3]);
+                return TfStringPrintf(
+                    "expected the channel %d to be lit at (%.2f, %.2f), got (%.4f, %.4f, %.4f, %.4f)", channel,
+                    position[0], position[1], c[0], c[1], c[2], c[3]);
+            }
+        }
+        for (int channel : dark) {
+            if (c[channel] >= 0.02f) {
+                return TfStringPrintf(
+                    "expected the channel %d to be dark at (%.2f, %.2f), got (%.4f, %.4f, %.4f, %.4f)", channel,
+                    position[0], position[1], c[0], c[1], c[2], c[3]);
             }
         }
         return std::string();
@@ -101,7 +109,7 @@ INTERACTIVE_USD_TEST_MAIN()
             AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)})},
         {"new blue light without light link collection, lighting both spheres while the other lights are linked",
             [](const UsdStageRefPtr& stage) { DefineColoredLight(stage, kUnlinkedLight, GfVec3f(0.f, 0.f, 1.f)); },
-            AllOf({ExpectChannels(left, {1, 2}), ExpectChannels(right, {0, 2})})},
+            AllOf({ExpectChannels(left, {1, 2}, {0}), ExpectChannels(right, {0, 2}, {1})})},
         {"the light without light link collection is removed",
             [](const UsdStageRefPtr& stage) { stage->RemovePrim(kUnlinkedLight); },
             AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)})},

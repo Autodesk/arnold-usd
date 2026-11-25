@@ -1,7 +1,8 @@
 // Interactive edits of an ArnoldOptions prim: ignore_lights, enabled from the start, is disabled, enabled again and
-// removed.
-// Covers the fix of the options updates (#2666): the render interrupt of HdArnoldOptions::Sync was shadowed by a loop
-// variable, so the edits of the options prim never restarted the render. See interactive_usd_test.h.
+// removed. For now, it documents the known issues of the options prims: with hydra 1 their edits aren't applied, with
+// hydra 2 the prim isn't. Once they're fixed, it covers the fix of the options updates (#2666): the render interrupt of
+// HdArnoldOptions::Sync was shadowed by a loop variable, so the edits of the options prim never restarted the render.
+// See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
 #include <pxr/usd/usdGeom/sphere.h>
@@ -31,6 +32,8 @@ INTERACTIVE_USD_TEST_MAIN()
     Scenario scenario;
     // Only the render delegate reads the ArnoldOptions prims as the options of its render
     scenario.methods = RenderDelegate;
+    // The ArnoldOptions adapter only populates the prim when the usd procedural is there
+    scenario.usdProceduralWithDelegate = true;
     scenario.createStage = [&]() {
         UsdStageRefPtr stage = UsdStage::CreateInMemory();
         UsdGeomXform::Define(stage, SdfPath("/World"));

@@ -68,7 +68,8 @@ def set_light_intensity(value):
 
 
 def insert_color_correct(stage):
-    """Inserts an imager_color_correct after the exposure one, making the image green"""
+    """Inserts an imager_color_correct as the input of the exposure one, i.e. before it in the chain, making the image
+    green"""
     from pxr import Gf, Sdf, UsdShade
     color_correct = define_imager(stage, COLOR_CORRECT, 'arnold:imager_color_correct')
     color_correct.CreateInput('main_gain', Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.05, 1, 0.05))
@@ -101,14 +102,13 @@ def set_flat_color(stage):
     UsdShade.Shader.Get(stage, FLAT).GetInput('color').Set(Gf.Vec3f(0.05, 0.8, 0.05))
 
 
-
 scenario = Scenario(create_stage, [
     Step('initial render, with an exposure imager of 0', render_settings={'arnold:global:imager': IMAGER},
          check=ExpectColor(Color.RED)),
     Step('exposure of -10', edit=set_exposure(-10.0), check=ExpectColor(Color.BLACK)),
     Step('exposure back to 0 during the render', edit=set_light_intensity(2.5), during_render=set_exposure(0.0),
          check=ExpectColor(Color.RED)),
-    Step('imager_color_correct inserted after the exposure imager', edit=insert_color_correct,
+    Step('imager_color_correct inserted as the input of the exposure imager', edit=insert_color_correct,
          check=ExpectColor(Color.GREEN)),
     Step('imager_color_correct removed', edit=remove_color_correct, check=ExpectColor(Color.RED)),
     Step('root imager replaced by an imager_shader of a blue flat shader', edit=replace_by_shader_imager,

@@ -1,10 +1,12 @@
 // Interactive change of the arnold type of a linked light: a sphere light linked to one of two spheres gets a spot
-// shaping, turning it into an arnold spot light, which is removed, and its light link collection is then edited.
+// shaping, turning it into an arnold spot light, which is removed, and its light link collection is then edited. An
+// occluder then shadows the right sphere, until the shadow link of the spot light excludes it.
 // Covers the fix of the light type change with light linking (#2663): the light link of the previous node wasn't
 // deregistered, so the new node wasn't in the light groups of the shapes. See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
 #include <pxr/usd/usd/collectionAPI.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdGeom/xform.h>
 #include <pxr/usd/usdLux/shapingAPI.h>
@@ -17,6 +19,7 @@ namespace {
 const SdfPath kLeft("/World/left");
 const SdfPath kRight("/World/right");
 const SdfPath kLight("/World/light");
+const SdfPath kOccluder("/World/occluder");
 
 UsdCollectionAPI LightLink(const UsdStageRefPtr& stage)
 {
@@ -83,7 +86,18 @@ INTERACTIVE_USD_TEST_MAIN()
             onlyLeft},
         {"right sphere added to the light link collection",
             [](const UsdStageRefPtr& stage) { SetLinks(LightLink(stage), {kLeft, kRight}); }, both},
-        {"spot shaping added again, with a shadow link to the left sphere only",
+        {"occluder, invisible to the camera, between the light and the right sphere",
+            [](const UsdStageRefPtr& stage) {
+                // Halfway between the light and the right probe
+                UsdGeomSphere::Define(stage, kOccluder).CreateRadiusAttr().Set(0.3);
+                SetTranslate(stage, kOccluder, GfVec3d(0.75, 0, 1.8));
+                UsdGeomPrimvarsAPI(stage->GetPrimAtPath(kOccluder))
+                    .CreatePrimvar(TfToken("arnold:visibility:camera"), SdfValueTypeNames->Bool,
+                        UsdGeomTokens->constant)
+                    .Set(false);
+            },
+            AllOf({ExpectColor(Color::Grey, left), ExpectColor(Color::Black, right)})},
+        {"spot shaping added again, with a shadow link to the left sphere only, the right one isn't shadowed",
             [](const UsdStageRefPtr& stage) {
                 UsdLuxShapingAPI::Apply(stage->GetPrimAtPath(kLight)).CreateShapingConeAngleAttr().Set(90.f);
                 SetLinks(ShadowLink(stage), {kLeft});

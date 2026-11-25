@@ -1,9 +1,10 @@
 Interactive USD change of the arnold type of a linked light
 
 A sphere light, the only light of the scene, is linked to the left of two spheres. A spot shaping is added to it,
-changing its arnold type, and removed, the right sphere is added to its light link collection, the shaping is added
-again with a shadow link, and the right sphere is removed from the light link collection. The stage is re-rendered
-after each edit. Covers the fix of the light type change with light linking (#2663).
+changing its arnold type, and removed, the right sphere is added to its light link collection, an occluder invisible to
+the camera shadows the right sphere, the shaping is added again with a shadow link excluding it, and the right sphere is
+removed from the light link collection. The stage is re-rendered after each edit. Covers the fix of the light type
+change with light linking (#2663).
 The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
 render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
 testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is

@@ -581,9 +581,7 @@ void RunMethod(const Scenario& scenario, Method method, bool writeTestRender)
     const char* methodName = method == Procedural ? "procedural" : "delegate";
     AiMsgInfo("[interactive_usd_test] running the scenario with the %s", modeName);
 
-    // Also for the render delegate: hosts always have the usd procedural, and the render delegate only supports the
-    // ArnoldUsd rprim type, which e.g. the ArnoldOptions adapter checks, when its node entry exists
-    if (!InstallProcedural())
+    if ((method == Procedural || scenario.usdProceduralWithDelegate) && !InstallProcedural())
         return;
     UsdStageRefPtr stage = scenario.createStage();
     if (!Check_(bool(stage), "Could not create the stage"))

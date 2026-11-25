@@ -42,13 +42,12 @@ INTERACTIVE_USD_TEST_MAIN()
 {
     // Positions in the full 160x120 image
     const GfVec2f red = ScreenPosition(kRedPosition);
+    // Also checked in the cropped buffers, where the green sphere would be if the full image was squeezed in them
     const GfVec2f green = ScreenPosition(kGreenPosition);
     // Position in the left half of the image (x in [0, 0.5]) of a position of the full image
     auto inLeftHalf = [](const GfVec2f& p) { return GfVec2f(p[0] * 2.f, p[1]); };
     // Position in the top half of the image (y in [0, 0.5]) of a position of the full image
     auto inTopHalf = [](const GfVec2f& p) { return GfVec2f(p[0], p[1] * 2.f); };
-    // The green sphere's position is also checked in the cropped buffers, where it would be if the full image was
-    // squeezed in them
     // Above the red sphere, and on its left, in the background
     const GfVec2f aboveRed = ScreenPosition(kRedPosition + GfVec3d(0, 0.9, 0));
     const GfVec2f leftOfRed = ScreenPosition(kRedPosition - GfVec3d(0.9, 0, 0));
