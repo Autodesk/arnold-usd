@@ -1,0 +1,13 @@
+Interactive render delegate edits of a shader imager graph through a UsdImagingGL.Engine, from python
+
+A red sphere is rendered with the imager graph of an ArnoldNodeGraph, set by the arnold:global:imager render setting.
+The exposure of its root imager is edited, before and during the render, an imager_color_correct is inserted after it
+and removed, the root imager is replaced by an imager_shader whose flat shader is edited during the render, and the
+imager setting is cleared. Covers the fixes of the imager updates (#2758, #2764). The render delegate is driven by a
+headless UsdImagingGL.Engine as a viewport does, see testsuite/common/interactive_engine_test.py. Each render is
+checked in test.py, and the last one is compared against the reference image. Edits that aren't rendered correctly yet
+are reported as warnings (known issues in test.py).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'script': '"{}" test.py'.format(usd_python)}
