@@ -23,6 +23,12 @@
 #include <common_utils.h>
 #include "utils.h"
 
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+#include <pxr/imaging/hd/primvarSchema.h>
+#include <pxr/imaging/hd/primvarsSchema.h>
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -50,8 +56,29 @@ HdArnoldCamera::~HdArnoldCamera() {
         _delegate->DestroyArnoldNode(_camera);
 }
 
+VtValue HdArnoldCamera::GetArnoldPrimvarValue(const TfToken& name, const VtValue& value) const
+{
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    if (value.IsEmpty() && _syncPrimDs) {
+        static const std::string primvarsPrefix("primvars:");
+        const std::string& nameStr = name.GetString();
+        if (TfStringStartsWith(nameStr, primvarsPrefix)) {
+            const TfToken primvarName(nameStr.substr(primvarsPrefix.size()));
+            if (const HdSampledDataSourceHandle valueDs = HdSampledDataSource::Cast(HdContainerDataSource::Get(
+                    _syncPrimDs, HdPrimvarsSchema::GetDefaultLocator().Append(primvarName).Append(
+                                     HdPrimvarSchemaTokens->primvarValue)))) {
+                return valueDs->GetValue(0.0f);
+            }
+        }
+    }
+#else
+    TF_UNUSED(name);
+#endif
+    return value;
+}
+
 AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits) {
-    const auto shaderValue = sceneDelegate->GetCameraParamValue(GetId(), param);
+    const auto shaderValue = GetArnoldPrimvarValue(param, sceneDelegate->GetCameraParamValue(GetId(), param));
     const std::string shaderStr = shaderValue.IsHolding<std::string>() ? 
         shaderValue.Get<std::string>() : std::string();
     if (shaderStr.empty())
@@ -119,7 +146,7 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
             continue;
 
         TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
-        const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);
+        const auto paramValue = GetArnoldPrimvarValue(attr, sceneDelegate->GetCameraParamValue(GetId(), attr));
         if (!paramValue.IsEmpty()) {
             HdArnoldSetParameter(_camera, param, paramValue, _delegate);
         }
@@ -230,7 +257,7 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
     // Returns false for an authored value of another type, left as SetCameraParams applied it.
     bool supportedWindow = true;
     const auto getVec2 = [&](const TfToken& token, const GfVec2f& defaultValue) -> GfVec2f {
-        const VtValue value = sceneDelegate->GetCameraParamValue(id, token);
+        const VtValue value = GetArnoldPrimvarValue(token, sceneDelegate->GetCameraParamValue(id, token));
         if (value.IsHolding<GfVec2f>()) {
             return value.UncheckedGet<GfVec2f>();
         } else if (value.IsHolding<GfVec2d>()) {
@@ -310,11 +337,18 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    // Read once for all the arnold primvars, see GetArnoldPrimvarValue.
+    if (HdSceneIndexBaseRefPtr sceneIndex = sceneDelegate->GetRenderIndex().GetTerminalSceneIndex())
+        _syncPrimDs = sceneIndex->GetPrim(GetId()).dataSource;
+#endif
+
     const auto projection = GetProjection();
     AtString cameraType = 
          (projection == HdCamera::Projection::Orthographic) ? str::ortho_camera : str::persp_camera;
 
-    VtValue cameraTypeVal = sceneDelegate->Get(GetId(), str::t_primvars_arnold_camera);
+    VtValue cameraTypeVal = GetArnoldPrimvarValue(
+        str::t_primvars_arnold_camera, sceneDelegate->Get(GetId(), str::t_primvars_arnold_camera));
     if (!cameraTypeVal.IsEmpty()) {     
         std::string cameraTypeStr = VtValueGetString(cameraTypeVal);
         if (!cameraTypeStr.empty())
@@ -406,6 +440,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     // TODO: should we split the dirtyclipplanes from the params ??
     // if (*dirtyBits & HdCamera::DirtyClipPlanes) {}
     *dirtyBits = HdChangeTracker::Clean;
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    _syncPrimDs = HdContainerDataSourceHandle();
+#endif
 }
 
 HdDirtyBits HdArnoldCamera::GetInitialDirtyBitsMask() const

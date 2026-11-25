@@ -37,6 +37,9 @@
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdShade/material.h>
+#ifdef ENABLE_SCENE_INDEX
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
 
 #include <functional>
 #include <optional>
@@ -165,6 +168,11 @@ struct Scenario {
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
+#ifdef ENABLE_SCENE_INDEX
+    // Filters the UsdImaging scene index before the render index gets it, in the DelegateHydra2 mode only, e.g. to
+    // reproduce the prims of another scene index producer than UsdImaging
+    std::function<HdSceneIndexBaseRefPtr(const HdSceneIndexBaseRefPtr&)> delegateSceneIndexFilter;
+#endif
 };
 
 // Runs the scenario with all its methods, returning the program exit code

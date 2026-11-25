@@ -376,7 +376,9 @@ public:
             info.stage = stage;
             const UsdImagingSceneIndices sceneIndices = UsdImagingCreateSceneIndices(info);
             _stageSceneIndex = sceneIndices.stageSceneIndex;
-            _sceneIndex = sceneIndices.finalSceneIndex;
+            _sceneIndex = scenario.delegateSceneIndexFilter
+                ? scenario.delegateSceneIndexFilter(sceneIndices.finalSceneIndex)
+                : sceneIndices.finalSceneIndex;
             _renderIndex->InsertSceneIndex(_sceneIndex, SdfPath::AbsoluteRootPath());
         } else
 #endif

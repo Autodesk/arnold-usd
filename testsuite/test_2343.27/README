@@ -1,0 +1,12 @@
+Interactive edits of the arnold primvars of a camera whose Hydra 2 prim only has them in its primvars container
+
+A grey sphere is seen by a camera whose primvars:arnold:exposure goes from 0 to 4 and back, the stage being
+re-rendered after each edit, with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. In the Hydra 2 mode, a scene index filter makes the camera prim look like
+the ones of MayaHydra: the camera schema only holds its own fields, and the arnold primvar is in the primvars
+container as "arnold:exposure". The render delegate must read it from there, as GetCameraParamValue doesn't find it.
+Each render is checked in test.cpp, and the overexposed render is compared against the reference image.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
