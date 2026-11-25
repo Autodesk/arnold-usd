@@ -1,7 +1,9 @@
 // Interactive edits of light linking: the light link collections of lights are edited, a linked light is added and
-// another one removed, and a prim is added and then included in a collection. See interactive_usd_test.h.
+// another one removed, a light without light link collection is added while the others are linked (#2784), and a prim
+// is added and then included in a collection. See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
+#include <pxr/base/tf/stringUtils.h>
 #include <pxr/usd/usd/collectionAPI.h>
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdGeom/xform.h>
@@ -18,6 +20,7 @@ const SdfPath kCenter("/World/center");
 const SdfPath kRedLight("/World/red_light");
 const SdfPath kGreenLight("/World/green_light");
 const SdfPath kBlueLight("/World/blue_light");
+const SdfPath kUnlinkedLight("/World/unlinked_light");
 
 UsdCollectionAPI LightLink(const UsdStageRefPtr& stage, const SdfPath& light)
 {
@@ -37,6 +40,21 @@ void DefineColoredLight(const UsdStageRefPtr& stage, const SdfPath& path, const 
 {
     DefineDistantLight(stage, path);
     UsdLuxDistantLight::Get(stage, path).CreateColorAttr().Set(color);
+}
+
+// The color at a position has the given channels, i.e. each of them is lit
+Check ExpectChannels(const GfVec2f& position, const std::vector<int>& channels)
+{
+    return [=](const Image& image) {
+        const GfVec4f c = image.Average(position[0], position[1]);
+        for (int channel : channels) {
+            if (c[channel] <= 0.05f) {
+                return TfStringPrintf("expected the channel %d to be lit at (%.2f, %.2f), got (%.4f, %.4f, %.4f, %.4f)",
+                    channel, position[0], position[1], c[0], c[1], c[2], c[3]);
+            }
+        }
+        return std::string();
+    };
 }
 
 void DefineSphere(const UsdStageRefPtr& stage, const SdfPath& path, const GfVec3d& position)
@@ -80,6 +98,12 @@ INTERACTIVE_USD_TEST_MAIN()
                 SetLinks(stage, kRedLight, {kRight}, true);
                 SetLinks(stage, kGreenLight, {kLeft}, true);
             },
+            AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)})},
+        {"new blue light without light link collection, lighting both spheres while the other lights are linked",
+            [](const UsdStageRefPtr& stage) { DefineColoredLight(stage, kUnlinkedLight, GfVec3f(0.f, 0.f, 1.f)); },
+            AllOf({ExpectChannels(left, {1, 2}), ExpectChannels(right, {0, 2})})},
+        {"the light without light link collection is removed",
+            [](const UsdStageRefPtr& stage) { stage->RemovePrim(kUnlinkedLight); },
             AllOf({ExpectColor(Color::Green, left), ExpectColor(Color::Red, right)})},
         {"new blue light only lighting the left sphere, and the green light turned off",
             [](const UsdStageRefPtr& stage) {

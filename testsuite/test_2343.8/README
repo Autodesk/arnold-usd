@@ -1,8 +1,9 @@
 Interactive USD edits of light linking, with the usd procedural cache_id and with the render delegate
 
 Two grey spheres are lit by a red and a green distant light, each light being linked to one sphere. The light link
-collections are edited, a linked blue light is added and the red one removed, a new sphere is added and then included
-in the blue light collection, and the blue light linking is removed. The stage is re-rendered after each edit.
+collections are edited, a blue light without light link collection is added and removed (#2784), a linked blue light
+is added and the red one removed, a new sphere is added and then included in the blue light collection, and the blue
+light linking is removed. The stage is re-rendered after each edit.
 The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
 and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
 testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
