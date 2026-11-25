@@ -26,6 +26,11 @@ import os
 import sys
 import time
 
+# Arnold is loaded before the tests import any pxr module, even at module level (e.g. CameraUtil to build framings).
+# On Windows, pxr adds every folder of the PATH as a DLL directory when it loads its libraries: if USD is loaded first,
+# it can pick an older C++ runtime (msvcp140.dll) from an unrelated folder of the PATH, and AiBegin then crashes.
+import arnold  # noqa: E402, F401
+
 # Modes, depending on the testsuite pass. The bits are the same as in interactive_usd_test.h.
 DELEGATE_HYDRA1 = 1 << 3  # "usd" and "hydra" passes
 DELEGATE_HYDRA2 = 1 << 4  # "hydra2" pass
