@@ -1,0 +1,14 @@
+Interactive USD edits of an arnold primvar of a light
+
+A sphere light casts the shadow of a small quad on a grey wall. primvars:arnold:cast_shadows is set to false on the
+light and removed, then the light intensity is edited. The stage is re-rendered after each edit. Since #2681 the
+light node isn't reset when the light changes, which a removed arnold primvar relies on.
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

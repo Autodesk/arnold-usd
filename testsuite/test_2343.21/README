@@ -1,0 +1,16 @@
+Interactive USD edits of point instancers with deduplicated mesh prototypes (HDARNOLD_GEOM_DEDUP=2)
+
+Two point instancers have identical quad prototypes, and a quad mesh identical to them is not instanced: the render
+delegate deduplicates all three in mode 2 (all identical meshes share their arnold geometry). The single mesh leaves
+the dedup group and joins it again, the displayColor and points of one prototype are edited, becoming different from
+the others and identical again, and the other point instancer and the single mesh are removed. The stage is
+re-rendered after each edit. Covers the fix of the dedup incremental updates (#2797).
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

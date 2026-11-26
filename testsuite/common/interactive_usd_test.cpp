@@ -378,7 +378,9 @@ public:
             _stageSceneIndex = sceneIndices.stageSceneIndex;
             if (scenario.time)
                 _stageSceneIndex->SetTime(UsdTimeCode(*scenario.time));
-            _sceneIndex = sceneIndices.finalSceneIndex;
+            _sceneIndex = scenario.delegateSceneIndexFilter
+                ? scenario.delegateSceneIndexFilter(sceneIndices.finalSceneIndex)
+                : sceneIndices.finalSceneIndex;
             _renderIndex->InsertSceneIndex(_sceneIndex, SdfPath::AbsoluteRootPath());
         } else
 #endif
@@ -543,6 +545,9 @@ bool InstallProcedural()
         return false;
     if (const AtNodeEntry* loaded = AiNodeEntryLookUp(AtString(lib.name))) {
         const char* filename = AiNodeEntryGetFilename(loaded);
+        // Already installed by a previous method
+        if (filename != nullptr && std::string(filename) == "interactive_usd_test")
+            return true;
         Check_(false, std::string("A ") + lib.name + " procedural was loaded from " +
             (filename ? filename : "an unknown library") + ", it has its own copy of USD");
         AiNodeEntryUninstall(lib.name);
@@ -586,7 +591,7 @@ void RunMethod(const Scenario& scenario, Method method, bool writeTestRender)
     const char* methodName = method == Procedural ? "procedural" : "delegate";
     AiMsgInfo("[interactive_usd_test] running the scenario with the %s", modeName);
 
-    if (method == Procedural && !InstallProcedural())
+    if ((method == Procedural || scenario.usdProceduralWithDelegate) && !InstallProcedural())
         return;
     UsdStageRefPtr stage = scenario.createStage();
     if (!Check_(bool(stage), "Could not create the stage"))

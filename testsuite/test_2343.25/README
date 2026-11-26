@@ -1,0 +1,12 @@
+Interactive USD render regions set by the resolution and dataWindowNDC render settings
+
+Two spheres are rendered by the HdArnoldRendererPlugin render delegate driven like a Hydra host, then with the
+resolution and dataWindowNDC render settings that Houdini sends for a cropped render, the host buffer being the size of
+the region: the left half (cropped in x only), the top half (cropped in y only) and the bottom right quarter. The
+settings are then cleared. Covers the fix of the regions cropped on a single axis (#2564). See
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last render is compared against
+the reference image.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
