@@ -100,6 +100,7 @@ void HdArnoldShape::DestroyNodes()
 
 bool HdArnoldShape::DestroyInstancers()
 {
+    _DestroyLightInstancer();
     if (_instancers.empty())
         return false;
     for (auto& instancer : _instancers) {
@@ -107,6 +108,75 @@ bool HdArnoldShape::DestroyInstancers()
     }
     _instancers.clear();
     return true;
+}
+
+void HdArnoldShape::_DestroyLightInstancer()
+{
+    if (_lightInstancer != nullptr) {
+        _renderDelegate->DestroyArnoldNode(_lightInstancer);
+        _lightInstancer = nullptr;
+    }
+    _lightInstancerDirty = true;
+}
+
+void HdArnoldShape::SetInstancedLight(AtNode* light)
+{
+    if (light == _instancedLight)
+        return;
+    // The light instancer references the previous light, which can be destroyed next.
+    _DestroyLightInstancer();
+    RestoreInstancedLightIntensity();
+    _instancedLight = light;
+    // The shape instances are rebuilt too, as a mesh light requires the instancer-node path.
+    _instancedLightChanged = true;
+}
+
+void HdArnoldShape::RestoreInstancedLightIntensity()
+{
+    if (_instancedLight == nullptr || !_instancedLightIntensityMoved)
+        return;
+    AiNodeSetFlt(_instancedLight, str::intensity, _instancedLightIntensity);
+    _instancedLightIntensityMoved = false;
+    _lightInstancerDirty = true;
+}
+
+void HdArnoldShape::_RebuildLightInstancer(
+    HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
+    const SdfPath& instancerId)
+{
+    _DestroyLightInstancer();
+    _lightInstancerDirty = false;
+    if (_instancedLight == nullptr)
+        return;
+    // As for the instanced lights (see HdArnoldGenericLight), the prototype light must not emit,
+    // its intensity is given to its instances. It is moved even without instances: the shape
+    // isn't rendered either then.
+    if (!_instancedLightIntensityMoved) {
+        _instancedLightIntensity = AiNodeGetFlt(_instancedLight, str::intensity);
+        AiNodeSetFlt(_instancedLight, str::intensity, 0.f);
+        _instancedLightIntensityMoved = true;
+    }
+    auto* hydraInstancer =
+        dynamic_cast<HdArnoldInstancer*>(sceneDelegate->GetRenderIndex().GetInstancer(instancerId));
+    if (hydraInstancer == nullptr)
+        return;
+    // The Arnold instancer creates, for each instance of a mesh light, an instance of its mesh
+    // which the light instance emits from. The matrix of this mesh instance is the instance
+    // matrix, multiplied by the matrix of the light (the instances inherit the transforms of
+    // their prototypes), and not by the one of the mesh. The light gets the matrix of the mesh,
+    // which it doesn't use otherwise.
+    if (const AtArray* matrices = AiNodeGetArray(_shape, str::matrix))
+        AiNodeSetArray(_instancedLight, str::matrix, AiArrayCopy(matrices));
+    _lightInstancer = hydraInstancer->CreateFlattenedArnoldInstancer(
+        renderDelegate, id, AtString((id.GetString() + "/light_instancer").c_str()));
+    if (_lightInstancer == nullptr)
+        return;
+    AiNodeSetPtr(_lightInstancer, str::nodes, _instancedLight);
+    renderDelegate->TrackRenderTag(_lightInstancer, sceneDelegate->GetRenderTag(id));
+    if (AiNodeLookUpUserParameter(_lightInstancer, str::instance_intensity) == nullptr)
+        AiNodeDeclare(_lightInstancer, str::instance_intensity, str::constantArrayFloat);
+    // A single element applies to all the instances.
+    AiNodeSetArray(_lightInstancer, str::instance_intensity, AiArray(1, 1, AI_TYPE_FLOAT, _instancedLightIntensity));
 }
 
 void HdArnoldShape::Sync(
@@ -144,6 +214,8 @@ void HdArnoldShape::Sync(
          for (auto &instancer : _instancers) {
              _renderDelegate->TrackRenderTag(instancer, renderTag);
          }
+         if (_lightInstancer != nullptr)
+             _renderDelegate->TrackRenderTag(_lightInstancer, renderTag);
      }
 #endif
 
@@ -151,9 +223,20 @@ void HdArnoldShape::Sync(
         _SyncSharedGeometryInstancer(dirtyBits, sceneDelegate, param, id, rprim->GetPrimId(), primOriginPath);
         return;
     }
+    // A new light must be instanced with the shape, which also changes how the shape is instanced.
+    const bool instancedLightChanged = _instancedLightChanged;
+    _instancedLightChanged = false;
     _SyncInstances(
-        dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force, rprim->GetPrimId(),
-        primOriginPath);
+        dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(),
+        force || instancedLightChanged, rprim->GetPrimId(), primOriginPath);
+    // Rebuild the light instances when the shape ones were rebuilt, when the light parameters
+    // were set again (see RestoreInstancedLightIntensity), or when the shape transform changed.
+    if (dirtyBits & HdChangeTracker::DirtyTransform)
+        _lightInstancerDirty = true;
+    if (_instancedLight != nullptr && _lightInstancerDirty && !rprim->GetInstancerId().IsEmpty()) {
+        param.Interrupt();
+        _RebuildLightInstancer(_renderDelegate, sceneDelegate, id, rprim->GetInstancerId());
+    }
 }
 
 void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelegate, HdArnoldRenderParamInterrupt& param){
@@ -163,6 +246,8 @@ void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelega
     for (auto &instancer : _instancers) {
         _renderDelegate->TrackRenderTag(instancer, renderTag);
     }
+    if (_lightInstancer != nullptr)
+        _renderDelegate->TrackRenderTag(_lightInstancer, renderTag);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
@@ -185,6 +270,8 @@ void HdArnoldShape::SetHidden(bool hidden, bool nodeIsShared)
         if (!_instancers.empty()) {
             for (AtNode* instancer : _instancers)
                 AiNodeSetDisabled(instancer, true);
+            if (_lightInstancer != nullptr)
+                AiNodeSetDisabled(_lightInstancer, true);
             _hiddenBy = HiddenBy::Instancers;
         } else if (nodeIsShared) {
             AiNodeSetByte(_shape, str::visibility, 0);
@@ -199,6 +286,8 @@ void HdArnoldShape::SetHidden(bool hidden, bool nodeIsShared)
         case HiddenBy::Instancers:
             for (AtNode* instancer : _instancers)
                 AiNodeSetDisabled(instancer, false);
+            if (_lightInstancer != nullptr)
+                AiNodeSetDisabled(_lightInstancer, false);
             break;
         case HiddenBy::Visibility:
             AiNodeSetByte(_shape, str::visibility, _instancers.empty() ? _visibility : 0);
@@ -211,6 +300,8 @@ void HdArnoldShape::SetHidden(bool hidden, bool nodeIsShared)
             AiNodeSetDisabled(_shape, false);
             for (AtNode* instancer : _instancers)
                 AiNodeSetDisabled(instancer, false);
+            if (_lightInstancer != nullptr)
+                AiNodeSetDisabled(_lightInstancer, false);
             break;
     }
     _hiddenBy = HiddenBy::None;
@@ -341,8 +432,10 @@ void HdArnoldShape::_SyncInstances(
     param.Interrupt();
 
     // Only an instancer node can reference a shared geometry (geometry deduplication).
+    // The instances of a mesh light are instances of its mesh node made by the Arnold instancer,
+    // which must not be instanced with instance_matrix as well.
     if (_sharedGeometry != nullptr || _forceInstancerNode || _perInstanceLightLinking ||
-        UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
+        _instancedLight != nullptr || UseArnoldInstancer(sceneDelegate, _renderDelegate, instancer, _shape)) {
         // First destroy the arnold parent instancers to this mesh
         DestroyInstancers();
         // The instance primvars are set on the instancers, drop the ones of the instance_matrix instancing.

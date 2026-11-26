@@ -65,8 +65,9 @@ hydra2_only: test_2549
 # delegate only, so the procedural 'usd' pass would abort on the unresolved
 # coordinate space. test_18101.2 checks the geometry deduplication, which only
 # exists in the render delegate (the 'usd' pass also ignores the visibility
-# primvars of point-instancer prototypes).
-pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2 interactive_engine
+# primvars of point-instancer prototypes). The instances of mesh lights authored with primvars:arnold:light
+# (test_2193) are only supported by the render delegate, the legacy usd reader doesn't instance their light.
+pass_usd: test_13221 test_13221.1 test_13221.2 test_13221.3 test_2731 test_2731.1 test_2731.2 test_18101.2 test_2193 test_2193.1 test_2193.2 interactive_engine
 
 # UsdLux light:filters (test_2799) needs the 'filters' light entry published by the scene index.
 # The legacy hydra1 pass doesn't expose that relationship, so it is skipped there.

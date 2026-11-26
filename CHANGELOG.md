@@ -28,6 +28,7 @@
 - [usd#2862](https://github.com/Autodesk/arnold-usd/pull/2862) - Fix the precedence of the color settings in the hydra render delegate, which now matches the usd procedural: `arnold:global:color_space_linear` and `arnold:global:color_space_narrow` authored on a render settings prim are no longer ignored with Hydra 2, and override `renderingColorSpace`. An OCIO config set by the scene (`arnold:color_manager:config`) is no longer replaced by the host OCIO config path (`ocioConfigPath`), whatever order the host sends them in
 - [usd#2860](https://github.com/Autodesk/arnold-usd/issues/2860) - Fix the `primvars:arnold:*` attributes of cameras being ignored by the render delegate with Hydra 2 when the scene index producer only provides them in the primvars container of the camera prim, as MayaHydra does (e.g. the camera exposure in Maya)
 - [usd#2863](https://github.com/Autodesk/arnold-usd/issues/2863) - Fix the motion blur of lights in the hydra render delegate: their transform is now sampled over the shutter interval like the other primitives, so a light moving with the camera is no longer blurred, and a moving light is blurred
+- [usd#2193](https://github.com/Autodesk/arnold-usd/issues/2193) - Fix the instances of mesh lights authored with `primvars:arnold:light` (as written by Solaris) in the hydra render delegate: only the mesh was instanced, its light was emitting once from the prototype. The instances of mesh lights authored with `primvars:arnold:light` or the MeshLightAPI are also supported in nested point instancers
 
 
 ## [7.5.4.1] (Unreleased)

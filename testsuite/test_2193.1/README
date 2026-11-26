@@ -1,0 +1,19 @@
+Interactive edits of the instances of a mesh light authored with primvars:arnold:light
+
+see #2193 and #2437
+
+A grey wall is only lit by the two instances of a small mesh light, moved in front of the wall by the prototype's own
+transform. The intensity of the mesh light is edited, an instance is moved, the mesh light is disabled and enabled
+again, then the prototype is moved. Each instance must light the wall from its instance and prototype transforms, and
+the prototype light itself, in front of the center of the wall, must not emit.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the initial procedural render is
+compared against the reference image. The legacy usd reader doesn't instance these mesh lights yet, the test is
+skipped in the 'usd' pass (see the testsuite groups). As for the other instanced lights (e.g. with the MeshLightAPI),
+the light instances rebuilt by an interactive update of the procedural with the hydra reader aren't rendered, this is
+reported as a known issue.
+
+author: cyril.pichard
+
+PARAMS: {'program_env': 'interactive_usd'}
