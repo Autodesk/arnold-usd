@@ -25,6 +25,7 @@
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
 - [usd#2835](https://github.com/Autodesk/arnold-usd/issues/2835) - Fix the arnold light groups (`primvars:arnold:light_group`) of shapes being reset in the hydra render delegate when the scene has a mesh light. They now take precedence over the UsdLux light link collections in the render delegate and the usd procedural, and follow interactive edits. Lights of an arnold light or shadow group that don't resolve, e.g. deleted lights, are skipped instead of the whole group being ignored
 - [usd#2851](https://github.com/Autodesk/arnold-usd/pull/2851) - Fix the `arnold:filter` of a RenderVar being ignored by the render delegate for the color, depth and primId outputs of the RenderProducts rendered by husk. A filter authored on a `depth` or `primId` RenderVar is now used, so it must support the type of the output: `closest_filter` keeps the previous behavior, and most filters don't support the INT primId output (`farthest_filter` does)
+- [usd#2860](https://github.com/Autodesk/arnold-usd/issues/2860) - Fix the `primvars:arnold:*` attributes of cameras being ignored by the render delegate with Hydra 2 when the scene index producer only provides them in the primvars container of the camera prim, as MayaHydra does (e.g. the camera exposure in Maya)
 
 
 ## [7.5.4.1] (Unreleased)
