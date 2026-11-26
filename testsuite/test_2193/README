@@ -1,0 +1,14 @@
+Instances of mesh lights authored with primvars:arnold:light
+
+see #2193 and #2437
+
+A point instancer has two mesh light prototypes, authored with primvars:arnold:light: a mesh, and an Xform whose child
+mesh inherits the light primvars as written by Solaris. The mesh light is instanced with its mesh, each instance lighting
+the grey ground from the instance transform combined with the prototype's one: elongated red pools at the top,
+elongated green pools at the bottom. The prototype lights don't emit, the center of the ground stays black.
+The legacy usd reader doesn't instance these mesh lights yet, the test is skipped in the 'usd' pass (see the
+testsuite groups).
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}

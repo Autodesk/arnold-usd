@@ -792,6 +792,59 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
 }
 
 
+AtNode* HdArnoldInstancer::CreateFlattenedArnoldInstancer(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, const AtString& name)
+{
+    // As in CreateArnoldInstancer, an invisible instancer produces no instances, nor its children.
+    for (const HdArnoldInstancer* instancer = this; instancer != nullptr;) {
+        if (!instancer->_IsInstancerVisible())
+            return nullptr;
+        const SdfPath& parentId = instancer->GetParentId();
+        instancer = parentId.IsEmpty() ? nullptr
+                                       : dynamic_cast<const HdArnoldInstancer*>(
+                                             GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+    }
+    // If the sampling interval has changed we need to resample the translate, orientations and scales.
+    // Resampling also updates the parent instancers.
+    HdArnoldRenderParam* renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    if (UpdateSamplingInterval(renderParam->GetShutterRange()))
+        ResampleInstancePrimvars();
+
+    HdArnoldSampledMatrixArrayType sampleArray;
+    const int instanceCount = ComputeSampleMatrixArrayRecursiveInternal(renderDelegate, sampleArray, prototypeId);
+    if (instanceCount <= 0 || sampleArray.count == 0 || sampleArray.values.front().size() != size_t(instanceCount))
+        return nullptr;
+
+    AtNode* instancerNode = renderDelegate->CreateArnoldNode(str::instancer, name);
+    // The instances inherit the transform of the prototype, as in CreateArnoldInstancer
+    if (AiNodeLookUpUserParameter(instancerNode, str::instance_inherit_xform) == nullptr)
+        AiNodeDeclare(instancerNode, str::instance_inherit_xform, str::constantArrayBool);
+    AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
+
+    const size_t sampleCount = sampleArray.count;
+    AtArray* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
+    AtMatrix* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
+    for (size_t sample = 0; sample < sampleCount; ++sample) {
+        // Reuse the first sample if there isn't enough data in this one
+        const VtMatrix4dArray& values = sampleArray.values[sample].size() == size_t(instanceCount)
+                                            ? sampleArray.values[sample]
+                                            : sampleArray.values.front();
+        for (int i = 0; i < instanceCount; ++i)
+            ConvertValue(matrices[sample * instanceCount + i], values[i]);
+    }
+    AiArrayUnmap(matrixArray);
+    AiNodeSetArray(instancerNode, str::instance_matrix, matrixArray);
+    const float motionStart = sampleCount > 1 ? sampleArray.times.front() : 0.f;
+    const float motionEnd = sampleCount > 1 ? sampleArray.times[sampleCount - 1] : 1.f;
+    for (const auto& motionParam : {std::make_pair(str::instance_motion_start, motionStart),
+                                    std::make_pair(str::instance_motion_end, motionEnd)}) {
+        if (AiNodeLookUpUserParameter(instancerNode, motionParam.first) == nullptr)
+            AiNodeDeclare(instancerNode, motionParam.first, str::constantArrayFloat);
+        AiNodeSetArray(instancerNode, motionParam.first, AiArray(1, 1, AI_TYPE_FLOAT, motionParam.second));
+    }
+    return instancerNode;
+}
+
 void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate )
 {
 

@@ -65,6 +65,21 @@ public:
     void CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
         const SdfPath& prototypeId, std::vector<AtNode *> &instancers);
 
+    /// Creates a single Arnold instancer node rendering all the instances of a prototype, through
+    /// this instancer and its parents, with their combined matrices instead of a chain of Arnold
+    /// instancers (see CreateArnoldInstancer). The prototype nodes are not set.
+    ///
+    /// It is used for the mesh lights (see HdArnoldShape::SetInstancedLight): the Arnold instancer
+    /// makes an instance of the mesh for each instance of a mesh light, but it doesn't render the
+    /// ones of a mesh light instanced by a chain of instancers.
+    ///
+    /// @param prototypeId ID of the instanced prim.
+    /// @param name Name of the Arnold instancer node.
+    /// @return The Arnold instancer node, or nullptr if there are no instances.
+    HDARNOLD_API
+    AtNode* CreateFlattenedArnoldInstancer(
+        HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, const AtString& name);
+
 
     /// Instances the prototype node with its instance_matrix, and declares the instance primvars on it.
     ///

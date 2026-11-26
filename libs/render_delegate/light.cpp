@@ -758,11 +758,25 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             auto* instancer = dynamic_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
             if (instancer != nullptr) {
 
-                HdDirtyBits bits = HdChangeTracker::AllDirty;
                 // The Sync function seems to be called automatically for shapes, but 
-                // not for lights
-                instancer->Sync(sceneDelegate, renderParam, &bits);
-                instancer->CreateArnoldInstancer(_delegate, id, _instancers);
+                // not for lights. The parent instancers must be synced too, for their
+                // instance matrices.
+                for (HdInstancer* syncedInstancer = instancer; syncedInstancer != nullptr;) {
+                    HdDirtyBits bits = HdChangeTracker::AllDirty;
+                    syncedInstancer->Sync(sceneDelegate, renderParam, &bits);
+                    const SdfPath& parentId = syncedInstancer->GetParentId();
+                    syncedInstancer = parentId.IsEmpty() ? nullptr : renderIndex.GetInstancer(parentId);
+                }
+                if (AiNodeIs(_light, str::mesh_light)) {
+                    // The Arnold instancer doesn't render the instances of a mesh light made by a chain of
+                    // instancers, the nested instances are flattened into a single instancer (#2193).
+                    AtNode* instancerNode = instancer->CreateFlattenedArnoldInstancer(_delegate, id,
+                        AtString((instancerId.GetString() + "_prototype_" + id.GetString() + "_instancer").c_str()));
+                    if (instancerNode != nullptr)
+                        _instancers.push_back(instancerNode);
+                } else {
+                    instancer->CreateArnoldInstancer(_delegate, id, _instancers);
+                }
                 const TfToken renderTag = sceneDelegate->GetRenderTag(id);
                 float lightIntensity = AiNodeGetFlt(_light, str::intensity);
                 // For instance of lights, we need to disable the prototype light

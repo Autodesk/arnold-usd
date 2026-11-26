@@ -1,0 +1,87 @@
+#usda 1.0
+(
+    upAxis = "Y"
+    metersPerUnit = 1
+)
+
+# Instances of mesh lights authored with primvars:arnold:light, above a grey ground only lit by them.
+# Each instance must light the ground, from its own transform and the prototype's one:
+#  - top row, red: a mesh prototype, scaled along Z and moved up by its own transform
+#  - bottom row, green: an Xform prototype (as written by Solaris) whose child mesh inherits the light primvars,
+#    rotated by 90 degrees around Y and moved up
+# The prototypes themselves must not emit any light: the center of the ground stays black.
+def PointInstancer "instancer"
+{
+    point3f[] positions = [(-4, -1, -2), (4, -1, -2), (-4, -1, 2.5), (4, -1, 2.5)]
+    int[] protoIndices = [0, 0, 1, 1]
+    rel prototypes = [</instancer/Prototypes/red_lamp>, </instancer/Prototypes/green_lamp>]
+
+    def Scope "Prototypes"
+    {
+        def Mesh "red_lamp"
+        {
+            bool primvars:arnold:light = 1 (interpolation = "constant")
+            color3f primvars:arnold:light:color = (1, 0, 0) (interpolation = "constant")
+            float primvars:arnold:light:intensity = 4 (interpolation = "constant")
+            bool primvars:arnold:visibility:camera = 0 (interpolation = "constant")
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            point3f[] points = [(-0.5, 0, -0.5), (0.5, 0, -0.5), (0.5, 0, 0.5), (-0.5, 0, 0.5)]
+            float3[] extent = [(-0.5, 0, -0.5), (0.5, 0, 0.5)]
+            uniform token subdivisionScheme = "none"
+            double3 xformOp:translate = (0, 2, 0)
+            float3 xformOp:scale = (1, 1, 2)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+
+        def Xform "green_lamp"
+        {
+            bool primvars:arnold:light = 1 (interpolation = "constant")
+            color3f primvars:arnold:light:color = (0, 1, 0) (interpolation = "constant")
+            float primvars:arnold:light:intensity = 4 (interpolation = "constant")
+            bool primvars:arnold:visibility:camera = 0 (interpolation = "constant")
+            double3 xformOp:translate = (0, 2, 0)
+            float xformOp:rotateY = 90
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateY"]
+
+            def Mesh "mesh"
+            {
+                int[] faceVertexCounts = [4]
+                int[] faceVertexIndices = [0, 1, 2, 3]
+                point3f[] points = [(-0.5, 0, -1), (0.5, 0, -1), (0.5, 0, 1), (-0.5, 0, 1)]
+                float3[] extent = [(-0.5, 0, -1), (0.5, 0, 1)]
+                uniform token subdivisionScheme = "none"
+            }
+        }
+    }
+}
+
+def Mesh "ground"
+{
+    int[] faceVertexCounts = [4]
+    int[] faceVertexIndices = [0, 3, 2, 1]
+    point3f[] points = [(-10, 0, -6), (10, 0, -6), (10, 0, 6), (-10, 0, 6)]
+    float3[] extent = [(-10, 0, -6), (10, 0, 6)]
+    color3f[] primvars:displayColor = [(0.5, 0.5, 0.5)] (interpolation = "constant")
+    uniform token subdivisionScheme = "none"
+}
+
+def Camera "camera"
+{
+    float focalLength = 18
+    float horizontalAperture = 20.955
+    float verticalAperture = 15.2908
+    double3 xformOp:translate = (0, 12, 0)
+    float xformOp:rotateX = -90
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateX"]
+}
+
+def Scope "Render"
+{
+    def RenderSettings "settings"
+    {
+        rel camera = </camera>
+        int2 resolution = (160, 120)
+        int arnold:global:AA_samples = 3
+    }
+}

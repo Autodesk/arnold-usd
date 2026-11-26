@@ -129,6 +129,25 @@ public:
     /// @param force Whether to force the Arnold instancer-node path.
     void SetForceInstancerNode(bool force) { _forceInstancerNode = force; }
 
+    /// Sets the light emitting from this shape (the mesh light of a mesh), or nullptr if none.
+    ///
+    /// The light references the shape node, it isn't instanced with it: when the shape is
+    /// instanced, an Arnold instancer of the light is built too, which makes one light per
+    /// instance, each emitting from an instance of the mesh (#2193). The prototype light must
+    /// not emit: its intensity is moved to the light instancer (instance_intensity) as for the
+    /// instanced lights (see HdArnoldGenericLight). It must be called with nullptr before the
+    /// light is destroyed, as the light instancer references it.
+    ///
+    /// @param light The light referencing the shape node, or nullptr.
+    HDARNOLD_API
+    void SetInstancedLight(AtNode* light);
+
+    /// Gives its intensity back to the light set by SetInstancedLight, if it was moved to the
+    /// light instancer. It must be called before the light parameters are set, the next Sync
+    /// moving the intensity to a new light instancer.
+    HDARNOLD_API
+    void RestoreInstancedLightIntensity();
+
     /// Syncs internal data and arnold state with hydra.
     ///
     /// @param rprim Pointer to the Hydra render primitive.
@@ -214,6 +233,15 @@ protected:
         const SdfPath& id, int32_t primId, const SdfPath& cryptoObject);
     /// Resets the instance primvars declared on the shape node that aren't in instancePrimvars, and keeps these.
     void _UpdateInstancePrimvars(std::vector<TfToken>&& instancePrimvars);
+    /// Rebuilds the Arnold instancer of the light set by SetInstancedLight, with the instances of
+    /// the shape, and moves the light intensity to it. The shape instances must have been synced
+    /// first. The instances of the nested instancers are flattened into this single instancer
+    /// (see HdArnoldInstancer::CreateFlattenedArnoldInstancer).
+    void _RebuildLightInstancer(
+        HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
+        const SdfPath& instancerId);
+    /// Destroys the Arnold instancer of the light set by SetInstancedLight.
+    void _DestroyLightInstancer();
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
     std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
@@ -229,6 +257,12 @@ protected:
     HiddenBy _hiddenBy = HiddenBy::None;
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
     bool _forceInstancerNode = false;        ///< Force the instancer-node path (see SetForceInstancerNode).
+    AtNode* _instancedLight = nullptr;       ///< Light emitting from the shape (see SetInstancedLight).
+    AtNode* _lightInstancer = nullptr;       ///< Arnold instancer of _instancedLight, if the shape is instanced.
+    float _instancedLightIntensity = 1.f;    ///< Intensity of _instancedLight, when moved to _lightInstancer.
+    bool _instancedLightIntensityMoved = false; ///< True if the intensity of _instancedLight is _instancedLightIntensity.
+    bool _instancedLightChanged = false;     ///< SetInstancedLight changed the light, the instances must be rebuilt.
+    bool _lightInstancerDirty = true;        ///< _lightInstancer must be rebuilt (see _RebuildLightInstancer).
     /// Instance primvars declared on _shape by the instance_matrix instancing (see _UpdateInstancePrimvars).
     std::vector<TfToken> _instancePrimvars;
     /// Light-link categories of the instances (see HdArnoldInstancer::ComputeInstanceCategories).

@@ -1,0 +1,14 @@
+Instances of a mesh light authored with primvars:arnold:light, in nested point instancers
+
+see #2193 and #2437
+
+Same as test_2193, with a point instancer of a mesh light instanced by another point instancer. The Arnold instancer
+doesn't render the instances of a mesh light made by a chain of instancers, so the render delegate flattens the nested
+instances of mesh lights into a single instancer. The four instances light the grey ground, from the transforms of both
+point instancers and the prototype's own transform: two elongated pools at the top left and two at the bottom right.
+The legacy usd reader doesn't instance these mesh lights yet, the test is skipped in the 'usd' pass (see the
+testsuite groups).
+
+author: cyril.pichard
+
+PARAMS: {'scene': 'scene.usda'}

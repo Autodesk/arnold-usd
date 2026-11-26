@@ -566,6 +566,10 @@ void HdArnoldMesh::Sync(
                                 &nodeGraphFilters);
                             _nodeGraphLightFilters = HdArnoldLight::GetLightFilterNames(nodeGraphFilters);
                         } else {
+                            // The intensity of an instanced mesh light is carried by its instancer,
+                            // which is rebuilt with the new one (see HdArnoldShape::SetInstancedLight).
+                            if (primvarStr == "arnold:intensity")
+                                GetShape().RestoreInstancedLightIntensity();
                             HdArnoldSetConstantPrimvar(
                                 _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value,
                                 nullptr, nullptr, nullptr, _renderDelegate);
@@ -797,9 +801,12 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
         }
         AiNodeSetPtr(_geometryLight, str::mesh, (void*)GetArnoldNode());
         _renderDelegate->RegisterMeshLight(_geometryLight);
+        // The light must be instanced with the mesh (#2193)
+        GetShape().SetInstancedLight(_geometryLight);
     } else if (_geometryLight) {
         // if a geometry light was previously set and it's not there anymore, 
         // we need to unregister and clear it now
+        GetShape().SetInstancedLight(nullptr);
         _renderDelegate->UnregisterMeshLight(_geometryLight);
         _renderDelegate->DestroyArnoldNode(_geometryLight);
         _geometryLight = nullptr;    
