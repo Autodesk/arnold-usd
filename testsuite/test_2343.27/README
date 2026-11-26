@@ -5,6 +5,8 @@ re-rendered after each edit, with the HdArnoldRendererPlugin render delegate dri
 testsuite/common/interactive_usd_test.h. In the Hydra 2 mode, a scene index filter makes the camera prim look like
 the ones of MayaHydra: the camera schema only holds its own fields, and the arnold primvar is in the primvars
 container as "arnold:exposure". The render delegate must read it from there, as GetCameraParamValue doesn't find it.
+As with MayaHydra, an edit of the exposure only dirties that primvar, not the camera schema: the arnold scene index
+plugins must dirty the camera schema for the camera to be synced.
 Each render is checked in test.cpp, and the overexposed render is compared against the reference image.
 
 author: sebastien.blaineau.ortega@autodesk.com

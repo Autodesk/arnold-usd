@@ -92,13 +92,27 @@ protected:
         _SendPrimsRemoved(entries);
     }
 
-    // UsdImaging dirties the camera schema when an attribute of the camera changes, the primvars are dirtied with it
+    // UsdImaging dirties the camera schema when an attribute of the camera changes. MayaHydra only dirties the
+    // primvars when an extension attribute such as aiExposure changes, which HdDirtyBitsTranslator doesn't map to any
+    // camera dirty bit: the arnold scene index plugins must dirty the camera schema. As this test only edits the arnold
+    // exposure of the camera, its camera schema changes are replaced by the change of that primvar.
     void _PrimsDirtied(const HdSceneIndexBase&, const HdSceneIndexObserver::DirtiedPrimEntries& entries) override
     {
-        HdSceneIndexObserver::DirtiedPrimEntries dirtied(entries);
-        for (auto& entry : dirtied) {
-            if (entry.dirtyLocators.Intersects(HdCameraSchema::GetDefaultLocator()))
-                entry.dirtyLocators.insert(HdPrimvarsSchema::GetDefaultLocator());
+        static const HdDataSourceLocator exposureLocator =
+            HdPrimvarsSchema::GetDefaultLocator().Append(TfToken("arnold:exposure"));
+        HdSceneIndexObserver::DirtiedPrimEntries dirtied;
+        for (const auto& entry : entries) {
+            HdDataSourceLocatorSet locators;
+            bool cameraDirtied = false;
+            for (const HdDataSourceLocator& locator : entry.dirtyLocators) {
+                if (locator.HasPrefix(HdCameraSchema::GetDefaultLocator()))
+                    cameraDirtied = true;
+                else
+                    locators.insert(locator);
+            }
+            if (cameraDirtied)
+                locators.insert(exposureLocator);
+            dirtied.emplace_back(entry.primPath, locators);
         }
         _SendPrimsDirtied(dirtied);
     }

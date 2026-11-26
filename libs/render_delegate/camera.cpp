@@ -124,6 +124,8 @@ void HdArnoldCamera::SetClippingPlanes(HdSceneDelegate* sceneDelegate) {
 
 void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const CameraParamMap &cameraParams) {
     const auto* nodeEntry = AiNodeGetNodeEntry(_camera);
+    // These are camera schema params, which every scene index producer provides there: unlike the arnold primvars
+    // below, they don't need GetArnoldPrimvarValue.
     for (const auto& paramDesc : cameraParams) {
         const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), std::get<0>(paramDesc));
         if (paramValue.IsEmpty()) {
