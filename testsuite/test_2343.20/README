@@ -1,0 +1,16 @@
+Interactive USD edits of point instancers with deduplicated curves prototypes (HDARNOLD_GEOM_DEDUP=1)
+
+Two point instancers have identical linear curves prototypes, which the render delegate deduplicates in mode 1 (the
+default, identical point instancer prototypes share their arnold geometry). The points of one prototype are set again
+to the same values, its displayColor and points are edited, becoming different from the other one and identical
+again, and the other point instancer is removed. The stage is re-rendered after each edit. Covers the fix of the dedup
+incremental updates (#2797).
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. Edits that aren't rendered correctly yet are reported as warnings (known issues
+in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}

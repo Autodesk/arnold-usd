@@ -1,0 +1,17 @@
+Interactive USD edits of the points of meshes with many points, with the usd procedural cache_id and with the render delegate
+
+The meshes of the other interactive tests are quads with 4 points. Here two 8x8 grids (81 points each) get their
+points moved several times, then their points and topology changed together; one grid is removed and defined again.
+The render delegate gives the points to Arnold as shared arrays pointing at the USD buffers (see
+libs/render_delegate/shared_arrays.h), so each edit replaces a shared vlist, and the release callback of the
+previous one runs during a later render or at teardown. The stage is re-rendered after each edit, and each render
+must show the new positions and nothing at the old ones.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. The legacy reader doesn't delete removed prims, a known issue reported as a
+warning.
+
+author: Cyril Pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

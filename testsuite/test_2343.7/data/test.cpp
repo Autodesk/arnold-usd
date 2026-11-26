@@ -1,5 +1,6 @@
 // Interactive edits of a material network: connections added and removed, the arnold surface terminal added, moved to a
-// shader already in the network and removed, a binding to a material defined later, and the bound material removed.
+// shader already in the network, moved back to the previous one (#2571) and removed, a binding to a material defined
+// later, and the bound material removed.
 // See interactive_usd_test.h.
 #include <interactive_usd_test.h>
 
@@ -106,6 +107,16 @@ INTERACTIVE_USD_TEST_MAIN()
                     Shader(stage, kFlat).GetOutput(TfToken("out")));
             },
             ExpectColor(Color::Green), movedTerminalIssue},
+        // The previous terminal (flat) stays in the network: the root shader must still be replaced (#2571)
+        {"arnold surface terminal moved back to the standard shader, still in the network, with a blue emission",
+            [](const UsdStageRefPtr& stage) {
+                UsdShadeShader standard = Shader(stage, kStandard);
+                standard.CreateInput(TfToken("emission"), SdfValueTypeNames->Float).Set(1.f);
+                standard.CreateInput(TfToken("emission_color"), SdfValueTypeNames->Color3f)
+                    .Set(GfVec3f(0.05f, 0.05f, 0.8f));
+                ArnoldSurfaceOutput(stage).ConnectToSource(standard.GetOutput(TfToken("out")));
+            },
+            ExpectColor(Color::Blue)},
         {"arnold surface terminal removed, back to the universal one",
             [](const UsdStageRefPtr& stage) { ArnoldSurfaceOutput(stage).DisconnectSource(); },
             ExpectColor(Color::Red), movedTerminalIssue},

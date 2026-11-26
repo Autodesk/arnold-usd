@@ -1,0 +1,12 @@
+Interactive USD edits of an ArnoldOptions prim, with the render delegate
+
+A grey sphere lit by a distant light is rendered by the HdArnoldRendererPlugin render delegate driven like a Hydra host,
+with an ArnoldOptions prim whose ignore_lights attribute is enabled. It is disabled, enabled again and removed. The
+stage is re-rendered after each edit. For now, it documents known issues (in test.cpp): with hydra 1 the edits of the
+options prim aren't applied, with hydra 2 the prim isn't applied at all. Once they're fixed, it covers the fix of the
+options updates restarting the render (#2666). See testsuite/common/interactive_usd_test.h. Each render is checked in
+test.cpp, and the last render is compared against the reference image.
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
