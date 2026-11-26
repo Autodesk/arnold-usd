@@ -164,6 +164,11 @@ struct Scenario {
     bool usdOverrideDoubleSided = true;
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
+    // The time the render delegate's UsdImaging scene is evaluated at, needed for time sampled attributes and motion
+    // blur. With Hydra 1, the values are then also sampled over the shutter of the scenario camera. UsdImaging's
+    // default time if unset. Ignored by the procedural, a scenario using it should only run with the RenderDelegate
+    // method.
+    std::optional<double> time;
     std::vector<SkippedModes> skippedModes;
 };
 

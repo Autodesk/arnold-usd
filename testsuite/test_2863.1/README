@@ -1,0 +1,12 @@
+Lights are resampled over the shutter when it changes in the render delegate
+
+A red sphere light moves along X, seen by a static camera. It's rendered by the render delegate with an
+instantaneous shutter (sharp), then with a shutter of 1 frame (blurred), then instantaneous again (sharp). The
+render delegate only knows the shutter once the camera is synced, so the lights must be resynced when it changes,
+as in Solaris. Each render is checked in test.cpp, and the blurred render is compared against the reference image.
+
+See #2863 (ARNOLD-18309)
+
+author: sebastien ortega
+
+PARAMS: {'program_env': 'interactive_usd'}
