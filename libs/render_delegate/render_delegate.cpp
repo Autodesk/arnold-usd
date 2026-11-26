@@ -1079,8 +1079,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
         // Remember the scene config, so that the color manager we create when the host sends
         // its config path afterwards still uses it.
-        if (AtString(cmParamCStr) == str::config && value.IsHolding<std::string>())
-            _sceneOcioConfigPath = value.UncheckedGet<std::string>();
+        if (AtString(cmParamCStr) == str::config)
+            _sceneOcioConfigPath = VtValueGetString(value);
         AtNode* colorManager = _GetOrCreateColorManager();
         if (colorManager != nullptr) {
             AtString cmParamStr(cmParamCStr);

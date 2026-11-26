@@ -25,5 +25,6 @@ def Scope "Render"
         uniform token renderingColorSpace = "lin_b"
         int2 resolution = (16, 16)
         string arnold:global:color_space_linear = "lin_a"
+        string arnold:global:color_space_narrow = "lin_c"
     }
 }

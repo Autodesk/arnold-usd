@@ -163,6 +163,21 @@ void _MergeAovShaders(AtNode* options, const std::vector<AtNode*>& newShaders)
         AiArrayConvert(merged.size(), 1, AI_TYPE_NODE, merged.data()));
 }
 
+/// Returns the namespaced settings _UpdateRenderingColorSpace reads: the arnold:global color
+/// spaces and the arnold:color_manager settings.
+VtDictionary _GetColorManagerSettings(VtDictionary const& settings)
+{
+    VtDictionary colorManagerSettings;
+    for (auto const& pair : settings) {
+        const std::string& name = pair.first;
+        if (name == "arnold:global:color_space_linear" || name == "arnold:global:color_space_narrow" ||
+            TfStringStartsWith(name, "arnold:color_manager:")) {
+            colorManagerSettings[name] = pair.second;
+        }
+    }
+    return colorManagerSettings;
+}
+
 } // end anonymous namespace
 
 // ----------------------------------------------------------------------------
@@ -558,8 +573,17 @@ void HdArnoldRenderSettings::_Sync(
     }
 
     // The color manager also reads the arnold:global color spaces and the arnold:color_manager
-    // settings, which only dirty the namespaced settings.
+    // settings, which only dirty the namespaced settings. We only update it when one of them
+    // changed, not on every edit of the other namespaced settings.
+    bool updateColorManager = (*dirtyBits & DirtyRenderingColorSpace) != 0;
     if (*dirtyBits & (DirtyRenderingColorSpace | HdRenderSettings::DirtyNamespacedSettings)) {
+        VtDictionary colorManagerSettings = _GetColorManagerSettings(GetNamespacedSettings());
+        if (colorManagerSettings != _colorManagerSettings) {
+            _colorManagerSettings = std::move(colorManagerSettings);
+            updateColorManager = true;
+        }
+    }
+    if (updateColorManager) {
         paramInterrupt.Interrupt();
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }
