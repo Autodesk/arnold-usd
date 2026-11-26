@@ -376,6 +376,8 @@ public:
             info.stage = stage;
             const UsdImagingSceneIndices sceneIndices = UsdImagingCreateSceneIndices(info);
             _stageSceneIndex = sceneIndices.stageSceneIndex;
+            if (scenario.time)
+                _stageSceneIndex->SetTime(UsdTimeCode(*scenario.time));
             _sceneIndex = scenario.delegateSceneIndexFilter
                 ? scenario.delegateSceneIndexFilter(sceneIndices.finalSceneIndex)
                 : sceneIndices.finalSceneIndex;
@@ -385,6 +387,12 @@ public:
         {
             _imagingDelegate = std::make_unique<UsdImagingDelegate>(_renderIndex, SdfPath::AbsoluteRootPath());
             _imagingDelegate->Populate(stage->GetPseudoRoot());
+            if (scenario.time) {
+                _imagingDelegate->SetTime(UsdTimeCode(*scenario.time));
+                // The UsdImagingDelegate samples the time varying values over the shutter of this camera, as set by
+                // hosts like usdview. Without it, it only samples the current time.
+                _imagingDelegate->SetCameraForSampling(scenario.camera);
+            }
         }
 
         const SdfPath bufferPath("/interactive_usd_test/color");

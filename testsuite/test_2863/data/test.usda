@@ -1,0 +1,78 @@
+#usda 1.0
+(
+    endTimeCode = 100
+    startTimeCode = -100
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 4
+        rel camera = </rig/camera>
+        bool instantaneousShutter = 0
+        rel products = None
+        int2 resolution = (160, 120)
+    }
+}
+
+# The camera and the sphere light move together, so the light must look still in the render.
+# A static sphere is blurred by the camera motion, showing that motion blur is enabled.
+def Xform "rig"
+{
+    double3 xformOp:translate.timeSamples = {
+        -100: (-100, 0, 0),
+        100: (100, 0, 0),
+    }
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+
+    def Camera "camera"
+    {
+        float focalLength = 35
+        float horizontalAperture = 36
+        float verticalAperture = 27
+        token projection = "perspective"
+        double shutter:open = -0.25
+        double shutter:close = 0.25
+        double3 xformOp:translate = (0, 0, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def SphereLight "light"
+    {
+        color3f inputs:color = (1, 0, 0)
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:radius = 1
+        float primvars:arnold:camera = 1
+        double3 xformOp:translate = (0, 1.2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+
+def Sphere "static_sphere" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
+{
+    double radius = 1
+    rel material:binding = </mtl/flat_white>
+    double3 xformOp:translate = (0, -1.2, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def Scope "mtl"
+{
+    def Material "flat_white"
+    {
+        token outputs:arnold:surface.connect = </mtl/flat_white/flat.outputs:out>
+
+        def Shader "flat"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (1, 1, 1)
+            token outputs:out
+        }
+    }
+}

@@ -1,0 +1,15 @@
+Sphere light moving with the camera must not be motion blurred
+
+The render delegate set the light transform with a single key, without sampling it over the
+shutter interval like the other primitives do. A light moving with the camera was then static
+in the scene while the camera moved, and it looked motion blurred in the render. The legacy
+USD reader already sampled the light transform over the shutter.
+
+The camera and the red sphere light are parented under an animated Xform, so the light must look
+sharp. The white sphere doesn't move, so it's blurred by the camera motion.
+
+See #2863 (ARNOLD-18309)
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}

@@ -291,6 +291,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
     // target ArnoldNodeGraph prims, which must therefore appear before light types.
     // Scene-index dependency forwarding dirties lights when graphs change but does
     // not reorder this pass.
+    // A new light type with its own transform must also be added to _ShutterSampledLightTypes.
     static const TfTokenVector r{HdPrimTypeTokens->camera,
                                  HdPrimTypeTokens->coordSys,
                                  HdPrimTypeTokens->material,
@@ -309,6 +310,17 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  _tokens->ArnoldOptions,
                                  HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
+    return r;
+}
+
+// The light Sprim types whose arnold light samples its own transform over the shutter, see
+// HdArnoldGenericLight::Sync. They are resynced when the shutter changes (HasPendingChanges). The mesh and
+// geometry lights aren't listed: the arnold mesh_light uses the transform of its mesh, an Rprim.
+inline const TfTokenVector& _ShutterSampledLightTypes()
+{
+    static const TfTokenVector r{HdPrimTypeTokens->distantLight, HdPrimTypeTokens->sphereLight,
+                                 HdPrimTypeTokens->diskLight,    HdPrimTypeTokens->rectLight,
+                                 HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight};
     return r;
 }
 
@@ -2198,7 +2210,8 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
 
     // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
     // and deformation, so we need to force re-syncing all the prims.
-    if (_renderParam->UpdateShutter(shutter)) {
+    const bool shutterChanged = _renderParam->UpdateShutter(shutter);
+    if (shutterChanged) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
         // If the shutter has changed, we also need to update the render camera
@@ -2300,6 +2313,38 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
             changeTracker.MarkSprimDirty(source, bits);
         }
     };
+    // The lights sample their transform over the shutter interval too. They are Sprims, so they
+    // aren't dirtied with the Rprims above, and we have to resync their transform separately.
+    if (shutterChanged) {
+#ifdef ENABLE_SCENE_INDEX
+        // Like for the Rprims, all the lights are dirtied with a single system message
+        TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash> dirtyLights;
+#endif
+        for (const auto& lightType : _ShutterSampledLightTypes()) {
+            for (const SdfPath& lightId : renderIndex->GetSprimSubtree(lightType, SdfPath::AbsoluteRootPath())) {
+                changes = true;
+#ifdef ENABLE_SCENE_INDEX
+                if (terminalSceneIndex) {
+                    HdDataSourceLocatorSet locators;
+                    HdDirtyBitsTranslator::SprimDirtyBitsToLocatorSet(
+                        terminalSceneIndex->GetPrim(lightId).primType, HdLight::DirtyTransform, &locators);
+                    if (!locators.IsEmpty())
+                        dirtyLights.insert({lightId, locators});
+                    continue;
+                }
+#endif
+                changeTracker.MarkSprimDirty(lightId, HdLight::DirtyTransform);
+            }
+        }
+#ifdef ENABLE_SCENE_INDEX
+        if (!dirtyLights.empty()) {
+            auto dataSource =
+                HdRetainedTypedSampledDataSource<TfHashMap<SdfPath, HdDataSourceLocatorSet, SdfPath::Hash>>::New(
+                    dirtyLights);
+            terminalSceneIndex->SystemMessage(str::t_ArnoldMarkPrimsDirty, dataSource);
+        }
+#endif
+    }
     // First let's process all the dependencies that were removed.
     // We need to remove it from all our maps, and mark all the 
     // sources as being dirty, so that they can update their 
