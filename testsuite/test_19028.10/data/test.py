@@ -9,8 +9,8 @@ import sys
 
 sys.path.insert(0, os.environ['ARNOLD_TESTSUITE_COMMON'])
 from interactive_engine_test import (  # noqa: E402
-    BindMaterial, Color, DefineCamera, DefineDistantLight, DefinePreviewMaterial, ExpectColor, Run, Scenario,
-    Step)
+    DELEGATE_HYDRA1, DELEGATE_HYDRA2, BindMaterial, Color, DefineCamera, DefineDistantLight, DefinePreviewMaterial,
+    ExpectColor, KnownIssue, Run, Scenario, Step)
 
 SPHERE = '/World/sphere'
 LIGHT = '/World/light'
@@ -97,6 +97,17 @@ def replace_by_shader_imager(stage):
     stage.RemovePrim(EXPOSURE)
 
 
+# With hydra 1, the ArnoldNodeGraph adapter isn't supported by the render index of the engine: it reports that the
+# ArnoldUsd rprim type isn't supported ("Selected hydra renderer doesn't support prim type 'ArnoldNodeGraph'"), though
+# the render delegate has it. The imager graph is never synced, so the image stays as without imagers. The steps
+# expecting red pass anyway, they don't tell whether their edit is applied.
+HYDRA1_NO_IMAGER_GRAPH = KnownIssue(
+    DELEGATE_HYDRA1, 'hydra 1 ignores the ArnoldNodeGraph prim of the imagers: its adapter is reported as unsupported')
+# With hydra 2, the imagers set by arnold:global:imager are still applied once the setting is cleared
+HYDRA2_IMAGER_NOT_CLEARED = KnownIssue(
+    DELEGATE_HYDRA2, 'hydra 2 keeps the imagers once the arnold:global:imager setting is cleared')
+
+
 def set_flat_color(stage):
     from pxr import Gf, UsdShade
     UsdShade.Shader.Get(stage, FLAT).GetInput('color').Set(Gf.Vec3f(0.05, 0.8, 0.05))
@@ -105,17 +116,19 @@ def set_flat_color(stage):
 scenario = Scenario(create_stage, [
     Step('initial render, with an exposure imager of 0', render_settings={'arnold:global:imager': IMAGER},
          check=ExpectColor(Color.RED)),
-    Step('exposure of -10', edit=set_exposure(-10.0), check=ExpectColor(Color.BLACK)),
+    Step('exposure of -10', edit=set_exposure(-10.0), check=ExpectColor(Color.BLACK),
+         known_issues=[HYDRA1_NO_IMAGER_GRAPH]),
     Step('exposure back to 0 during the render', edit=set_light_intensity(2.5), during_render=set_exposure(0.0),
          check=ExpectColor(Color.RED)),
     Step('imager_color_correct inserted as the input of the exposure imager', edit=insert_color_correct,
-         check=ExpectColor(Color.GREEN)),
+         check=ExpectColor(Color.GREEN), known_issues=[HYDRA1_NO_IMAGER_GRAPH]),
     Step('imager_color_correct removed', edit=remove_color_correct, check=ExpectColor(Color.RED)),
     Step('root imager replaced by an imager_shader of a blue flat shader', edit=replace_by_shader_imager,
-         check=ExpectColor(Color.BLUE)),
+         check=ExpectColor(Color.BLUE), known_issues=[HYDRA1_NO_IMAGER_GRAPH]),
     Step('flat shader of the imager_shader made green during the render', edit=set_light_intensity(3.0),
-         during_render=set_flat_color, check=ExpectColor(Color.GREEN)),
-    Step('imager setting cleared', render_settings={'arnold:global:imager': ''}, check=ExpectColor(Color.RED)),
+         during_render=set_flat_color, check=ExpectColor(Color.GREEN), known_issues=[HYDRA1_NO_IMAGER_GRAPH]),
+    Step('imager setting cleared', render_settings={'arnold:global:imager': ''}, check=ExpectColor(Color.RED),
+         known_issues=[HYDRA2_IMAGER_NOT_CLEARED]),
 ])
 
 sys.exit(Run(scenario))
