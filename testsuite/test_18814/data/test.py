@@ -1,5 +1,6 @@
 import os
 import re
+import subprocess
 import sys
 
 # Regression test for ARNOLD-18814.
@@ -65,9 +66,10 @@ def getColorSpaces(scene):
     '''Loads the scene with kick and returns the color_space_linear and color_space_narrow of the
     resaved color manager, or None'''
     resaved = os.path.splitext(scene)[0] + '.ass'
-    cmd = '{} {} -resave {} -r 16 16 -dw -dp -v 2 2>&1'.format(kick, scene, resaved)
-    print(cmd)
-    print(os.popen(cmd).read())
+    cmd = [kick, scene, '-resave', resaved, '-r', '16', '16', '-dw', '-dp', '-v', '2']
+    print(' '.join(cmd))
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    print(result.stdout)
     if not os.path.exists(resaved):
         return None
     with open(resaved, 'r') as f:
