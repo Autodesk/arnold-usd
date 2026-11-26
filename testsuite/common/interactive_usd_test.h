@@ -165,6 +165,10 @@ struct Scenario {
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
+    // Also installs the usd procedural for the RenderDelegate method, as hosts load it: the render delegate only
+    // supports the ArnoldUsd rprim type when its node entry exists, which e.g. the ArnoldOptions adapter checks. It's
+    // the procedural the Procedural method uses, the SDK's one if it isn't built here (BUILD_PROCEDURAL=0).
+    bool usdProceduralWithDelegate = false;
 };
 
 // Runs the scenario with all its methods, returning the program exit code

@@ -27,6 +27,20 @@ Check ExpectPartialCoverage(float u, float v)
     };
 }
 
+// Opaque pixels, whether the surface is lit or not
+Check ExpectOpaque(float u, float v)
+{
+    return [u, v](const Image& image) -> std::string {
+        const float alpha = image.Average(u, v)[3];
+        if (alpha > 0.9f)
+            return std::string();
+        char buffer[128];
+        snprintf(buffer, sizeof(buffer), "expected an opaque surface at (%.2f, %.2f), got an alpha of %.4f", u, v,
+            alpha);
+        return buffer;
+    };
+}
+
 } // namespace
 
 INTERACTIVE_USD_TEST_MAIN()
@@ -37,6 +51,13 @@ INTERACTIVE_USD_TEST_MAIN()
     // orthographic camera of horizontal aperture 30
     const GfVec2f orthoProbe(0.86f, 0.5f);
     const GfVec2f blurProbe(0.93f, 0.5f);
+    // Inside and outside the top of the sphere, with the orthographic cameras of 7.2x5.4 and 3x2.25 units
+    const GfVec2f orthoTopOutside(0.5f, 0.5f - 1.1f / 5.4f);
+    const GfVec2f smallOrthoTopInside(0.5f, 0.5f - 0.9f / 2.25f);
+    const GfVec2f smallOrthoTopOutside(0.5f, 0.5f - 1.07f / 2.25f);
+    const std::vector<KnownIssue> orthoHeightIssue = {{AnyDelegate,
+        "the vertical extent of the orthographic screen window is scaled by the image aspect ratio twice, the sphere "
+        "is rendered 4/3 taller than wide"}};
 
     Scenario scenario;
     scenario.methods = RenderDelegate;
@@ -74,8 +95,16 @@ INTERACTIVE_USD_TEST_MAIN()
                 camera(stage).CreateProjectionAttr().Set(UsdGeomTokens->orthographic);
             },
             AllOf({ExpectColor(Color::Grey), ExpectColor(Color::Empty, probe)})},
+        // The same image, checked separately for the vertical extent of the screen window (#2666)
+        {"no change, the top of the sphere at the height of the 7.2x5.4 units orthographic window", nullptr,
+            AllOf({ExpectOpaque(0.5f, 0.5f - 0.9f / 5.4f), ExpectColor(Color::Empty, orthoTopOutside)}),
+            orthoHeightIssue},
         {"orthographic apertures change, 3 units wide", [=](const UsdStageRefPtr& stage) { setApertures(stage, 30.f); },
             AllOf({ExpectColor(Color::Grey), ExpectColor(Color::Grey, probe), ExpectColor(Color::Empty, orthoProbe)})},
+        {"no change, the top of the sphere at the height of the 3x2.25 units orthographic window", nullptr,
+            AllOf({ExpectOpaque(smallOrthoTopInside[0], smallOrthoTopInside[1]),
+                ExpectColor(Color::Empty, smallOrthoTopOutside)}),
+            orthoHeightIssue},
         {"projection change back to perspective",
             [=](const UsdStageRefPtr& stage) { camera(stage).GetProjectionAttr().Set(UsdGeomTokens->perspective); },
             AllOf({ExpectColor(Color::Grey), ExpectColor(Color::Grey, orthoProbe), ExpectColor(Color::Empty, blurProbe)})},

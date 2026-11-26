@@ -1,0 +1,14 @@
+Interactive USD edits of an ArnoldGinstance prim
+
+An ArnoldGinstance prim instances a red cube placed out of the frame. The ginstance is moved, its inherit_xform
+parameter is enabled and disabled, its visibility is set to 0 and restored, and it instances another cube. The stage
+is re-rendered after each edit. Covers the fix of the interactive changes of ArnoldGinstance prims (#2532).
+The scenario runs with the "usd" procedural (hydra reader) reading the stage through its cache_id in an interactive
+render session, and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the procedural render of the
+"visibility restored" step is compared against the reference image. Edits that aren't rendered correctly yet are
+reported as warnings (known issues in test.cpp).
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {'program_env': 'interactive_usd'}
