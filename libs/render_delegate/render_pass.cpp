@@ -605,6 +605,26 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     const auto projMtx = renderPassState->GetProjectionMatrix();
     const auto viewMtx = renderPassState->GetWorldToViewMatrix();
+    {
+        // Stats only: reported through GetRenderStats() for the EXR headers written by husk.
+        // The headers follow Houdini's coordinate system convention so tools that read them
+        // (e.g. Houdini's ML gsplat preprocessing) work unchanged: camera space looks down +Z,
+        // whereas Hydra's view matrix looks down -Z, and the z column of worldToNDC is the
+        // camera depth measured from the near plane instead of Hydra's clip-space depth.
+        const GfRange1f clipRange = camera ? camera->GetClippingRange() : GfRange1f(0.0f, 0.0f);
+        const double clipNear = static_cast<double>(clipRange.GetMin());
+        const double clipFar = static_cast<double>(clipRange.GetMax());
+
+        GfMatrix4d zFlip(1.0);
+        zFlip[2][2] = -1.0;
+        const GfMatrix4d worldToCamera = viewMtx * zFlip;
+        GfMatrix4d worldToNDC = viewMtx * projMtx;
+        for (int row = 0; row < 4; ++row) {
+            worldToNDC[row][2] = worldToCamera[row][2];
+        }
+        worldToNDC[3][2] -= clipNear;
+        _renderDelegate->SetStatsCamera(worldToCamera, worldToNDC, clipNear, clipFar);
+    }
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
