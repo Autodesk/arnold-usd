@@ -1074,6 +1074,9 @@ private:
     std::string _profileFile;
     /// OCIO config file path set by the host application, see GetOcioConfigPath.
     std::string _ocioConfigPath;
+    /// OCIO config file path set by the scene (color_manager:config), which takes precedence
+    /// over _ocioConfigPath.
+    std::string _sceneOcioConfigPath;
     /// Color spaces received through the render settings, kept so that they can be applied
     /// to a color manager that is created after them.
     std::string _colorSpaceLinear;

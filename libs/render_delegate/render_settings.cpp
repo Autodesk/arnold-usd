@@ -268,6 +268,9 @@ void HdArnoldRenderSettings::_UpdateArnoldOptions(HdSceneDelegate* sceneDelegate
                 AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), nameStr);
 
             if (!paramEntry) {
+                // The color spaces are set on the color manager in _UpdateRenderingColorSpace
+                if (nameStr == str::color_space_linear || nameStr == str::color_space_narrow)
+                    continue;
                 // Declare user data
                 TF_WARN("Unknown Arnold option: %s", name.c_str());
                 continue;
@@ -402,8 +405,22 @@ void HdArnoldRenderSettings::_UpdateRenderingColorSpace(HdSceneDelegate* sceneDe
             }
         }
 
-        // Set color manager parameters from arnold:color_manager prefixed settings
+        // The arnold:global color spaces override renderingColorSpace, as in the usd procedural
         const VtDictionary& namespacedSettings = GetNamespacedSettings();
+        static const std::string colorSpaceLinearName("arnold:global:color_space_linear");
+        static const std::string colorSpaceNarrowName("arnold:global:color_space_narrow");
+        const auto colorSpaceLinearIt = namespacedSettings.find(colorSpaceLinearName);
+        if (colorSpaceLinearIt != namespacedSettings.end()) {
+            AiNodeSetStr(colorManager, str::color_space_linear,
+                AtString(VtValueGetString(colorSpaceLinearIt->second).c_str()));
+        }
+        const auto colorSpaceNarrowIt = namespacedSettings.find(colorSpaceNarrowName);
+        if (colorSpaceNarrowIt != namespacedSettings.end()) {
+            AiNodeSetStr(colorManager, str::color_space_narrow,
+                AtString(VtValueGetString(colorSpaceNarrowIt->second).c_str()));
+        }
+
+        // Set color manager parameters from arnold:color_manager prefixed settings
         const std::string colorManagerPrefix = "arnold:color_manager:";
         
         for (const auto& pair : namespacedSettings) {
@@ -540,7 +557,9 @@ void HdArnoldRenderSettings::_Sync(
         _UpdateRenderProducts(sceneDelegate, param);
     }
 
-    if (*dirtyBits & DirtyRenderingColorSpace) {
+    // The color manager also reads the arnold:global color spaces and the arnold:color_manager
+    // settings, which only dirty the namespaced settings.
+    if (*dirtyBits & (DirtyRenderingColorSpace | HdRenderSettings::DirtyNamespacedSettings)) {
         paramInterrupt.Interrupt();
         _UpdateRenderingColorSpace(sceneDelegate, param);
     }

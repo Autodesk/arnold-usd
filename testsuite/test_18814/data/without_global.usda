@@ -1,0 +1,28 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def Sphere "sphere1"
+{
+    double radius = 1
+}
+
+def Camera "camera1"
+{
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 8, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 1
+        rel camera = </camera1>
+        uniform token renderingColorSpace = "lin_b"
+        int2 resolution = (16, 16)
+    }
+}

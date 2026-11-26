@@ -766,9 +766,11 @@ AtNode* HdArnoldRenderDelegate::_GetOrCreateColorManager()
         return colorManager;
 
     // The OCIO environment variable takes precedence over everything else, then comes the
-    // config path the host application gave us through the render settings (#2730).
+    // config set by the scene, and finally the config path the host application gave us
+    // through the render settings (#2730).
     const char* ocio_path = std::getenv("OCIO");
-    const AtString config(ocio_path ? ocio_path : _ocioConfigPath.c_str());
+    const AtString config(ocio_path ? ocio_path
+        : (!_sceneOcioConfigPath.empty() ? _sceneOcioConfigPath.c_str() : _ocioConfigPath.c_str()));
     if (!config.empty()) {
         // The reading paths create the same color manager when they read the render settings
         // prim, we must not end up with two of them
@@ -841,14 +843,21 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     // environment variable is not set, as it always takes precedence.
     if (_key == _tokens->ocioConfigPath) {
         if (_value.IsHolding<std::string>()) {
+            const std::string previousConfigPath = _ocioConfigPath;
             _ocioConfigPath = _value.UncheckedGet<std::string>();
             if (!_ocioConfigPath.empty() && std::getenv("OCIO") == nullptr) {
                 // Create the color manager right away, the color spaces might never be set.
                 AtNode* colorManager = _GetOrCreateColorManager();
                 // The color manager could already exist, in which case the above returned it
-                // as-is and we still need to apply the config we just received.
-                if (colorManager != nullptr && AiNodeIs(colorManager, str::color_manager_ocio))
-                    AiNodeSetStr(colorManager, str::config, AtString(_ocioConfigPath.c_str()));
+                // as-is and we still need to apply the config we just received. A config
+                // authored in the scene (color_manager:config) takes precedence over the host
+                // one, as in the usd procedural, so we only replace an empty config or the
+                // one the host gave us before.
+                if (colorManager != nullptr && AiNodeIs(colorManager, str::color_manager_ocio)) {
+                    const AtString currentConfig = AiNodeGetStr(colorManager, str::config);
+                    if (currentConfig.empty() || previousConfigPath == currentConfig.c_str())
+                        AiNodeSetStr(colorManager, str::config, AtString(_ocioConfigPath.c_str()));
+                }
             }
         }
         return;
@@ -1068,6 +1077,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         }
     } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
         const char* cmParamCStr = key.GetText() + _tokens->colorManagerNamespace.GetString().size();
+        // Remember the scene config, so that the color manager we create when the host sends
+        // its config path afterwards still uses it.
+        if (AtString(cmParamCStr) == str::config && value.IsHolding<std::string>())
+            _sceneOcioConfigPath = value.UncheckedGet<std::string>();
         AtNode* colorManager = _GetOrCreateColorManager();
         if (colorManager != nullptr) {
             AtString cmParamStr(cmParamCStr);
