@@ -142,6 +142,9 @@ private:
     HdArnoldRenderDelegate* _renderDelegate = nullptr;
     SdfPath _hydraCameraPath;
     GfVec2f _hydraCameraShutter = GfVec2f(0.f, 0.f);
+    /// The namespaced settings read by _UpdateRenderingColorSpace when it last ran, so that
+    /// editing other namespaced settings doesn't update the color manager.
+    VtDictionary _colorManagerSettings;
     // Data window last applied to the options, used to avoid needless render interruptions
     GfVec4f _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
 };

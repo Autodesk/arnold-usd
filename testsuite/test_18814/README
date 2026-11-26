@@ -1,0 +1,14 @@
+Authored arnold:global color spaces override renderingColorSpace with Hydra 2
+
+The render settings prim of with_global.usda authors renderingColorSpace = "lin_b",
+arnold:global:color_space_linear = "lin_a" and arnold:global:color_space_narrow = "lin_c". As in the
+usd procedural, the arnold attributes must be used, so the color manager gets "lin_a" and "lin_c" in
+every pass. Before the fix, the Hydra 2 render settings prim dropped the arnold:global color spaces as
+unknown options, and "lin_b" was used. without_global.usda only authors renderingColorSpace, which
+must then be used.
+
+See ARNOLD-18814
+
+author: sebastien.blaineau.ortega@autodesk.com
+
+PARAMS: {}
