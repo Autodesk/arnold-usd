@@ -37,6 +37,7 @@
 #include <pxr/pxr.h>
 #include "api.h"
 
+#include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/vt/array.h>
 
 #include <pxr/imaging/hd/light.h>
@@ -177,6 +178,14 @@ public:
     /// @return VtDictionary holding the render stats.
     HDARNOLD_API
     VtDictionary GetRenderStats() const override;
+    /// Stores the camera matrices and clipping range reported in the render stats.
+    ///
+    /// @param worldToCamera World to camera (view) matrix.
+    /// @param worldToNDC World to NDC matrix (view composed with projection).
+    /// @param clipNear Camera near clipping distance.
+    /// @param clipFar Camera far clipping distance.
+    HDARNOLD_API
+    void SetStatsCamera(const GfMatrix4d& worldToCamera, const GfMatrix4d& worldToNDC, double clipNear, double clipFar);
     /// Gets the Resource Registry.
     ///
     /// @return Pointer to the shared HdResourceRegistry.
@@ -1136,6 +1145,13 @@ private:
     std::mutex _deferredFunctionCallsMutex;
     std::vector<std::function<void()>> _deferredFunctionCalls;
     HydraArnoldReader *_reader = nullptr;
+
+    // Camera values reported through GetRenderStats() (used by husk for EXR headers).
+    GfMatrix4d _statsWorldToCamera{1.0};
+    GfMatrix4d _statsWorldToNDC{1.0};
+    double _statsClipNear = 0.0;
+    double _statsClipFar = 0.0;
+    bool _hasStatsCamera = false;
 
 #if defined(HOUDINI_LOGGER_BUILD)
     std::unique_ptr<HdArnoldHoudiniLogger> _houdiniLogger;

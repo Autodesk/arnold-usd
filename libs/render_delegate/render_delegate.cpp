@@ -99,6 +99,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
+    (world_to_camera)
+    (world_to_screen)
+    (camera_near_far)
     (renderProgressAnnotation)
     (delegateRenderProducts)
     (orderedVars)
@@ -1319,6 +1322,16 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
     return ret;
 }
 
+void HdArnoldRenderDelegate::SetStatsCamera(
+    const GfMatrix4d& worldToCamera, const GfMatrix4d& worldToNDC, double clipNear, double clipFar)
+{
+    _statsWorldToCamera = worldToCamera;
+    _statsWorldToNDC = worldToNDC;
+    _statsClipNear = clipNear;
+    _statsClipFar = clipFar;
+    _hasStatsCamera = true;
+}
+
 VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 {
     VtDictionary stats;
@@ -1329,6 +1342,12 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 
     const double elapsed = _renderParam->GetElapsedRenderTime() / 1000.0;
     stats[_tokens->totalClockTime] = VtValue(elapsed);
+
+    if (_hasStatsCamera) {
+        stats[_tokens->world_to_camera] = VtValue(_statsWorldToCamera);
+        stats[_tokens->world_to_screen] = VtValue(_statsWorldToNDC);
+        stats[_tokens->camera_near_far] = VtValue(GfVec2d(_statsClipNear, _statsClipFar));
+    }
 
     std::string renderStatus = _renderParam->GetRenderStatusString();
     if(!renderStatus.empty())
