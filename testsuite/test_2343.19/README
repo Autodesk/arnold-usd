@@ -1,0 +1,21 @@
+Interactive USD edits of the points of meshes sharing their points, subdivided, instanced or large
+
+Two meshes are given the same points array, so they use one USD buffer (and the render delegate makes the second a
+duplicate of the first); a subdivided mesh, the prototype of a point instancer and a mesh of 65536 points also get
+their points edited. The steps:
+- the points of one of the shared meshes changed, then the other given the same new points;
+- one of the shared meshes removed while the other still uses the points, then the points of the other changed;
+- the subdivided mesh's points moved, then its subdivision turned off and its points moved in the same edit;
+- the points of the instancer's prototype changed;
+- the subdivided mesh replaced by a large grid, whose points are then moved.
+The stage is re-rendered after each edit, and each render must show the new positions and nothing at the old ones.
+The scenario runs with the "usd" procedural reading the stage through its cache_id in an interactive render session,
+and with the HdArnoldRendererPlugin render delegate driven like a Hydra host, see
+testsuite/common/interactive_usd_test.h. Each render is checked in test.cpp, and the last procedural render is
+compared against the reference image. The legacy reader doesn't delete removed prims, a known issue reported as a
+warning: the "usd" pass has its own reference image (ref/reference.usd.tif), where the removed mesh is still there and the
+prototype itself is rendered between the instances.
+
+author: Cyril Pichard
+
+PARAMS: {'program_env': 'interactive_usd'}

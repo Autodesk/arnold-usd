@@ -21,9 +21,16 @@ one by default), saved as testrender.tif to be compared against the reference im
 """
 import array
 import ctypes
+import faulthandler
 import os
 import sys
 import time
+
+# Arnold is loaded before the tests import any pxr module, even at module level (e.g. CameraUtil to build framings).
+# On Windows, AiBegin crashed reading a null pointer in a test that imported pxr before arnold. pxr adds every folder of
+# the PATH as a DLL directory when it loads its libraries, so USD loaded first can resolve DLLs from unrelated folders
+# of the PATH, e.g. an older C++ runtime (msvcp140.dll); which DLL made AiBegin crash wasn't found.
+import arnold  # noqa: E402, F401
 
 # Modes, depending on the testsuite pass. The bits are the same as in interactive_usd_test.h.
 DELEGATE_HYDRA1 = 1 << 3  # "usd" and "hydra" passes
@@ -542,6 +549,8 @@ def Run(scenario):
     """Runs the scenario in the current mode, returning the program exit code"""
     global _success
     _success = True
+    # A crash (e.g. an access violation in the render delegate) prints the python stack of every thread in the test log
+    faulthandler.enable()
     dll_directories = _SetupDllDirectories()  # noqa: F841, kept until the end
     # libai must be loaded before the bundle, which has no rpath to it
     import arnold

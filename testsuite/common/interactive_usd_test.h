@@ -37,6 +37,9 @@
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdShade/material.h>
+#ifdef ENABLE_SCENE_INDEX
+#include <pxr/imaging/hd/sceneIndex.h>
+#endif
 
 #include <functional>
 #include <optional>
@@ -165,6 +168,15 @@ struct Scenario {
     // The step whose render is compared against the reference image, the last one if negative
     int referenceStep = -1;
     std::vector<SkippedModes> skippedModes;
+    // Also installs the usd procedural for the RenderDelegate method, as hosts load it: the render delegate only
+    // supports the ArnoldUsd rprim type when its node entry exists, which e.g. the ArnoldOptions adapter checks. It's
+    // the procedural the Procedural method uses, the SDK's one if it isn't built here (BUILD_PROCEDURAL=0).
+    bool usdProceduralWithDelegate = false;
+#ifdef ENABLE_SCENE_INDEX
+    // Filters the UsdImaging scene index before the render index gets it, in the DelegateHydra2 mode only, e.g. to
+    // reproduce the prims of another scene index producer than UsdImaging
+    std::function<HdSceneIndexBaseRefPtr(const HdSceneIndexBaseRefPtr&)> delegateSceneIndexFilter;
+#endif
 };
 
 // Runs the scenario with all its methods, returning the program exit code

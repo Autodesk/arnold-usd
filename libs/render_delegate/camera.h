@@ -25,6 +25,9 @@
 
 #include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/cameraUtil/conformWindow.h>
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+#include <pxr/imaging/hd/dataSource.h>
+#endif
 
 #include "render_delegate.h"
 
@@ -123,6 +126,22 @@ protected:
 
     /// @brief Writes the screen window of a perspective camera, conformed to the host if SetHostConform enabled it
     void WriteScreenWindow();
+
+    /// @brief Returns the value of an arnold primvar of the camera
+    ///
+    /// value is what the scene delegate returned for name. With Hydra 2, GetCameraParamValue and Get only look into
+    /// the camera schema. UsdImaging answers there for any attribute of the camera prim, but other scene index
+    /// producers (e.g. MayaHydra) only provide the primvars in the primvars container. When value is empty, the
+    /// primvar is read from there instead, without the "primvars:" namespace.
+    /// @param name The primvar name, e.g. "primvars:arnold:exposure"
+    /// @param value The value returned by the scene delegate for name
+    /// @return value if it's not empty, the value of the primvar in the primvars container otherwise
+    VtValue GetArnoldPrimvarValue(const TfToken& name, const VtValue& value) const;
+
+#ifdef ENABLE_SCENE_INDEX // Hydra2
+    /// Data source of the camera prim in the terminal scene index, only set during Sync.
+    HdContainerDataSourceHandle _syncPrimDs;
+#endif
 
     AtNode* _camera = nullptr; ///< Arnold camera node.
     HdArnoldRenderDelegate *_delegate = nullptr;
