@@ -25,6 +25,7 @@
 - [usd#2845](https://github.com/Autodesk/arnold-usd/issues/2845) - Support the USD color space of gaussian splats 
 - [usd#2835](https://github.com/Autodesk/arnold-usd/issues/2835) - Fix the arnold light groups (`primvars:arnold:light_group`) of shapes being reset in the hydra render delegate when the scene has a mesh light. They now take precedence over the UsdLux light link collections in the render delegate and the usd procedural, and follow interactive edits. Lights of an arnold light or shadow group that don't resolve, e.g. deleted lights, are skipped instead of the whole group being ignored
 - [usd#2851](https://github.com/Autodesk/arnold-usd/pull/2851) - Fix the `arnold:filter` of a RenderVar being ignored by the render delegate for the color, depth and primId outputs of the RenderProducts rendered by husk. A filter authored on a `depth` or `primId` RenderVar is now used, so it must support the type of the output: `closest_filter` keeps the previous behavior, and most filters don't support the INT primId output (`farthest_filter` does)
+- [usd#2863](https://github.com/Autodesk/arnold-usd/issues/2863) - Fix the motion blur of lights in the hydra render delegate: their transform is now sampled over the shutter interval like the other primitives, so a light moving with the camera is no longer blurred, and a moving light is blurred
 
 
 ## [7.5.4.1] (Unreleased)

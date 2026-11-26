@@ -2185,7 +2185,8 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
 
     // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
     // and deformation, so we need to force re-syncing all the prims.
-    if (_renderParam->UpdateShutter(shutter)) {
+    const bool shutterChanged = _renderParam->UpdateShutter(shutter);
+    if (shutterChanged) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
         // If the shutter has changed, we also need to update the render camera
@@ -2287,6 +2288,19 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
             changeTracker.MarkSprimDirty(source, bits);
         }
     };
+    // The lights sample their transform over the shutter interval too. They are Sprims, so they
+    // aren't dirtied with the Rprims above, and we have to resync their transform separately.
+    if (shutterChanged) {
+        static const TfTokenVector lightTypes{
+            HdPrimTypeTokens->distantLight, HdPrimTypeTokens->sphereLight,   HdPrimTypeTokens->diskLight,
+            HdPrimTypeTokens->rectLight,    HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight};
+        for (const auto& lightType : lightTypes) {
+            for (const SdfPath& lightId : renderIndex->GetSprimSubtree(lightType, SdfPath::AbsoluteRootPath())) {
+                markPrimDirty(lightId, HdLight::DirtyTransform);
+                changes = true;
+            }
+        }
+    }
     // First let's process all the dependencies that were removed.
     // We need to remove it from all our maps, and mark all the 
     // sources as being dirty, so that they can update their 

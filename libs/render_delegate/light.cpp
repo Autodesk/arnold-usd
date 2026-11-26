@@ -810,7 +810,9 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
     if (*dirtyBits & HdLight::DirtyTransform) {
         param->Interrupt();
-        HdArnoldSetTransform(_light, sceneDelegate, id);
+        // Sample the transform over the shutter interval, like the other primitives do, so that
+        // the light gets motion keys. Otherwise a light moving with the camera is blurred.
+        HdArnoldSetTransform(_light, sceneDelegate, id, param->GetShutterRange());
     }
 
     if (*dirtyBits & (DirtyParams | DirtyShadowParams | DirtyCollection)) {
